@@ -5,636 +5,554 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Đồng hồ nước - OCR v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html {
-  /* iOS Safari: cần overflow auto để scroll được trong GAS iframe */
-  height: 100%;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
+/* =====================================================
+   ĐỒNG HỒ NƯỚC — NEW UI v9
+   Theme: Teal/Water · Font: DM Sans · Clean Professional
+   ===================================================== */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 :root {
-  /* Dark VIP dashboard palette */
-  --bg: #0A0E1A;
-  --bg-tint: #0F1426;
-  --surface: #161B2E;
-  --surface-elevated: #1C2238;
-  --surface-higher: #232B45;
-  --border: #2A314A;
-  --border-strong: #3B4366;
-  --text: #E8EAF0;
-  --text-2: #B0B4C1;
-  --text-muted: #7C8094;
-  --primary: #4C9AFF;
-  --primary-dark: #2E78DD;
-  --primary-light: #7CB4FF;
-  --primary-bg: rgba(76, 154, 255, 0.12);
-  --success: #36D399;
-  --success-dark: #1F9E6E;
-  --success-bg: rgba(54, 211, 153, 0.12);
-  --danger: #F87272;
-  --danger-bg: rgba(248, 114, 114, 0.12);
-  --warning: #FBBD23;
-  --warning-bg: rgba(251, 189, 35, 0.12);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.35);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.35);
-  --shadow-glow: 0 0 20px rgba(76, 154, 255, 0.3);
-  --radius: 10px;
-  --radius-sm: 6px;
-  --radius-lg: 14px;
+  --c-bg:        #F0F4F8;
+  --c-surface:   #FFFFFF;
+  --c-surface-2: #F7FAFB;
+  --c-border:    #D8E4EC;
+  --c-border-2:  #B8CDD9;
+  --c-text:      #1A2B35;
+  --c-text-2:    #4A6070;
+  --c-muted:     #8AA0AD;
+  --c-primary:   #0D9488;
+  --c-primary-h: #0B7E72;
+  --c-primary-lt:#CCFBF1;
+  --c-primary-bg:rgba(13,148,136,.08);
+  --c-success:   #16A34A;
+  --c-success-bg:rgba(22,163,74,.09);
+  --c-success-lt:#DCFCE7;
+  --c-warn:      #D97706;
+  --c-warn-bg:   rgba(217,119,6,.09);
+  --c-warn-lt:   #FEF3C7;
+  --c-danger:    #DC2626;
+  --c-danger-bg: rgba(220,38,38,.09);
+  --c-danger-lt: #FEE2E2;
+  --c-blue:      #2563EB;
+  --c-blue-bg:   rgba(37,99,235,.08);
+  --radius:      10px;
+  --radius-sm:   6px;
+  --radius-lg:   14px;
+  --shadow-sm:   0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --shadow:      0 4px 12px rgba(0,0,0,.08), 0 1px 3px rgba(0,0,0,.05);
+  --shadow-md:   0 8px 24px rgba(0,0,0,.1), 0 2px 6px rgba(0,0,0,.06);
 }
+
+html { height:100%; }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
-  background: var(--bg);
-  /* gradient background disabled on mobile for performance & iOS touch compat */
-  color: var(--text); padding: 16px;
-  max-width: 1140px; margin: 0 auto; line-height: 1.5;
-  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--c-bg);
+  color: var(--c-text);
+  padding: 14px 14px 80px;
+  max-width: 1100px; margin: 0 auto; line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
   min-height: 100vh;
 }
 
-/* App Header */
+/* ── APP HEADER ── */
 .app-header {
-  background: linear-gradient(135deg, var(--surface-elevated) 0%, var(--surface) 100%);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 18px 22px;
-  margin-bottom: 14px;
   display: flex; align-items: center; gap: 14px;
-  box-shadow: var(--shadow-md);
+  background: var(--c-primary);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 16px rgba(13,148,136,.35), 0 1px 3px rgba(13,148,136,.2);
   position: relative; overflow: hidden;
 }
-.app-header::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(76,154,255,0.5), transparent);
+.app-header::after {
+  content:''; position:absolute; right:-20px; top:-20px;
+  width:120px; height:120px; border-radius:50%;
+  background: rgba(255,255,255,.08);
+  pointer-events: none;
 }
 .app-header .app-icon {
-  width: 46px; height: 46px; flex-shrink: 0;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  color: white; font-size: 22px;
-  box-shadow: 0 4px 14px rgba(76,154,255,0.4), 0 0 0 1px rgba(76,154,255,0.25), inset 0 1px 0 rgba(255,255,255,0.15);
+  width:44px; height:44px; flex-shrink:0;
+  background: rgba(255,255,255,.2);
+  border-radius:10px; font-size:22px;
+  display:flex; align-items:center; justify-content:center;
+  border: 1px solid rgba(255,255,255,.25);
 }
-.app-header .app-title-wrap { flex: 1; min-width: 0; }
 .app-header h1 {
-  font-size: 19px; font-weight: 700; color: var(--text);
-  letter-spacing: -0.01em; margin-bottom: 2px;
-  background: linear-gradient(135deg, var(--text) 0%, var(--primary-light) 100%);
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-size:17px; font-weight:700; color:#fff;
+  letter-spacing:-.01em; margin-bottom:2px;
 }
-.app-header .subtitle { font-size: 13px; color: var(--text-muted); margin: 0; }
+.app-header .subtitle { font-size:12px; color:rgba(255,255,255,.75); }
 
-/* Cards */
+/* ── CARDS ── */
 .card {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
   border-radius: var(--radius);
-  padding: 18px;
-  margin-bottom: 12px;
+  padding: 16px;
+  margin-bottom: 10px;
   box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.2s;
+  transition: box-shadow .18s;
 }
 .card:hover { box-shadow: var(--shadow); }
-.card h3 { font-size: 14px; font-weight: 600; color: var(--text); letter-spacing: -0.005em; margin-bottom: 12px; }
-
-h1 { font-size: 19px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
-.subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 14px; }
-
-.format-guide {
-  background: var(--success-bg);
-  border-left: 3px solid var(--success);
-  padding: 12px 14px; border-radius: var(--radius-sm);
-  margin-bottom: 12px; font-size: 13px;
-  color: var(--text-2);
+.card h3 {
+  font-size:13px; font-weight:700; color:var(--c-text);
+  letter-spacing:.01em; text-transform:uppercase; margin-bottom:12px;
+  color: var(--c-primary); display:flex; align-items:center; gap:6px;
 }
-.format-guide strong { color: var(--success); }
-.format-guide code {
-  background: var(--surface-higher); padding: 2px 8px; border-radius: 4px;
-  font-size: 12px; font-family: "SF Mono", Consolas, monospace;
-  font-weight: 600; color: var(--success); border: 1px solid var(--border);
-}
-.format-bad { color: var(--danger); text-decoration: line-through; opacity: 0.7; }
-
-/* Buttons - dark VIP style */
-.btn {
-  padding: 8px 14px; background: var(--surface-higher);
-  border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
-  font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;
-  color: var(--text); display: inline-flex; align-items: center; gap: 6px;
-  transition: all 0.15s; line-height: 1.4;
-  box-shadow: var(--shadow-sm);
-}
-.btn:hover { background: var(--surface-elevated); border-color: var(--primary); color: var(--text); box-shadow: var(--shadow); transform: translateY(-1px); }
-.btn:active { transform: translateY(0); box-shadow: var(--shadow-sm); }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.btn-primary {
-  background: linear-gradient(180deg, #6BAAFF 0%, var(--primary) 100%);
-  color: white; border-color: var(--primary-dark);
-  box-shadow: 0 2px 8px rgba(76,154,255,0.35), inset 0 1px 0 rgba(255,255,255,0.2);
-}
-.btn-primary:hover { background: linear-gradient(180deg, var(--primary-light) 0%, var(--primary) 100%); box-shadow: 0 4px 14px rgba(76,154,255,0.45), inset 0 1px 0 rgba(255,255,255,0.25); }
-.btn-success {
-  background: linear-gradient(180deg, #4BE1AB 0%, var(--success) 100%);
-  color: #0A1A14; border-color: var(--success-dark);
-  box-shadow: 0 2px 8px rgba(54,211,153,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
-  font-weight: 600;
-}
-.btn-success:hover { background: linear-gradient(180deg, #5EE8B6 0%, var(--success) 100%); box-shadow: 0 4px 14px rgba(54,211,153,0.4), inset 0 1px 0 rgba(255,255,255,0.25); }
-.btn-warning {
-  background: linear-gradient(180deg, #FCC847 0%, var(--warning) 100%);
-  color: #1A1505; border-color: #C99203;
-  box-shadow: 0 2px 8px rgba(251,189,35,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
-  font-weight: 600;
-}
-.btn-warning:hover { background: linear-gradient(180deg, #FFD25E 0%, var(--warning) 100%); }
-.btn-danger {
-  background: var(--danger-bg); color: var(--danger); border-color: rgba(248,114,114,0.35);
-}
-.btn-danger:hover { background: rgba(248,114,114,0.18); border-color: var(--danger); color: var(--danger); }
-
-/* Upload zone - dark glassy */
-.upload-zone {
-  background: linear-gradient(180deg, var(--surface-elevated) 0%, var(--surface) 100%);
-  border: 2px dashed var(--border-strong); border-radius: var(--radius);
-  padding: 28px 24px; text-align: center; cursor: pointer; transition: all 0.2s;
-  color: var(--text);
-}
-.upload-zone:hover {
-  background: var(--primary-bg); border-color: var(--primary); transform: translateY(-1px);
-  box-shadow: var(--shadow), 0 0 0 1px rgba(76,154,255,0.15);
-}
-.upload-zone.dragover { background: var(--primary-bg); border-color: var(--primary); border-style: solid; box-shadow: var(--shadow-glow); }
-.upload-icon { font-size: 32px; margin-bottom: 8px; }
-.upload-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; color: var(--text); }
-.upload-hint { font-size: 12px; color: var(--text-muted); }
-input[type="file"] { display: none; }
-
-.status {
-  margin-top: 12px; padding: 10px 14px;
-  background: var(--primary-bg); border-radius: var(--radius-sm);
-  font-size: 13px; color: var(--primary-light); display: none;
-  border-left: 3px solid var(--primary);
-}
-.status.done { background: var(--success-bg); color: var(--success); border-left-color: var(--success); }
-.status.error { background: var(--danger-bg); color: var(--danger); border-left-color: var(--danger); }
-
-/* Result items */
-.result-item {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 13px; margin-bottom: 8px;
-  display: grid; grid-template-columns: 80px 1fr; gap: 13px;
-  transition: all 0.15s;
-}
-.result-item:hover { border-color: var(--border-strong); background: var(--surface-elevated); box-shadow: var(--shadow); }
-.result-item img {
-  width: 80px; height: 80px; object-fit: cover;
-  border-radius: var(--radius-sm); cursor: pointer; border: 1px solid var(--border);
-}
-.result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.result-filename { font-size: 11px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; font-family: "SF Mono", Consolas, monospace; }
-.badge { font-size: 10px; padding: 3px 9px; border-radius: 10px; font-weight: 600; flex-shrink: 0; letter-spacing: 0.2px; }
-.badge-ok { background: var(--success-bg); color: var(--success); border: 1px solid rgba(54,211,153,0.3); }
-.badge-warn { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(248,114,114,0.3); }
-.badge-partial { background: var(--warning-bg); color: var(--warning); border: 1px solid rgba(251,189,35,0.3); }
-.badge-saved { background: var(--primary-bg); color: var(--primary-light); margin-left: 6px; border: 1px solid rgba(76,154,255,0.3); }
-
-/* Form inputs - dark with glow focus */
-.fields-grid { display: grid; grid-template-columns: 60px 1fr 50px 1fr; gap: 6px 8px; align-items: center; }
-.fields-grid label { font-size: 12px; color: var(--text-2); font-weight: 500; }
-.fields-grid input {
-  height: 30px; padding: 0 9px; font-size: 12px;
-  border: 1px solid var(--border-strong); border-radius: 5px;
-  font-family: inherit; width: 100%; background: var(--surface-higher);
-  color: var(--text); transition: all 0.15s;
-}
-.fields-grid input:hover { border-color: var(--text-muted); }
-.fields-grid input:focus {
-  outline: none; border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(76,154,255,0.2);
-  background: var(--surface);
-}
-.chi-so-input { font-weight: 600; color: var(--success); }
-.ma-input { font-weight: 600; color: var(--primary-light); }
-
-details summary { font-size: 11px; color: var(--text-muted); cursor: pointer; margin-top: 8px; user-select: none; }
-details pre {
-  font-size: 11px; background: var(--bg); padding: 8px 10px;
-  border-radius: 5px; margin-top: 6px; white-space: pre-wrap;
-  max-height: 100px; overflow: auto; font-family: "SF Mono", Consolas, monospace;
-  border: 1px solid var(--border); color: var(--text-2);
-}
-details .pattern-found {
-  background: var(--success-bg); padding: 5px 10px; border-radius: 5px;
-  margin: 4px 0; font-size: 11px; color: var(--success); font-weight: 500;
+.card h3::after {
+  content:''; flex:1; height:1px; background:var(--c-border);
 }
 
-@media (max-width: 600px) {
-  .result-item { grid-template-columns: 60px 1fr; }
-  .result-item img { width: 60px; height: 60px; }
-  .fields-grid { grid-template-columns: 70px 1fr; }
-  .app-header { padding: 14px 16px; }
-  .app-header .app-icon { width: 38px; height: 38px; font-size: 19px; }
-  .app-header h1 { font-size: 16px; }
-}
-
-.modal {
-  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.85); z-index: 100;
-  align-items: center; justify-content: center; padding: 20px;
-}
-.modal.show { display: flex; }
-.modal img { max-width: 100%; max-height: 90vh; border-radius: 8px; }
-
-.spinner {
-  display: inline-block; width: 12px; height: 12px;
-  border: 2px solid var(--border); border-top-color: var(--primary);
-  border-radius: 50%; animation: spin 0.8s linear infinite;
-  vertical-align: middle; margin-right: 6px;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* Summary bar — polished */
-.summary-bar {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  padding: 12px 16px; border-radius: var(--radius);
-  margin-bottom: 12px; font-size: 13px;
-  display: flex; justify-content: space-between;
-  align-items: center; flex-wrap: wrap; gap: 8px;
-  box-shadow: var(--shadow-sm);
-  color: var(--text-2);
-}
-.summary-stats strong { color: var(--text); font-weight: 600; }
-.summary-stats .sep { color: var(--border-strong); margin: 0 8px; }
-
-/* Tabs — desktop horizontal tabs */
+/* ── DESKTOP TABS ── */
 .tabs {
-  display: flex; gap: 2px; margin-bottom: 14px;
-  border-bottom: 1px solid var(--border);
-  padding: 0 4px;
+  display: flex; gap: 0; margin-bottom: 12px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: 4px;
+  box-shadow: var(--shadow-sm);
+  overflow-x: scroll; scrollbar-width: none;
   position: sticky; top: 0; z-index: 50;
-  background: var(--bg);
-  overflow-x: scroll; scrollbar-width: none; -ms-overflow-style: none;
 }
 .tabs::-webkit-scrollbar { display: none; }
 .tab {
-  padding: 11px 18px; cursor: pointer; font-size: 13px;
-  font-weight: 500; color: var(--text-muted);
-  border-bottom: 2px solid transparent; margin-bottom: -1px;
-  transition: all 0.15s; white-space: nowrap;
-  border-radius: 6px 6px 0 0;
-  background: none; border-top: none; border-left: none; border-right: none;
-  font-family: inherit; outline: none;
+  flex: 1; padding: 9px 14px; cursor:pointer; font-size:12.5px;
+  font-weight:600; color:var(--c-text-2);
+  border-radius: 7px; white-space: nowrap;
+  background: none; border: none; font-family: inherit; outline: none;
   touch-action: manipulation;
-  -webkit-tap-highlight-color: rgba(76,154,255,0.2);
-  min-height: 44px; display: inline-flex; align-items: center;
-  user-select: none; -webkit-user-select: none;
+  -webkit-tap-highlight-color: rgba(13,148,136,.15);
+  min-height:40px; display:inline-flex; align-items:center; justify-content:center; gap:5px;
+  user-select:none; -webkit-user-select:none;
+  transition: all .15s;
 }
-.tab:hover { color: var(--text); background: rgba(76,154,255,0.06); }
-.tab.active {
-  color: var(--primary-light); border-bottom-color: var(--primary);
-  font-weight: 600; background: linear-gradient(180deg, transparent 0%, rgba(76,154,255,0.08) 100%);
-}
+.tab:hover { background:var(--c-primary-bg); color:var(--c-primary); }
+.tab.active { background:var(--c-primary); color:#fff; box-shadow: 0 2px 8px rgba(13,148,136,.35); }
 
-/* ===== BOTTOM NAV — chỉ hiện trên mobile ===== */
-.bottom-nav {
-  display: none; /* ẩn trên desktop */
-}
+/* ── BOTTOM NAV (mobile only) ── */
+.bottom-nav { display:none; }
+
 @media (max-width: 768px) {
-  /* Ẩn top tabs, dùng bottom nav thay thế */
   .tabs { display: none !important; }
+  body { padding-bottom: calc(72px + env(safe-area-inset-bottom,0px)); }
 
   .bottom-nav {
     display: flex;
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 999;
-    background: var(--surface-elevated);
-    border-top: 1px solid var(--border-strong);
-    padding: 0; padding-bottom: env(safe-area-inset-bottom, 0px);
-    box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+    position: fixed; bottom:0; left:0; right:0; z-index:9999;
+    background: var(--c-surface);
+    border-top: 1.5px solid var(--c-border);
+    padding-bottom: env(safe-area-inset-bottom,0px);
+    box-shadow: 0 -4px 20px rgba(0,0,0,.1);
   }
+  /* <a> tags — iOS luôn nhận tap, không bị scroll intercept */
   .bn-item {
-    flex: 1; display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    padding: 8px 4px; gap: 3px;
-    background: none; border: none; outline: none;
-    font-family: inherit; cursor: pointer;
-    color: var(--text-muted); font-size: 10px; font-weight: 500;
+    flex:1; display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    padding:10px 4px; gap:3px;
+    color:var(--c-muted); text-decoration:none;
+    font-size:10px; font-weight:600; font-family:inherit;
+    min-height:60px;
+    -webkit-tap-highlight-color: rgba(13,148,136,.18);
+    transition: color .15s;
+    background: none; border: none; cursor: pointer;
     touch-action: manipulation;
-    -webkit-tap-highlight-color: rgba(76,154,255,0.25);
-    user-select: none; -webkit-user-select: none;
-    min-height: 56px;
-    transition: color 0.15s, background 0.15s;
-    -webkit-appearance: none; appearance: none;
+    user-select:none; -webkit-user-select:none;
   }
-  .bn-item:active { background: rgba(76,154,255,0.1); }
-  .bn-item .bn-icon { font-size: 20px; line-height: 1; }
-  .bn-item .bn-label { font-size: 10px; line-height: 1.2; text-align: center; }
-  .bn-item.active { color: var(--primary-light); }
-  .bn-item.active .bn-icon { filter: drop-shadow(0 0 6px rgba(76,154,255,0.6)); }
-
-  /* Thêm padding dưới body để nội dung không bị che bởi bottom nav */
-  body { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+  .bn-item .bn-icon {
+    font-size:22px; line-height:1;
+    transition: transform .15s;
+  }
+  .bn-item .bn-label { font-size:10px; line-height:1.2; text-align:center; }
+  .bn-item.active { color:var(--c-primary); }
+  .bn-item.active .bn-icon { transform: scale(1.15); }
+  .bn-item:active .bn-icon { transform: scale(.9); }
 }
 
-/* Table — dark polished */
-table.history { width: 100%; border-collapse: collapse; font-size: 13px; color: var(--text-2); }
+/* ── BUTTONS ── */
+.btn {
+  padding: 8px 14px; background: var(--c-surface-2);
+  border: 1px solid var(--c-border-2); border-radius: var(--radius-sm);
+  font-size:13px; font-weight:600; cursor:pointer; font-family:inherit;
+  color:var(--c-text); display:inline-flex; align-items:center; gap:6px;
+  transition: all .15s; line-height:1.4; box-shadow: var(--shadow-sm);
+  touch-action: manipulation;
+}
+.btn:hover { background:var(--c-primary-bg); border-color:var(--c-primary); color:var(--c-primary); }
+.btn:active { transform:scale(.97); }
+.btn:disabled { opacity:.45; cursor:not-allowed; transform:none; }
+.btn-primary {
+  background:var(--c-primary); color:#fff; border-color:var(--c-primary-h);
+  box-shadow:0 2px 8px rgba(13,148,136,.3);
+}
+.btn-primary:hover { background:var(--c-primary-h); color:#fff; box-shadow:0 4px 12px rgba(13,148,136,.4); }
+.btn-success {
+  background:var(--c-success); color:#fff; border-color:#15803D;
+  box-shadow:0 2px 8px rgba(22,163,74,.25); font-weight:700;
+}
+.btn-success:hover { background:#15803D; color:#fff; }
+.btn-warning {
+  background:var(--c-warn); color:#fff; border-color:#B45309;
+  box-shadow:0 2px 8px rgba(217,119,6,.25); font-weight:700;
+}
+.btn-warning:hover { background:#B45309; color:#fff; }
+.btn-danger {
+  background:var(--c-danger-bg); color:var(--c-danger); border-color:rgba(220,38,38,.3);
+}
+.btn-danger:hover { background:var(--c-danger); color:#fff; }
+
+/* ── UPLOAD ZONE ── */
+.upload-zone {
+  background: linear-gradient(160deg, var(--c-primary-bg) 0%, var(--c-surface-2) 100%);
+  border: 2px dashed var(--c-border-2); border-radius: var(--radius);
+  padding: 28px 20px; text-align:center; cursor:pointer; transition: all .2s;
+  color: var(--c-text);
+  touch-action: manipulation;
+}
+.upload-zone:hover {
+  background: var(--c-primary-bg); border-color:var(--c-primary);
+  transform: translateY(-1px); box-shadow:0 4px 16px rgba(13,148,136,.15);
+}
+.upload-zone.dragover { border-color:var(--c-primary); border-style:solid; background:var(--c-primary-bg); }
+.upload-icon { font-size:32px; margin-bottom:8px; }
+.upload-title { font-weight:700; font-size:14px; margin-bottom:4px; color:var(--c-primary); }
+.upload-hint { font-size:12px; color:var(--c-muted); }
+input[type="file"] { display:none; }
+
+/* ── STATUS BAR ── */
+.status {
+  margin-top:10px; padding:10px 14px;
+  background:var(--c-blue-bg); border-radius:var(--radius-sm);
+  font-size:13px; color:var(--c-blue); display:none;
+  border-left:3px solid var(--c-blue);
+}
+.status.done { background:var(--c-success-bg); color:var(--c-success); border-left-color:var(--c-success); }
+.status.error { background:var(--c-danger-bg); color:var(--c-danger); border-left-color:var(--c-danger); }
+
+/* ── RESULT ITEMS ── */
+.result-item {
+  background:var(--c-surface); border:1px solid var(--c-border); border-radius:var(--radius);
+  padding:12px; margin-bottom:8px;
+  display:grid; grid-template-columns:70px 1fr; gap:12px;
+  transition: all .15s;
+}
+.result-item:hover { border-color:var(--c-primary); box-shadow:var(--shadow); }
+.result-item img {
+  width:70px; height:70px; object-fit:cover;
+  border-radius:var(--radius-sm); cursor:pointer; border:1px solid var(--c-border);
+}
+.result-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.result-filename { font-size:11px; color:var(--c-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:60%; font-family:'DM Mono',monospace; }
+.badge { font-size:10px; padding:3px 9px; border-radius:10px; font-weight:700; flex-shrink:0; letter-spacing:.2px; }
+.badge-ok { background:var(--c-success-lt); color:var(--c-success); }
+.badge-warn { background:var(--c-danger-lt); color:var(--c-danger); }
+.badge-partial { background:var(--c-warn-lt); color:var(--c-warn); }
+.badge-saved { background:var(--c-primary-lt); color:var(--c-primary); margin-left:6px; }
+
+/* ── FORM FIELDS ── */
+.fields-grid { display:grid; grid-template-columns:60px 1fr 50px 1fr; gap:6px 8px; align-items:center; }
+.fields-grid label { font-size:12px; color:var(--c-text-2); font-weight:600; }
+.fields-grid input {
+  height:32px; padding:0 10px; font-size:13px;
+  border:1.5px solid var(--c-border); border-radius:var(--radius-sm);
+  font-family:inherit; width:100%; background:var(--c-surface-2); color:var(--c-text);
+  transition: all .15s;
+}
+.fields-grid input:hover { border-color:var(--c-border-2); }
+.fields-grid input:focus { outline:none; border-color:var(--c-primary); box-shadow:0 0 0 3px var(--c-primary-bg); background:var(--c-surface); }
+.chi-so-input { font-weight:700; color:var(--c-success); font-family:'DM Mono',monospace; }
+.ma-input { font-weight:700; color:var(--c-primary); font-family:'DM Mono',monospace; }
+
+details summary { font-size:11px; color:var(--c-muted); cursor:pointer; margin-top:8px; user-select:none; }
+details pre {
+  font-size:11px; background:var(--c-bg); padding:8px 10px;
+  border-radius:5px; margin-top:6px; white-space:pre-wrap;
+  max-height:100px; overflow:auto; font-family:'DM Mono',monospace;
+  border:1px solid var(--c-border); color:var(--c-text-2);
+}
+details .pattern-found {
+  background:var(--c-success-bg); padding:5px 10px; border-radius:5px;
+  margin:4px 0; font-size:11px; color:var(--c-success); font-weight:600;
+}
+
+@media (max-width:600px) {
+  .result-item { grid-template-columns:56px 1fr; }
+  .result-item img { width:56px; height:56px; }
+  .fields-grid { grid-template-columns:70px 1fr; }
+}
+
+/* ── MODAL ── */
+.modal {
+  display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+  background:rgba(0,0,0,.75); z-index:200;
+  align-items:center; justify-content:center; padding:20px;
+}
+.modal.show { display:flex; }
+.modal img { max-width:100%; max-height:90vh; border-radius:8px; box-shadow:var(--shadow-md); }
+
+/* ── SPINNER ── */
+.spinner {
+  display:inline-block; width:12px; height:12px;
+  border:2px solid var(--c-border); border-top-color:var(--c-primary);
+  border-radius:50%; animation:spin .8s linear infinite;
+  vertical-align:middle; margin-right:6px;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ── SUMMARY BAR ── */
+.summary-bar {
+  background:var(--c-surface); border:1px solid var(--c-border);
+  padding:10px 14px; border-radius:var(--radius);
+  margin-bottom:10px; font-size:13px;
+  display:flex; justify-content:space-between;
+  align-items:center; flex-wrap:wrap; gap:8px;
+  box-shadow:var(--shadow-sm); color:var(--c-text-2);
+}
+.summary-stats strong { color:var(--c-text); font-weight:700; }
+.summary-stats .sep { color:var(--c-border-2); margin:0 6px; }
+
+/* ── FORMAT GUIDE ── */
+.format-guide {
+  background:var(--c-success-bg); border-left:3px solid var(--c-success);
+  padding:10px 14px; border-radius:var(--radius-sm);
+  margin-bottom:12px; font-size:13px; color:var(--c-text-2);
+}
+.format-guide strong { color:var(--c-success); }
+.format-guide code {
+  background:var(--c-surface); padding:2px 7px; border-radius:4px;
+  font-size:12px; font-family:'DM Mono',monospace;
+  font-weight:600; color:var(--c-primary); border:1px solid var(--c-border);
+}
+.format-bad { color:var(--c-danger); text-decoration:line-through; opacity:.7; }
+
+/* ── TABLE ── */
+table.history { width:100%; border-collapse:collapse; font-size:13px; color:var(--c-text-2); }
 table.history th {
-  text-align: left; padding: 11px 12px;
-  background: var(--bg-tint); border-bottom: 1px solid var(--border);
-  font-weight: 600; font-size: 11px; color: var(--text-muted);
-  text-transform: uppercase; letter-spacing: 0.6px;
-  position: sticky; top: 0;
+  text-align:left; padding:10px 12px;
+  background:var(--c-bg); border-bottom:2px solid var(--c-border);
+  font-weight:700; font-size:11px; color:var(--c-muted);
+  text-transform:uppercase; letter-spacing:.7px;
+  position:sticky; top:0;
 }
-table.history td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
-table.history tr:hover td { background: var(--surface-elevated); }
+table.history td { padding:9px 12px; border-bottom:1px solid var(--c-border); color:var(--c-text); }
+table.history tr:hover td { background:var(--c-primary-bg); }
 
+/* ── TOOLBAR ── */
 .toolbar {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 12px; flex-wrap: wrap; gap: 8px;
+  display:flex; justify-content:space-between; align-items:center;
+  margin-bottom:10px; flex-wrap:wrap; gap:8px;
 }
 
-/* === STAMPING TOOL === */
+/* ── STEPPER ── */
 .stepper-mini {
-  display: flex; gap: 4px; margin-bottom: 14px;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 6px; overflow-x: auto;
-  box-shadow: var(--shadow-sm);
+  display:flex; gap:3px; margin-bottom:12px;
+  background:var(--c-surface); border:1px solid var(--c-border);
+  border-radius:var(--radius); padding:5px; overflow-x:auto;
+  box-shadow:var(--shadow-sm);
 }
 .step-mini {
-  flex: 1; padding: 7px 11px; font-size: 12px;
-  color: var(--text-muted); text-align: center; border-radius: 6px;
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-  min-width: 90px; white-space: nowrap;
-  transition: all 0.2s;
+  flex:1; padding:7px 10px; font-size:12px;
+  color:var(--c-muted); text-align:center; border-radius:6px;
+  display:flex; align-items:center; justify-content:center; gap:5px;
+  min-width:80px; white-space:nowrap; transition:all .18s;
 }
-.step-mini.active { background: var(--primary-bg); color: var(--primary-light); font-weight: 600; }
-.step-mini.done { color: var(--success); }
+.step-mini.active { background:var(--c-primary-bg); color:var(--c-primary); font-weight:700; }
+.step-mini.done { color:var(--c-success); }
 .step-mini .num {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 20px; height: 20px; border-radius: 50%;
-  background: var(--border); color: var(--text-2); font-weight: 600; font-size: 11px;
-  transition: all 0.2s;
+  display:inline-flex; align-items:center; justify-content:center;
+  width:20px; height:20px; border-radius:50%;
+  background:var(--c-border); color:var(--c-text-2); font-weight:700; font-size:11px;
+  transition:all .18s;
 }
-.step-mini.active .num { background: var(--primary); color: white; box-shadow: 0 0 0 3px rgba(76,154,255,0.2); }
-.step-mini.done .num { background: var(--success); color: #0A1A14; }
+.step-mini.active .num { background:var(--c-primary); color:#fff; box-shadow:0 0 0 3px var(--c-primary-bg); }
+.step-mini.done .num { background:var(--c-success); color:#fff; }
 
-.stamp-input-row {
-  display: grid;
-  grid-template-columns: 60px 30px 100px 110px 130px 40px;
-  gap: 8px; align-items: center;
-  padding: 8px;
+/* ── STAMP INPUT ── */
+.stamp-input-header, .stamp-input-row {
+  display:grid;
+  grid-template-columns: 62px 26px 100px 110px 130px 36px;
+  gap:7px; align-items:center; padding:7px;
 }
-.stamp-input-row:hover { background: var(--surface-elevated); }
-.stamp-input-block { border-bottom: 1px solid var(--border); }
-.stamp-input-block:hover { background: var(--surface-elevated); }
+.stamp-input-header { font-size:11px; font-weight:700; color:var(--c-muted); text-transform:uppercase; letter-spacing:.5px; background:var(--c-bg); border-radius:6px 6px 0 0; }
+.stamp-input-row:hover { background:var(--c-primary-bg); }
+.stamp-input-block { border-bottom:1px solid var(--c-border); }
 .stamp-input-block .prev-note {
-  font-size: 11px; padding: 4px 10px 8px 76px;
-  display: flex; align-items: center; gap: 6px;
-  line-height: 1.4;
+  font-size:11px; padding:3px 8px 7px 76px;
+  display:flex; align-items:center; gap:5px; line-height:1.4;
 }
-.stamp-input-block .prev-note.has-prev { color: var(--success); }
-.stamp-input-block .prev-note.anomaly { color: var(--danger); font-weight: 600; }
-.stamp-input-block .prev-note.empty { color: var(--text-muted); font-style: italic; }
+.stamp-input-block .prev-note.has-prev { color:var(--c-success); }
+.stamp-input-block .prev-note.anomaly { color:var(--c-danger); font-weight:700; }
+.stamp-input-block .prev-note.empty { color:var(--c-muted); font-style:italic; }
 .stamp-input-row .thumb {
-  width: 60px; height: 60px; object-fit: cover;
-  border-radius: 4px; cursor: pointer;
-  border: 1px solid var(--border);
+  width:62px; height:62px; object-fit:cover;
+  border-radius:5px; cursor:pointer; border:1px solid var(--c-border);
 }
-.stamp-input-row input {
-  height: 32px; padding: 0 8px; font-size: 13px;
-  border: 1px solid var(--border-strong); border-radius: 4px;
-  font-family: inherit; width: 100%;
-  background: var(--surface-higher); color: var(--text);
+.stamp-input-row input, .stamp-input-row select {
+  height:32px; padding:0 8px; font-size:13px;
+  border:1.5px solid var(--c-border); border-radius:5px;
+  font-family:inherit; width:100%; background:var(--c-surface-2); color:var(--c-text);
+  transition:border-color .15s;
 }
-.stamp-input-row select {
-  height: 32px; padding: 0 4px; font-size: 13px;
-  border: 1px solid var(--border-strong); border-radius: 4px;
-  font-family: inherit; width: 100%;
-  background: var(--surface-higher); color: var(--text); cursor: pointer;
+.stamp-input-row input:focus, .stamp-input-row select:focus {
+  outline:none; border-color:var(--c-primary); box-shadow:0 0 0 3px var(--c-primary-bg);
 }
-.stamp-input-row select.unset { color: var(--text-muted); }
-.stamp-input-row select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(76,154,255,0.2); }
-.stamp-input-row input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(76,154,255,0.2); }
-.stamp-input-header {
-  display: grid;
-  grid-template-columns: 60px 30px 100px 110px 130px 40px;
-  gap: 8px; padding: 8px;
-  font-size: 11px; color: var(--text-muted); font-weight: 600;
-  text-transform: uppercase; background: var(--bg-tint);
-  border-bottom: 1px solid var(--border);
-  position: sticky; top: 0; z-index: 5;
-}
-.stamp-input-row .row-num { font-size: 11px; color: var(--text-muted); text-align: center; }
-.btn-del-row {
-  background: var(--danger-bg); border: 1px solid rgba(248,114,114,0.3); color: var(--danger);
-  width: 28px; height: 28px; border-radius: 4px; cursor: pointer;
-  font-size: 14px; line-height: 1; padding: 0;
-  transition: all 0.15s;
-}
-.btn-del-row:hover { background: rgba(248,114,114,0.18); border-color: var(--danger); }
+.stamp-input-row select.unset { color:var(--c-muted); }
 
+/* ── BULK FILL ── */
 .bulk-fill {
-  background: var(--warning-bg); border: 1px solid rgba(251,189,35,0.3); border-radius: var(--radius-sm);
-  padding: 10px 14px; margin-bottom: 12px;
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  color: var(--text-2);
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  padding:10px 12px; margin-bottom:10px;
+  background:var(--c-warn-bg); border-radius:var(--radius-sm);
+  font-size:13px; color:var(--c-text-2); border:1px solid rgba(217,119,6,.2);
 }
-.bulk-fill label { font-size: 12px; color: var(--text-2); }
+.bulk-fill label { font-size:12px; color:var(--c-text-2); font-weight:600; }
 .bulk-fill input, .bulk-fill select {
-  height: 30px; padding: 0 8px; font-size: 13px;
-  border: 1px solid var(--border-strong); border-radius: 4px;
-  font-family: inherit; background: var(--surface-higher); color: var(--text);
+  height:32px; padding:0 10px; font-size:13px;
+  border:1.5px solid var(--c-border); border-radius:5px;
+  font-family:inherit; background:var(--c-surface); color:var(--c-text);
 }
 
+/* ── STAMP PREVIEW ── */
 .stamp-preview-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 12px;
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px;
 }
 .stamp-preview-item {
-  background: var(--surface-elevated); border-radius: var(--radius-sm); padding: 8px;
-  text-align: center; font-size: 11px;
-  border: 2px solid transparent;
+  border:1px solid var(--c-border); border-radius:var(--radius-sm);
+  padding:8px; background:var(--c-surface-2); text-align:center; font-size:12px;
+  transition:all .15s;
 }
-.stamp-preview-item.error { border-color: rgba(248,114,114,0.4); background: var(--danger-bg); }
-.stamp-preview-item img { width: 100%; border-radius: 4px; margin-bottom: 6px; cursor: pointer; }
-.stamp-preview-item .name { font-weight: 600; color: var(--text); font-size: 12px; }
-.stamp-preview-item .info { color: var(--text-2); font-size: 11px; margin-top: 2px; }
-.stamp-preview-item .folder { color: var(--primary-light); font-size: 10px; margin-top: 2px; word-break: break-all; }
-.stamp-preview-item .warn { color: #A32D2D; font-size: 11px; margin-top: 4px; font-weight: 600; }
+.stamp-preview-item:hover { border-color:var(--c-primary); box-shadow:var(--shadow); }
+.stamp-preview-item.error { border-color:rgba(220,38,38,.35); background:var(--c-danger-bg); }
+.stamp-preview-item img { width:100%; border-radius:4px; margin-bottom:5px; cursor:pointer; }
+.stamp-preview-item .name { font-weight:700; color:var(--c-text); font-size:12px; }
+.stamp-preview-item .info { color:var(--c-text-2); font-size:11px; margin-top:2px; }
+.stamp-preview-item .folder { color:var(--c-primary); font-size:10px; margin-top:2px; font-family:'DM Mono',monospace; word-break:break-all; }
+.stamp-preview-item .warn { color:var(--c-danger); font-size:11px; margin-top:4px; font-weight:700; }
+#stampCanvas { display:none; }
 
-#stampCanvas { display: none; }
-
-@media (max-width: 700px) {
+@media (max-width:700px) {
   .stamp-input-header, .stamp-input-row {
-    grid-template-columns: 50px 25px 80px 90px 110px 30px;
-    gap: 4px;
+    grid-template-columns: 50px 22px 78px 88px 108px 28px;
+    gap:4px;
   }
-  .stamp-input-row .thumb { width: 50px; height: 50px; }
+  .stamp-input-row .thumb { width:50px; height:50px; }
 }
 
-/* Chart view toggle buttons (legacy) */
-.btn-chart-tab, .btn-gran-tab {
-  padding: 6px 12px; font-size: 13px; border: none; border-radius: 4px;
-  cursor: pointer; font-family: inherit; background: transparent; color: var(--text-2);
-  font-weight: 500; transition: all 0.15s;
-}
-.btn-chart-tab:hover, .btn-gran-tab:hover { background: rgba(76, 154, 255, 0.1); }
-.btn-chart-tab.active { background: var(--primary); color: white; font-weight: 600; }
-.btn-gran-tab.active { background: var(--primary-dark); color: white; font-weight: 600; }
-.btn-gran-tab { padding: 5px 12px; font-size: 12px; }
-
-/* Segmented control - dark VIP */
+/* ── SEGMENTED CONTROL ── */
 .seg-control {
-  display: inline-flex; background: var(--bg-tint); padding: 3px; border-radius: 8px; gap: 2px;
-  border: 1px solid var(--border);
+  display:inline-flex; background:var(--c-bg); padding:3px; border-radius:8px; gap:2px;
+  border:1px solid var(--c-border);
 }
-.seg-control.gran { background: rgba(76,154,255,0.08); border-color: rgba(76,154,255,0.25); }
 .seg-btn {
-  padding: 7px 16px; font-size: 13px; border: none; background: transparent;
-  color: var(--text-2); cursor: pointer; border-radius: 5px; font-family: inherit;
-  font-weight: 500; transition: all 0.15s; min-width: 0;
+  padding:6px 14px; font-size:13px; border:none; background:transparent;
+  color:var(--c-text-2); cursor:pointer; border-radius:5px; font-family:inherit;
+  font-weight:600; transition:all .15s;
+  touch-action:manipulation;
 }
-.seg-btn:hover { background: rgba(76, 154, 255, 0.1); color: var(--primary-light); }
+.seg-btn:hover { background:var(--c-primary-bg); color:var(--c-primary); }
 .seg-btn.active {
-  background: var(--surface-higher); color: var(--primary-light); font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(76,154,255,0.15);
+  background:var(--c-surface); color:var(--c-primary); font-weight:700;
+  box-shadow:var(--shadow-sm);
 }
 .seg-control.gran .seg-btn.active {
-  background: linear-gradient(180deg, var(--primary-light) 0%, var(--primary) 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(76,154,255,0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+  background:var(--c-primary); color:#fff;
+  box-shadow:0 2px 8px rgba(13,148,136,.3);
 }
-.seg-btn.small { padding: 5px 12px; font-size: 12px; }
+.seg-btn.small { padding:5px 11px; font-size:12px; }
 
-/* Compare toggle */
+/* ── COMPARE TOGGLE ── */
 .compare-toggle {
-  display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;
-  padding: 7px 12px; background: var(--surface-higher); border: 1px solid var(--border-strong); border-radius: 6px;
-  transition: all 0.15s; user-select: none; color: var(--text);
+  display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;
+  padding:7px 12px; background:var(--c-surface-2); border:1.5px solid var(--c-border); border-radius:6px;
+  transition:all .15s; user-select:none; color:var(--c-text);
+  touch-action:manipulation;
 }
-.compare-toggle:hover { background: var(--surface-elevated); border-color: var(--primary); }
-.compare-toggle input[type="checkbox"] {
-  width: 14px; height: 14px; cursor: pointer; margin: 0;
-  accent-color: var(--primary);
-}
+.compare-toggle:hover { background:var(--c-primary-bg); border-color:var(--c-primary); }
+.compare-toggle input[type="checkbox"] { width:14px; height:14px; cursor:pointer; margin:0; accent-color:var(--c-primary); }
 .compare-toggle .info-icon {
-  font-size: 11px; color: var(--text-muted); cursor: help; padding: 0 4px;
-  background: var(--border); border-radius: 50%; line-height: 1; height: 14px; width: 14px;
-  display: inline-flex; align-items: center; justify-content: center;
+  font-size:11px; color:var(--c-muted); cursor:help; padding:0 4px;
+  background:var(--c-border); border-radius:50%; line-height:1; height:14px; width:14px;
+  display:inline-flex; align-items:center; justify-content:center;
 }
 
-/* KPI cards grid - dark VIP */
-.kpi-grid {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
-  margin: 14px 0;
-}
-@media (max-width: 700px) {
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-}
+/* ── KPI CARDS ── */
+.kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:12px 0; }
+@media (max-width:700px) { .kpi-grid { grid-template-columns:repeat(2,1fr); } }
 .kpi-card {
-  padding: 14px 16px;
-  background: linear-gradient(145deg, var(--surface-elevated) 0%, var(--surface) 100%);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  transition: all 0.2s;
-  border-left-width: 3px;
-  box-shadow: var(--shadow-sm);
-  position: relative;
-  overflow: hidden;
+  padding:14px 15px;
+  background:var(--c-surface);
+  border:1px solid var(--c-border);
+  border-radius:var(--radius);
+  transition:all .18s; border-left-width:3px;
+  box-shadow:var(--shadow-sm);
 }
-.kpi-card::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
-}
-.kpi-card:hover {
-  transform: translateY(-1px); box-shadow: var(--shadow);
-  border-color: var(--border-strong);
-}
-.kpi-card.kpi-total { border-left-color: var(--success); }
-.kpi-card.kpi-avg { border-left-color: var(--primary); }
-.kpi-card.kpi-max { border-left-color: var(--danger); }
-.kpi-card.kpi-min { border-left-color: var(--warning); }
-.kpi-label {
-  font-size: 10px; font-weight: 700; color: var(--text-muted);
-  text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 8px;
-}
-.kpi-value {
-  font-size: 24px; font-weight: 700; color: var(--text); line-height: 1.1;
-  font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
-}
-.kpi-card.kpi-total .kpi-value { color: var(--success); text-shadow: 0 0 18px rgba(54,211,153,0.4); }
-.kpi-card.kpi-max .kpi-value { color: var(--danger); text-shadow: 0 0 18px rgba(248,114,114,0.35); }
-.kpi-card.kpi-min .kpi-value { color: var(--warning); text-shadow: 0 0 18px rgba(251,189,35,0.35); }
-.kpi-card.kpi-avg .kpi-value { color: var(--primary-light); text-shadow: 0 0 18px rgba(76,154,255,0.4); }
-.kpi-unit { font-size: 12px; font-weight: 500; color: var(--text-muted); margin-left: 3px; }
-.kpi-detail {
-  font-size: 11px; color: var(--text-2); margin-top: 6px;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.kpi-detail strong { color: var(--primary-light); }
+.kpi-card:hover { transform:translateY(-2px); box-shadow:var(--shadow); }
+.kpi-card.kpi-total { border-left-color:var(--c-success); }
+.kpi-card.kpi-avg   { border-left-color:var(--c-primary); }
+.kpi-card.kpi-max   { border-left-color:var(--c-danger); }
+.kpi-card.kpi-min   { border-left-color:var(--c-warn); }
+.kpi-label { font-size:10px; font-weight:700; color:var(--c-muted); text-transform:uppercase; letter-spacing:.7px; margin-bottom:7px; }
+.kpi-value { font-size:24px; font-weight:700; color:var(--c-text); line-height:1.1; font-variant-numeric:tabular-nums; letter-spacing:-.02em; font-family:'DM Mono',monospace; }
+.kpi-card.kpi-total .kpi-value { color:var(--c-success); }
+.kpi-card.kpi-max   .kpi-value { color:var(--c-danger); }
+.kpi-card.kpi-min   .kpi-value { color:var(--c-warn); }
+.kpi-card.kpi-avg   .kpi-value { color:var(--c-primary); }
+.kpi-unit { font-size:12px; font-weight:500; color:var(--c-muted); margin-left:2px; }
+.kpi-detail { font-size:11px; color:var(--c-text-2); margin-top:5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.kpi-detail strong { color:var(--c-primary); }
 
-/* Compare panel - dark VIP */
+/* ── COMPARE PANEL ── */
 .compare-panel {
-  font-size: 13px; color: var(--text);
-  background: linear-gradient(145deg, rgba(76,154,255,0.08) 0%, rgba(76,154,255,0.03) 100%) !important;
-  border: 1px solid rgba(76,154,255,0.25) !important;
-  border-left: 4px solid var(--primary) !important;
-  box-shadow: 0 0 20px rgba(76,154,255,0.08);
+  font-size:13px; color:var(--c-text);
+  background:var(--c-primary-bg) !important;
+  border:1px solid rgba(13,148,136,.25) !important;
+  border-left:4px solid var(--c-primary) !important;
 }
-.compare-panel .compare-title {
-  font-weight: 700; color: var(--primary-light); margin-bottom: 10px; font-size: 13px;
-  display: flex; align-items: center; gap: 6px;
-}
-.compare-panel .compare-rows {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 14px; align-items: center;
-}
-.compare-row { display: flex; flex-direction: column; gap: 3px; }
-.compare-row .compare-label { font-size: 11px; color: var(--text-muted); }
-.compare-row .compare-val { font-size: 17px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
-.compare-diff {
-  display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px;
-  border-radius: 12px; font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums;
-}
-.compare-diff.up { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(248,114,114,0.3); }
-.compare-diff.down { background: var(--success-bg); color: var(--success); border: 1px solid rgba(54,211,153,0.3); }
-.compare-diff.same { background: var(--surface-higher); color: var(--text-2); border: 1px solid var(--border); }
+.compare-panel .compare-title { font-weight:700; color:var(--c-primary); margin-bottom:10px; font-size:13px; display:flex; align-items:center; gap:6px; }
+.compare-panel .compare-rows { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; align-items:center; }
+.compare-row { display:flex; flex-direction:column; gap:3px; }
+.compare-row .compare-label { font-size:11px; color:var(--c-muted); }
+.compare-row .compare-val { font-size:17px; font-weight:700; color:var(--c-text); font-variant-numeric:tabular-nums; font-family:'DM Mono',monospace; }
+.compare-diff { display:inline-flex; align-items:center; gap:4px; padding:5px 12px; border-radius:12px; font-weight:700; font-size:13px; font-variant-numeric:tabular-nums; font-family:'DM Mono',monospace; }
+.compare-diff.up   { background:var(--c-danger-bg);  color:var(--c-danger);  border:1px solid rgba(220,38,38,.25); }
+.compare-diff.down { background:var(--c-success-bg); color:var(--c-success); border:1px solid rgba(22,163,74,.25); }
+.compare-diff.same { background:var(--c-surface-2);  color:var(--c-text-2);  border:1px solid var(--c-border); }
 
-/* ===== iOS / iPhone fixes ===== */
-/* Prevent input zoom on focus (iOS zooms when font-size < 16px) */
-@media (max-width: 768px) {
-  input, select, textarea {
-    font-size: 16px !important;
-  }
-  .fields-grid input,
-  .stamp-input-row input,
-  .stamp-input-row select,
-  .bulk-fill input, .bulk-fill select {
-    font-size: 16px !important;
-  }
+/* ── CHART BUTTONS ── */
+.btn-chart-tab, .btn-gran-tab {
+  padding:6px 12px; font-size:13px; border:none; border-radius:4px;
+  cursor:pointer; font-family:inherit; background:transparent; color:var(--c-text-2);
+  font-weight:600; transition:all .15s; touch-action:manipulation;
 }
-/* Smooth momentum scroll on iOS for overflow containers */
-.card, [style*="overflow: auto"], [style*="overflow:auto"],
-[style*="max-height"], .tabs {
-  -webkit-overflow-scrolling: touch;
-}
-/* Prevent sticky hover state on touch */
-@media (hover: none) {
-  .btn:hover { transform: none; box-shadow: var(--shadow-sm); }
-  .card:hover { box-shadow: var(--shadow-sm); }
-  .upload-zone:hover { transform: none; }
+.btn-chart-tab:hover, .btn-gran-tab:hover { background:var(--c-primary-bg); }
+.btn-chart-tab.active { background:var(--c-primary); color:#fff; font-weight:700; }
+.btn-gran-tab.active  { background:var(--c-primary-h); color:#fff; font-weight:700; }
+.btn-gran-tab { padding:5px 12px; font-size:12px; }
+
+/* ── iOS INPUT ZOOM FIX ── */
+@media (max-width:768px) {
+  input, select, textarea { font-size:16px !important; }
+  .fields-grid input, .stamp-input-row input, .stamp-input-row select, .bulk-fill input, .bulk-fill select { font-size:16px !important; }
 }
 /* Tap highlight */
-* { -webkit-tap-highlight-color: rgba(76,154,255,0.15); }
-button, .btn, .tab, label[class] { cursor: pointer; touch-action: manipulation; }
+* { -webkit-tap-highlight-color: rgba(13,148,136,.12); }
+/* Hover none on touch */
+@media (hover:none) {
+  .btn:hover { transform:none; background:var(--c-surface-2); border-color:var(--c-border-2); color:var(--c-text); }
+  .card:hover { box-shadow:var(--shadow-sm); }
+  .upload-zone:hover { transform:none; }
+}
+
+/* ── HISTORY PAGE MONTH TABS ── */
+#pagCtrl { background:var(--c-surface); border:1px solid var(--c-border); border-radius:var(--radius); padding:8px 10px; margin-bottom:10px; font-size:12px; overflow-x:auto; display:flex; align-items:center; gap:4px; flex-wrap:wrap; box-shadow:var(--shadow-sm); }
 </style>
 </head>
 <body>
@@ -655,45 +573,30 @@ button, .btn, .tab, label[class] { cursor: pointer; touch-action: manipulation; 
   <button class="tab" onclick="switchTab('guide')" id="tab-guide">📖 Hướng dẫn</button>
 </div>
 
-<!-- BOTTOM NAV — chỉ hiện trên mobile, luôn bắt được tap -->
+<!-- BOTTOM NAV — <a href="javascript:..."> iOS không bao giờ chặn -->
 <nav class="bottom-nav" id="bottomNav">
-  <button class="bn-item" id="bn-stamp"
-    onclick="switchTab('stamp')"
-    ontouchend="switchTab('stamp');event.preventDefault()">
-    <span class="bn-icon">📌</span>
-    <span class="bn-label">Đóng dấu</span>
-  </button>
-  <button class="bn-item active" id="bn-ocr"
-    onclick="switchTab('ocr')"
-    ontouchend="switchTab('ocr');event.preventDefault()">
-    <span class="bn-icon">📷</span>
-    <span class="bn-label">Quét OCR</span>
-  </button>
-  <button class="bn-item" id="bn-history"
-    onclick="switchTab('history')"
-    ontouchend="switchTab('history');event.preventDefault()">
-    <span class="bn-icon">📊</span>
-    <span class="bn-label">Lịch sử</span>
-  </button>
-  <button class="bn-item" id="bn-chart"
-    onclick="switchTab('chart')"
-    ontouchend="switchTab('chart');event.preventDefault()">
-    <span class="bn-icon">📈</span>
-    <span class="bn-label">Biểu đồ</span>
-  </button>
-  <button class="bn-item" id="bn-guide"
-    onclick="switchTab('guide')"
-    ontouchend="switchTab('guide');event.preventDefault()">
-    <span class="bn-icon">📖</span>
-    <span class="bn-label">Hướng dẫn</span>
-  </button>
+  <a class="bn-item" id="bn-stamp" href="javascript:switchTab('stamp')">
+    <span class="bn-icon">📌</span><span class="bn-label">Đóng dấu</span>
+  </a>
+  <a class="bn-item active" id="bn-ocr" href="javascript:switchTab('ocr')">
+    <span class="bn-icon">📷</span><span class="bn-label">Quét OCR</span>
+  </a>
+  <a class="bn-item" id="bn-history" href="javascript:switchTab('history')">
+    <span class="bn-icon">📊</span><span class="bn-label">Lịch sử</span>
+  </a>
+  <a class="bn-item" id="bn-chart" href="javascript:switchTab('chart')">
+    <span class="bn-icon">📈</span><span class="bn-label">Biểu đồ</span>
+  </a>
+  <a class="bn-item" id="bn-guide" href="javascript:switchTab('guide')">
+    <span class="bn-icon">📖</span><span class="bn-label">Hướng dẫn</span>
+  </a>
 </nav>
 
 <!-- ====== TRANG ĐÓNG DẤU ====== -->
 <div id="page-stamp" style="display:none;">
   
-  <div style="background: var(--warning-bg); border-left:3px solid var(--warning); padding:10px 14px; border-radius:6px; margin-bottom:12px; font-size:13px; color: var(--text-2);">
-    <strong style="color:var(--warning);">💡 Khi nào dùng:</strong> Ảnh gốc chưa có watermark Timemark, hoặc watermark sai. Tool sẽ đè watermark giả lập lên <strong>đầu ảnh</strong> theo format chuẩn để OCR đọc dễ.
+  <div style="background: var(--c-warn-bg); border-left:3px solid var(--c-warn); padding:10px 14px; border-radius:6px; margin-bottom:12px; font-size:13px; color: var(--c-text-2);">
+    <strong style="color:var(--c-warn);">💡 Khi nào dùng:</strong> Ảnh gốc chưa có watermark Timemark, hoặc watermark sai. Tool sẽ đè watermark giả lập lên <strong>đầu ảnh</strong> theo format chuẩn để OCR đọc dễ.
   </div>
   
   <div class="stepper-mini" id="stampStepper">
@@ -712,9 +615,9 @@ button, .btn, .tab, label[class] { cursor: pointer; touch-action: manipulation; 
       <div class="upload-title">Chọn nhiều ảnh cùng lúc</div>
       <div class="upload-hint">Bấm hoặc kéo thả · Khuyến nghị dưới 30 ảnh / lần</div>
     </label>
-    <div id="stampUploadInfo" style="margin-top: 12px; font-size: 13px; color: var(--success); display: none;"></div>
-    <div style="margin-top: 12px; padding: 10px 14px; background: var(--warning-bg); border: 1px solid rgba(251,189,35,0.35); border-radius: 6px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-      <span><strong style="color: var(--warning);">✏️ Không có ảnh?</strong> <span style="color:var(--text-2);">Bạn có thể nhập chỉ số trực tiếp.</span></span>
+    <div id="stampUploadInfo" style="margin-top: 12px; font-size: 13px; color: var(--c-success); display: none;"></div>
+    <div style="margin-top: 12px; padding: 10px 14px; background: var(--c-warn-bg); border: 1px solid rgba(217,119,6,0.35); border-radius: 6px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+      <span><strong style="color: var(--c-warn);">✏️ Không có ảnh?</strong> <span style="color:var(--c-text-2);">Bạn có thể nhập chỉ số trực tiếp.</span></span>
       <button class="btn btn-warning" onclick="goToManualEntry()">→ Sang mode nhập tay</button>
     </div>
     <div style="text-align: right; margin-top: 12px;">
@@ -733,11 +636,11 @@ button, .btn, .tab, label[class] { cursor: pointer; touch-action: manipulation; 
       <button class="btn btn-warning" onclick="stampBulkFill()">Áp dụng cho hết</button>
     </div>
     
-    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">
+    <div style="font-size: 12px; color: var(--c-muted); margin-bottom: 8px;">
       💡 Nhập Mã + Chỉ số cho từng ảnh. Click thumbnail để xem ảnh to.
     </div>
     
-    <div style="border: 1px solid var(--border); border-radius: 6px; max-height: 60vh; overflow: auto; -webkit-overflow-scrolling: touch;">
+    <div style="border: 1px solid var(--c-border); border-radius: 6px; max-height: 60vh; overflow: auto; -webkit-overflow-scrolling: touch;">
       <div class="stamp-input-header">
         <div>Ảnh</div>
         <div>#</div>
@@ -778,7 +681,7 @@ button, .btn, .tab, label[class] { cursor: pointer; touch-action: manipulation; 
   <div id="stampStep4" class="card" style="display:none;">
     <h3 style="font-size: 14px; margin-bottom: 10px;">Bước 4: Hoàn tất - chọn cách sử dụng</h3>
     
-    <div id="stampZipInfo" style="background: var(--success-bg); padding:12px 16px; border-radius:6px; font-size:13px; margin-bottom:16px; border: 1px solid rgba(54,211,153,0.25);"></div>
+    <div id="stampZipInfo" style="background: var(--c-success-bg); padding:12px 16px; border-radius:6px; font-size:13px; margin-bottom:16px; border: 1px solid rgba(22,163,74,0.25);"></div>
     
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
       <button class="btn btn-success" id="stampDownloadBtn" onclick="stampDownloadAll()" style="padding: 16px; flex-direction: column; height: auto;">
@@ -793,7 +696,7 @@ button, .btn, .tab, label[class] { cursor: pointer; touch-action: manipulation; 
       </button>
     </div>
     
-    <div id="stampProgress" style="margin-top: 12px; display: none; font-size: 13px; color: var(--text-2);"></div>
+    <div id="stampProgress" style="margin-top: 12px; display: none; font-size: 13px; color: var(--c-text-2);"></div>
     
     <div style="display: flex; justify-content: space-between; margin-top: 16px;">
       <button class="btn" onclick="stampGoStep(3)">← Quay lại preview</button>
@@ -808,40 +711,40 @@ button, .btn, .tab, label[class] { cursor: pointer; touch-action: manipulation; 
 <div id="page-ocr">
 
 <!-- TOGGLE: Mode nhập tay (không cần ảnh) -->
-<div class="card" style="background: var(--warning-bg); border: 1px solid rgba(251,189,35,0.35);">
+<div class="card" style="background: var(--c-warn-bg); border: 1px solid rgba(217,119,6,0.35);">
   <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:14px;">
-    <input type="checkbox" id="manualModeToggle" onchange="toggleManualMode()" style="width:18px; height:18px; cursor:pointer; accent-color: var(--warning);">
-    <span style="font-weight: 600; color: var(--warning);">✏️ Nhập tay (không cần ảnh)</span>
-    <span style="font-size:12px; color: var(--text-2); font-weight: normal;">— Bật khi muốn gõ chỉ số trực tiếp, bỏ qua OCR</span>
+    <input type="checkbox" id="manualModeToggle" onchange="toggleManualMode()" style="width:18px; height:18px; cursor:pointer; accent-color: var(--c-warn);">
+    <span style="font-weight: 600; color: var(--c-warn);">✏️ Nhập tay (không cần ảnh)</span>
+    <span style="font-size:12px; color: var(--c-text-2); font-weight: normal;">— Bật khi muốn gõ chỉ số trực tiếp, bỏ qua OCR</span>
   </label>
 </div>
 
 <!-- KHỐI OCR GỐC (ẩn khi mode nhập tay bật) -->
 <div id="ocrModeBlock">
 
-<div class="card" style="border: 1px solid rgba(76,154,255,0.35); background: rgba(76,154,255,0.06);">
+<div class="card" style="border: 1px solid rgba(13,148,136,0.35); background: rgba(13,148,136,0.06);">
   <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
     <div style="font-size: 28px;">📅</div>
     <div style="flex: 1; min-width: 160px;">
-      <div style="font-weight: 600; font-size: 14px; color: var(--primary-light); margin-bottom: 4px;">
+      <div style="font-weight: 600; font-size: 14px; color: var(--c-primary); margin-bottom: 4px;">
         Bước 1: Chọn ngày ghi chỉ số
       </div>
-      <div style="font-size: 12px; color: var(--text-2);">
+      <div style="font-size: 12px; color: var(--c-text-2);">
         Tất cả ảnh quét sau đây sẽ được gán ngày này
       </div>
     </div>
-    <input type="date" id="readingDate" style="height:40px; padding:0 12px; font-size:15px; font-weight:600; color:var(--primary-light); border:1px solid var(--primary); border-radius:6px; font-family:inherit; background:var(--surface-higher);">
+    <input type="date" id="readingDate" style="height:40px; padding:0 12px; font-size:15px; font-weight:600; color:var(--c-primary); border:1px solid var(--c-primary); border-radius:6px; font-family:inherit; background:var(--c-surface-2);">
   </div>
 </div>
 
 <div class="card">
-  <div style="font-weight: 600; font-size: 14px; margin-bottom: 10px; color: var(--text);">
+  <div style="font-weight: 600; font-size: 14px; margin-bottom: 10px; color: var(--c-text);">
     Bước 2: Quét ảnh
   </div>
-  <div style="background: var(--warning-bg); border: 1px solid rgba(251,189,35,0.35); border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; font-size: 13px; color: var(--text);">
+  <div style="background: var(--c-warn-bg); border: 1px solid rgba(217,119,6,0.35); border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; font-size: 13px; color: var(--c-text);">
     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-      <input type="checkbox" id="cropTopOnly" checked style="width:16px; height:16px; accent-color: var(--warning); flex-shrink: 0;">
-      <span><strong style="color: var(--warning);">Chỉ quét vùng đóng dấu mới (30% trên đầu ảnh)</strong> <span style="color: var(--text-2);">— bỏ qua watermark Timemark cũ ở dưới</span></span>
+      <input type="checkbox" id="cropTopOnly" checked style="width:16px; height:16px; accent-color: var(--c-warn); flex-shrink: 0;">
+      <span><strong style="color: var(--c-warn);">Chỉ quét vùng đóng dấu mới (30% trên đầu ảnh)</strong> <span style="color: var(--c-text-2);">— bỏ qua watermark Timemark cũ ở dưới</span></span>
     </label>
   </div>
   <label class="upload-zone" id="uploadZone">
@@ -865,8 +768,8 @@ button, .btn, .tab, label[class] { cursor: pointer; touch-action: manipulation; 
       ✗ Lỗi: <strong id="countWarn">0</strong>
     </div>
     <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-      <label style="font-size:12px; color:var(--text-2);">🔍 Lọc mã:</label>
-      <select id="filterMaResults" onchange="renderResults()" style="height:32px; padding:0 8px; font-size:13px; border:1px solid var(--border-strong); border-radius:4px; font-family:inherit; background:var(--surface-higher);">
+      <label style="font-size:12px; color:var(--c-text-2);">🔍 Lọc mã:</label>
+      <select id="filterMaResults" onchange="renderResults()" style="height:32px; padding:0 8px; font-size:13px; border:1px solid var(--c-border-2); border-radius:4px; font-family:inherit; background:var(--c-surface-2);">
         <option value="">Tất cả</option>
       </select>
       <button class="btn btn-success" onclick="saveToExcel()">💾 Lưu vào Sheet</button>
@@ -882,20 +785,20 @@ button, .btn, .tab, label[class] { cursor: pointer; touch-action: manipulation; 
 
 <!-- KHỐI NHẬP TAY (hiện khi tick) -->
 <div id="manualModeBlock" style="display:none;">
-  <div class="card" style="border: 2px solid var(--warning); background: var(--surface-elevated);">
+  <div class="card" style="border: 2px solid var(--c-warn); background: var(--c-surface-2);">
     <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px;">
       <div style="font-size: 28px;">✏️</div>
       <div style="flex: 1; min-width: 160px;">
-        <div style="font-weight: 600; font-size: 14px; color: var(--warning); margin-bottom: 4px;">
+        <div style="font-weight: 600; font-size: 14px; color: var(--c-warn); margin-bottom: 4px;">
           Chọn ngày ghi chỉ số
         </div>
-        <div style="font-size: 12px; color: var(--text-2);">
+        <div style="font-size: 12px; color: var(--c-text-2);">
           Tất cả chỉ số bên dưới sẽ được gán ngày này
         </div>
       </div>
-      <input type="date" id="manualDate" style="height:40px; padding:0 12px; font-size:15px; font-weight:600; color:var(--warning); border:1px solid var(--warning); border-radius:6px; font-family:inherit; background:var(--surface-higher);">
+      <input type="date" id="manualDate" style="height:40px; padding:0 12px; font-size:15px; font-weight:600; color:var(--c-warn); border:1px solid var(--c-warn); border-radius:6px; font-family:inherit; background:var(--c-surface-2);">
     </div>
-    <div style="font-size: 12px; color: var(--text-2); line-height: 1.5;">
+    <div style="font-size: 12px; color: var(--c-text-2); line-height: 1.5;">
       💡 Nhập <strong>chỉ số</strong> cho các mã cần ghi · Để trống nếu không ghi mã đó · Bấm "Lưu vào lịch sử" khi xong.
     </div>
   </div>
@@ -908,7 +811,7 @@ button, .btn, .tab, label[class] { cursor: pointer; touch-action: manipulation; 
         <button class="btn btn-success" onclick="manualSaveToHistory()" style="font-weight:600;">💾 Lưu vào lịch sử</button>
       </div>
     </div>
-    <div id="manualEntryStats" style="font-size: 12px; color: var(--text-2); margin-bottom: 8px; padding: 6px 10px; background: var(--surface-elevated); border-radius: 4px;">
+    <div id="manualEntryStats" style="font-size: 12px; color: var(--c-text-2); margin-bottom: 8px; padding: 6px 10px; background: var(--c-surface-2); border-radius: 4px;">
       Đã nhập: <strong>0</strong>/26 mã
     </div>
     <div id="manualEntryGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px;"></div>
@@ -925,11 +828,11 @@ button, .btn, .tab, label[class] { cursor: pointer; touch-action: manipulation; 
       Lần cuối: <strong id="lastUpdate">—</strong>
     </div>
     <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-      <label style="font-size:12px; color:var(--text-2);">📅 Lọc ngày:</label>
-      <input type="date" id="filterNgayHistory" onchange="onPickFilterNgay()" style="height:32px; padding:0 8px; font-size:13px; border:1px solid var(--border-strong); border-radius:4px; font-family:inherit; background:var(--surface-higher);">
+      <label style="font-size:12px; color:var(--c-text-2);">📅 Lọc ngày:</label>
+      <input type="date" id="filterNgayHistory" onchange="onPickFilterNgay()" style="height:32px; padding:0 8px; font-size:13px; border:1px solid var(--c-border-2); border-radius:4px; font-family:inherit; background:var(--c-surface-2);">
       <button class="btn" id="clearNgayFilterBtn" onclick="clearNgayFilter()" title="Xóa filter ngày" style="padding:4px 8px; font-size:13px; display:none;">✕</button>
-      <label style="font-size:12px; color:var(--text-2);">🔍 Lọc mã:</label>
-      <select id="filterMaHistory" onchange="onPickFilterMa()" style="height:32px; padding:0 8px; font-size:13px; border:1px solid var(--border-strong); border-radius:4px; font-family:inherit; background:var(--surface-higher);">
+      <label style="font-size:12px; color:var(--c-text-2);">🔍 Lọc mã:</label>
+      <select id="filterMaHistory" onchange="onPickFilterMa()" style="height:32px; padding:0 8px; font-size:13px; border:1px solid var(--c-border-2); border-radius:4px; font-family:inherit; background:var(--c-surface-2);">
         <option value="">Tất cả</option>
       </select>
       <button class="btn btn-success" onclick="downloadExcel()">⬇️ Tải Excel</button>
@@ -946,7 +849,7 @@ button, .btn, .tab, label[class] { cursor: pointer; touch-action: manipulation; 
         <tr><th>#</th><th>Ngày</th><th>Mã</th><th>Chỉ số trước</th><th>Chỉ số</th><th>Tiêu thụ</th><th>Tổng tháng</th><th>File</th><th></th></tr>
       </thead>
       <tbody id="historyBody">
-        <tr><td colspan="9" style="text-align:center; padding:24px; color:var(--text-muted);">Chưa có dữ liệu</td></tr>
+        <tr><td colspan="9" style="text-align:center; padding:24px; color:var(--c-muted);">Chưa có dữ liệu</td></tr>
       </tbody>
     </table>
   </div>
@@ -961,10 +864,10 @@ button, .btn, .tab, label[class] { cursor: pointer; touch-action: manipulation; 
       📈 Biểu đồ tiêu thụ <span class="sep">|</span> <span id="chartRecordCount">0</span> bản ghi
     </div>
     <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-      <label style="font-size: 12px; color: var(--text-2);">Từ:</label>
-      <input type="date" id="chartStartDate" onchange="renderConsumptionChart()" style="height: 32px; padding: 0 8px; font-size: 13px; border: 1px solid var(--border-strong); border-radius: 4px; font-family: inherit;">
-      <label style="font-size: 12px; color: var(--text-2);">Đến:</label>
-      <input type="date" id="chartEndDate" onchange="renderConsumptionChart()" style="height: 32px; padding: 0 8px; font-size: 13px; border: 1px solid var(--border-strong); border-radius: 4px; font-family: inherit;">
+      <label style="font-size: 12px; color: var(--c-text-2);">Từ:</label>
+      <input type="date" id="chartStartDate" onchange="renderConsumptionChart()" style="height: 32px; padding: 0 8px; font-size: 13px; border: 1px solid var(--c-border-2); border-radius: 4px; font-family: inherit;">
+      <label style="font-size: 12px; color: var(--c-text-2);">Đến:</label>
+      <input type="date" id="chartEndDate" onchange="renderConsumptionChart()" style="height: 32px; padding: 0 8px; font-size: 13px; border: 1px solid var(--c-border-2); border-radius: 4px; font-family: inherit;">
       <button class="btn" onclick="resetChartDateRange()" title="Đặt lại về toàn bộ khoảng thời gian có dữ liệu">↺ Toàn bộ</button>
     </div>
   </div>
@@ -984,14 +887,14 @@ button, .btn, .tab, label[class] { cursor: pointer; touch-action: manipulation; 
     </div>
 
     <div id="chartGranRow" style="display:none; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px; padding-top:12px; border-top:1px solid #E5E4DD;">
-      <span style="font-size: 12px; font-weight: 600; color: var(--text-2);">Gộp theo:</span>
+      <span style="font-size: 12px; font-weight: 600; color: var(--c-text-2);">Gộp theo:</span>
       <div class="seg-control gran">
         <button onclick="setChartGran('day')" class="seg-btn small active" id="cgDay">Ngày</button>
         <button onclick="setChartGran('week')" class="seg-btn small" id="cgWeek">Tuần</button>
         <button onclick="setChartGran('month')" class="seg-btn small" id="cgMonth">Tháng</button>
       </div>
-      <span style="margin-left: 12px; font-size: 12px; font-weight: 600; color: var(--text-2);">Đồng hồ:</span>
-      <select id="chartMaSelector" onchange="setChartMa(this.value)" style="height:30px; padding:0 8px; font-size:13px; border:1px solid var(--border-strong); border-radius:4px; font-family:inherit; background:var(--surface-higher); min-width:160px;">
+      <span style="margin-left: 12px; font-size: 12px; font-weight: 600; color: var(--c-text-2);">Đồng hồ:</span>
+      <select id="chartMaSelector" onchange="setChartMa(this.value)" style="height:30px; padding:0 8px; font-size:13px; border:1px solid var(--c-border-2); border-radius:4px; font-family:inherit; background:var(--c-surface-2); min-width:160px;">
         <option value="">Tất cả mã (tổng)</option>
       </select>
     </div>
@@ -1001,12 +904,12 @@ button, .btn, .tab, label[class] { cursor: pointer; touch-action: manipulation; 
   <div class="kpi-grid" id="chartKpiGrid" style="display:none;"></div>
 
   <!-- Compare panel (only when compare on + có data) -->
-  <div class="card compare-panel" id="chartComparePanel" style="display:none; padding:14px 16px; background:var(--primary-bg); border-left:4px solid var(--primary);"></div>
+  <div class="card compare-panel" id="chartComparePanel" style="display:none; padding:14px 16px; background:var(--c-primary-bg); border-left:4px solid var(--c-primary);"></div>
 
   <!-- Chart canvas -->
   <div class="card" style="padding: 14px 16px;">
     <div id="chartCaption" style="font-size:13px; color:#2C2C2A; font-weight:600; margin-bottom:8px;"></div>
-    <div id="chartEmptyState" style="display:none; padding:32px 16px; text-align:center; color:var(--text-muted);"></div>
+    <div id="chartEmptyState" style="display:none; padding:32px 16px; text-align:center; color:var(--c-muted);"></div>
     <div id="chartCanvasWrap" style="position: relative; height: 400px;">
       <canvas id="consumptionChart"></canvas>
     </div>
@@ -1015,113 +918,113 @@ button, .btn, .tab, label[class] { cursor: pointer; touch-action: manipulation; 
 
 <div id="page-guide" style="display:none;">
   <div class="card">
-    <h2 style="font-size: 18px; margin-bottom: 6px; color: var(--text); letter-spacing: -0.01em;">📖 Hướng dẫn sử dụng</h2>
-    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 18px;">Bộ công cụ tích hợp cho việc ghi & theo dõi chỉ số đồng hồ nước tại nhà máy</p>
+    <h2 style="font-size: 18px; margin-bottom: 6px; color: var(--c-text); letter-spacing: -0.01em;">📖 Hướng dẫn sử dụng</h2>
+    <p style="font-size: 13px; color: var(--c-muted); margin-bottom: 18px;">Bộ công cụ tích hợp cho việc ghi & theo dõi chỉ số đồng hồ nước tại nhà máy</p>
 
     <!-- TAB 1: ĐÓNG DẤU ẢNH -->
-    <div style="padding: 14px 16px; background: var(--surface-elevated); border-radius: var(--radius); margin-bottom: 12px; border-left: 3px solid var(--primary);">
-      <h3 style="font-size: 14px; color: var(--primary-light); margin-bottom: 8px;">📌 Tab "Đóng dấu ảnh"</h3>
-      <p style="font-size: 13px; color: var(--text-2); margin-bottom: 10px;">Upload nhiều ảnh từ điện thoại → gắn ghi chú <strong style="color: var(--text);">"Mã đồng hồ - Chỉ số - Ngày"</strong> lên góc trên ảnh → tải về máy hoặc gửi thẳng sang OCR.</p>
-      <ol style="font-size: 13px; color: var(--text-2); padding-left: 22px; line-height: 1.8;">
-        <li><strong style="color: var(--text);">Bước 1:</strong> Bấm "Chọn nhiều ảnh cùng lúc" — chọn các ảnh đồng hồ đã chụp</li>
-        <li><strong style="color: var(--text);">Bước 2:</strong> Điền Mã (vd <code style="background: var(--surface-higher); padding: 1px 6px; border-radius: 3px; color: var(--primary-light);">01</code>, <code style="background: var(--surface-higher); padding: 1px 6px; border-radius: 3px; color: var(--primary-light);">3a</code>, <code style="background: var(--surface-higher); padding: 1px 6px; border-radius: 3px; color: var(--primary-light);">BYPASS</code>) + Chỉ số cho mỗi ảnh</li>
-        <li><strong style="color: var(--text);">Bước 3:</strong> Preview kết quả</li>
-        <li><strong style="color: var(--text);">Bước 4:</strong> Bấm <strong style="color: var(--success);">📁 Lưu vào folder</strong> để chọn folder và lưu tất cả ảnh đặt tên <code style="background: var(--surface-higher); padding: 1px 6px; border-radius: 3px;">DHxx_chỉ_số.jpg</code></li>
+    <div style="padding: 14px 16px; background: var(--c-surface-2); border-radius: var(--radius); margin-bottom: 12px; border-left: 3px solid var(--c-primary);">
+      <h3 style="font-size: 14px; color: var(--c-primary); margin-bottom: 8px;">📌 Tab "Đóng dấu ảnh"</h3>
+      <p style="font-size: 13px; color: var(--c-text-2); margin-bottom: 10px;">Upload nhiều ảnh từ điện thoại → gắn ghi chú <strong style="color: var(--c-text);">"Mã đồng hồ - Chỉ số - Ngày"</strong> lên góc trên ảnh → tải về máy hoặc gửi thẳng sang OCR.</p>
+      <ol style="font-size: 13px; color: var(--c-text-2); padding-left: 22px; line-height: 1.8;">
+        <li><strong style="color: var(--c-text);">Bước 1:</strong> Bấm "Chọn nhiều ảnh cùng lúc" — chọn các ảnh đồng hồ đã chụp</li>
+        <li><strong style="color: var(--c-text);">Bước 2:</strong> Điền Mã (vd <code style="background: var(--c-surface-2); padding: 1px 6px; border-radius: 3px; color: var(--c-primary);">01</code>, <code style="background: var(--c-surface-2); padding: 1px 6px; border-radius: 3px; color: var(--c-primary);">3a</code>, <code style="background: var(--c-surface-2); padding: 1px 6px; border-radius: 3px; color: var(--c-primary);">BYPASS</code>) + Chỉ số cho mỗi ảnh</li>
+        <li><strong style="color: var(--c-text);">Bước 3:</strong> Preview kết quả</li>
+        <li><strong style="color: var(--c-text);">Bước 4:</strong> Bấm <strong style="color: var(--c-success);">📁 Lưu vào folder</strong> để chọn folder và lưu tất cả ảnh đặt tên <code style="background: var(--c-surface-2); padding: 1px 6px; border-radius: 3px;">DHxx_chỉ_số.jpg</code></li>
       </ol>
-      <div style="margin-top: 10px; padding: 8px 12px; background: var(--warning-bg); border-left: 3px solid var(--warning); border-radius: 4px; font-size: 12px; color: var(--text-2);">
-        💡 <strong style="color: var(--warning);">Mẹo:</strong> Nếu không có ảnh, bấm box vàng <em>"Sang mode nhập tay"</em> để gõ số liệu trực tiếp.
+      <div style="margin-top: 10px; padding: 8px 12px; background: var(--c-warn-bg); border-left: 3px solid var(--c-warn); border-radius: 4px; font-size: 12px; color: var(--c-text-2);">
+        💡 <strong style="color: var(--c-warn);">Mẹo:</strong> Nếu không có ảnh, bấm box vàng <em>"Sang mode nhập tay"</em> để gõ số liệu trực tiếp.
       </div>
     </div>
 
     <!-- TAB 2: QUÉT OCR -->
-    <div style="padding: 14px 16px; background: var(--surface-elevated); border-radius: var(--radius); margin-bottom: 12px; border-left: 3px solid var(--success);">
-      <h3 style="font-size: 14px; color: var(--success); margin-bottom: 8px;">📷 Tab "Quét OCR"</h3>
-      <p style="font-size: 13px; color: var(--text-2); margin-bottom: 10px;">Đọc tự động Mã + Chỉ số từ ảnh đã đóng dấu (hoặc nhập tay).</p>
-      <ul style="font-size: 13px; color: var(--text-2); padding-left: 22px; line-height: 1.8;">
-        <li>Chọn <strong style="color: var(--text);">Ngày</strong> ghi chỉ số ở Bước 1</li>
-        <li>Bật <strong style="color: var(--warning);">"Chỉ quét vùng đóng dấu mới"</strong> để bỏ qua watermark Timemark cũ ở đáy ảnh</li>
+    <div style="padding: 14px 16px; background: var(--c-surface-2); border-radius: var(--radius); margin-bottom: 12px; border-left: 3px solid var(--c-success);">
+      <h3 style="font-size: 14px; color: var(--c-success); margin-bottom: 8px;">📷 Tab "Quét OCR"</h3>
+      <p style="font-size: 13px; color: var(--c-text-2); margin-bottom: 10px;">Đọc tự động Mã + Chỉ số từ ảnh đã đóng dấu (hoặc nhập tay).</p>
+      <ul style="font-size: 13px; color: var(--c-text-2); padding-left: 22px; line-height: 1.8;">
+        <li>Chọn <strong style="color: var(--c-text);">Ngày</strong> ghi chỉ số ở Bước 1</li>
+        <li>Bật <strong style="color: var(--c-warn);">"Chỉ quét vùng đóng dấu mới"</strong> để bỏ qua watermark Timemark cũ ở đáy ảnh</li>
         <li>Upload ảnh — OCR tự động đọc, hiện kết quả ngay</li>
-        <li>Kiểm tra số liệu, sửa ô nào sai (nếu có), bấm <strong style="color: var(--success);">💾 Lưu vào Excel</strong></li>
-        <li>Hoặc bật <strong style="color: var(--warning);">✏️ Nhập tay (không cần ảnh)</strong> → gõ 26 mã trên 1 form</li>
+        <li>Kiểm tra số liệu, sửa ô nào sai (nếu có), bấm <strong style="color: var(--c-success);">💾 Lưu vào Excel</strong></li>
+        <li>Hoặc bật <strong style="color: var(--c-warn);">✏️ Nhập tay (không cần ảnh)</strong> → gõ 26 mã trên 1 form</li>
       </ul>
     </div>
 
     <!-- TAB 3: LỊCH SỬ -->
-    <div style="padding: 14px 16px; background: var(--surface-elevated); border-radius: var(--radius); margin-bottom: 12px; border-left: 3px solid var(--primary-light);">
-      <h3 style="font-size: 14px; color: var(--primary-light); margin-bottom: 8px;">📊 Tab "Lịch sử"</h3>
-      <p style="font-size: 13px; color: var(--text-2); margin-bottom: 10px;">Xem tất cả số liệu đã lưu — có 3 cách xem:</p>
-      <ul style="font-size: 13px; color: var(--text-2); padding-left: 22px; line-height: 1.8;">
-        <li><strong style="color: var(--text);">Tất cả</strong>: phân trang 26 dòng/trang (đúng bằng số đồng hồ)</li>
-        <li><strong style="color: var(--text);">Lọc theo ngày</strong> 📅: chọn ngày trên lịch → hiện 26 mã của ngày đó</li>
-        <li><strong style="color: var(--text);">Lọc theo mã</strong> 🔍: phân trang <em>theo tháng</em> — mỗi tab T1/2026, T2/2026... là 1 tháng</li>
+    <div style="padding: 14px 16px; background: var(--c-surface-2); border-radius: var(--radius); margin-bottom: 12px; border-left: 3px solid var(--c-primary);">
+      <h3 style="font-size: 14px; color: var(--c-primary); margin-bottom: 8px;">📊 Tab "Lịch sử"</h3>
+      <p style="font-size: 13px; color: var(--c-text-2); margin-bottom: 10px;">Xem tất cả số liệu đã lưu — có 3 cách xem:</p>
+      <ul style="font-size: 13px; color: var(--c-text-2); padding-left: 22px; line-height: 1.8;">
+        <li><strong style="color: var(--c-text);">Tất cả</strong>: phân trang 26 dòng/trang (đúng bằng số đồng hồ)</li>
+        <li><strong style="color: var(--c-text);">Lọc theo ngày</strong> 📅: chọn ngày trên lịch → hiện 26 mã của ngày đó</li>
+        <li><strong style="color: var(--c-text);">Lọc theo mã</strong> 🔍: phân trang <em>theo tháng</em> — mỗi tab T1/2026, T2/2026... là 1 tháng</li>
       </ul>
-      <div style="margin-top: 10px; padding: 8px 12px; background: var(--primary-bg); border-left: 3px solid var(--primary); border-radius: 4px; font-size: 12px; color: var(--text-2);">
-        💡 <strong style="color: var(--primary-light);">Cột "Tổng tháng"</strong>: tính tổng tiêu thụ của mã đó trong tháng tương ứng. Quy ước: <em>tiêu thụ ngày X = chỉ số X+1 trừ chỉ số X</em>. Vd T1/2026 = chỉ số 1/2 − chỉ số 1/1.
+      <div style="margin-top: 10px; padding: 8px 12px; background: var(--c-primary-bg); border-left: 3px solid var(--c-primary); border-radius: 4px; font-size: 12px; color: var(--c-text-2);">
+        💡 <strong style="color: var(--c-primary);">Cột "Tổng tháng"</strong>: tính tổng tiêu thụ của mã đó trong tháng tương ứng. Quy ước: <em>tiêu thụ ngày X = chỉ số X+1 trừ chỉ số X</em>. Vd T1/2026 = chỉ số 1/2 − chỉ số 1/1.
       </div>
-      <div style="margin-top: 8px; padding: 8px 12px; background: var(--surface-higher); border-radius: 4px; font-size: 12px; color: var(--text-2);">
-        🖼 <strong style="color: var(--text);">Cột File</strong>: bấm vào thumbnail để xem lại ảnh gốc (nếu có).
+      <div style="margin-top: 8px; padding: 8px 12px; background: var(--c-surface-2); border-radius: 4px; font-size: 12px; color: var(--c-text-2);">
+        🖼 <strong style="color: var(--c-text);">Cột File</strong>: bấm vào thumbnail để xem lại ảnh gốc (nếu có).
       </div>
     </div>
 
     <!-- TAB 4: BIỂU ĐỒ -->
-    <div style="padding: 14px 16px; background: var(--surface-elevated); border-radius: var(--radius); margin-bottom: 12px; border-left: 3px solid var(--warning);">
-      <h3 style="font-size: 14px; color: var(--warning); margin-bottom: 8px;">📈 Tab "Biểu đồ"</h3>
-      <p style="font-size: 13px; color: var(--text-2); margin-bottom: 10px;">2 chế độ xem chính:</p>
-      <ul style="font-size: 13px; color: var(--text-2); padding-left: 22px; line-height: 1.8;">
-        <li><strong style="color: var(--primary-light);">📊 Theo mã</strong>: cột tiêu thụ của từng đồng hồ trong khoảng đã chọn. Bấm 1 cột để xem chi tiết theo thời gian cho mã đó.</li>
-        <li><strong style="color: var(--primary-light);">📈 Theo thời gian</strong>: gộp theo <strong>Ngày / Tuần / Tháng</strong>, có dropdown chọn mã cụ thể hoặc tổng tất cả.</li>
+    <div style="padding: 14px 16px; background: var(--c-surface-2); border-radius: var(--radius); margin-bottom: 12px; border-left: 3px solid var(--c-warn);">
+      <h3 style="font-size: 14px; color: var(--c-warn); margin-bottom: 8px;">📈 Tab "Biểu đồ"</h3>
+      <p style="font-size: 13px; color: var(--c-text-2); margin-bottom: 10px;">2 chế độ xem chính:</p>
+      <ul style="font-size: 13px; color: var(--c-text-2); padding-left: 22px; line-height: 1.8;">
+        <li><strong style="color: var(--c-primary);">📊 Theo mã</strong>: cột tiêu thụ của từng đồng hồ trong khoảng đã chọn. Bấm 1 cột để xem chi tiết theo thời gian cho mã đó.</li>
+        <li><strong style="color: var(--c-primary);">📈 Theo thời gian</strong>: gộp theo <strong>Ngày / Tuần / Tháng</strong>, có dropdown chọn mã cụ thể hoặc tổng tất cả.</li>
       </ul>
-      <div style="margin-top: 10px; padding: 8px 12px; background: rgba(76,154,255,0.08); border-left: 3px solid var(--primary); border-radius: 4px; font-size: 12px; color: var(--text-2);">
-        💡 <strong style="color: var(--primary-light);">So sánh kỳ trước:</strong> tick checkbox <strong>"📐 So sánh kỳ trước"</strong> để hiện thêm cột mờ của kỳ liền kề trước (cùng độ dài). Vd chọn 1/2 → 28/2 thì kỳ trước là 4/1 → 31/1.
+      <div style="margin-top: 10px; padding: 8px 12px; background: rgba(13,148,136,0.08); border-left: 3px solid var(--c-primary); border-radius: 4px; font-size: 12px; color: var(--c-text-2);">
+        💡 <strong style="color: var(--c-primary);">So sánh kỳ trước:</strong> tick checkbox <strong>"📐 So sánh kỳ trước"</strong> để hiện thêm cột mờ của kỳ liền kề trước (cùng độ dài). Vd chọn 1/2 → 28/2 thì kỳ trước là 4/1 → 31/1.
       </div>
-      <div style="margin-top: 8px; padding: 8px 12px; background: var(--surface-higher); border-radius: 4px; font-size: 12px; color: var(--text-2);">
-        🎨 <strong style="color: var(--text);">Màu cột:</strong> xanh = bình thường · <span style="color: var(--danger);">đỏ = cao nhất</span> · <span style="color: var(--warning);">vàng = thấp nhất</span>
+      <div style="margin-top: 8px; padding: 8px 12px; background: var(--c-surface-2); border-radius: 4px; font-size: 12px; color: var(--c-text-2);">
+        🎨 <strong style="color: var(--c-text);">Màu cột:</strong> xanh = bình thường · <span style="color: var(--c-danger);">đỏ = cao nhất</span> · <span style="color: var(--c-warn);">vàng = thấp nhất</span>
       </div>
     </div>
 
     <!-- DANH SÁCH 26 MÃ -->
-    <div style="padding: 14px 16px; background: var(--surface-elevated); border-radius: var(--radius); margin-bottom: 12px;">
-      <h3 style="font-size: 14px; color: var(--text); margin-bottom: 10px;">🏷 Danh sách 26 mã đồng hồ chuẩn</h3>
+    <div style="padding: 14px 16px; background: var(--c-surface-2); border-radius: var(--radius); margin-bottom: 12px;">
+      <h3 style="font-size: 14px; color: var(--c-text); margin-bottom: 10px;">🏷 Danh sách 26 mã đồng hồ chuẩn</h3>
       <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-        <span style="padding: 4px 10px; background: var(--surface-higher); border: 1px solid var(--border-strong); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--primary-light); font-weight: 600;">1</span>
-        <span style="padding: 4px 10px; background: var(--surface-higher); border: 1px solid var(--border-strong); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--primary-light); font-weight: 600;">2</span>
-        <span style="padding: 4px 10px; background: var(--surface-higher); border: 1px solid var(--border-strong); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--primary-light); font-weight: 600;">3a</span>
-        <span style="padding: 4px 10px; background: var(--surface-higher); border: 1px solid var(--border-strong); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--primary-light); font-weight: 600;">3b</span>
-        <span style="padding: 4px 10px; background: var(--surface-higher); border: 1px solid var(--border-strong); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--primary-light); font-weight: 600;">3c</span>
-        <span style="padding: 4px 10px; background: var(--surface-higher); border: 1px solid var(--border-strong); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--primary-light); font-weight: 600;">4</span>
-        <span style="padding: 4px 10px; background: var(--surface-higher); border: 1px solid var(--border-strong); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--primary-light); font-weight: 600;">5</span>
-        <span style="padding: 4px 10px; background: var(--surface-higher); border: 1px solid var(--border-strong); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--primary-light); font-weight: 600;">6</span>
-        <span style="padding: 4px 10px; background: var(--surface-higher); border: 1px solid var(--border-strong); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--primary-light); font-weight: 600;">7</span>
-        <span style="padding: 4px 10px; background: var(--surface-higher); border: 1px solid var(--border-strong); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--primary-light); font-weight: 600;">8</span>
-        <span style="padding: 4px 10px; background: var(--surface-higher); border: 1px solid var(--border-strong); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--primary-light); font-weight: 600;">9</span>
-        <span style="padding: 4px 10px; background: var(--surface-higher); border: 1px solid var(--border-strong); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--primary-light); font-weight: 600;">10</span>
-        <span style="padding: 4px 10px; background: var(--surface-higher); border: 1px solid var(--border-strong); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--primary-light); font-weight: 600;">11</span>
-        <span style="padding: 4px 10px; background: var(--surface-higher); border: 1px solid var(--border-strong); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--primary-light); font-weight: 600;">12</span>
-        <span style="padding: 4px 10px; background: var(--surface-higher); border: 1px solid var(--border-strong); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--primary-light); font-weight: 600;">13</span>
-        <span style="padding: 4px 10px; background: var(--surface-higher); border: 1px solid var(--border-strong); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--primary-light); font-weight: 600;">14</span>
-        <span style="padding: 4px 10px; background: var(--surface-higher); border: 1px solid var(--border-strong); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--primary-light); font-weight: 600;">15</span>
-        <span style="padding: 4px 10px; background: var(--surface-higher); border: 1px solid var(--border-strong); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--primary-light); font-weight: 600;">16</span>
-        <span style="padding: 4px 10px; background: var(--surface-higher); border: 1px solid var(--border-strong); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--primary-light); font-weight: 600;">17</span>
-        <span style="padding: 4px 10px; background: var(--surface-higher); border: 1px solid var(--border-strong); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--primary-light); font-weight: 600;">18</span>
-        <span style="padding: 4px 10px; background: var(--surface-higher); border: 1px solid var(--border-strong); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--primary-light); font-weight: 600;">19</span>
-        <span style="padding: 4px 10px; background: var(--surface-higher); border: 1px solid var(--border-strong); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--primary-light); font-weight: 600;">20</span>
-        <span style="padding: 4px 10px; background: rgba(76,154,255,0.15); border: 1px solid var(--primary); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--primary-light); font-weight: 600;">BYPASS</span>
-        <span style="padding: 4px 10px; background: rgba(54,211,153,0.15); border: 1px solid var(--success); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--success); font-weight: 600;">W06</span>
-        <span style="padding: 4px 10px; background: rgba(54,211,153,0.15); border: 1px solid var(--success); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--success); font-weight: 600;">W07</span>
-        <span style="padding: 4px 10px; background: rgba(251,189,35,0.15); border: 1px solid var(--warning); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--warning); font-weight: 600;">XLNT</span>
+        <span style="padding: 4px 10px; background: var(--c-surface-2); border: 1px solid var(--c-border-2); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-primary); font-weight: 600;">1</span>
+        <span style="padding: 4px 10px; background: var(--c-surface-2); border: 1px solid var(--c-border-2); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-primary); font-weight: 600;">2</span>
+        <span style="padding: 4px 10px; background: var(--c-surface-2); border: 1px solid var(--c-border-2); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-primary); font-weight: 600;">3a</span>
+        <span style="padding: 4px 10px; background: var(--c-surface-2); border: 1px solid var(--c-border-2); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-primary); font-weight: 600;">3b</span>
+        <span style="padding: 4px 10px; background: var(--c-surface-2); border: 1px solid var(--c-border-2); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-primary); font-weight: 600;">3c</span>
+        <span style="padding: 4px 10px; background: var(--c-surface-2); border: 1px solid var(--c-border-2); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-primary); font-weight: 600;">4</span>
+        <span style="padding: 4px 10px; background: var(--c-surface-2); border: 1px solid var(--c-border-2); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-primary); font-weight: 600;">5</span>
+        <span style="padding: 4px 10px; background: var(--c-surface-2); border: 1px solid var(--c-border-2); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-primary); font-weight: 600;">6</span>
+        <span style="padding: 4px 10px; background: var(--c-surface-2); border: 1px solid var(--c-border-2); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-primary); font-weight: 600;">7</span>
+        <span style="padding: 4px 10px; background: var(--c-surface-2); border: 1px solid var(--c-border-2); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-primary); font-weight: 600;">8</span>
+        <span style="padding: 4px 10px; background: var(--c-surface-2); border: 1px solid var(--c-border-2); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-primary); font-weight: 600;">9</span>
+        <span style="padding: 4px 10px; background: var(--c-surface-2); border: 1px solid var(--c-border-2); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-primary); font-weight: 600;">10</span>
+        <span style="padding: 4px 10px; background: var(--c-surface-2); border: 1px solid var(--c-border-2); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-primary); font-weight: 600;">11</span>
+        <span style="padding: 4px 10px; background: var(--c-surface-2); border: 1px solid var(--c-border-2); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-primary); font-weight: 600;">12</span>
+        <span style="padding: 4px 10px; background: var(--c-surface-2); border: 1px solid var(--c-border-2); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-primary); font-weight: 600;">13</span>
+        <span style="padding: 4px 10px; background: var(--c-surface-2); border: 1px solid var(--c-border-2); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-primary); font-weight: 600;">14</span>
+        <span style="padding: 4px 10px; background: var(--c-surface-2); border: 1px solid var(--c-border-2); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-primary); font-weight: 600;">15</span>
+        <span style="padding: 4px 10px; background: var(--c-surface-2); border: 1px solid var(--c-border-2); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-primary); font-weight: 600;">16</span>
+        <span style="padding: 4px 10px; background: var(--c-surface-2); border: 1px solid var(--c-border-2); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-primary); font-weight: 600;">17</span>
+        <span style="padding: 4px 10px; background: var(--c-surface-2); border: 1px solid var(--c-border-2); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-primary); font-weight: 600;">18</span>
+        <span style="padding: 4px 10px; background: var(--c-surface-2); border: 1px solid var(--c-border-2); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-primary); font-weight: 600;">19</span>
+        <span style="padding: 4px 10px; background: var(--c-surface-2); border: 1px solid var(--c-border-2); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-primary); font-weight: 600;">20</span>
+        <span style="padding: 4px 10px; background: rgba(13,148,136,0.15); border: 1px solid var(--c-primary); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-primary); font-weight: 600;">BYPASS</span>
+        <span style="padding: 4px 10px; background: rgba(22,163,74,0.15); border: 1px solid var(--c-success); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-success); font-weight: 600;">W06</span>
+        <span style="padding: 4px 10px; background: rgba(22,163,74,0.15); border: 1px solid var(--c-success); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-success); font-weight: 600;">W07</span>
+        <span style="padding: 4px 10px; background: rgba(217,119,6,0.15); border: 1px solid var(--c-warn); border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; color: var(--c-warn); font-weight: 600;">XLNT</span>
       </div>
-      <div style="margin-top: 10px; font-size: 12px; color: var(--text-muted);">
-        Khi nhập tay, mã có thể viết hoa hoặc thường (<code style="color: var(--text-2);">3A</code> = <code style="color: var(--text-2);">3a</code>), có hoặc không số 0 đầu (<code style="color: var(--text-2);">01</code> = <code style="color: var(--text-2);">1</code>, <code style="color: var(--text-2);">W06</code> = <code style="color: var(--text-2);">W6</code>).
+      <div style="margin-top: 10px; font-size: 12px; color: var(--c-muted);">
+        Khi nhập tay, mã có thể viết hoa hoặc thường (<code style="color: var(--c-text-2);">3A</code> = <code style="color: var(--c-text-2);">3a</code>), có hoặc không số 0 đầu (<code style="color: var(--c-text-2);">01</code> = <code style="color: var(--c-text-2);">1</code>, <code style="color: var(--c-text-2);">W06</code> = <code style="color: var(--c-text-2);">W6</code>).
       </div>
     </div>
 
     <!-- MẸO CHỤP ẢNH -->
-    <div style="padding: 14px 16px; background: var(--surface-elevated); border-radius: var(--radius); border-left: 3px solid var(--danger);">
-      <h3 style="font-size: 14px; color: var(--danger); margin-bottom: 8px;">💡 Mẹo chụp ảnh để OCR đọc chính xác</h3>
-      <ul style="font-size: 13px; color: var(--text-2); padding-left: 22px; line-height: 1.8;">
-        <li>📱 Chụp <strong style="color: var(--text);">dọc (portrait)</strong>, không chụp ngang</li>
+    <div style="padding: 14px 16px; background: var(--c-surface-2); border-radius: var(--radius); border-left: 3px solid var(--c-danger);">
+      <h3 style="font-size: 14px; color: var(--c-danger); margin-bottom: 8px;">💡 Mẹo chụp ảnh để OCR đọc chính xác</h3>
+      <ul style="font-size: 13px; color: var(--c-text-2); padding-left: 22px; line-height: 1.8;">
+        <li>📱 Chụp <strong style="color: var(--c-text);">dọc (portrait)</strong>, không chụp ngang</li>
         <li>☀️ Tránh nắng chiếu vào góc dưới — vùng OCR</li>
-        <li>🎨 Cài camera để chữ <strong style="color: var(--text);">trắng đậm trên nền tối</strong> — không dùng chữ đỏ</li>
+        <li>🎨 Cài camera để chữ <strong style="color: var(--c-text);">trắng đậm trên nền tối</strong> — không dùng chữ đỏ</li>
         <li>📏 Tăng cỡ chữ Timemark lên to nhất có thể</li>
         <li>📐 Cầm máy thẳng, không nghiêng — chỉ số dễ đọc</li>
         <li>📷 Lấy chỉ số rõ nét, không bị mờ rung tay</li>
@@ -1136,15 +1039,15 @@ button, .btn, .tab, label[class] { cursor: pointer; touch-action: manipulation; 
 
 <!-- Modal xác nhận ngày sau khi chọn ảnh -->
 <div class="modal" id="dateConfirmModal">
-  <div style="background: var(--surface-elevated); border: 1px solid var(--border); border-radius: var(--radius); padding:20px 22px; max-width:420px; width:100%; box-shadow: var(--shadow-md), 0 0 40px rgba(76,154,255,0.15);">
-    <div style="font-size:16px; font-weight:600; color: var(--primary-light); margin-bottom:4px;">📅 Xác nhận ngày ghi chỉ số</div>
-    <div id="dateConfirmCount" style="font-size:13px; color: var(--text-muted); margin-bottom:14px;">Sắp quét … ảnh</div>
+  <div style="background: var(--c-surface-2); border: 1px solid var(--c-border); border-radius: var(--radius); padding:20px 22px; max-width:420px; width:100%; box-shadow: var(--shadow-md), 0 0 40px rgba(13,148,136,0.15);">
+    <div style="font-size:16px; font-weight:600; color: var(--c-primary); margin-bottom:4px;">📅 Xác nhận ngày ghi chỉ số</div>
+    <div id="dateConfirmCount" style="font-size:13px; color: var(--c-muted); margin-bottom:14px;">Sắp quét … ảnh</div>
 
-    <label style="font-size:13px; color: var(--text); font-weight:600; display:block; margin-bottom:6px;">
+    <label style="font-size:13px; color: var(--c-text); font-weight:600; display:block; margin-bottom:6px;">
       Ngày sẽ được gán cho tất cả ảnh:
     </label>
-    <input type="date" id="dateConfirmInput" style="width:100%; height:42px; padding:0 12px; font-size:16px; font-weight:600; color: var(--primary-light); border:1px solid var(--primary); border-radius:6px; font-family:inherit; background: var(--surface-higher); margin-bottom:6px;">
-    <div id="dateConfirmHint" style="font-size:12px; color: var(--text-muted); margin-bottom:16px;"></div>
+    <input type="date" id="dateConfirmInput" style="width:100%; height:42px; padding:0 12px; font-size:16px; font-weight:600; color: var(--c-primary); border:1px solid var(--c-primary); border-radius:6px; font-family:inherit; background: var(--c-surface-2); margin-bottom:6px;">
+    <div id="dateConfirmHint" style="font-size:12px; color: var(--c-muted); margin-bottom:16px;"></div>
 
     <div style="display:flex; gap:8px; justify-content:flex-end;">
       <button class="btn" onclick="cancelDateConfirm()">Hủy</button>
@@ -1163,9 +1066,9 @@ function showToast(msg, type) {
     toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;max-width:90vw;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.4);transition:opacity 0.3s;';
     document.body.appendChild(toast);
   }
-  toast.style.background = type === 'error' ? 'var(--danger-bg)' : 'var(--success-bg)';
-  toast.style.color = type === 'error' ? 'var(--danger)' : 'var(--success)';
-  toast.style.border = `1px solid ${type === 'error' ? 'rgba(248,114,114,0.4)' : 'rgba(54,211,153,0.4)'}`;
+  toast.style.background = type === 'error' ? 'var(--c-danger-bg)' : 'var(--c-success-bg)';
+  toast.style.color = type === 'error' ? 'var(--c-danger)' : 'var(--c-success)';
+  toast.style.border = `1px solid ${type === 'error' ? 'rgba(220,38,38,0.4)' : 'rgba(22,163,74,0.4)'}`;
   toast.textContent = msg;
   toast.style.opacity = '1';
   clearTimeout(toast._t);
@@ -1231,7 +1134,7 @@ function isStandardMa(ma) {
 function loadHistory() {
   // Hiện loading indicator
   const tbody = document.getElementById('historyBody');
-  if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px; color:var(--text-muted);"><span class="spinner"></span> Đang tải dữ liệu từ Google Sheets...</td></tr>';
+  if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px; color:var(--c-muted);"><span class="spinner"></span> Đang tải dữ liệu từ Google Sheets...</td></tr>';
 
   google.script.run
     .withSuccessHandler(function(data) {
@@ -1314,7 +1217,7 @@ function renderHistoryMissingMaNote(filterNgay, itemsToShow) {
   const unknown = [...unknownMap.values()];
 
   if (missing.length === 0 && unknown.length === 0) {
-    box.style.cssText = 'display:block; margin-bottom:12px; padding:10px 14px; border-radius:6px; font-size:13px; background:var(--success-bg); border-left:3px solid var(--success); color:var(--success);';
+    box.style.cssText = 'display:block; margin-bottom:12px; padding:10px 14px; border-radius:6px; font-size:13px; background:var(--c-success-bg); border-left:3px solid var(--c-success); color:var(--c-success);';
     box.innerHTML = `✓ Đầy đủ <strong>${MA_LIST.length}/${MA_LIST.length}</strong> mã chuẩn cho ngày <strong>${escapeHtml(filterNgay)}</strong>`;
     return;
   }
@@ -1323,17 +1226,17 @@ function renderHistoryMissingMaNote(filterNgay, itemsToShow) {
   if (missing.length > 0) {
     parts.push(`<div style="margin-bottom:6px;"><strong>⚠ Ngày ${escapeHtml(filterNgay)} thiếu ${missing.length}/${MA_LIST.length} mã:</strong></div>
       <div style="display:flex; flex-wrap:wrap; gap:4px;">${
-        missing.map(m => `<span style="background:var(--surface-higher); border:1px solid #F0C5C5; color:var(--danger); padding:2px 8px; border-radius:4px; font-weight:600; font-size:12px;">${escapeHtml(m)}</span>`).join('')
+        missing.map(m => `<span style="background:var(--c-surface-2); border:1px solid #F0C5C5; color:var(--c-danger); padding:2px 8px; border-radius:4px; font-weight:600; font-size:12px;">${escapeHtml(m)}</span>`).join('')
       }</div>`);
   }
   if (unknown.length > 0) {
     parts.push(`<div style="margin-top:8px;"><strong>ℹ Mã không thuộc danh sách 26 mã chuẩn:</strong> ${
-      unknown.map(m => `<span style="background:var(--surface-higher); border:1px solid #C0D5EC; color:#0C447C; padding:2px 8px; border-radius:4px; font-weight:600; font-size:12px;">${escapeHtml(m)}</span>`).join(' ')
+      unknown.map(m => `<span style="background:var(--c-surface-2); border:1px solid #C0D5EC; color:#0C447C; padding:2px 8px; border-radius:4px; font-weight:600; font-size:12px;">${escapeHtml(m)}</span>`).join(' ')
     }</div>`);
   }
 
   const hasMissing = missing.length > 0;
-  box.style.cssText = `display:block; margin-bottom:12px; padding:10px 14px; border-radius:6px; font-size:13px; background:${hasMissing ? 'var(--danger-bg)' : 'var(--warning-bg)'}; border-left:3px solid ${hasMissing ? 'var(--danger)' : 'var(--warning)'};`;
+  box.style.cssText = `display:block; margin-bottom:12px; padding:10px 14px; border-radius:6px; font-size:13px; background:${hasMissing ? 'var(--c-danger-bg)' : 'var(--c-warn-bg)'}; border-left:3px solid ${hasMissing ? 'var(--c-danger)' : 'var(--c-warn)'};`;
   box.innerHTML = parts.join('');
 }
 
@@ -1352,7 +1255,7 @@ function updateHistoryUI() {
   
   const tbody = document.getElementById('historyBody');
   if (history.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px; color:var(--text-muted);">Chưa có dữ liệu</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px; color:var(--c-muted);">Chưa có dữ liệu</td></tr>';
     refreshFilterOptions('filterMaHistory', []);
     refreshNgayFilterOptions('filterNgayHistory', []);
     const noteBox = document.getElementById('historyMissingMaNote');
@@ -1405,7 +1308,7 @@ function updateHistoryUI() {
     if (filterNgay) msg = `Không có bản ghi nào ngày "${filterNgay}"`;
     else if (filterMa) msg = `Không có bản ghi nào với mã "${filterMa}"`;
     else msg = 'Không có bản ghi nào';
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:24px; color:var(--text-muted);">${msg}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:24px; color:var(--c-muted);">${msg}</td></tr>`;
     const pagCtrl = document.getElementById('historyPagination');
     if (pagCtrl) pagCtrl.style.display = 'none';
     return;
@@ -1473,39 +1376,39 @@ function updateHistoryUI() {
   }
 
   tbody.innerHTML = pagedItems.map(({ r, idx, tt, prev }) => {
-    let ttHtml = '<span style="color:var(--text-muted);">—</span>';
+    let ttHtml = '<span style="color:var(--c-muted);">—</span>';
     if (tt !== null && tt !== undefined) {
-      if (tt < 0) ttHtml = `<span style="color:var(--danger); font-weight:600;" title="Chỉ số giảm so với lần trước - cần kiểm tra">${tt} ⚠</span>`;
-      else ttHtml = `<strong style="color:var(--success);">${tt}</strong>`;
+      if (tt < 0) ttHtml = `<span style="color:var(--c-danger); font-weight:600;" title="Chỉ số giảm so với lần trước - cần kiểm tra">${tt} ⚠</span>`;
+      else ttHtml = `<strong style="color:var(--c-success);">${tt}</strong>`;
     }
     const prevHtml = (prev !== null && prev !== undefined)
-      ? `<span style="color:var(--text-2);">${prev}</span>`
-      : '<span style="color:var(--text-muted);">—</span>';
+      ? `<span style="color:var(--c-text-2);">${prev}</span>`
+      : '<span style="color:var(--c-muted);">—</span>';
 
     // Cột Tổng tháng - tổng tiêu thụ của mã này trong tháng của row
     const iso = ngayToSortable(r.ngay);
     const ym = iso.substring(0, 7); // YYYY-MM
     const maNorm = normalizeMa(r.ma);
     const monthTotal = monthlyTotals[maNorm] && monthlyTotals[maNorm][ym];
-    let monthTotalHtml = '<span style="color:var(--text-muted);">—</span>';
+    let monthTotalHtml = '<span style="color:var(--c-muted);">—</span>';
     if (monthTotal !== undefined && !isNaN(monthTotal)) {
       const mm = ym.substring(5, 7);
       const yy = ym.substring(0, 4);
-      monthTotalHtml = `<span style="color:var(--primary-light); font-weight:600;" title="Tổng tiêu thụ mã ${r.ma} trong tháng ${mm}/${yy}">${monthTotal.toFixed(2)}</span>`;
+      monthTotalHtml = `<span style="color:var(--c-primary); font-weight:600;" title="Tổng tiêu thụ mã ${r.ma} trong tháng ${mm}/${yy}">${monthTotal.toFixed(2)}</span>`;
     }
 
     // File: nếu có thumbDataUrl → click xem ảnh; nếu không (manual hoặc data cũ) → text mờ
     let fileCellHtml;
     if (r.thumbDataUrl) {
       const safeUrl = r.thumbDataUrl.replace(/'/g, "\\'");
-      fileCellHtml = `<a href="#" onclick="showModal('${safeUrl}'); return false;" style="display:inline-flex; align-items:center; gap:6px; color:var(--primary-light); text-decoration:none; max-width:200px; overflow:hidden;" title="Bấm để xem ảnh">
-        <img src="${r.thumbDataUrl}" style="width:28px; height:28px; object-fit:cover; border-radius:4px; border:1px solid var(--border); flex-shrink:0;">
+      fileCellHtml = `<a href="#" onclick="showModal('${safeUrl}'); return false;" style="display:inline-flex; align-items:center; gap:6px; color:var(--c-primary); text-decoration:none; max-width:200px; overflow:hidden;" title="Bấm để xem ảnh">
+        <img src="${r.thumbDataUrl}" style="width:28px; height:28px; object-fit:cover; border-radius:4px; border:1px solid var(--c-border); flex-shrink:0;">
         <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px;">${escapeHtml(r.filename || '')}</span>
       </a>`;
     } else if (r.filename === '(nhập tay)' || r.matchedPattern === 'manual') {
-      fileCellHtml = `<span style="color:var(--warning); font-size:11px; font-style:italic;">✏️ Nhập tay</span>`;
+      fileCellHtml = `<span style="color:var(--c-warn); font-size:11px; font-style:italic;">✏️ Nhập tay</span>`;
     } else {
-      fileCellHtml = `<span style="color:var(--text-muted); font-size:11px;" title="Không có ảnh thumbnail">${escapeHtml(r.filename || '—')}</span>`;
+      fileCellHtml = `<span style="color:var(--c-muted); font-size:11px;" title="Không có ảnh thumbnail">${escapeHtml(r.filename || '—')}</span>`;
     }
 
     return `<tr>
@@ -1541,7 +1444,7 @@ function updateHistoryUI() {
           ${label}${isActive ? ` <span style="opacity:0.7; font-weight:normal;">(${count})</span>` : ''}
         </button>`;
       }).join(' ');
-      pagCtrl.innerHTML = `<span style="font-size:12px; color:var(--text-2); margin-right:6px;">📅 Chọn tháng:</span>${tabs}<span style="margin-left:8px; font-size:11px; color:var(--text-muted);">${totalRows} bản ghi · ${monthList.length} tháng</span>`;
+      pagCtrl.innerHTML = `<span style="font-size:12px; color:var(--c-text-2); margin-right:6px;">📅 Chọn tháng:</span>${tabs}<span style="margin-left:8px; font-size:11px; color:var(--c-muted);">${totalRows} bản ghi · ${monthList.length} tháng</span>`;
       pagCtrl.style.display = 'flex';
     } else if (isUnfiltered && totalPages > 1) {
       const btn = (label, page, disabled, title) => 
@@ -1549,8 +1452,8 @@ function updateHistoryUI() {
       pagCtrl.innerHTML = `
         ${btn('« Đầu', 1, historyPage===1)}
         ${btn('← Trước', historyPage-1, historyPage===1)}
-        <span style="padding:0 8px;">Trang <strong style="color:var(--primary-light);">${historyPage}</strong> / ${totalPages} 
-          <span style="color:var(--text-muted);">· ${totalRows} bản ghi · ${HISTORY_PAGE_SIZE}/trang</span></span>
+        <span style="padding:0 8px;">Trang <strong style="color:var(--c-primary);">${historyPage}</strong> / ${totalPages} 
+          <span style="color:var(--c-muted);">· ${totalRows} bản ghi · ${HISTORY_PAGE_SIZE}/trang</span></span>
         ${btn('Sau →', historyPage+1, historyPage===totalPages)}
         ${btn('Cuối »', totalPages, historyPage===totalPages)}
       `;
@@ -1720,7 +1623,7 @@ function renderConsumptionChart() {
 
   if (history.length === 0) {
     captionEl.textContent = '';
-    showEmpty('<div style="font-size:32px; margin-bottom:8px;">📊</div><div style="font-size:14px; color:var(--text-2);">Chưa có dữ liệu trong lịch sử</div><div style="font-size:12px; color:var(--text-muted); margin-top:4px;">Quét OCR, nhập tay hoặc nhập JSON để bắt đầu</div>');
+    showEmpty('<div style="font-size:32px; margin-bottom:8px;">📊</div><div style="font-size:14px; color:var(--c-text-2);">Chưa có dữ liệu trong lịch sử</div><div style="font-size:12px; color:var(--c-muted); margin-top:4px;">Quét OCR, nhập tay hoặc nhập JSON để bắt đầu</div>');
     return;
   }
 
@@ -1787,8 +1690,8 @@ function renderChartByMa(canvas, start, end) {
 
   const entries = Object.values(agg);
   if (entries.length === 0) {
-    captionEl.innerHTML = `Tiêu thụ theo mã đồng hồ <span style="color:var(--text-muted); font-weight:normal;">· Từ ${start} → ${end}</span>`;
-    emptyEl.innerHTML = '<div style="font-size:32px; margin-bottom:8px;">📊</div><div style="font-size:14px; color:var(--danger);">Không có dữ liệu tiêu thụ trong khoảng đã chọn</div><div style="font-size:12px; color:var(--text-muted); margin-top:4px;">Tiêu thụ chỉ tính được khi mã đó có ≥ 2 lần ghi</div>';
+    captionEl.innerHTML = `Tiêu thụ theo mã đồng hồ <span style="color:var(--c-muted); font-weight:normal;">· Từ ${start} → ${end}</span>`;
+    emptyEl.innerHTML = '<div style="font-size:32px; margin-bottom:8px;">📊</div><div style="font-size:14px; color:var(--c-danger);">Không có dữ liệu tiêu thụ trong khoảng đã chọn</div><div style="font-size:12px; color:var(--c-muted); margin-top:4px;">Tiêu thụ chỉ tính được khi mã đó có ≥ 2 lần ghi</div>';
     emptyEl.style.display = 'block';
     wrapEl.style.display = 'none';
     kpiEl.style.display = 'none';
@@ -1817,7 +1720,7 @@ function renderChartByMa(canvas, start, end) {
   const maxIdx = data.indexOf(Math.max(...data));
   const minIdx = data.indexOf(Math.min(...data));
 
-  captionEl.innerHTML = `Tiêu thụ theo mã đồng hồ <span style="color:var(--text-muted); font-weight:normal;">· ${start} → ${end} · 💡 bấm cột để xem chi tiết theo thời gian</span>`;
+  captionEl.innerHTML = `Tiêu thụ theo mã đồng hồ <span style="color:var(--c-muted); font-weight:normal;">· ${start} → ${end} · 💡 bấm cột để xem chi tiết theo thời gian</span>`;
 
   kpiEl.innerHTML = `
     <div class="kpi-card kpi-total">
@@ -1872,7 +1775,7 @@ function renderChartByMa(canvas, start, end) {
     } else {
       cmpEl.innerHTML = `
         <div class="compare-title">📐 So sánh với kỳ trước</div>
-        <div style="font-size:12px; color:var(--text-2);">⚠ Kỳ trước (${prevStart} → ${prevEnd}) không có dữ liệu để so sánh.</div>
+        <div style="font-size:12px; color:var(--c-text-2);">⚠ Kỳ trước (${prevStart} → ${prevEnd}) không có dữ liệu để so sánh.</div>
       `;
     }
     cmpEl.style.display = 'block';
@@ -1993,13 +1896,13 @@ function renderChartByTime(canvas, start, end) {
   const granText = chartGranularity === 'day' ? 'ngày'
                   : chartGranularity === 'week' ? 'tuần' : 'tháng';
   const maText = chartSelectedMa
-    ? `mã <strong style="color:var(--primary-light);">${escapeHtml(getDisplayMa(chartSelectedMa))}</strong>`
+    ? `mã <strong style="color:var(--c-primary);">${escapeHtml(getDisplayMa(chartSelectedMa))}</strong>`
     : '<strong>tất cả mã (tổng)</strong>';
 
-  captionEl.innerHTML = `Tiêu thụ theo ${granText} cho ${maText} <span style="color:var(--text-muted); font-weight:normal;">· ${start} → ${end}</span>`;
+  captionEl.innerHTML = `Tiêu thụ theo ${granText} cho ${maText} <span style="color:var(--c-muted); font-weight:normal;">· ${start} → ${end}</span>`;
 
   if (data.length === 0) {
-    emptyEl.innerHTML = `<div style="font-size:32px; margin-bottom:8px;">📈</div><div style="font-size:14px; color:var(--danger);">Không có dữ liệu tiêu thụ trong khoảng đã chọn</div>`;
+    emptyEl.innerHTML = `<div style="font-size:32px; margin-bottom:8px;">📈</div><div style="font-size:14px; color:var(--c-danger);">Không có dữ liệu tiêu thụ trong khoảng đã chọn</div>`;
     emptyEl.style.display = 'block';
     wrapEl.style.display = 'none';
     kpiEl.style.display = 'none';
@@ -2280,10 +2183,10 @@ function renderManualEntryGrid() {
   // Chỉ render 1 lần nếu chưa có
   if (grid.children.length === MA_LIST.length) return;
   grid.innerHTML = MA_LIST.map((ma, i) => `
-    <div style="display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: var(--surface-elevated); border-radius: 6px; border: 1px solid var(--border);">
-      <div style="min-width: 38px; font-weight: 700; color: var(--primary-light); font-size: 13px;">${ma}</div>
+    <div style="display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: var(--c-surface-2); border-radius: 6px; border: 1px solid var(--c-border);">
+      <div style="min-width: 38px; font-weight: 700; color: var(--c-primary); font-size: 13px;">${ma}</div>
       <input type="number" step="any" min="0" id="manual_${i}" data-ma="${ma}" placeholder="Chỉ số" oninput="updateManualStats()"
-        style="flex: 1; height: 32px; padding: 0 8px; font-size: 13px; border: 1px solid var(--border-strong); border-radius: 4px; font-family: inherit; font-weight: 600; color: var(--success); min-width: 0; background: var(--surface-higher);">
+        style="flex: 1; height: 32px; padding: 0 8px; font-size: 13px; border: 1px solid var(--c-border-2); border-radius: 4px; font-family: inherit; font-weight: 600; color: var(--c-success); min-width: 0; background: var(--c-surface-2);">
     </div>
   `).join('');
   updateManualStats();
@@ -2294,7 +2197,7 @@ function updateManualStats() {
   let filled = 0;
   inputs.forEach(inp => { if (inp.value.trim() !== '') filled++; });
   const stats = document.getElementById('manualEntryStats');
-  stats.innerHTML = `Đã nhập: <strong style="color:${filled > 0 ? 'var(--success)' : 'var(--text-muted)'};">${filled}</strong>/${MA_LIST.length} mã`;
+  stats.innerHTML = `Đã nhập: <strong style="color:${filled > 0 ? 'var(--c-success)' : 'var(--c-muted)'};">${filled}</strong>/${MA_LIST.length} mã`;
 }
 
 function manualClearAll() {
@@ -2488,7 +2391,7 @@ function openDateConfirmModal() {
     if (!v) { hint.textContent = '⚠ Chưa chọn ngày'; hint.style.color = '#A32D2D'; return; }
     const [y, m, d] = v.split('-');
     hint.textContent = `→ Ngày sẽ ghi: ${d}/${m}/${y}`;
-    hint.style.color = 'var(--success)';
+    hint.style.color = 'var(--c-success)';
   };
   dateInput.oninput = updateHint;
   updateHint();
@@ -2698,7 +2601,7 @@ function renderResults() {
   list.innerHTML = results.map((r, i) => {
     const key = r.ma + '|' + (r.ngay || '');
     const isDupe = r.ma && dupeKeys.has(key);
-    const maStyle = isDupe ? 'background:var(--danger-bg); border-color:var(--danger);' : '';
+    const maStyle = isDupe ? 'background:var(--c-danger-bg); border-color:var(--c-danger);' : '';
     const dupeBadge = isDupe ? '<span class="badge badge-warn" style="margin-left:6px;">⚠ Trùng mã</span>' : '';
     const hidden = filterMa && r.ma !== filterMa ? 'display:none;' : '';
 
@@ -2724,7 +2627,7 @@ function renderResults() {
           : +(prev.chiSo - curCs).toFixed(2);  // hiện tại trước → prev - cur
       }
       if (isAnomaly) {
-        chiSoInputStyle = 'background: var(--danger-bg); border-color: var(--danger); color: var(--danger); font-weight:600;';
+        chiSoInputStyle = 'background: var(--c-danger-bg); border-color: var(--c-danger); color: var(--c-danger); font-weight:600;';
         chiSoTitle = prev.direction === 'before'
           ? `Chỉ số hiện tại (${curCs}) NHỎ HƠN lần trước ngày ${prev.ngay} (${prev.chiSo}) - kiểm tra lại!`
           : `Chỉ số hiện tại (${curCs}) LỚN HƠN lần ghi ngày ${prev.ngay} (${prev.chiSo}) - kiểm tra lại!`;
@@ -2737,20 +2640,20 @@ function renderResults() {
           const msg = prev.direction === 'before'
             ? `⚠ Giảm ${Math.abs(diff)} m³ so với lần trước!`
             : `⚠ Cao hơn ${Math.abs(diff)} m³ so với ngày sau!`;
-          diffHtml = `<span style="color: var(--danger); font-weight:600; margin-left:8px;">${msg}</span>`;
+          diffHtml = `<span style="color: var(--c-danger); font-weight:600; margin-left:8px;">${msg}</span>`;
         } else {
-          diffHtml = `<span style="color: var(--success); font-weight: 600; margin-left:8px;">Tiêu thụ: <strong>${diff >= 0 ? '+' : ''}${diff}</strong> m³</span>`;
+          diffHtml = `<span style="color: var(--c-success); font-weight: 600; margin-left:8px;">Tiêu thụ: <strong>${diff >= 0 ? '+' : ''}${diff}</strong> m³</span>`;
         }
       }
-      const bgBlock = isAnomaly ? 'var(--danger-bg)' : 'rgba(54,211,153,0.10)';
-      const borderBlock = isAnomaly ? 'var(--danger)' : 'var(--success)';
-      const textBlock = isAnomaly ? 'var(--danger)' : 'var(--text)';
+      const bgBlock = isAnomaly ? 'var(--c-danger-bg)' : 'rgba(22,163,74,0.10)';
+      const borderBlock = isAnomaly ? 'var(--c-danger)' : 'var(--c-success)';
+      const textBlock = isAnomaly ? 'var(--c-danger)' : 'var(--c-text)';
       prevBlock = `<div style="grid-column: 1 / -1; font-size:12px; padding:8px 12px; background:${bgBlock}; border-left:3px solid ${borderBlock}; border-radius:5px; margin-top:6px; color: ${textBlock};">
-        ${dirIcon} <span style="color: var(--text-2);">${label}:</span> <strong style="color: var(--text);">${prev.chiSo}</strong> <span style="color: var(--text-muted);">(ngày ${prev.ngay})</span>${diffHtml}
+        ${dirIcon} <span style="color: var(--c-text-2);">${label}:</span> <strong style="color: var(--c-text);">${prev.chiSo}</strong> <span style="color: var(--c-muted);">(ngày ${prev.ngay})</span>${diffHtml}
       </div>`;
     } else if (r.ma) {
-      prevBlock = `<div style="grid-column: 1 / -1; font-size:12px; padding:8px 12px; background: var(--surface-elevated); border-left:3px solid var(--text-muted); border-radius:5px; margin-top:6px; color: var(--text-2);">
-        📊 Chỉ số trước: <em style="color: var(--text-muted);">chưa có dữ liệu cho mã này</em>
+      prevBlock = `<div style="grid-column: 1 / -1; font-size:12px; padding:8px 12px; background: var(--c-surface-2); border-left:3px solid var(--c-muted); border-radius:5px; margin-top:6px; color: var(--c-text-2);">
+        📊 Chỉ số trước: <em style="color: var(--c-muted);">chưa có dữ liệu cho mã này</em>
       </div>`;
     }
 
@@ -2761,7 +2664,7 @@ function renderResults() {
         <div class="result-filename">${r.filename}</div>
         <div style="display:flex; align-items:center; gap:4px;">
           ${getStatusBadge(r)} ${dupeBadge} ${r.saved ? '<span class="badge badge-saved">💾</span>' : ''}
-          <button onclick="deleteResult(${i})" title="Xóa kết quả này" style="background:var(--surface-higher); border:1px solid #F0C5C5; color:var(--danger); width:24px; height:24px; border-radius:4px; cursor:pointer; font-size:14px; line-height:1; padding:0; margin-left:4px;">×</button>
+          <button onclick="deleteResult(${i})" title="Xóa kết quả này" style="background:var(--c-surface-2); border:1px solid #F0C5C5; color:var(--c-danger); width:24px; height:24px; border-radius:4px; cursor:pointer; font-size:14px; line-height:1; padding:0; margin-left:4px;">×</button>
         </div>
       </div>
       <div class="fields-grid">
@@ -2770,7 +2673,7 @@ function renderResults() {
         <label>Chỉ số:</label>
         <input type="text" value="${r.chiSo}" placeholder="m³" class="chi-so-input" style="${chiSoInputStyle}" title="${chiSoTitle}" onchange="updateField(${i}, 'chiSo', this.value)">
         <label>Ngày:</label>
-        <input type="text" value="${r.ngay}" readonly style="background:var(--surface-elevated); color:var(--text-2);" title="Ngày được lấy từ ô chọn ngày ở trên">
+        <input type="text" value="${r.ngay}" readonly style="background:var(--c-surface-2); color:var(--c-text-2);" title="Ngày được lấy từ ô chọn ngày ở trên">
         ${prevBlock}
       </div>
       <details>
@@ -2784,7 +2687,7 @@ function renderResults() {
   
   // Hiển thị thông báo nếu filter không khớp ai
   if (filterMa && filteredCount === 0) {
-    list.insertAdjacentHTML('beforeend', `<div style="text-align:center; padding:24px; color:var(--text-muted); font-size:13px;">Không có kết quả nào với mã "${filterMa}"</div>`);
+    list.insertAdjacentHTML('beforeend', `<div style="text-align:center; padding:24px; color:var(--c-muted); font-size:13px;">Không có kết quả nào với mã "${filterMa}"</div>`);
   } else if (filterMa) {
     list.insertAdjacentHTML('afterbegin', `<div style="font-size:12px; color:#0C447C; background:#E6F1FB; padding:8px 12px; border-radius:6px; margin-bottom:8px;">🔍 Đang lọc mã <strong>${filterMa}</strong>: ${filteredCount}/${results.length} ảnh</div>`);
   }
@@ -3603,22 +3506,22 @@ function renderStampMissingMaNote() {
   if (missing.length > 0) {
     parts.push(`<div style="margin-bottom:6px;"><strong>⚠ Còn thiếu ${missing.length}/${MA_LIST.length} mã chưa nhập:</strong></div>
       <div style="display:flex; flex-wrap:wrap; gap:4px;">${
-        missing.map(m => `<span style="background:var(--surface-higher); border:1px solid #F0C5C5; color:var(--danger); padding:2px 8px; border-radius:4px; font-weight:600; font-size:12px;">${escapeHtml(m)}</span>`).join('')
+        missing.map(m => `<span style="background:var(--c-surface-2); border:1px solid #F0C5C5; color:var(--c-danger); padding:2px 8px; border-radius:4px; font-weight:600; font-size:12px;">${escapeHtml(m)}</span>`).join('')
       }</div>`);
   }
   if (noChiSo.length > 0) {
     parts.push(`<div style="margin-top:8px;"><strong>⚠ Đã chọn mã nhưng chưa nhập chỉ số:</strong> ${
-      noChiSo.map(m => `<span style="background:var(--surface-higher); border:1px solid rgba(251,189,35,0.35); color:var(--warning); padding:2px 8px; border-radius:4px; font-weight:600; font-size:12px;">${escapeHtml(m)}</span>`).join(' ')
+      noChiSo.map(m => `<span style="background:var(--c-surface-2); border:1px solid rgba(217,119,6,0.35); color:var(--c-warn); padding:2px 8px; border-radius:4px; font-weight:600; font-size:12px;">${escapeHtml(m)}</span>`).join(' ')
     }</div>`);
   }
   if (unknown.length > 0) {
     parts.push(`<div style="margin-top:8px;"><strong>ℹ Mã không thuộc danh sách 26 mã chuẩn:</strong> ${
-      unknown.map(m => `<span style="background:var(--surface-higher); border:1px solid #C0D5EC; color:#0C447C; padding:2px 8px; border-radius:4px; font-weight:600; font-size:12px;">${escapeHtml(m)}</span>`).join(' ')
+      unknown.map(m => `<span style="background:var(--c-surface-2); border:1px solid #C0D5EC; color:#0C447C; padding:2px 8px; border-radius:4px; font-weight:600; font-size:12px;">${escapeHtml(m)}</span>`).join(' ')
     }</div>`);
   }
 
   const allMissing = missing.length > 0;
-  box.style.cssText = `display:block; margin-bottom:12px; padding:10px 14px; border-radius:6px; font-size:13px; background:${allMissing ? 'var(--danger-bg)' : 'var(--warning-bg)'}; border-left:3px solid ${allMissing ? 'var(--danger)' : 'var(--warning)'};`;
+  box.style.cssText = `display:block; margin-bottom:12px; padding:10px 14px; border-radius:6px; font-size:13px; background:${allMissing ? 'var(--c-danger-bg)' : 'var(--c-warn-bg)'}; border-left:3px solid ${allMissing ? 'var(--c-danger)' : 'var(--c-warn)'};`;
   box.innerHTML = parts.join('');
 }
 
@@ -3633,9 +3536,9 @@ async function stampRenderPreviews() {
   const errCount = stampItems.length - okCount;
   
   stats.innerHTML = `📊 Tổng: <strong>${stampItems.length}</strong> · ✓ Đủ data: <strong>${okCount}</strong>` +
-    (errCount > 0 ? ` · <span style="color:var(--danger);">⚠ Thiếu: <strong>${errCount}</strong></span>` : '');
+    (errCount > 0 ? ` · <span style="color:var(--c-danger);">⚠ Thiếu: <strong>${errCount}</strong></span>` : '');
   
-  grid.innerHTML = '<div style="padding:24px; text-align:center; color:var(--text-muted);">⏳ Đang render preview...</div>';
+  grid.innerHTML = '<div style="padding:24px; text-align:center; color:var(--c-muted);">⏳ Đang render preview...</div>';
   
   const html = [];
   for (let i = 0; i < stampItems.length; i++) {
@@ -3682,7 +3585,7 @@ function stampPrepareFinish() {
     lines.push(`&nbsp;&nbsp;📁 <code>${f}/</code> — ${n} ảnh`);
   });
   if (stampItems.length - okCount > 0) {
-    lines.push(`<br><span style="color:var(--danger);">⚠ Còn ${stampItems.length - okCount} ảnh thiếu data.</span>`);
+    lines.push(`<br><span style="color:var(--c-danger);">⚠ Còn ${stampItems.length - okCount} ảnh thiếu data.</span>`);
   }
   document.getElementById('stampZipInfo').innerHTML = lines.join('<br>');
 }
@@ -3735,7 +3638,7 @@ async function stampDownloadAll() {
     // 3a. Nếu browser hỗ trợ File System Access API → cho user chọn folder
     if (window.showDirectoryPicker) {
       try {
-        progress.innerHTML = `📁 <span style="color:var(--primary);">Chọn folder để lưu...</span> <span style="font-size:11px; color:var(--text-muted);">(Browser sẽ mở dialog chọn folder)</span>`;
+        progress.innerHTML = `📁 <span style="color:var(--c-primary);">Chọn folder để lưu...</span> <span style="font-size:11px; color:var(--c-muted);">(Browser sẽ mở dialog chọn folder)</span>`;
         const folderHandle = await window.showDirectoryPicker({
           mode: 'readwrite',
           startIn: 'pictures',
@@ -3750,11 +3653,11 @@ async function stampDownloadAll() {
           await writable.close();
           progress.textContent = `Đang lưu ${i+1}/${sorted.length}: ${filename}`;
         }
-        progress.innerHTML = `✅ <span style="color:var(--success); font-weight:600;">Đã lưu ${sorted.length} ảnh vào folder!</span> <span style="font-size:11px; color:var(--text-muted);">Tên: DHxx_chỉ_số · Sort theo mã tăng dần</span>`;
+        progress.innerHTML = `✅ <span style="color:var(--c-success); font-weight:600;">Đã lưu ${sorted.length} ảnh vào folder!</span> <span style="font-size:11px; color:var(--c-muted);">Tên: DHxx_chỉ_số · Sort theo mã tăng dần</span>`;
         return;
       } catch (err) {
         if (err.name === 'AbortError') {
-          progress.innerHTML = `<span style="color:var(--text-muted);">Đã hủy chọn folder.</span>`;
+          progress.innerHTML = `<span style="color:var(--c-muted);">Đã hủy chọn folder.</span>`;
           return;
         }
         // Lỗi khác → fallback sang tải từng file
@@ -3763,7 +3666,7 @@ async function stampDownloadAll() {
     }
 
     // 3b. Fallback: tải từng file riêng
-    progress.innerHTML = `<span style="color:var(--text-muted);">Browser không hỗ trợ chọn folder, tải từng file...</span>`;
+    progress.innerHTML = `<span style="color:var(--c-muted);">Browser không hỗ trợ chọn folder, tải từng file...</span>`;
     for (let i = 0; i < sorted.length; i++) {
       const { it } = sorted[i];
       const filename = `${formatMaForFilename(it.ma)}_${formatChiSoForFilename(it.chiSo)}.jpg`;
@@ -3777,10 +3680,10 @@ async function stampDownloadAll() {
       URL.revokeObjectURL(url);
       progress.textContent = `Đã tải ${i+1}/${sorted.length}: ${filename}`;
     }
-    progress.innerHTML = `✅ <span style="color:var(--success); font-weight:600;">Tải xong ${sorted.length} ảnh!</span>`;
+    progress.innerHTML = `✅ <span style="color:var(--c-success); font-weight:600;">Tải xong ${sorted.length} ảnh!</span>`;
 
   } catch (err) {
-    progress.innerHTML = `❌ <span style="color:var(--danger);">Lỗi: ${err.message}</span>`;
+    progress.innerHTML = `❌ <span style="color:var(--c-danger);">Lỗi: ${err.message}</span>`;
   } finally {
     btn.disabled = false;
   }
