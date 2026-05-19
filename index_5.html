@@ -657,23 +657,33 @@ button, .btn, .tab, label[class] { cursor: pointer; touch-action: manipulation; 
 
 <!-- BOTTOM NAV — chỉ hiện trên mobile, luôn bắt được tap -->
 <nav class="bottom-nav" id="bottomNav">
-  <button class="bn-item" id="bn-stamp" onclick="switchTab('stamp')">
+  <button class="bn-item" id="bn-stamp"
+    onclick="switchTab('stamp')"
+    ontouchend="switchTab('stamp');event.preventDefault()">
     <span class="bn-icon">📌</span>
     <span class="bn-label">Đóng dấu</span>
   </button>
-  <button class="bn-item active" id="bn-ocr" onclick="switchTab('ocr')">
+  <button class="bn-item active" id="bn-ocr"
+    onclick="switchTab('ocr')"
+    ontouchend="switchTab('ocr');event.preventDefault()">
     <span class="bn-icon">📷</span>
     <span class="bn-label">Quét OCR</span>
   </button>
-  <button class="bn-item" id="bn-history" onclick="switchTab('history')">
+  <button class="bn-item" id="bn-history"
+    onclick="switchTab('history')"
+    ontouchend="switchTab('history');event.preventDefault()">
     <span class="bn-icon">📊</span>
     <span class="bn-label">Lịch sử</span>
   </button>
-  <button class="bn-item" id="bn-chart" onclick="switchTab('chart')">
+  <button class="bn-item" id="bn-chart"
+    onclick="switchTab('chart')"
+    ontouchend="switchTab('chart');event.preventDefault()">
     <span class="bn-icon">📈</span>
     <span class="bn-label">Biểu đồ</span>
   </button>
-  <button class="bn-item" id="bn-guide" onclick="switchTab('guide')">
+  <button class="bn-item" id="bn-guide"
+    onclick="switchTab('guide')"
+    ontouchend="switchTab('guide');event.preventDefault()">
     <span class="bn-icon">📖</span>
     <span class="bn-label">Hướng dẫn</span>
   </button>
@@ -2213,16 +2223,34 @@ function deleteRecord(idx) {
 }
 
 function switchTab(tab) {
-  ['stamp', 'ocr', 'history', 'chart', 'guide'].forEach(t => {
-    document.getElementById('tab-' + t).classList.toggle('active', t === tab);
-    document.getElementById('page-' + t).style.display = t === tab ? 'block' : 'none';
-    // Sync bottom nav
-    const bn = document.getElementById('bn-' + t);
-    if (bn) bn.classList.toggle('active', t === tab);
+  const pages = ['stamp', 'ocr', 'history', 'chart', 'guide'];
+  pages.forEach(t => {
+    // Top tabs
+    const tabEl = document.getElementById('tab-' + t);
+    if (tabEl) tabEl.classList.toggle('active', t === tab);
+    // Bottom nav
+    const bnEl = document.getElementById('bn-' + t);
+    if (bnEl) bnEl.classList.toggle('active', t === tab);
+    // Page visibility — dùng visibility + display cùng lúc để iOS repaint
+    const pageEl = document.getElementById('page-' + t);
+    if (!pageEl) return;
+    if (t === tab) {
+      pageEl.style.display = 'block';
+      pageEl.style.visibility = 'visible';
+    } else {
+      pageEl.style.display = 'none';
+      pageEl.style.visibility = 'hidden';
+    }
   });
-  // Scroll lên đầu trang khi đổi tab (mobile UX)
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  // Khi chuyển sang tab chart, re-render để chart fit đúng kích thước
+
+  // Force iOS repaint (tránh bug display:none không cập nhật ngay)
+  document.body.style.webkitTransform = 'scale(1)';
+  requestAnimationFrame(() => { document.body.style.webkitTransform = ''; });
+
+  // Scroll lên đầu (không smooth để tránh conflict trên iOS)
+  window.scrollTo(0, 0);
+
+  // Khi chuyển sang tab chart, re-render
   if (tab === 'chart') {
     document.getElementById('chartRecordCount').textContent = history.length;
     populateChartMaSelector();
