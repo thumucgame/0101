@@ -275,41 +275,73 @@ details .pattern-found {
 .summary-stats strong { color: var(--text); font-weight: 600; }
 .summary-stats .sep { color: var(--border-strong); margin: 0 8px; }
 
-/* Tabs — modern dark style */
+/* Tabs — desktop horizontal tabs */
 .tabs {
   display: flex; gap: 2px; margin-bottom: 14px;
   border-bottom: 1px solid var(--border);
   padding: 0 4px;
-  /* Sticky: luôn hiện dù scroll xuống */
   position: sticky; top: 0; z-index: 50;
   background: var(--bg);
-  /* overflow-x:scroll thay vì auto để tránh iOS bắt touchstart */
-  overflow-x: scroll;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  overflow-x: scroll; scrollbar-width: none; -ms-overflow-style: none;
 }
 .tabs::-webkit-scrollbar { display: none; }
 .tab {
   padding: 11px 18px; cursor: pointer; font-size: 13px;
   font-weight: 500; color: var(--text-muted);
   border-bottom: 2px solid transparent; margin-bottom: -1px;
-  transition: all 0.15s;
-  white-space: nowrap;
+  transition: all 0.15s; white-space: nowrap;
   border-radius: 6px 6px 0 0;
-  /* Full button reset */
   background: none; border-top: none; border-left: none; border-right: none;
   font-family: inherit; outline: none;
-  /* manipulation: không delay 300ms, không zoom, bắn click ngay */
   touch-action: manipulation;
   -webkit-tap-highlight-color: rgba(76,154,255,0.2);
-  min-height: 44px;
-  display: inline-flex; align-items: center;
+  min-height: 44px; display: inline-flex; align-items: center;
   user-select: none; -webkit-user-select: none;
 }
 .tab:hover { color: var(--text); background: rgba(76,154,255,0.06); }
 .tab.active {
   color: var(--primary-light); border-bottom-color: var(--primary);
   font-weight: 600; background: linear-gradient(180deg, transparent 0%, rgba(76,154,255,0.08) 100%);
+}
+
+/* ===== BOTTOM NAV — chỉ hiện trên mobile ===== */
+.bottom-nav {
+  display: none; /* ẩn trên desktop */
+}
+@media (max-width: 768px) {
+  /* Ẩn top tabs, dùng bottom nav thay thế */
+  .tabs { display: none !important; }
+
+  .bottom-nav {
+    display: flex;
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 999;
+    background: var(--surface-elevated);
+    border-top: 1px solid var(--border-strong);
+    padding: 0; padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+  }
+  .bn-item {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 8px 4px; gap: 3px;
+    background: none; border: none; outline: none;
+    font-family: inherit; cursor: pointer;
+    color: var(--text-muted); font-size: 10px; font-weight: 500;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(76,154,255,0.25);
+    user-select: none; -webkit-user-select: none;
+    min-height: 56px;
+    transition: color 0.15s, background 0.15s;
+    -webkit-appearance: none; appearance: none;
+  }
+  .bn-item:active { background: rgba(76,154,255,0.1); }
+  .bn-item .bn-icon { font-size: 20px; line-height: 1; }
+  .bn-item .bn-label { font-size: 10px; line-height: 1.2; text-align: center; }
+  .bn-item.active { color: var(--primary-light); }
+  .bn-item.active .bn-icon { filter: drop-shadow(0 0 6px rgba(76,154,255,0.6)); }
+
+  /* Thêm padding dưới body để nội dung không bị che bởi bottom nav */
+  body { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
 }
 
 /* Table — dark polished */
@@ -622,6 +654,30 @@ button, .btn, .tab, label[class] { cursor: pointer; touch-action: manipulation; 
   <button class="tab" onclick="switchTab('chart')" id="tab-chart">📈 Biểu đồ</button>
   <button class="tab" onclick="switchTab('guide')" id="tab-guide">📖 Hướng dẫn</button>
 </div>
+
+<!-- BOTTOM NAV — chỉ hiện trên mobile, luôn bắt được tap -->
+<nav class="bottom-nav" id="bottomNav">
+  <button class="bn-item" id="bn-stamp" onclick="switchTab('stamp')">
+    <span class="bn-icon">📌</span>
+    <span class="bn-label">Đóng dấu</span>
+  </button>
+  <button class="bn-item active" id="bn-ocr" onclick="switchTab('ocr')">
+    <span class="bn-icon">📷</span>
+    <span class="bn-label">Quét OCR</span>
+  </button>
+  <button class="bn-item" id="bn-history" onclick="switchTab('history')">
+    <span class="bn-icon">📊</span>
+    <span class="bn-label">Lịch sử</span>
+  </button>
+  <button class="bn-item" id="bn-chart" onclick="switchTab('chart')">
+    <span class="bn-icon">📈</span>
+    <span class="bn-label">Biểu đồ</span>
+  </button>
+  <button class="bn-item" id="bn-guide" onclick="switchTab('guide')">
+    <span class="bn-icon">📖</span>
+    <span class="bn-label">Hướng dẫn</span>
+  </button>
+</nav>
 
 <!-- ====== TRANG ĐÓNG DẤU ====== -->
 <div id="page-stamp" style="display:none;">
@@ -2160,7 +2216,12 @@ function switchTab(tab) {
   ['stamp', 'ocr', 'history', 'chart', 'guide'].forEach(t => {
     document.getElementById('tab-' + t).classList.toggle('active', t === tab);
     document.getElementById('page-' + t).style.display = t === tab ? 'block' : 'none';
+    // Sync bottom nav
+    const bn = document.getElementById('bn-' + t);
+    if (bn) bn.classList.toggle('active', t === tab);
   });
+  // Scroll lên đầu trang khi đổi tab (mobile UX)
+  window.scrollTo({ top: 0, behavior: 'smooth' });
   // Khi chuyển sang tab chart, re-render để chart fit đúng kích thước
   if (tab === 'chart') {
     document.getElementById('chartRecordCount').textContent = history.length;
