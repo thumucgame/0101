@@ -1,0 +1,192 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TimeMark Mini</title>
+<style>
+body{font-family:Arial;margin:10px;background:#f5f5f5}
+select,input,button{width:100%;padding:12px;margin:6px 0;box-sizing:border-box}
+#reading{font-size:28px;font-weight:bold}
+button{font-weight:bold}
+canvas{width:100%;border:1px solid #ccc;background:#fff}
+.day{background:#fff;margin-top:10px;padding:10px;border-radius:8px}
+.item{border-top:1px solid #ddd;padding:8px 0}
+.thumb{width:120px}
+</style>
+</head>
+<body>
+
+<h2>TimeMark Mini</h2>
+
+<select id="meter"></select>
+
+<input type="file" id="photo" accept="image/*" capture="environment">
+
+<input id="reading" placeholder="Nhập chỉ số">
+
+<button onclick="buildImage()">TẠO ẢNH</button>
+<button onclick="saveRecord()">LƯU</button>
+<button onclick="loadHistory()">XEM LỊCH SỬ</button>
+
+<br><br>
+<canvas id="canvas"></canvas>
+
+<div id="historyBox"></div>
+
+<script>
+for(let i=1;i<=26;i++){
+ let o=document.createElement('option');
+ o.value='DH'+String(i).padStart(2,'0');
+ o.textContent=o.value;
+ document.getElementById('meter').appendChild(o);
+}
+
+let db=null;
+let img=null;
+
+const openReq=indexedDB.open("TimeMarkDB",1);
+
+openReq.onupgradeneeded=(e)=>{
+ const db=e.target.result;
+ if(!db.objectStoreNames.contains("records")){
+   db.createObjectStore("records",{keyPath:"id",autoIncrement:true});
+ }
+};
+
+openReq.onsuccess=(e)=>{
+ db=e.target.result;
+ console.log("DB READY");
+};
+
+document.getElementById("photo").addEventListener("change",(e)=>{
+ const file=e.target.files[0];
+ if(!file) return;
+
+ const im=new Image();
+ im.onload=()=>{ img=im; };
+ im.src=URL.createObjectURL(file);
+});
+
+function buildImage(){
+
+ if(!img){
+   alert("Chưa chọn ảnh");
+   return;
+ }
+
+ const meter=document.getElementById("meter").value;
+ const reading=document.getElementById("reading").value;
+
+ const canvas=document.getElementById("canvas");
+ const ctx=canvas.getContext("2d");
+
+ const header=250;
+
+ canvas.width=img.width;
+ canvas.height=img.height+header;
+
+ ctx.fillStyle="#fff";
+ ctx.fillRect(0,0,canvas.width,canvas.height);
+
+ const now=new Date();
+
+ ctx.fillStyle="#000";
+ ctx.font="bold 40px Arial";
+ ctx.fillText(now.toLocaleString("vi-VN"),20,50);
+
+ ctx.font="bold 50px Arial";
+ ctx.fillText("Đồng hồ: "+meter,20,120);
+
+ ctx.font="bold 60px Arial";
+ ctx.fillText("Chỉ số: "+reading,20,210);
+
+ ctx.drawImage(img,0,header,img.width,img.height);
+}
+
+function saveRecord(){
+
+ if(!db){
+   alert("Database chưa sẵn sàng");
+   return;
+ }
+
+ const canvas=document.getElementById("canvas");
+
+ if(canvas.width===0){
+   alert("Hãy bấm TẠO ẢNH trước");
+   return;
+ }
+
+ const now=new Date();
+
+ const rec={
+   date:now.toISOString().split("T")[0],
+   time:now.toLocaleTimeString("vi-VN"),
+   meter:document.getElementById("meter").value,
+   reading:document.getElementById("reading").value,
+   image:canvas.toDataURL("image/jpeg",0.8)
+ };
+
+ const tx=db.transaction(["records"],"readwrite");
+ tx.objectStore("records").add(rec);
+
+ tx.oncomplete=()=>{
+   alert("Đã lưu");
+   loadHistory();
+ };
+}
+
+function loadHistory(){
+
+ if(!db){
+   alert("Database chưa sẵn sàng");
+   return;
+ }
+
+ const tx=db.transaction(["records"],"readonly");
+ const req=tx.objectStore("records").getAll();
+
+ req.onsuccess=()=>{
+
+   const rows=req.result;
+
+   const groups={};
+
+   rows.forEach(r=>{
+      if(!groups[r.date]) groups[r.date]=[];
+      groups[r.date].push(r);
+   });
+
+   let html="";
+
+   Object.keys(groups)
+     .sort()
+     .reverse()
+     .forEach(date=>{
+
+       html+=`<div class="day">
+         <h3>📅 ${date} (${groups[date].length})</h3>`;
+
+       groups[date].forEach(r=>{
+         html+=`
+           <div class="item">
+             <b>${r.meter}</b><br>
+             Chỉ số: ${r.reading}<br>
+             Giờ: ${r.time}<br>
+             <img class="thumb" src="${r.image}">
+           </div>
+         `;
+       });
+
+       html+=`</div>`;
+     });
+
+   document.getElementById("historyBox").innerHTML=html;
+ };
+}
+</script>
+
+</body>
+</html>
