@@ -686,8 +686,9 @@ async function startSpeak(){
       const audioMime = mediaRecorder.mimeType || 'audio/webm';
 
       // Call Gemini 2.0 Flash (free tier, latest endpoint)
+      // Đã sửa: Chuyển từ gemini-2.0-flash sang gemini-1.5-flash để tránh lỗi Quota 429
       const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
