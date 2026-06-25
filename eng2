@@ -1,0 +1,271 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Học Giao Tiếp Tiếng Anh AI</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f2f2f7;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        h2 {
+            text-align: center;
+            color: #1c1c1e;
+            margin: 10px 0 5px 0;
+            font-size: 18px;
+        }
+        #chat-container {
+            flex: 1;
+            background: white;
+            border-radius: 16px;
+            padding: 15px;
+            overflow-y: auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            margin-bottom: 10px;
+        }
+        .message {
+            margin: 10px 0;
+            padding: 12px 16px;
+            border-radius: 20px;
+            max-width: 85%;
+            word-wrap: break-word;
+            font-size: 16px;
+            line-height: 1.4;
+        }
+        .user {
+            background-color: #34c759;
+            color: white;
+            margin-left: auto;
+        }
+        .bot {
+            background-color: #e5e5ea;
+            color: black;
+        }
+        #controls {
+            background: white;
+            padding: 12px;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        #input-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        textarea {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #d1d1d6;
+            border-radius: 18px;
+            font-size: 16px;
+            outline: none;
+            resize: none;
+            font-family: inherit;
+            height: 44px;
+            line-height: 20px;
+        }
+        button {
+            border: none;
+            color: white;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 18px;
+            height: 44px;
+            transition: opacity 0.2s;
+        }
+        button:active {
+            opacity: 0.7;
+        }
+        .btn-clear {
+            background-color: #8e8e93;
+            padding: 0 12px;
+        }
+        .btn-send {
+            background-color: #007aff;
+            padding: 0 20px;
+        }
+        .btn-mic {
+            background-color: #ff3b30;
+            width: 100%;
+            border-radius: 22px;
+            font-size: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 6px rgba(255, 59, 48, 0.2);
+        }
+        .btn-mic.recording {
+            background-color: #5856d6; /* Đổi sang màu tím khi đang nghe */
+            animation: pulse 1.5s infinite;
+            box-shadow: 0 4px 6px rgba(88, 86, 214, 0.3);
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <h2>🇬🇧 Luyện Giao Tiếp Tiếng Anh AI 🤖</h2>
+
+    <div id="chat-container">
+        <div class="message bot">Hi! Chào mừng bạn đến với lớp học giao tiếp. <br><br><b>Cách học:</b><br>1. Nhấn nút <b>🎤 BẬT MIC</b>.<br>2. Nói một câu hoặc một đoạn dài bằng tiếng Anh.<br>3. Nhấn <b>🛑 TẮT MIC</b> khi nói xong.<br>4. Bấm <b>Gửi</b> để tôi sửa lỗi và trò chuyện cùng bạn nhé!</div>
+    </div>
+
+    <div id="controls">
+        <div id="input-row">
+            <button class="btn-clear" onclick="clearInput()">Xóa</button>
+            <textarea id="userInput" placeholder="Chữ bạn nói sẽ hiện ở đây..."></textarea>
+            <button class="btn-send" onclick="sendMessage()">Gửi</button>
+        </div>
+        <button id="micBtn" class="btn-mic" onclick="toggleMic()">
+            🎤 BẬT MIC ĐỂ NÓI
+        </button>
+    </div>
+
+    <script>
+        // LƯU Ý: THAY ĐOẠN API KEY CỦA BẠN VÀO ĐÂY ĐỂ CHẠY
+        const API_KEY = "AQ.Ab8RN6L6n2auznL2UEiYvymUBwnSI7rFcnGCO5D2MDIFE3iWcA"; 
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+        let isRecording = false;
+        const userInput = document.getElementById("userInput");
+        const micBtn = document.getElementById("micBtn");
+        const chatContainer = document.getElementById("chat-container");
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';        // Nhận diện giọng tiếng Anh Mỹ
+            recognition.continuous = true;     // BẬT tính năng nói liên tục không ngắt khi dừng lấy hơi
+            recognition.interimResults = true;  // Hiển thị chữ tạm thời ngay khi đang nói
+
+            recognition.onstart = () => {
+                isRecording = true;
+                micBtn.innerText = "🛑 TẮT MIC (Bấm khi nói xong)";
+                micBtn.classList.add("recording");
+            };
+
+            let finalTranscript = '';
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript + ' ';
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+                // Cập nhật chữ vào ô nhập liệu
+                userInput.value = finalTranscript + interimTranscript;
+                // Tự động cuộn ô văn bản xuống nếu nói quá dài
+                userInput.scrollTop = userInput.scrollHeight;
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Lỗi Mic: ", event.error);
+                if(event.error === 'not-allowed') {
+                    alert("Hãy vào Cài đặt trên iPhone -> Safari -> Cho phép quyền truy cập Micro nhé!");
+                }
+                stopMicLogic();
+            };
+
+            recognition.onend = () => {
+                stopMicLogic();
+            };
+        } else {
+            alert("Trình duyệt này không hỗ trợ Mic. Bạn hãy mở trang web này bằng Safari trên iPhone nhé!");
+        }
+
+        function toggleMic() {
+            if (!recognition) return;
+            if (!isRecording) {
+                // Trước khi nói lượt mới, lấy lại chữ cũ đang có trong ô (nếu có)
+                finalTranscript = userInput.value ? userInput.value + ' ' : '';
+                recognition.start();
+            } else {
+                recognition.stop();
+            }
+        }
+
+        function stopMicLogic() {
+            isRecording = false;
+            micBtn.innerText = "🎤 BẬT MIC ĐỂ NÓI";
+            micBtn.classList.remove("recording");
+        }
+
+        function clearInput() {
+            userInput.value = "";
+            finalTranscript = "";
+        }
+
+        async function sendMessage() {
+            const rawText = userInput.value.trim();
+            if (!rawText) return;
+
+            // Nếu đang bật mic mà bấm gửi, tắt mic trước
+            if (isRecording) {
+                recognition.stop();
+            }
+
+            // Hiển thị câu nói của bạn lên màn hình chat
+            chatContainer.innerHTML += `<div class="message user">${rawText}</div>`;
+            clearInput();
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            // Trạng thái AI đang xử lý
+            const loadingId = "loading-" + Date.now();
+            chatContainer.innerHTML += `<div class="message bot" id="${loadingId}">Giáo viên AI đang nghe và phân tích...</div>`;
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            // Prompt ép AI đóng vai giáo viên chấm bài giao tiếp cực kỳ chi tiết
+            const promptSystem = `Bạn là một giáo viên dạy tiếng Anh giao tiếp bản xứ cực kỳ tâm huyết. Người học vừa nói một câu/đoạn văn sau đây: "${rawText}".
+            Nhiệm vụ của bạn:
+            1. Viết lại câu/đoạn văn chuẩn, tự nhiên nhất của người bản xứ (nếu họ nói chưa chuẩn hoặc sai ngữ pháp). Chữ viết lại đặt trong thẻ <b>.
+            2. Giải thích ngắn gọn bằng tiếng Việt lỗi sai (nếu có) hoặc cách dùng từ sao cho hay hơn, Tây hơn.
+            3. Trả lời lại họ bằng một câu hỏi hoặc một câu nói tiếng Anh ngắn gọn, đơn giản để tiếp tục dẫn dắt cuộc hội thoại giao tiếp.`;
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: promptSystem }] }]
+                    })
+                });
+
+                const data = await response.json();
+                let botReply = data.candidates[0].content.parts[0].text;
+                
+                // Định dạng lại xuống dòng cho đẹp
+                botReply = botReply.replace(/\n/g, "<br>");
+
+                document.getElementById(loadingId).innerHTML = botReply;
+            } catch (error) {
+                document.getElementById(loadingId).innerText = "Hệ thống bận hoặc API Key chưa đúng. Bạn hãy kiểm tra lại nhé!";
+                console.error(error);
+            }
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    </script>
+</body>
+</html>
