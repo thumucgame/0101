@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>English Learning Studio</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.4.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Segoe UI',Arial,sans-serif;
+  background:#f0f4f8;
+  color:#1a2332;
+  min-height:100vh;
+}
+
+/* HEADER */
+.header{
+  background:linear-gradient(135deg,#1a2e4a 0%,#2d4a7a 100%);
+  color:white;
+  padding:18px 24px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  box-shadow:0 2px 12px rgba(0,0,0,0.2);
+}
+.header h1{font-size:20px;font-weight:700;letter-spacing:-0.3px}
+.header h1 span{color:#7dd3fc}
+.progress-bar-wrap{display:flex;align-items:center;gap:10px}
+.progress-bar{width:180px;height:8px;background:rgba(255,255,255,0.2);border-radius:99px;overflow:hidden}
+.progress-fill{height:100%;background:#7dd3fc;border-radius:99px;transition:width 0.4s}
+.progress-text{font-size:13px;color:#bfdbfe;white-space:nowrap}
+
+/* TABS */
+.tabs{background:white;border-bottom:1px solid #e2e8f0;display:flex;gap:0;padding:0 24px}
+.tab{padding:12px 20px;font-size:14px;font-weight:500;color:#64748b;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;display:flex;align-items:center;gap:6px}
+.tab:hover{color:#1a2e4a}
+.tab.active{color:#2d4a7a;border-bottom-color:#2d4a7a}
+.tab i{font-size:15px}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:1fr 320px;gap:16px;padding:20px 24px;max-width:1100px;margin:auto}
+@media(max-width:768px){.layout{grid-template-columns:1fr}.sidebar{order:99}}
+
+/* PANEL */
+.panel{
+  background:white;
+  border-radius:14px;
+  border:1px solid #e2e8f0;
+  overflow:hidden;
+}
+.panel-header{
+  padding:14px 20px;
+  border-bottom:1px solid #f1f5f9;
+  font-size:14px;
+  font-weight:600;
+  color:#374151;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.panel-header i{font-size:16px;color:#2d4a7a}
+.panel-body{padding:20px}
+
+/* SENTENCE PANEL */
+.sentence-display{
+  font-size:28px;
+  font-weight:500;
+  line-height:1.5;
+  color:#1a2332;
+  padding:16px 0 8px;
+  letter-spacing:-0.3px;
+}
+.word-chip{
+  display:inline-block;
+  cursor:pointer;
+  padding:2px 6px;
+  border-radius:6px;
+  transition:all 0.15s;
+  border-bottom:2px solid transparent;
+}
+.word-chip:hover{background:#eff6ff;border-bottom-color:#93c5fd;color:#1d4ed8}
+.word-chip.active{background:#dbeafe;border-bottom-color:#3b82f6;color:#1d4ed8}
+.meaning-vi{
+  font-size:15px;
+  color:#64748b;
+  padding:6px 0 16px;
+  font-style:italic;
+}
+.lesson-meta{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:12px;
+  color:#94a3b8;
+  margin-bottom:14px;
+}
+.badge{
+  padding:2px 10px;
+  border-radius:99px;
+  font-size:11px;
+  font-weight:600;
+  background:#eff6ff;
+  color:#2563eb;
+}
+.badge.topic{background:#f0fdf4;color:#15803d}
+.badge.level{background:#fef3c7;color:#d97706}
+
+/* CONTROLS */
+.controls{display:flex;flex-wrap:wrap;gap:8px;padding:14px 0 4px;border-top:1px solid #f1f5f9}
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 14px;
+  border-radius:9px;
+  font-size:13px;
+  font-weight:500;
+  cursor:pointer;
+  border:1px solid #d1d5db;
+  background:white;
+  color:#374151;
+  transition:all 0.15s;
+}
+.btn:hover{background:#f8fafc;border-color:#94a3b8}
+.btn:active{transform:scale(0.97)}
+.btn i{font-size:15px}
+.btn.primary{background:#2d4a7a;color:white;border-color:#2d4a7a}
+.btn.primary:hover{background:#1e3a60}
+.btn.success{background:#16a34a;color:white;border-color:#16a34a}
+.btn.success:hover{background:#15803d}
+.btn.danger{background:#dc2626;color:white;border-color:#dc2626}
+
+/* SPEED SLIDER */
+.speed-row{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:13px;color:#64748b}
+.speed-row input[type=range]{flex:1;accent-color:#2d4a7a;height:4px}
+.speed-val{font-weight:600;color:#374151;min-width:28px}
+
+/* RESULTS */
+.score-ring{
+  width:72px;height:72px;border-radius:50%;
+  background:conic-gradient(#22c55e var(--pct), #e5e7eb var(--pct));
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:700;color:#15803d;
+  flex-shrink:0;
+  transition:background 0.5s;
+}
+.score-ring.bad{background:conic-gradient(#ef4444 var(--pct), #e5e7eb var(--pct));color:#dc2626}
+.score-ring.ok{background:conic-gradient(#f59e0b var(--pct), #e5e7eb var(--pct));color:#d97706}
+.result-row{display:flex;align-items:center;gap:16px;padding:14px 0}
+.result-info h3{font-size:15px;font-weight:600;color:#1a2332}
+.result-info p{font-size:13px;color:#64748b;margin-top:3px}
+.word-results{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.wr-item{
+  display:flex;align-items:center;gap:8px;
+  font-size:13px;padding:6px 10px;border-radius:8px;
+}
+.wr-item.correct{background:#f0fdf4;color:#166534}
+.wr-item.wrong{background:#fef2f2;color:#991b1b}
+.wr-item.miss{background:#fff7ed;color:#9a3412}
+.wr-item.extra{background:#faf5ff;color:#6b21a8}
+.wr-item i{font-size:14px}
+
+/* WORD DETAIL */
+.word-detail{
+  background:#f8fafc;border-radius:10px;padding:14px;
+  border:1px solid #e2e8f0;text-align:center;
+}
+.word-big{font-size:26px;font-weight:700;color:#1a2e4a;letter-spacing:-0.5px}
+.word-ipa{font-size:14px;color:#64748b;margin:3px 0 8px;font-family:'Segoe UI',monospace}
+.word-vi{font-size:16px;color:#2d4a7a;font-weight:500}
+.word-pos{font-size:12px;color:#94a3b8;margin-top:4px}
+
+/* QUIZ SECTION */
+.quiz-card{
+  background:white;border-radius:14px;
+  border:1px solid #e2e8f0;
+  padding:20px;margin-bottom:12px;
+}
+.quiz-question{font-size:17px;font-weight:600;margin-bottom:16px;color:#1a2332}
+.quiz-options{display:flex;flex-direction:column;gap:8px}
+.quiz-opt{
+  padding:11px 16px;border-radius:10px;
+  border:1.5px solid #e2e8f0;
+  font-size:14px;cursor:pointer;
+  transition:all 0.15s;display:flex;align-items:center;gap:10px;
+  color:#374151;background:white;
+}
+.quiz-opt:hover:not(.locked){background:#eff6ff;border-color:#93c5fd;color:#1d4ed8}
+.quiz-opt.correct{background:#f0fdf4;border-color:#22c55e;color:#15803d}
+.quiz-opt.wrong{background:#fef2f2;border-color:#f87171;color:#dc2626}
+.quiz-opt .opt-letter{
+  width:24px;height:24px;border-radius:6px;
+  background:#f1f5f9;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;flex-shrink:0;color:#64748b;
+}
+.quiz-opt.correct .opt-letter{background:#dcfce7;color:#15803d}
+.quiz-opt.wrong .opt-letter{background:#fee2e2;color:#dc2626}
+.quiz-feedback{
+  margin-top:12px;padding:10px 14px;border-radius:8px;
+  font-size:13px;display:none;
+}
+.quiz-feedback.show{display:block}
+.quiz-feedback.good{background:#f0fdf4;color:#15803d}
+.quiz-feedback.bad{background:#fef2f2;color:#dc2626}
+
+/* SIDEBAR */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.stat-card{
+  background:#f8fafc;border-radius:10px;
+  padding:12px;text-align:center;
+  border:1px solid #e2e8f0;
+}
+.stat-num{font-size:22px;font-weight:700;color:#2d4a7a}
+.stat-label{font-size:11px;color:#94a3b8;margin-top:2px;text-transform:uppercase;letter-spacing:0.5px}
+
+.lesson-list{display:flex;flex-direction:column;gap:6px}
+.lesson-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 12px;border-radius:9px;
+  border:1px solid #e2e8f0;cursor:pointer;
+  transition:all 0.15s;
+  font-size:13px;color:#374151;
+}
+.lesson-item:hover{background:#eff6ff;border-color:#93c5fd}
+.lesson-item.active{background:#dbeafe;border-color:#3b82f6;color:#1d4ed8;font-weight:500}
+.lesson-item.done .li-icon{color:#22c55e}
+.lesson-num{font-size:11px;color:#94a3b8;min-width:18px}
+.li-icon{font-size:14px;color:#94a3b8;margin-left:auto}
+
+/* FILL BLANK */
+.fill-input{
+  display:inline-block;
+  border:none;border-bottom:2px solid #3b82f6;
+  font-size:18px;font-weight:500;color:#1d4ed8;
+  background:transparent;outline:none;
+  min-width:80px;text-align:center;
+  padding:2px 4px;
+}
+
+/* LISTENING QUIZ */
+.listening-box{
+  background:#f8fafc;border-radius:12px;
+  padding:20px;text-align:center;
+  border:2px dashed #d1d5db;margin-bottom:16px;
+}
+.listening-box i{font-size:40px;color:#2d4a7a;margin-bottom:8px;display:block}
+.listening-box p{font-size:14px;color:#64748b}
+.listen-answer{
+  width:100%;padding:10px 14px;
+  border-radius:9px;border:1.5px solid #d1d5db;
+  font-size:15px;outline:none;
+  transition:border-color 0.2s;
+}
+.listen-answer:focus{border-color:#3b82f6}
+
+/* MATCH */
+.match-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.match-col{display:flex;flex-direction:column;gap:6px}
+.match-item{
+  padding:10px 14px;border-radius:9px;
+  border:1.5px solid #e2e8f0;
+  font-size:14px;cursor:pointer;
+  transition:all 0.15s;text-align:center;
+}
+.match-item:hover:not(.matched):not(.used){background:#eff6ff;border-color:#93c5fd;color:#1d4ed8}
+.match-item.selected{background:#dbeafe;border-color:#3b82f6;color:#1d4ed8;font-weight:500}
+.match-item.matched{background:#f0fdf4;border-color:#22c55e;color:#15803d}
+.match-item.wrong-match{background:#fef2f2;border-color:#f87171;}
+
+/* TOAST */
+.toast{
+  position:fixed;top:20px;right:20px;z-index:999;
+  background:#1a2332;color:white;
+  padding:12px 20px;border-radius:10px;
+  font-size:14px;font-weight:500;
+  transform:translateY(-80px);opacity:0;transition:all 0.3s;
+  display:flex;align-items:center;gap:8px;
+}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{background:#15803d}
+.toast.error{background:#dc2626}
+
+/* TABS CONTENT */
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* RECORDING INDICATOR */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.recording-dot{
+  width:10px;height:10px;border-radius:50%;background:#ef4444;
+  animation:pulse 1s infinite;display:inline-block;
+}
+
+.hint-text{font-size:12px;color:#94a3b8;margin-top:6px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span>✦</span> English Learning Studio</h1>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar"><div class="progress-fill" id="globalProgress" style="width:0%"></div></div>
+    <div class="progress-text" id="progressText">0 / 12</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('speak')"><i class="ti ti-microphone"></i>Luyện nói</div>
+  <div class="tab" onclick="switchTab('quiz')"><i class="ti ti-bulb"></i>Trắc nghiệm</div>
+  <div class="tab" onclick="switchTab('listen')"><i class="ti ti-headphones"></i>Nghe điền</div>
+  <div class="tab" onclick="switchTab('match')"><i class="ti ti-arrows-left-right"></i>Ghép từ</div>
+</div>
+
+<div class="layout">
+  <div>
+
+    <!-- SPEAK TAB -->
+    <div id="tab-speak" class="tab-content active">
+      <div class="panel">
+        <div class="panel-header"><i class="ti ti-book-2"></i>Câu học hôm nay</div>
+        <div class="panel-body">
+          <div class="lesson-meta">
+            <div class="badge topic" id="lessonTopic">General</div>
+            <div class="badge level" id="lessonLevel">Beginner</div>
+            <div class="badge" id="lessonNum">1 / 12</div>
+          </div>
+          <div class="sentence-display" id="sentence"></div>
+          <div class="meaning-vi" id="meaning"></div>
+          <div class="speed-row">
+            <i class="ti ti-speedboat" style="font-size:15px"></i>
+            <span>Tốc độ</span>
+            <input type="range" id="rate" min="0.5" max="1.5" step="0.1" value="1">
+            <span class="speed-val" id="rateText">1.0×</span>
+          </div>
+          <div class="controls">
+            <button class="btn primary" onclick="speakSentence()"><i class="ti ti-volume"></i>Nghe câu</button>
+            <button class="btn" id="speakBtn" onclick="startSpeak()"><i class="ti ti-microphone"></i>Nói thử</button>
+            <button class="btn" onclick="next()"><i class="ti ti-arrow-right"></i>Tiếp theo</button>
+            <button class="btn" onclick="prev()"><i class="ti ti-arrow-left"></i>Trước</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:14px">
+        <div class="panel-header"><i class="ti ti-chart-bar"></i>Kết quả luyện nói</div>
+        <div class="panel-body">
+          <div class="result-row">
+            <div class="score-ring" id="scoreRing" style="--pct:0%"><span id="scoreText">—</span></div>
+            <div class="result-info">
+              <h3 id="statusMsg">Nhấn "Nói thử" để bắt đầu</h3>
+              <p id="statusSub">Đọc câu tiếng Anh rõ ràng vào micro</p>
+            </div>
+          </div>
+          <div id="wordResults" class="word-results"></div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:14px">
+        <div class="panel-header"><i class="ti ti-bookmarks"></i>Từ đã chọn</div>
+        <div class="panel-body">
+          <div id="wordDetail" class="word-detail">
+            <div style="color:#94a3b8;font-size:14px"><i class="ti ti-hand-click"></i> Bấm vào từ trong câu để xem nghĩa</div>
+          </div>
+          <button class="btn" style="margin-top:10px" onclick="speakWord()"><i class="ti ti-volume"></i>Phát âm từ</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUIZ TAB -->
+    <div id="tab-quiz" class="tab-content">
+      <div id="quizContainer"></div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="btn primary" onclick="loadQuiz()"><i class="ti ti-refresh"></i>Câu mới</button>
+        <button class="btn" onclick="showAllQuiz()"><i class="ti ti-list"></i>Tất cả câu</button>
+      </div>
+    </div>
+
+    <!-- LISTEN TAB -->
+    <div id="tab-listen" class="tab-content">
+      <div class="panel">
+        <div class="panel-header"><i class="ti ti-headphones"></i>Nghe và điền từ vào chỗ trống</div>
+        <div class="panel-body">
+          <div class="listening-box">
+            <i class="ti ti-volume-2"></i>
+            <p>Nhấn nút nghe, sau đó điền từ còn thiếu vào chỗ trống</p>
+          </div>
+          <div id="listenSentence" style="font-size:20px;line-height:2;margin-bottom:16px"></div>
+          <div class="hint-text" id="listenHint"></div>
+          <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+            <button class="btn primary" onclick="playListenAudio()"><i class="ti ti-volume"></i>Nghe lại</button>
+            <button class="btn success" onclick="checkListenAnswer()"><i class="ti ti-check"></i>Kiểm tra</button>
+            <button class="btn" onclick="loadListen()"><i class="ti ti-refresh"></i>Câu mới</button>
+            <button class="btn" onclick="revealListen()"><i class="ti ti-eye"></i>Xem đáp án</button>
+          </div>
+          <div id="listenFeedback" class="quiz-feedback" style="margin-top:12px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MATCH TAB -->
+    <div id="tab-match" class="tab-content">
+      <div class="panel">
+        <div class="panel-header"><i class="ti ti-arrows-left-right"></i>Ghép từ với nghĩa</div>
+        <div class="panel-body">
+          <p style="font-size:13px;color:#64748b;margin-bottom:14px">Chọn một từ tiếng Anh, sau đó chọn nghĩa tiếng Việt tương ứng</p>
+          <div class="match-grid">
+            <div class="match-col" id="matchLeft"></div>
+            <div class="match-col" id="matchRight"></div>
+          </div>
+          <div id="matchResult" style="margin-top:14px;font-size:14px;color:#64748b"></div>
+          <div style="margin-top:12px;display:flex;gap:8px">
+            <button class="btn primary" onclick="loadMatch()"><i class="ti ti-refresh"></i>Bài mới</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="panel">
+      <div class="panel-header"><i class="ti ti-trophy"></i>Thống kê</div>
+      <div class="panel-body">
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-num" id="st-speak">0</div><div class="stat-label">Đã nói</div></div>
+          <div class="stat-card"><div class="stat-num" id="st-quiz">0</div><div class="stat-label">Quiz đúng</div></div>
+          <div class="stat-card"><div class="stat-num" id="st-streak">0</div><div class="stat-label">Liên tiếp</div></div>
+          <div class="stat-card"><div class="stat-num" id="st-words">0</div><div class="stat-label">Từ học</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:14px">
+      <div class="panel-header"><i class="ti ti-list"></i>Danh sách câu</div>
+      <div class="panel-body" style="padding:12px">
+        <div class="lesson-list" id="lessonList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const lessons = [
+  { text:"Hello how are you today", vi:"Xin chào, hôm nay bạn có khỏe không?", topic:"Daily", level:"Beginner" },
+  { text:"My name is John and I am a student", vi:"Tên tôi là John và tôi là sinh viên", topic:"Daily", level:"Beginner" },
+  { text:"I work in a factory every day", vi:"Tôi làm việc trong nhà máy mỗi ngày", topic:"Work", level:"Beginner" },
+  { text:"Please check the pressure sensor carefully", vi:"Hãy kiểm tra cảm biến áp suất cẩn thận", topic:"Technical", level:"Intermediate" },
+  { text:"The machine stopped working this morning", vi:"Máy dừng hoạt động sáng nay", topic:"Technical", level:"Intermediate" },
+  { text:"Can you show me how to use this tool", vi:"Bạn có thể chỉ tôi cách dùng công cụ này không?", topic:"Work", level:"Intermediate" },
+  { text:"I need to report a problem to the supervisor", vi:"Tôi cần báo cáo sự cố cho người giám sát", topic:"Work", level:"Intermediate" },
+  { text:"The quality control team checked the product", vi:"Nhóm kiểm soát chất lượng đã kiểm tra sản phẩm", topic:"Technical", level:"Intermediate" },
+  { text:"Please wear your safety equipment at all times", vi:"Hãy đeo thiết bị bảo hộ mọi lúc", topic:"Safety", level:"Beginner" },
+  { text:"The production target for today is two hundred units", vi:"Mục tiêu sản xuất hôm nay là 200 sản phẩm", topic:"Work", level:"Intermediate" },
+  { text:"Can I have tomorrow off for a personal reason", vi:"Tôi có thể nghỉ ngày mai vì lý do cá nhân không?", topic:"Daily", level:"Intermediate" },
+  { text:"This component needs to be replaced as soon as possible", vi:"Linh kiện này cần được thay thế càng sớm càng tốt", topic:"Technical", level:"Advanced" }
+];
+
+const dict = {
+  hello:{vi:"xin chào",pos:"thán từ"},
+  how:{vi:"như thế nào",pos:"trạng từ"},
+  are:{vi:"là / có",pos:"động từ"},
+  you:{vi:"bạn",pos:"đại từ"},
+  today:{vi:"hôm nay",pos:"trạng từ"},
+  factory:{vi:"nhà máy",pos:"danh từ"},
+  pressure:{vi:"áp suất",pos:"danh từ"},
+  sensor:{vi:"cảm biến",pos:"danh từ"},
+  work:{vi:"làm việc",pos:"động từ"},
+  name:{vi:"tên",pos:"danh từ"},
+  student:{vi:"sinh viên",pos:"danh từ"},
+  machine:{vi:"máy móc",pos:"danh từ"},
+  stopped:{vi:"dừng lại",pos:"động từ"},
+  morning:{vi:"buổi sáng",pos:"danh từ"},
+  tool:{vi:"công cụ",pos:"danh từ"},
+  report:{vi:"báo cáo",pos:"động từ"},
+  problem:{vi:"sự cố / vấn đề",pos:"danh từ"},
+  supervisor:{vi:"người giám sát",pos:"danh từ"},
+  quality:{vi:"chất lượng",pos:"danh từ"},
+  product:{vi:"sản phẩm",pos:"danh từ"},
+  safety:{vi:"an toàn",pos:"danh từ"},
+  equipment:{vi:"thiết bị",pos:"danh từ"},
+  production:{vi:"sản xuất",pos:"danh từ"},
+  target:{vi:"mục tiêu",pos:"danh từ"},
+  component:{vi:"linh kiện",pos:"danh từ"},
+  replaced:{vi:"được thay thế",pos:"động từ"},
+  personal:{vi:"cá nhân",pos:"tính từ"},
+  reason:{vi:"lý do",pos:"danh từ"},
+  carefully:{vi:"cẩn thận",pos:"trạng từ"},
+  check:{vi:"kiểm tra",pos:"động từ"}
+};
+
+let index = 0;
+let selectedWord = "";
+let doneSet = new Set();
+let stats = { speak:0, quiz:0, streak:0, words:new Set() };
+let listenData = null;
+let matchState = { selected:null, side:null, matched:new Set(), items:[] };
+
+// Global Speech Recognizer - tạo 1 lần duy nhất
+let recognizer = null;
+let micPermissionGranted = false;
+
+async function requestMicPermission(){
+  if(micPermissionGranted) return true;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach(track => track.stop());
+    micPermissionGranted = true;
+    return true;
+  } catch(e) {
+    console.log("Mic permission denied:", e);
+    return false;
+  }
+}
+
+function initRecognizer(){
+  if(recognizer) return;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR) return;
+  recognizer = new SR();
+  recognizer.lang = "en-US";
+  recognizer.interimResults = false;
+  recognizer.continuous = false;
+  recognizer.maxAlternatives = 1;
+}
+
+// RENDER LESSONS LIST
+function buildLessonList(){
+  const el = document.getElementById("lessonList");
+  el.innerHTML = lessons.map((l,i)=>`
+    <div class="lesson-item ${i===index?'active':''} ${doneSet.has(i)?'done':''}" onclick="goLesson(${i})">
+      <span class="lesson-num">${i+1}</span>
+      <span style="flex:1">${l.text.slice(0,30)}…</span>
+      <i class="ti ${doneSet.has(i)?'ti-circle-check':'ti-circle'} li-icon"></i>
+    </div>
+  `).join('');
+}
+
+function goLesson(i){
+  index = i;
+  render();
+  switchTab('speak');
+}
+
+// RENDER SPEAK TAB
+function render(){
+  const l = lessons[index];
+  document.getElementById("lessonTopic").textContent = l.topic;
+  document.getElementById("lessonLevel").textContent = l.level;
+  document.getElementById("lessonNum").textContent = (index+1) + " / " + lessons.length;
+  document.getElementById("sentence").innerHTML = l.text.split(" ").map(w=>{
+    const lw = w.toLowerCase().replace(/[^a-z]/g,'');
+    return `<span class="word-chip" onclick="pick('${lw}')">${w}</span>`;
+  }).join(" ");
+  document.getElementById("meaning").textContent = l.vi;
+  document.getElementById("wordResults").innerHTML = "";
+  document.getElementById("scoreText").textContent = "—";
+  document.getElementById("scoreRing").style.setProperty("--pct","0%");
+  document.getElementById("scoreRing").className = "score-ring";
+  document.getElementById("statusMsg").textContent = 'Nhấn "Nói thử" để bắt đầu';
+  document.getElementById("statusSub").textContent = "Đọc câu tiếng Anh rõ ràng vào micro";
+  buildLessonList();
+  updateProgress();
+}
+
+function updateProgress(){
+  const pct = Math.round(doneSet.size / lessons.length * 100);
+  document.getElementById("globalProgress").style.width = pct + "%";
+  document.getElementById("progressText").textContent = doneSet.size + " / " + lessons.length;
+  document.getElementById("st-speak").textContent = stats.speak;
+  document.getElementById("st-quiz").textContent = stats.quiz;
+  document.getElementById("st-streak").textContent = stats.streak;
+  document.getElementById("st-words").textContent = stats.words.size;
+}
+
+// SPEED
+document.getElementById("rate").oninput = function(){
+  document.getElementById("rateText").textContent = this.value + "×";
+};
+
+function speakSentence(){
+  const msg = new SpeechSynthesisUtterance(lessons[index].text);
+  msg.lang = "en-US";
+  msg.rate = parseFloat(document.getElementById("rate").value);
+  speechSynthesis.speak(msg);
+}
+
+function pick(w){
+  selectedWord = w;
+  document.querySelectorAll(".word-chip").forEach(c=>c.classList.remove("active"));
+  event.target.classList.add("active");
+  stats.words.add(w);
+  updateProgress();
+  const info = dict[w];
+  const el = document.getElementById("wordDetail");
+  if(info){
+    el.innerHTML = `
+      <div class="word-big">${w}</div>
+      <div class="word-ipa"></div>
+      <div class="word-vi">${info.vi}</div>
+      <div class="word-pos">${info.pos}</div>
+    `;
+  } else {
+    el.innerHTML = `<div class="word-big">${w}</div><div class="word-vi" style="color:#94a3b8;font-size:14px">Chưa có trong từ điển</div>`;
+  }
+}
+
+function speakWord(){
+  if(!selectedWord) return;
+  const msg = new SpeechSynthesisUtterance(selectedWord);
+  msg.lang = "en-US";
+  speechSynthesis.speak(msg);
+}
+
+async function startSpeak(){
+  initRecognizer();
+  if(!recognizer){ showToast("Trình duyệt không hỗ trợ micro", "error"); return; }
+  
+  const btn = document.getElementById("speakBtn");
+  
+  // Request quyền mic trước
+  const hasPermission = await requestMicPermission();
+  if(!hasPermission){
+    showToast("Cần cấp quyền truy cập mic", "error");
+    return;
+  }
+  
+  btn.innerHTML = `<span class="recording-dot"></span> Đang nghe…`;
+  btn.disabled = true;
+  
+  // Reset state trước khi start
+  try {
+    recognizer.abort();
+  } catch(e) {}
+  
+  // Thiết lập callback mỗi lần dùng
+  recognizer.onstart = ()=>{
+    console.log("Recording started");
+  };
+  
+  recognizer.onresult = e=>{
+    console.log("Result received:", e.results.length);
+    btn.innerHTML = `<i class="ti ti-microphone"></i>Nói thử`;
+    btn.disabled = false;
+    if(e.results && e.results[0]){
+      const text = e.results[0][0].transcript;
+      checkAndCompare(text);
+      stats.speak++;
+      updateProgress();
+    }
+  };
+  
+  recognizer.onerror = (e)=>{
+    console.log("Error:", e.error);
+    btn.innerHTML = `<i class="ti ti-microphone"></i>Nói thử`;
+    btn.disabled = false;
+    const errorMsg = {
+      'network': 'Lỗi mạng hoặc mic không được cấp quyền',
+      'no-speech': 'Không phát hiện âm thanh, hãy thử lại',
+      'audio-capture': 'Mic không có sẵn'
+    };
+    showToast(errorMsg[e.error] || "Lỗi: " + e.error, "error");
+  };
+  
+  recognizer.onend = ()=>{
+    console.log("Recording ended");
+    btn.innerHTML = `<i class="ti ti-microphone"></i>Nói thử`;
+    btn.disabled = false;
+  };
+  
+  try {
+    recognizer.start();
+  } catch(e) {
+    console.log("Start error:", e);
+    btn.innerHTML = `<i class="ti ti-microphone"></i>Nói thử`;
+    btn.disabled = false;
+    showToast("Không thể bắt đầu ghi âm", "error");
+  }
+}
+
+function checkAndCompare(text){
+  const target = lessons[index].text.toLowerCase().split(" ");
+  const user = text.toLowerCase().trim().split(/\s+/);
+  let ok = 0, firstWrong = -1, html = "";
+  const maxLen = Math.max(target.length, user.length);
+  for(let i=0;i<maxLen;i++){
+    const t=target[i], u=user[i];
+    if(t&&u&&t===u){
+      ok++;
+      html+=`<div class="wr-item correct"><i class="ti ti-circle-check"></i><b>${t}</b> — đúng</div>`;
+    } else {
+      if(firstWrong===-1) firstWrong=i;
+      if(t&&u) html+=`<div class="wr-item wrong"><i class="ti ti-x"></i>Nói <b>${u}</b> → đúng là <b>${t}</b></div>`;
+      else if(t&&!u) html+=`<div class="wr-item miss"><i class="ti ti-minus"></i>Thiếu từ <b>${t}</b></div>`;
+      else html+=`<div class="wr-item extra"><i class="ti ti-plus"></i>Thừa từ <b>${u}</b></div>`;
+    }
+  }
+  const pct = Math.round(ok/target.length*100);
+  document.getElementById("scoreText").textContent = pct + "%";
+  const ring = document.getElementById("scoreRing");
+  ring.style.setProperty("--pct", pct + "%");
+  ring.className = "score-ring " + (pct>=85?"":"") + (pct<60?"bad":pct<85?"ok":"");
+  document.getElementById("statusMsg").textContent = pct>=85 ? "✓ Tuyệt vời!" : pct>=60 ? "Khá ổn, cần cải thiện" : "Sai từ ở vị trí " + (firstWrong+1);
+  document.getElementById("statusSub").textContent = ok + "/" + target.length + " từ đúng";
+  document.getElementById("wordResults").innerHTML = html;
+  if(pct>=85){ doneSet.add(index); stats.streak++; showToast("Tuyệt vời! +1 streak", "success"); }
+  else { stats.streak = 0; }
+  updateProgress();
+  buildLessonList();
+  if(firstWrong>=0) playWordCompare(firstWrong, user);
+}
+
+function playWordCompare(i, userWords){
+  const targetWords = lessons[index].text.split(" ");
+  const userWord = userWords[i] || "silent";
+  const correctWord = targetWords[i] || "";
+  const msg1 = new SpeechSynthesisUtterance(userWord);
+  msg1.lang="en-US"; msg1.rate=0.85;
+  msg1.onend = ()=>{
+    const msg2 = new SpeechSynthesisUtterance(correctWord);
+    msg2.lang="en-US"; msg2.rate=0.85;
+    speechSynthesis.speak(msg2);
+  };
+  speechSynthesis.speak(msg1);
+}
+
+function next(){ index = (index+1)%lessons.length; render(); }
+function prev(){ index = (index-1+lessons.length)%lessons.length; render(); }
+
+// QUIZ
+const quizTemplates = [
+  l => ({
+    type:"meaning",
+    q: `Câu này có nghĩa gì?\n"${l.text}"`,
+    correct: l.vi,
+    wrongs: lessons.filter(x=>x!==l).sort(()=>Math.random()-0.5).slice(0,3).map(x=>x.vi)
+  }),
+  l => ({
+    type:"word",
+    q: `Từ "${Object.keys(dict)[Math.floor(Math.random()*Object.keys(dict).length)]}" có nghĩa là gì?`,
+    get real(){ const w=Object.keys(dict)[Math.floor(Math.random()*5)]; this._w=w; return `Từ "${w}" có nghĩa là gì?` },
+  }),
+  l => ({
+    type:"fill",
+    q: `Hoàn thành câu: "${l.text.split(" ").map((w,i)=>i===Math.floor(l.text.split(" ").length/2)?"___":w).join(" ")}"`,
+    correct: l.text.split(" ")[Math.floor(l.text.split(" ").length/2)],
+    wrongs: ["quickly","broken","slowly","happy"].filter(x=>x!==l.text.split(" ")[Math.floor(l.text.split(" ").length/2)])
+  })
+];
+
+function loadQuiz(){
+  const lessonPool = lessons;
+  const qs = lessonPool.map(l=>{
+    const words = l.text.split(" ");
+    const blankIdx = Math.floor(words.length / 2);
+    const correct = words[blankIdx];
+    const wrongPool = ["machine","factory","quickly","broken","sensor","report","today","carefully","personal","quality"];
+    const wrongs = wrongPool.filter(w=>w!==correct).sort(()=>Math.random()-0.5).slice(0,3);
+    const opts = shuffle([correct,...wrongs]);
+    return {
+      sentence: words.map((w,i)=>i===blankIdx?"___":w).join(" "),
+      correct,
+      opts,
+      vi: l.vi
+    };
+  });
+  const q = qs[Math.floor(Math.random()*qs.length)];
+  renderQuiz([q]);
+}
+
+function showAllQuiz(){
+  const all = lessons.map(l=>{
+    const words = l.text.split(" ");
+    const bi = Math.floor(words.length/2);
+    const correct = words[bi];
+    const wp = Object.keys(dict).filter(w=>w!==correct).sort(()=>Math.random()-0.5).slice(0,3);
+    return { sentence:words.map((w,i)=>i===bi?"___":w).join(" "), correct, opts:shuffle([correct,...wp]), vi:l.vi };
+  });
+  renderQuiz(all);
+}
+
+function renderQuiz(questions){
+  const c = document.getElementById("quizContainer");
+  c.innerHTML = questions.map((q,qi)=>`
+    <div class="quiz-card" id="qcard-${qi}">
+      <div class="quiz-question">
+        Điền từ còn thiếu:<br>
+        <span style="font-size:18px;font-weight:500;color:#2d4a7a">"${q.sentence}"</span>
+        <div style="font-size:13px;color:#94a3b8;margin-top:4px;font-style:italic">${q.vi}</div>
+      </div>
+      <div class="quiz-options">
+        ${q.opts.map((o,oi)=>`
+          <button class="quiz-opt" id="qopt-${qi}-${oi}" onclick="answerQuiz(${qi},'${q.correct}','${o}',${oi})">
+            <div class="opt-letter">${'ABCD'[oi]}</div>
+            ${o}
+          </button>
+        `).join('')}
+      </div>
+      <div class="quiz-feedback" id="qfb-${qi}"></div>
+    </div>
+  `).join('');
+}
+
+function answerQuiz(qi,correct,chosen,oi){
+  const card = document.getElementById("qcard-"+qi);
+  if(card.classList.contains("done")) return;
+  card.classList.add("done");
+  const fb = document.getElementById("qfb-"+qi);
+  const opts = card.querySelectorAll(".quiz-opt");
+  opts.forEach(o=>o.classList.add("locked"));
+  const chosenBtn = document.getElementById("qopt-"+qi+"-"+oi);
+  if(chosen===correct){
+    chosenBtn.classList.add("correct");
+    fb.textContent = "✓ Chính xác! Từ đúng là: " + correct;
+    fb.className = "quiz-feedback show good";
+    stats.quiz++; stats.streak++;
+    showToast("Đúng rồi! +1", "success");
+  } else {
+    chosenBtn.classList.add("wrong");
+    opts.forEach((o,i)=>{
+      if(o.textContent.trim().endsWith(correct)) o.classList.add("correct");
+    });
+    fb.textContent = "✗ Sai rồi. Đáp án đúng là: " + correct;
+    fb.className = "quiz-feedback show bad";
+    stats.streak = 0;
+    showToast("Sai mất rồi!", "error");
+  }
+  updateProgress();
+}
+
+function shuffle(a){ return a.sort(()=>Math.random()-0.5); }
+
+// LISTEN
+function loadListen(){
+  const l = lessons[Math.floor(Math.random()*lessons.length)];
+  const words = l.text.split(" ");
+  const blanks = [];
+  const numBlanks = Math.min(3, Math.floor(words.length/3));
+  while(blanks.length < numBlanks){
+    const i = Math.floor(Math.random()*words.length);
+    if(!blanks.includes(i)) blanks.push(i);
+  }
+  listenData = { l, words, blanks };
+  const html = words.map((w,i)=>
+    blanks.includes(i)
+      ? `<input class="fill-input" data-idx="${i}" data-answer="${w.toLowerCase()}" placeholder="___" style="width:${Math.max(60,w.length*14)}px">`
+      : `<span>${w}</span>`
+  ).join(" ");
+  document.getElementById("listenSentence").innerHTML = html;
+  document.getElementById("listenHint").textContent = "Nghĩa: " + l.vi;
+  document.getElementById("listenFeedback").className = "quiz-feedback";
+  playListenAudio();
+}
+
+function playListenAudio(){
+  if(!listenData) return;
+  const msg = new SpeechSynthesisUtterance(listenData.l.text);
+  msg.lang = "en-US";
+  msg.rate = 0.85;
+  speechSynthesis.speak(msg);
+}
+
+function checkListenAnswer(){
+  if(!listenData){ showToast("Hãy tải câu trước", "error"); return; }
+  const inputs = document.querySelectorAll(".fill-input");
+  let correct = 0;
+  inputs.forEach(inp=>{
+    const ans = inp.value.trim().toLowerCase();
+    const expected = inp.dataset.answer.toLowerCase();
+    if(ans===expected){
+      inp.style.color="#15803d";
+      inp.style.borderColor="#22c55e";
+      correct++;
+    } else {
+      inp.style.color="#dc2626";
+      inp.style.borderColor="#f87171";
+    }
+  });
+  const fb = document.getElementById("listenFeedback");
+  if(correct===inputs.length){
+    fb.textContent = "✓ Tuyệt vời! Điền đúng tất cả " + inputs.length + " từ!";
+    fb.className = "quiz-feedback show good";
+    stats.quiz++; stats.streak++;
+    showToast("Hoàn hảo!", "success");
+  } else {
+    fb.textContent = `✗ Đúng ${correct}/${inputs.length} từ. Hãy thử lại!`;
+    fb.className = "quiz-feedback show bad";
+  }
+  updateProgress();
+}
+
+function revealListen(){
+  if(!listenData) return;
+  document.querySelectorAll(".fill-input").forEach(inp=>{
+    inp.value = inp.dataset.answer;
+    inp.style.color="#2d4a7a";
+    inp.style.borderColor="#93c5fd";
+  });
+}
+
+// MATCH
+function loadMatch(){
+  const pool = Object.keys(dict).sort(()=>Math.random()-0.5).slice(0,6);
+  matchState = { selected:null, side:null, matched:new Set(), items: pool.map(w=>({w,vi:dict[w].vi})) };
+  const shuffledRight = [...pool].sort(()=>Math.random()-0.5);
+  document.getElementById("matchLeft").innerHTML = pool.map((w,i)=>
+    `<div class="match-item" id="ml-${i}" onclick="selectMatch('left',${i},'${w}')">${w}</div>`
+  ).join('');
+  document.getElementById("matchRight").innerHTML = shuffledRight.map((w,i)=>
+    `<div class="match-item" id="mr-${i}" onclick="selectMatch('right',${i},'${w}')" data-word="${w}">${dict[w].vi}</div>`
+  ).join('');
+  document.getElementById("matchResult").textContent = "";
+}
+
+let matchLeft = null, matchRight = null;
+function selectMatch(side, idx, word){
+  if(side==='left'){
+    document.querySelectorAll("[id^=ml-]").forEach(e=>e.classList.remove("selected"));
+    matchLeft = {idx,word};
+    document.getElementById("ml-"+idx).classList.add("selected");
+  } else {
+    document.querySelectorAll("[id^=mr-]").forEach(e=>e.classList.remove("selected"));
+    matchRight = {idx,word};
+    document.getElementById("mr-"+idx).classList.add("selected");
+  }
+  if(matchLeft && matchRight){
+    const isMatch = matchLeft.word === matchRight.word;
+    const lEl = document.getElementById("ml-"+matchLeft.idx);
+    const rEl = document.getElementById("mr-"+matchRight.idx);
+    if(isMatch){
+      lEl.classList.add("matched"); rEl.classList.add("matched");
+      lEl.classList.remove("selected"); rEl.classList.remove("selected");
+      lEl.style.pointerEvents="none"; rEl.style.pointerEvents="none";
+      showToast("Ghép đúng! ✓", "success");
+      stats.quiz++;
+    } else {
+      lEl.classList.add("wrong-match"); rEl.classList.add("wrong-match");
+      setTimeout(()=>{
+        lEl.classList.remove("wrong-match","selected");
+        rEl.classList.remove("wrong-match","selected");
+      },600);
+    }
+    matchLeft=null; matchRight=null;
+    const matched = document.querySelectorAll(".match-item.matched").length;
+    const total = document.querySelectorAll("[id^=ml-]").length;
+    if(matched===total*2){
+      document.getElementById("matchResult").innerHTML = `<span style="color:#15803d;font-weight:600">🎉 Hoàn thành! Ghép đúng tất cả ${total} cặp!</span>`;
+    }
+    updateProgress();
+  }
+}
+
+// TAB SWITCH
+function switchTab(name){
+  document.querySelectorAll(".tab-content").forEach(t=>t.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById("tab-"+name).classList.add("active");
+  document.querySelectorAll(".tab")[["speak","quiz","listen","match"].indexOf(name)].classList.add("active");
+  if(name==="quiz") loadQuiz();
+  if(name==="listen") loadListen();
+  if(name==="match") loadMatch();
+}
+
+function showToast(msg, type=""){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast show " + type;
+  setTimeout(()=>{ t.className = "toast"; }, 2500);
+}
+
+// INIT
+initRecognizer();
+render();
+loadMatch();
+</script>
+</body>
+</html>
