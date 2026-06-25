@@ -687,8 +687,9 @@ async function startSpeak(){
 
       // Call Gemini 2.0 Flash (free tier, latest endpoint)
       // Đã sửa: Chuyển từ gemini-2.0-flash sang gemini-1.5-flash để tránh lỗi Quota 429
-      const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      // Đã sửa: Chuyển sang endpoint v1 ổn định và model 1.5-flash để hết lỗi 404 và 429
+const resp = await fetch(
+  `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
