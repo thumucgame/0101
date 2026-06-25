@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -111,7 +110,7 @@
             box-shadow: 0 4px 6px rgba(255, 59, 48, 0.2);
         }
         .btn-mic.recording {
-            background-color: #5856d6; /* Đổi sang màu tím khi đang nghe */
+            background-color: #5856d6;
             animation: pulse 1.5s infinite;
             box-shadow: 0 4px 6px rgba(88, 86, 214, 0.3);
         }
@@ -142,22 +141,24 @@
     </div>
 
     <script>
-        // LƯU Ý: THAY ĐOẠN API KEY CỦA BẠN VÀO ĐÂY ĐỂ CHẠY
-        const API_KEY = "AQ.Ab8RN6L6n2auznL2UEiYvymUBwnSI7rFcnGCO5D2MDIFE3iWcA"; 
+        // LƯU Ý BẮT BUỘC: Hãy lấy lại Key mới bắt đầu bằng AIzaSy... dán vào đây để kích hoạt kết nối nhé!
+        const API_KEY = "AQ.Ab8RN6JNjENeyefl0geDtIAg9NUcUZPwcUzxB7C6yw84YjmlEQ"; 
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition;
         let isRecording = false;
+        let finalTranscript = ''; // Đã sửa: Đưa biến này ra ngoài phạm vi toàn cục để tránh lỗi sập code
+        
         const userInput = document.getElementById("userInput");
         const micBtn = document.getElementById("micBtn");
         const chatContainer = document.getElementById("chat-container");
 
         if (SpeechRecognition) {
             recognition = new SpeechRecognition();
-            recognition.lang = 'en-US';        // Nhận diện giọng tiếng Anh Mỹ
-            recognition.continuous = true;     // BẬT tính năng nói liên tục không ngắt khi dừng lấy hơi
-            recognition.interimResults = true;  // Hiển thị chữ tạm thời ngay khi đang nói
+            recognition.lang = 'en-US';        
+            recognition.continuous = true;     
+            recognition.interimResults = true;  
 
             recognition.onstart = () => {
                 isRecording = true;
@@ -165,7 +166,6 @@
                 micBtn.classList.add("recording");
             };
 
-            let finalTranscript = '';
             recognition.onresult = (event) => {
                 let interimTranscript = '';
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
@@ -175,9 +175,7 @@
                         interimTranscript += event.results[i][0].transcript;
                     }
                 }
-                // Cập nhật chữ vào ô nhập liệu
                 userInput.value = finalTranscript + interimTranscript;
-                // Tự động cuộn ô văn bản xuống nếu nói quá dài
                 userInput.scrollTop = userInput.scrollHeight;
             };
 
@@ -199,7 +197,6 @@
         function toggleMic() {
             if (!recognition) return;
             if (!isRecording) {
-                // Trước khi nói lượt mới, lấy lại chữ cũ đang có trong ô (nếu có)
                 finalTranscript = userInput.value ? userInput.value + ' ' : '';
                 recognition.start();
             } else {
@@ -222,27 +219,23 @@
             const rawText = userInput.value.trim();
             if (!rawText) return;
 
-            // Nếu đang bật mic mà bấm gửi, tắt mic trước
             if (isRecording) {
                 recognition.stop();
             }
 
-            // Hiển thị câu nói của bạn lên màn hình chat
             chatContainer.innerHTML += `<div class="message user">${rawText}</div>`;
             clearInput();
             chatContainer.scrollTop = chatContainer.scrollHeight;
 
-            // Trạng thái AI đang xử lý
             const loadingId = "loading-" + Date.now();
             chatContainer.innerHTML += `<div class="message bot" id="${loadingId}">Giáo viên AI đang nghe và phân tích...</div>`;
             chatContainer.scrollTop = chatContainer.scrollHeight;
 
-            // Prompt ép AI đóng vai giáo viên chấm bài giao tiếp cực kỳ chi tiết
             const promptSystem = `Bạn là một giáo viên dạy tiếng Anh giao tiếp bản xứ cực kỳ tâm huyết. Người học vừa nói một câu/đoạn văn sau đây: "${rawText}".
-            Nhiệm vụ của bạn:
-            1. Viết lại câu/đoạn văn chuẩn, tự nhiên nhất của người bản xứ (nếu họ nói chưa chuẩn hoặc sai ngữ pháp). Chữ viết lại đặt trong thẻ <b>.
-            2. Giải thích ngắn gọn bằng tiếng Việt lỗi sai (nếu có) hoặc cách dùng từ sao cho hay hơn, Tây hơn.
-            3. Trả lời lại họ bằng một câu hỏi hoặc một câu nói tiếng Anh ngắn gọn, đơn giản để tiếp tục dẫn dắt cuộc hội thoại giao tiếp.`;
+            Nhiệm vụ của bạn trả về kết quả theo cấu trúc rõ ràng sau bằng tiếng Việt:
+            1. Câu chuẩn của người bản xứ (đặt trong thẻ <b> để in đậm).
+            2. Giải thích ngắn gọn bằng tiếng Việt xem họ sai ở đâu, hoặc cách dùng từ thế nào cho tự nhiên, Tây hơn.
+            3. Trả lời hoặc đặt một câu hỏi tiếng Anh ngắn gọn, đơn giản liên quan tới chủ đề để tiếp tục cuộc trò chuyện giao tiếp.`;
 
             try {
                 const response = await fetch(API_URL, {
@@ -256,12 +249,13 @@
                 const data = await response.json();
                 let botReply = data.candidates[0].content.parts[0].text;
                 
-                // Định dạng lại xuống dòng cho đẹp
+                // Đã sửa: Xử lý định dạng xuống dòng và dấu in đậm Markdown thành HTML chuẩn iOS
                 botReply = botReply.replace(/\n/g, "<br>");
+                botReply = botReply.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
 
                 document.getElementById(loadingId).innerHTML = botReply;
             } catch (error) {
-                document.getElementById(loadingId).innerText = "Hệ thống bận hoặc API Key chưa đúng. Bạn hãy kiểm tra lại nhé!";
+                document.getElementById(loadingId).innerText = "Hệ thống bận hoặc API Key chưa đúng định dạng AIzaSy. Bạn hãy kiểm tra lại nhé!";
                 console.error(error);
             }
             chatContainer.scrollTop = chatContainer.scrollHeight;
