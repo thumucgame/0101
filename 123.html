@@ -890,7 +890,7 @@ function handleAction(playerId, action, isAuto=false){
     if(!gameState.currentCombo) return;
     gameState.passed.add(playerId);
     gameState.log = `${prefix}${pName} đã bỏ lượt.`;
-    consecutivePlayCount = 0; // Có người bỏ lượt thì cắt đứt chuỗi đối kháng liên tục
+    consecutivePlayCount = 0;
     checkNextTurn();
   } 
   else if(action.kind === 'play'){
@@ -907,10 +907,8 @@ function handleAction(playerId, action, isAuto=false){
 
     if(!canBeat(combo, gameState.currentCombo)) return;
 
-    // Phát âm thanh xoẹt quẹt bài (PLAY_CARD)
     broadcastSoundEvent('PLAY_CARD', 0.8);
 
-    // Xử lý đối kháng liên tục 4 lượt không ai bỏ lượt để vang CHANCHAT
     consecutivePlayCount++;
     if(consecutivePlayCount >= 4){
       let chanchatVol = consecutivePlayCount >= 8 ? 1.0 : (0.7 + ((consecutivePlayCount - 4) * 0.08));
@@ -965,7 +963,7 @@ function checkNextTurn(){
     if(allPassed){
       gameState.currentCombo = null;
       gameState.passed.clear();
-      consecutivePlayCount = 0; // Hết vòng cũ sang vòng mới reset đếm chuỗi đối kháng
+      consecutivePlayCount = 0;
 
       if(gameState.finished.includes(gameState.leaderId)){
         let nextLeader = gameState.order[(gameState.order.indexOf(gameState.leaderId) + 1) % gameState.order.length];
