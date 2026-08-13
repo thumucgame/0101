@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
-<title>Tiến Lên Online - Bản Fix Mobile</title>
+<title>Tiến Lên Online - Bản Fix Mobile & Ném Đồ & Âm Thanh Online Chuẩn</title>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
 :root{
@@ -22,7 +22,7 @@
 *{box-sizing:border-box;}
 html,body{height:100%;height:100dvh;margin:0;padding:0;overflow:hidden;}
 body{
-  font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
+  font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji";
   background:radial-gradient(ellipse at 50% -10%, var(--felt-2) 0%, var(--felt-1) 55%, #062319 100%);
   color:var(--cream);
   display:flex;
@@ -76,7 +76,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .crown{color:var(--gold);font-size:12px;}
 .checkbox-row{display:flex;align-items:center;gap:8px;margin:12px 0;font-size:13px;cursor:pointer;}
 
-/* TABLE LAYOUT - FIX DVH CHO MOBILE */
+/* TABLE LAYOUT */
 #tableScreen{
   flex:1;display:grid;grid-template-rows:40px 1fr auto;
   height:100vh;height:100dvh;position:relative;padding:4px;overflow:hidden;
@@ -86,15 +86,17 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .p-slot{
   position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;
   background:rgba(0,0,0,.4);border:1px solid var(--panel-line);border-radius:10px;padding:4px 8px;z-index:2;
+  cursor:pointer;
 }
 .p-slot.active{border-color:var(--gold);box-shadow:0 0 10px rgba(212,175,55,.4);}
-.p-slot .avatar{width:30px;height:30px;border-radius:50%;background:#1d4d3e;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.p-slot .avatar{width:30px;height:30px;border-radius:50%;background:#1d4d3e;display:flex;align-items:center;justify-content:center;font-size:15px;position:relative;}
 .p-slot .name{font-size:11px;font-weight:600;margin-top:2px;max-width:70px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .p-slot .card-cnt{font-size:10px;color:var(--gold);font-weight:bold;}
 
 .slot-top{top:6px;left:50%;transform:translateX(-50%);}
 .slot-left{top:35%;left:4px;transform:translateY(-50%);}
 .slot-right{top:35%;right:4px;transform:translateY(-50%);}
+.slot-bottom{position:relative;margin-bottom:4px;border:none;background:transparent;}
 
 .table-center{
   grid-row:2;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -107,10 +109,10 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .timer-sec{font-family:monospace;font-weight:700;color:var(--gold);font-size:14px;}
 .timer-sec.low{color:var(--bad);}
 
-.played-combo{display:flex;gap:2px;min-height:60px;align-items:center;justify-content:center;margin-top:10px;max-width:100%;overflow:x-auto;}
+.played-combo{display:flex;gap:2px;min-height:60px;align-items:center;justify-content:center;margin-top:10px;max-width:100%;overflow-x:auto;}
 .action-log{font-size:11px;color:rgba(250,246,238,.7);margin-top:4px;height:14px;text-align:center;padding:0 4px;}
 
-/* HAND AREA - FIX CO GIÃN BÀI TAY TRÊN MOBILE */
+/* HAND AREA */
 .hand-area{
   grid-row:3;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
   padding-bottom:10px;padding-top:5px;width:100%;
@@ -141,12 +143,9 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .controls{display:flex;gap:6px;width:100%;max-width:320px;justify-content:center;padding:0 8px;}
 .controls .btn{flex:1;padding:8px 10px;font-size:13px;}
 
-/* MOBILE OPTIMIZATION (ĐIỆN THOẠI MÀN HÌNH NHỎ) */
 @media (max-width: 600px) {
-  .brand{display:none;} /* Ẩn bớt logo khi vào bàn để nhường diện tích */
-  .card{
-    width:38px;height:58px;margin-left:-20px;padding:2px;
-  }
+  .brand{display:none;}
+  .card{width:38px;height:58px;margin-left:-20px;padding:2px;}
   .card .rank{font-size:12px;}
   .card .suit{font-size:12px;}
   .card.selected{transform:translateY(-12px);}
@@ -164,7 +163,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .amt.plus{color:var(--good);}
 .amt.minus{color:var(--bad);}
 
-/* CHAT PANEL & NOTIFICATION */
+/* CHAT PANEL */
 .side-panel{position:fixed;right:0;top:0;bottom:0;width:260px;background:rgba(6,20,15,.96);border-left:1px solid var(--panel-line);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .2s;z-index:90;}
 .side-panel.open{transform:translateX(0);}
 .chat-log{flex:1;overflow-y:auto;padding:10px;font-size:13px;}
@@ -175,12 +174,52 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   display:flex;align-items:center;justify-content:center;transition:transform .1s;
 }
 .chat-toggle:active{transform:scale(.9);}
-.chat-toggle.has-unread{
-  background:var(--bad);color:#fff;animation:pulse 1s infinite alternate;
+.chat-toggle.has-unread{background:var(--bad);color:#fff;animation:pulse 1s infinite alternate;}
+@keyframes pulse{0%{transform:scale(1);}100%{transform:scale(1.12);}}
+
+/* POPOVER NÉM ĐỒ VUI NHỘN */
+.throw-popover {
+  position: fixed; background: rgba(10, 46, 35, 0.95); border: 1px solid var(--gold);
+  border-radius: 12px; padding: 6px 10px; display: flex; gap: 8px; z-index: 200;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+  animation: popIn 0.15s ease-out;
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
 }
-@keyframes pulse{
-  0%{transform:scale(1);}
-  100%{transform:scale(1.12);}
+@keyframes popIn { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.throw-btn {
+  font-size: 22px; background: rgba(255,255,255,0.1); border: none; border-radius: 8px;
+  width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: transform 0.1s, background 0.1s;
+  font-family: inherit;
+}
+.throw-btn:active { transform: scale(1.2); background: rgba(212,175,55,0.3); }
+
+.flying-item {
+  position: fixed; font-size: 32px; z-index: 300; pointer-events: none;
+  transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s;
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+}
+.splat-effect {
+  position: absolute; font-size: 36px; pointer-events: none; z-index: 50;
+  animation: splatAnim 0.8s ease-out forwards;
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+}
+@keyframes splatAnim {
+  0% { transform: scale(0.5); opacity: 1; }
+  70% { transform: scale(1.3); opacity: 0.9; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+
+.sound-text-pop {
+  position: absolute; font-weight: 800; font-size: 13px; color: #ffe600;
+  text-shadow: 0 0 4px #000, 0 0 8px #ff0000; pointer-events: none; z-index: 350;
+  white-space: nowrap; animation: floatUp 1.2s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+}
+@keyframes floatUp {
+  0% { transform: translateY(0) scale(0.7); opacity: 0; }
+  20% { transform: translateY(-10px) scale(1.2); opacity: 1; }
+  80% { transform: translateY(-25px) scale(1); opacity: 1; }
+  100% { transform: translateY(-35px) scale(0.8); opacity: 0; }
 }
 </style>
 </head>
@@ -275,6 +314,9 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   </div>
 
   <div class="hand-area">
+    <div class="p-slot slot-bottom" id="mySlot" style="cursor:default;">
+      <div class="avatar" id="myAvatar">👤</div>
+    </div>
     <div class="hand-cards" id="handCards"></div>
     <div class="controls">
       <button class="btn btn-outline" id="btnSort">Xếp bài</button>
@@ -312,9 +354,43 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   </div>
 </div>
 
+<!-- POPOVER NÉM ĐỒ VUI NHỘN (THÊM HƠN CHO ĐÃ) -->
+<div class="throw-popover hidden" id="throwPopover">
+  <button class="throw-btn" onclick="triggerThrow('🍅')" title="Cà chua">🍅</button>
+  <button class="throw-btn" onclick="triggerThrow('🥚')" title="Trứng vỡ">🥚</button>
+  <button class="throw-btn" onclick="triggerThrow('🩴')" title="Dép thần thánh">🩴</button>
+  <button class="throw-btn" onclick="triggerThrow('🌹')" title="Hoa hồng">🌹</button>
+  <button class="throw-btn" onclick="triggerThrow('🍺')" title="Cốc bia">🍺</button>
+  <button class="throw-btn" onclick="triggerThrow('💩')" title="Cục cứt">💩</button>
+  <button class="throw-btn" onclick="triggerThrow('🔥')" title="Lửa đốt">🔥</button>
+</div>
+
 <script>
 (function(){
 "use strict";
+
+/* BỔ SUNG ĐẦY ĐỦ LINK ÂM THANH CHO TẤT CẢ CÁC MÓN (BAO GỒM LY BIA 🍺 VÀ CÁC MÓN MỚI) */
+const SOUND_URLS = {
+  '🩴': 'https://www.myinstants.com/media/sounds/vine-boom.mp3',             // Vine boom hài hước
+  '🥚': 'https://www.myinstants.com/media/sounds/cartoon-boing.mp3',         // Boing vui nhộn
+  '🍅': 'https://www.myinstants.com/media/sounds/aughh.mp3',                 // Aughh meme
+  '🍺': 'https://www.myinstants.com/media/sounds/cheering.mp3',              // Tiếng cạn ly / reo hò vui nhộn
+  '🌹': 'https://www.myinstants.com/media/sounds/emotional-damage-meme.mp3', // Emotional Damage
+  '💩': 'https://www.myinstants.com/media/sounds/fart-with-reverb.mp3',       // Tiếng xì hơi có reverb cực bựa
+  '🔥': 'https://www.myinstants.com/media/sounds/bruh-sound-effect.mp3'      // Tiếng Bruh hài hước
+};
+
+function playOnlineSound(item){
+  const url = SOUND_URLS[item];
+  if(!url) return;
+  try {
+    const audio = new Audio(url);
+    audio.volume = 0.9;
+    audio.play().catch(e => console.log("Audio play blocked/error:", e));
+  } catch(err){
+    console.log(err);
+  }
+}
 
 const ICE_SERVERS = {
   iceServers: [
@@ -421,12 +497,12 @@ let gameState=null;
 let myHand=[];
 let selected=new Set();
 let unreadChat = 0;
+let activeTargetId = null;
 
 let roomSettings = { turnSeconds: 30, stakeUnit: 'Trái Dừa', hideCardCount: true };
 
 const $=id=>document.getElementById(id);
 
-/* COPY CODE */
 $('roomCodeDisplay').onclick = () => {
   if(!roomCode) return;
   navigator.clipboard.writeText(roomCode).then(() => {
@@ -437,7 +513,6 @@ $('roomCodeDisplay').onclick = () => {
   });
 };
 
-/* INITIALIZATION */
 $('btnShowJoin').onclick=()=>{ $('joinBox').classList.remove('hidden'); };
 
 $('btnCreate').onclick=()=>{
@@ -498,6 +573,8 @@ function onMessage(conn, msg){
       handleAction(msg.id, msg.action);
     } else if(msg.t==='chat'){
       broadcastChat(msg.name, msg.text);
+    } else if(msg.t==='throwItem'){
+      broadcastThrowItem(msg.fromId, msg.toId, msg.item);
     }
   } else {
     if(msg.t==='lobby'){
@@ -510,6 +587,8 @@ function onMessage(conn, msg){
       addChatLine(msg.name, msg.text);
     } else if(msg.t==='result'){
       showResultOverlay(msg.results);
+    } else if(msg.t==='throwItem'){
+      animateItemThrow(msg.fromId, msg.toId, msg.item);
     }
   }
 }
@@ -524,6 +603,12 @@ function broadcastChat(name, text){
   const msg = {t:'chat', name, text};
   Object.values(conns).forEach(c=>c.send(msg));
   addChatLine(name, text);
+}
+
+function broadcastThrowItem(fromId, toId, item){
+  const msg = {t:'throwItem', fromId, toId, item};
+  Object.values(conns).forEach(c=>c.send(msg));
+  animateItemThrow(fromId, toId, item);
 }
 
 function showLobby(){
@@ -811,7 +896,6 @@ function broadcastState(){
   });
 }
 
-/* UI RENDER */
 let currentState = null;
 function applyState(st){
   currentState = st;
@@ -850,12 +934,21 @@ function renderOpponents(){
     let cardCountDisplay = currentState.hideCardCount ? '🙈 Bài: ??' : `${currentState.counts[pId]} lá`;
     if(isFinished) cardCountDisplay = 'Về đích';
 
-    wrap.innerHTML += `
-      <div class="p-slot ${posClass} ${isTurn?'active':''}">
-        <div class="avatar">👤</div>
-        <div class="name">${currentState.names[pId]}</div>
-        <div class="card-cnt">${cardCountDisplay}</div>
-      </div>`;
+    const slotDiv = document.createElement('div');
+    slotDiv.className = `p-slot ${posClass} ${isTurn?'active':''}`;
+    slotDiv.dataset.pid = pId;
+    slotDiv.innerHTML = `
+      <div class="avatar" id="avatar-${pId}">👤</div>
+      <div class="name">${currentState.names[pId]}</div>
+      <div class="card-cnt">${cardCountDisplay}</div>
+    `;
+
+    slotDiv.onclick = (e) => {
+      e.stopPropagation();
+      openThrowPopover(pId, slotDiv);
+    };
+
+    wrap.appendChild(slotDiv);
   }
 }
 
@@ -918,6 +1011,110 @@ function sendAction(act){
   if(isHost) handleAction(myId, act);
   else conns.host && conns.host.send({t:'action', id:myId, action:act});
   selected.clear();
+}
+
+function openThrowPopover(pId, targetEl){
+  activeTargetId = pId;
+  const pop = $('throwPopover');
+  const rect = targetEl.getBoundingClientRect();
+  
+  pop.style.top = Math.min(window.innerHeight - 60, rect.bottom + 5) + 'px';
+  pop.style.left = Math.max(10, Math.min(window.innerWidth - 260, rect.left - 40)) + 'px';
+  pop.classList.remove('hidden');
+}
+
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('#throwPopover') && !e.target.closest('.p-slot')){
+    $('throwPopover').classList.add('hidden');
+  }
+});
+
+window.triggerThrow = function(item){
+  $('throwPopover').classList.add('hidden');
+  if(!activeTargetId) return;
+
+  if(isHost) broadcastThrowItem(myId, activeTargetId, item);
+  else conns.host && conns.host.send({t:'throwItem', fromId:myId, toId:activeTargetId, item});
+};
+
+function animateItemThrow(fromId, toId, item){
+  const fromEl = (fromId === myId) ? $('myAvatar') : $(`avatar-${fromId}`);
+  const toEl = (toId === myId) ? $('myAvatar') : $(`avatar-${toId}`);
+
+  if(!fromEl || !toEl) return;
+
+  const startRect = fromEl.getBoundingClientRect();
+  const endRect = toEl.getBoundingClientRect();
+
+  const flyEl = document.createElement('div');
+  flyEl.className = 'flying-item';
+  flyEl.textContent = item;
+  flyEl.style.left = (startRect.left + startRect.width/2 - 16) + 'px';
+  flyEl.style.top = (startRect.top + startRect.height/2 - 16) + 'px';
+
+  document.body.appendChild(flyEl);
+
+  requestAnimationFrame(() => {
+    const deltaX = (endRect.left + endRect.width/2) - (startRect.left + startRect.width/2);
+    const deltaY = (endRect.top + endRect.height/2) - (startRect.top + startRect.height/2);
+    
+    let rotate = item === '🩴' ? 720 : (item === '🍺' ? 360 : 0);
+    flyEl.style.transform = `translate(${deltaX}px, ${deltaY}px) rotate(${rotate}deg)`;
+  });
+
+  setTimeout(() => {
+    flyEl.remove();
+    showSplatEffect(toEl, item);
+    playOnlineSound(item); // PHÁT ÂM THANH TƯƠNG ƯNG CHO TỪNG MÓN
+  }, 600);
+}
+
+function showSplatEffect(targetEl, item){
+  const splat = document.createElement('div');
+  splat.className = 'splat-effect';
+
+  const textPop = document.createElement('div');
+  textPop.className = 'sound-text-pop';
+
+  if(item === '🍅'){
+    splat.textContent = '💥';
+    textPop.textContent = 'Aughh! Trúng mặt 🍅';
+  }
+  else if(item === '🥚'){
+    splat.textContent = '🍳';
+    textPop.textContent = 'Boing! Trứng vỡ! 🥚';
+  }
+  else if(item === '🩴'){
+    splat.textContent = '💫';
+    textPop.textContent = 'Vine Boom! Chát! 🩴';
+  }
+  else if(item === '🌹'){
+    splat.textContent = '💔';
+    textPop.textContent = 'Emotional Damage! 🌹';
+  }
+  else if(item === '🍺'){
+    splat.textContent = '🍻';
+    textPop.textContent = 'Cạn ly vô! Dô dô! 🍺';
+  }
+  else if(item === '💩'){
+    splat.textContent = '💨';
+    textPop.textContent = 'Fart reverb! Thúi quá! 💩';
+  }
+  else if(item === '🔥'){
+    splat.textContent = '✨';
+    textPop.textContent = 'Bruh! Cháy nhà! 🔥';
+  }
+
+  splat.style.left = '0px';
+  splat.style.top = '0px';
+  targetEl.appendChild(splat);
+
+  textPop.style.left = '50%';
+  textPop.style.top = '-20px';
+  textPop.style.transform = 'translateX(-50%)';
+  targetEl.appendChild(textPop);
+
+  setTimeout(() => { splat.remove(); textPop.remove(); }, 1200);
 }
 
 /* CHAT LOGIC */
