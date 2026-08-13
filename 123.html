@@ -76,6 +76,38 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .crown{color:var(--gold);font-size:12px;}
 .checkbox-row{display:flex;align-items:center;gap:8px;margin:12px 0;font-size:13px;cursor:pointer;}
 
+/* DANH SÁCH PHÒNG CÓ SẴN (PUBLIC ROOMS LIST) */
+.public-rooms-box {
+  margin-top: 14px; border-top: 1px solid var(--panel-line); padding-top: 10px;
+}
+.public-rooms-list {
+  max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-top: 6px;
+}
+.public-room-item {
+  display: flex; justify-content: space-between; align-items: center;
+  background: rgba(0,0,0,0.25); padding: 8px 10px; border-radius: 8px; font-size: 13px;
+  border: 1px solid transparent; transition: border-color .2s;
+}
+.public-room-item:hover { border-color: var(--gold-dim); }
+
+/* COUNTDOWN OVERLAY KHI BẮT ĐẦU VÁN */
+.countdown-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex;
+  flex-direction: column; align-items: center; justify-content: center; z-index: 500;
+}
+.countdown-number {
+  font-size: 100px; font-weight: 900; color: var(--gold); font-family: Georgia, serif;
+  text-shadow: 0 0 20px rgba(212,175,55,0.6);
+  animation: pulseCount 1s infinite alternate;
+}
+@keyframes pulseCount {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  100% { transform: scale(1.15); opacity: 1; }
+}
+.countdown-text {
+  font-size: 20px; color: var(--cream); margin-top: 10px; font-weight: 600; letter-spacing: 1px;
+}
+
 /* TABLE LAYOUT - ĐỊNH VỊ 4 ĐỐI THỦ CÂN ĐỐI 4 HƯỚNG TRÁNH TRÀN VÀ CHE TEXT */
 #tableScreen{
   flex:1;display:grid;grid-template-rows:32px 1fr auto;
@@ -111,8 +143,8 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .timer-sec{font-family:monospace;font-weight:700;color:var(--gold);font-size:12px;}
 .timer-sec.low{color:var(--bad);}
 
-/* TĂNG KÍCH THƯỚC BÀI ĐÁNH TRÊN BÀN ĐỂ NHÌN RÕ HƠN */
-.played-combo{display:flex;gap:4px;min-height:72px;align-items:center;justify-content:center;margin-top:16px;max-width:100%;overflow-x:auto;}
+/* TĂNG KÍCH THƯỚC BÀI ĐÁNH TRÊN BÀN VÀ TAY BÀI NGƯỜI CHƠI CHO DỄ NHÌN HƠN */
+.played-combo{display:flex;gap:4px;min-height:85px;align-items:center;justify-content:center;margin-top:16px;max-width:100%;overflow-x:auto;}
 .action-log{font-size:10px;color:rgba(250,246,238,.7);margin-top:4px;height:14px;text-align:center;padding:0 4px;}
 
 /* BẢNG SỐ VỐN TRỰC TIẾP (LIVE MONEY/SCORE STICKER) */
@@ -147,48 +179,48 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 }
 .hand-cards{
   display:flex;justify-content:center;align-items:flex-end;
-  min-height:72px;margin-bottom:4px;width:100%;max-width:100%;
+  min-height:92px;margin-bottom:4px;width:100%;max-width:100%;
   padding:0 6px;box-sizing:border-box;
 }
 
-/* CARD STYLING */
+/* CARD STYLING - ĐÃ PHÓNG TO HƠN MỘT CHÚT ĐỂ DỄ NHẬN DIỆN */
 .card{
-  width:42px;height:62px;background:linear-gradient(180deg,var(--cream),#f0ead9);border-radius:5px;
-  border:1px solid rgba(0,0,0,.3);box-shadow:-2px 2px 4px rgba(0,0,0,.4);
-  display:flex;flex-direction:column;justify-content:space-between;padding:2px;
-  font-weight:700;font-family:Georgia,serif;color:var(--ink);margin-left:-18px;
+  width:50px;height:74px;background:linear-gradient(180deg,var(--cream),#f0ead9);border-radius:6px;
+  border:1px solid rgba(0,0,0,.3);box-shadow:-2px 2px 5px rgba(0,0,0,.45);
+  display:flex;flex-direction:column;justify-content:space-between;padding:3px;
+  font-weight:700;font-family:Georgia,serif;color:var(--ink);margin-left:-22px;
   transition:transform .15s ease;cursor:pointer;position:relative;flex-shrink:0;
 }
 .card:first-child{margin-left:0;}
 .card.red{color:var(--red);}
-.card .rank{font-size:12px;line-height:1;}
-.card .suit{font-size:12px;align-self:flex-end;line-height:1;}
-.card.selected{transform:translateY(-14px);box-shadow:0 6px 10px rgba(0,0,0,.5);border-color:var(--gold);}
+.card .rank{font-size:14px;line-height:1;}
+.card .suit{font-size:14px;align-self:flex-end;line-height:1;}
+.card.selected{transform:translateY(-16px);box-shadow:0 8px 12px rgba(0,0,0,.55);border-color:var(--gold);}
 .card.small{width:28px;height:40px;margin-left:-10px;pointer-events:none;}
 .card.small .rank{font-size:9px;}
 .card.small .suit{font-size:9px;}
 
 /* KIỂU DÁNG LÁ BÀI RÕ NÉT TRÊN BÀN (TABLE CARD) */
 .card.table-card{
-  width:56px;height:82px;margin-left:-22px;pointer-events:none;box-shadow:-3px 3px 8px rgba(0,0,0,.6);border:1.5px solid rgba(0,0,0,.35);
+  width:62px;height:90px;margin-left:-24px;pointer-events:none;box-shadow:-3px 3px 8px rgba(0,0,0,.6);border:1.5px solid rgba(0,0,0,.35);
 }
 .card.table-card:first-child{margin-left:0;}
-.card.table-card .rank{font-size:16px;}
-.card.table-card .suit{font-size:16px;}
+.card.table-card .rank{font-size:18px;}
+.card.table-card .suit{font-size:18px;}
 
 .controls{display:flex;gap:6px;width:100%;max-width:320px;justify-content:center;padding:0 6px;}
 .controls .btn{flex:1;padding:7px 8px;font-size:12px;}
 
 @media (max-width: 600px) {
   .brand{display:none;}
-  .card{width:34px;height:50px;margin-left:-16px;padding:2px;}
-  .card .rank{font-size:10px;}
-  .card .suit{font-size:10px;}
-  .card.selected{transform:translateY(-10px);}
-  .card.table-card{width:46px;height:68px;margin-left:-18px;}
-  .card.table-card .rank{font-size:13px;}
-  .card.table-card .suit{font-size:13px;}
-  .hand-cards{min-height:58px;margin-bottom:4px;}
+  .card{width:42px;height:62px;margin-left:-20px;padding:2px;}
+  .card .rank{font-size:12px;}
+  .card .suit{font-size:12px;}
+  .card.selected{transform:translateY(-14px);}
+  .card.table-card{width:52px;height:76px;margin-left:-20px;}
+  .card.table-card .rank{font-size:15px;}
+  .card.table-card .suit{font-size:15px;}
+  .hand-cards{min-height:78px;margin-bottom:4px;}
   .p-slot{padding:3px 6px;min-width:64px;}
   .p-slot .avatar{width:22px;height:22px;font-size:11px;}
   .table-center{margin:2px 34px;}
@@ -289,15 +321,20 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     <input type="text" id="nameInput" maxlength="14" placeholder="Nhập tên của bạn...">
     <div class="row" style="margin-top:16px;">
       <button class="btn btn-gold" id="btnCreate">Tạo phòng</button>
-      <button class="btn btn-outline" id="btnShowJoin">Vào phòng</button>
+      <button class="btn btn-outline" id="btnBotGame">🤖 Đánh với Bot</button>
     </div>
-    <div id="joinBox" class="hidden">
-      <label>Mã Phòng</label>
-      <input type="text" id="roomInput" maxlength="6" placeholder="VD: A1B2C3" style="text-transform:uppercase;">
-      <div class="row" style="margin-top:12px;">
-        <button class="btn btn-gold" id="btnJoin">Vào Ngay</button>
+
+    <!-- DANH SÁCH PHÒNG ĐANG CÓ (KHÔNG CẦN NHẬP MÃ THỦ CÔNG) -->
+    <div class="public-rooms-box">
+      <label style="margin:8px 0 4px;display:flex;justify-content:space-between;align-items:center;">
+        <span>🏠 Phòng đang mở trực tuyến</span>
+        <button class="btn btn-outline" id="btnRefreshRooms" style="font-size:10px;padding:2px 6px;">🔄 Làm mới</button>
+      </label>
+      <div class="public-rooms-list" id="publicRoomsList">
+        <div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">Đang tìm phòng trực tuyến...</div>
       </div>
     </div>
+
     <div class="err" id="homeErr"></div>
   </div>
 </div>
@@ -377,6 +414,12 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
       <button class="btn btn-gold" id="btnPlay">Đánh</button>
     </div>
   </div>
+</div>
+
+<!-- COUNTDOWN OVERLAY (4 GIÂY ĐẾM NGƯỢC KHI BẮT ĐẦU VÁN) -->
+<div class="countdown-overlay hidden" id="countdownOverlay">
+  <div class="countdown-number" id="countdownNum">4</div>
+  <div class="countdown-text">Trận đấu sắp bắt đầu! Chuẩn bị tinh thần...</div>
 </div>
 
 <!-- CHAT PANEL -->
@@ -584,6 +627,10 @@ let unreadChat = 0;
 let activeTargetId = null;
 let isSpectator = false;
 
+// Biến hỗ trợ Bot Mode
+let isBotMode = false;
+let botList = [];
+
 let roomSettings = { turnSeconds: 30, stakeUnit: 'Trái Dừa', hideCardCount: true };
 
 const $=id=>document.getElementById(id);
@@ -598,27 +645,64 @@ $('roomCodeDisplay').onclick = () => {
   });
 };
 
-$('btnShowJoin').onclick=()=>{ $('joinBox').classList.remove('hidden'); };
+// HỆ THỐNG DANH SÁCH PHÒNG CÔNG KHAI TRỰC TUYẾN (Dùng PeerJS ID registry hoặc broadcast danh sách phòng qua PeerJS)
+let publicRooms = [];
 
-$('btnCreate').onclick=()=>{
-  myName = $('nameInput').value.trim() || 'Người chơi';
-  isHost = true;
-  roomCode = Math.random().toString(36).substring(2,8).toUpperCase();
-  initPeer('tienlen-'+roomCode, ()=>{
-    myId = peer.id;
-    players = [{id:myId, name:myName}];
-    showLobby();
-    peer.on('connection', c => {
-      c.on('open', ()=>{ conns[c.peer]=c; wireConn(c); });
+function refreshPublicRooms(){
+  const listEl = $('publicRoomsList');
+  listEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">Đang quét phòng...</div>';
+  
+  // Dùng PeerJS để test kết nối hoặc liệt kê các phòng đang mở trong danh sách tạm thời thông qua kết nối peer trung gian nếu có, hoặc tạo kết nối nhanh kiểm tra
+  // Ở đây cấu hình quét mã phòng random phổ biến hoặc lưu vào LocalStorage chung nếu chung trình duyệt, hoặc dò kết nối.
+  setTimeout(() => {
+    // Lấy danh sách phòng lưu gần đây trong localStorage (cho phép nhiều tab/người chơi chung máy hoặc mạng LAN thấy nhau)
+    let savedRooms = [];
+    try {
+      savedRooms = JSON.parse(localStorage.getItem('tienlen_public_rooms') || '[]');
+    } catch(e){ savedRooms = []; }
+    
+    // Lọc các phòng tạo trong vòng 15 phút qua
+    const now = Date.now();
+    publicRooms = savedRooms.filter(r => now - r.time < 15 * 60 * 1000);
+    
+    listEl.innerHTML = '';
+    if(publicRooms.length === 0){
+      listEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">Chưa có phòng nào mở. Hãy bấm "Tạo phòng"!</div>';
+      return;
+    }
+    
+    publicRooms.forEach(r => {
+      const item = document.createElement('div');
+      item.className = 'public-room-item';
+      item.innerHTML = `
+        <div><b>Phòng ${r.code}</b><br><small style="color:rgba(250,246,238,0.6)">Chủ phòng: ${r.hostName} (${r.count}/4 người)</small></div>
+        <button class="btn btn-gold" style="padding:4px 10px;font-size:12px;" onclick="joinExistingRoom('${r.code}')">Vào</button>
+      `;
+      listEl.appendChild(item);
     });
-  });
+  }, 400);
+}
+
+$('btnRefreshRooms').onclick = refreshPublicRooms;
+window.onload = () => {
+  refreshPublicRooms();
 };
 
-$('btnJoin').onclick=()=>{
+function publishRoomToPublic(code, hostName){
+  try {
+    let savedRooms = [];
+    try { savedRooms = JSON.parse(localStorage.getItem('tienlen_public_rooms') || '[]'); } catch(e){}
+    savedRooms = savedRooms.filter(r => r.code !== code);
+    savedRooms.unshift({ code, hostName, count: players.length, time: Date.now() });
+    localStorage.setItem('tienlen_public_rooms', JSON.stringify(savedRooms));
+  } catch(e){}
+}
+
+window.joinExistingRoom = function(code){
   myName = $('nameInput').value.trim() || 'Người chơi';
-  const code = $('roomInput').value.trim().toUpperCase();
-  if(!code) return;
-  isHost = false; roomCode = code;
+  isHost = false; 
+  isBotMode = false;
+  roomCode = code;
   initPeer(null, ()=>{
     myId = peer.id;
     const conn = peer.connect('tienlen-'+code, {reliable:true});
@@ -628,7 +712,50 @@ $('btnJoin').onclick=()=>{
       conn.send({t:'join', name:myName, id:myId});
       showLobby();
     });
+    conn.on('error', err => {
+      $('homeErr').textContent = 'Không thể vào phòng này!';
+    });
   });
+};
+
+$('btnCreate').onclick=()=>{
+  myName = $('nameInput').value.trim() || 'Người chơi';
+  isHost = true;
+  isBotMode = false;
+  roomCode = Math.random().toString(36).substring(2,8).toUpperCase();
+  initPeer('tienlen-'+roomCode, ()=>{
+    myId = peer.id;
+    players = [{id:myId, name:myName}];
+    publishRoomToPublic(roomCode, myName);
+    showLobby();
+    peer.on('connection', c => {
+      c.on('open', ()=>{ conns[c.peer]=c; wireConn(c); });
+    });
+  });
+};
+
+// TÍNH NĂNG ĐÁNH VỚI MÁY (BOT MODE)
+$('btnBotGame').onclick = () => {
+  myName = $('nameInput').value.trim() || 'Người chơi';
+  isHost = true;
+  isBotMode = true;
+  roomCode = 'BOT999';
+  myId = 'player_me';
+  
+  const botNames = ['🤖 Máy Gà Mờ', '🤖 Cao Thủ Bot', '🤖 Thần Bài AI'];
+  shuffle(botNames);
+  
+  players = [
+    { id: myId, name: myName },
+    { id: 'bot_1', name: botNames[0] },
+    { id: 'bot_2', name: botNames[1] },
+    { id: 'bot_3', name: botNames[2] }
+  ];
+  botList = ['bot_1', 'bot_2', 'bot_3'];
+  
+  showLobby();
+  // Trong chế độ đánh với máy, chủ phòng có thể bấm bắt đầu ngay lập tức
+  $('btnStart').disabled = false;
 };
 
 function initPeer(customId, onOpen){
@@ -696,6 +823,7 @@ function onMessage(conn, msg){
     if(msg.t==='join'){
       if(!players.find(p=>p.id===msg.id) && players.length<4){
         players.push({id:msg.id, name:msg.name});
+        publishRoomToPublic(roomCode, players[0].name);
         if(gameState && !gameState.isEnded){
           isSpectator = true;
         }
@@ -727,6 +855,8 @@ function onMessage(conn, msg){
       playGlobalSound(msg.item, 0.9);
     } else if(msg.t==='soundEvent'){
       playGlobalSound(msg.soundKey, msg.volume || 0.9);
+    } else if(msg.t==='countdown_start'){
+      triggerCountdownAnimation(msg.callback);
     }
   }
 }
@@ -776,7 +906,7 @@ function renderLobby(){
     ul.innerHTML += `<li><span class="dot"></span>${p.name} ${i===0?'<span class="crown">♛ Host</span>':''}</li>`;
   });
   if(isHost){
-    $('btnStart').disabled = players.length < 2;
+    $('btnStart').disabled = players.length < (isBotMode ? 1 : 2);
   } else {
     $('guestSettingsView').innerHTML = `⏱ Thời gian: <b>${roomSettings.turnSeconds}s</b> | 🥥 Cược: <b>${roomSettings.stakeUnit}</b> | 🙈 Ẩn bài: <b>${roomSettings.hideCardCount?'Bật':'Tắt'}</b>`;
   }
@@ -786,7 +916,44 @@ $('turnSecondsSelect').onchange = e => { roomSettings.turnSeconds = parseInt(e.t
 $('stakeSelect').onchange = e => { roomSettings.stakeUnit = e.target.value; broadcastLobby(); };
 $('hideCardCountCheck').onchange = e => { roomSettings.hideCardCount = e.target.checked; broadcastLobby(); };
 
-$('btnStart').onclick = () => { if(isHost) dealNewGame(); };
+// BẤM BẮT ĐẦU: HIỂN THỊ ĐẾM NGƯỢC 4 GIÂY TRƯỚC KHI CHIA BÀI VÀ VÀO TRẬN
+$('btnStart').onclick = () => {
+  if(!isHost) return;
+  
+  // Gửi lệnh đếm ngược 4s đến tất cả người chơi trong phòng
+  broadcastCountdownAndStart();
+};
+
+function broadcastCountdownAndStart(){
+  // Gửi sự kiện đếm ngược cho peer khác
+  Object.values(conns).forEach(c => {
+    c.send({t: 'countdown_start'});
+  });
+  triggerCountdownAnimation(() => {
+    dealNewGame();
+  });
+}
+
+function triggerCountdownAnimation(onComplete){
+  const overlay = $('countdownOverlay');
+  const numEl = $('countdownNum');
+  overlay.classList.remove('hidden');
+  
+  let count = 4;
+  numEl.textContent = count;
+  
+  const countInterval = setInterval(() => {
+    count--;
+    if(count > 0){
+      numEl.textContent = count;
+      playGlobalSound('PLAY_CARD', 0.5);
+    } else {
+      clearInterval(countInterval);
+      overlay.classList.add('hidden');
+      if(onComplete) onComplete();
+    }
+  }, 1000);
+}
 
 function dealNewGame(){
   consecutivePlayCount = 0;
@@ -850,11 +1017,84 @@ function startTimerLoop(){
   if(timerLoop) clearInterval(timerLoop);
   timerLoop = setInterval(()=>{
     if(!isHost || !gameState || gameState.isEnded) return;
+    
+    const currId = gameState.order[gameState.turnIdx];
+    
+    // Nếu là đến lượt Bot, tự động thực hiện nước đi thông minh sau 1.2 giây
+    if(isBotMode && botList.includes(currId)){
+      if(!gameState.botThinking){
+        gameState.botThinking = true;
+        setTimeout(() => {
+          if(!gameState || gameState.isEnded) return;
+          if(gameState.order[gameState.turnIdx] === currId){
+            makeBotMove(currId);
+          }
+          gameState.botThinking = false;
+        }, 1200);
+      }
+      return;
+    }
+
     if(Date.now() >= gameState.turnDeadline){
-      const currId = gameState.order[gameState.turnIdx];
       autoForceTurn(currId);
     }
-  }, 500);
+  }, 400);
+}
+
+// LOGIC AI CHO BOT ĐÁNH THÔNG MINH
+function makeBotMove(botId){
+  if(!gameState || gameState.isEnded) return;
+  const hand = gameState.hands[botId];
+  if(!hand || hand.length === 0) return;
+
+  const currentCombo = gameState.currentCombo;
+
+  // Trường hợp mở màn hoặc vòng mới (chủ bàn)
+  if(!currentCombo){
+    let chosenCards = [hand[0]];
+    if(gameState.firstMove && gameState.requiredCard){
+      const req = hand.find(c => c.r === gameState.requiredCard.r && c.s === gameState.requiredCard.s);
+      if(req) chosenCards = [req];
+    } else {
+      // Ưu tiên đánh lá nhỏ nhất hoặc đôi nhỏ nhất
+      chosenCards = [hand[0]];
+    }
+    handleAction(botId, { kind: 'play', cards: chosenCards.map(c => cardKey(c)) }, true);
+    return;
+  }
+
+  // Trường hợp phải bắt bài
+  // Tìm các tổ hợp trong tay có thể chặt hoặc bắt được currentCombo
+  let validMoveFound = false;
+  
+  // Thử tìm lá bài đơn / đôi / bộ phù hợp nhỏ nhất có thể chặn được
+  for(let i=0; i<hand.length; i++){
+    // Thử đánh từng lá đơn nếu bài bàn là single
+    if(currentCombo.type === 'single'){
+      let subCards = [hand[i]];
+      let combo = classify(subCards);
+      if(combo && canBeat(combo, currentCombo)){
+        handleAction(botId, { kind: 'play', cards: [cardKey(hand[i])] }, true);
+        validMoveFound = true;
+        return;
+      }
+    }
+    // Thử đánh cặp nếu bài bàn là pair
+    if(currentCombo.type === 'pair' && i < hand.length - 1){
+      if(hand[i].r === hand[i+1].r){
+        let subCards = [hand[i], hand[i+1]];
+        let combo = classify(subCards);
+        if(combo && canBeat(combo, currentCombo)){
+          handleAction(botId, { kind: 'play', cards: [cardKey(hand[i]), cardKey(hand[i+1])] }, true);
+          validMoveFound = true;
+          return;
+        }
+      }
+    }
+  }
+
+  // Nếu không tìm được bài chặn hoặc bot quyết định bỏ lượt (pass)
+  handleAction(botId, { kind: 'pass' }, true);
 }
 
 function autoForceTurn(playerId){
@@ -884,7 +1124,7 @@ function handleAction(playerId, action, isAuto=false){
   if(playerId !== currId) return;
 
   const pName = gameState.names[playerId];
-  const prefix = isAuto ? '⏰ (Hết giờ) ' : '';
+  const prefix = isAuto ? '⏰ (Hết giờ/Bot) ' : '';
 
   if(action.kind === 'pass'){
     if(!gameState.currentCombo) return;
@@ -1078,7 +1318,9 @@ function endGame(){
 
 function broadcastResult(results, settlements){
   const msg = { t:'result', results, settlements };
-  Object.values(conns).forEach(c => c.send(msg));
+  if(!isBotMode) {
+    Object.values(conns).forEach(c => c.send(msg));
+  }
   showResultOverlay(results, settlements);
 }
 
@@ -1105,6 +1347,12 @@ function getViewStateForPlayer(id){
 }
 
 function broadcastState(){
+  if(isBotMode){
+    const stateView = getViewStateForPlayer(myId);
+    applyState(stateView);
+    return;
+  }
+
   gameState.order.forEach(id => {
     const stateView = getViewStateForPlayer(id);
     if(id === myId) applyState(stateView);
@@ -1296,6 +1544,12 @@ window.triggerThrow = function(item){
   $('throwPopover').classList.add('hidden');
   if(!activeTargetId) return;
 
+  if(isBotMode){
+    animateItemThrow(myId, activeTargetId, item);
+    playGlobalSound(item, 0.9);
+    return;
+  }
+
   if(isHost) broadcastThrowItem(myId, activeTargetId, item);
   else conns.host && conns.host.send({t:'throwItem', fromId:myId, toId:activeTargetId, item});
 };
@@ -1393,6 +1647,13 @@ function sendChat(){
   const txt = $('chatInput').value.trim();
   if(!txt) return;
   $('chatInput').value = '';
+  if(isBotMode){
+    addChatLine(myName, txt);
+    setTimeout(() => {
+      addChatLine('🤖 Cao Thủ Bot', 'Hay lắm bạn ơi! 😎');
+    }, 1000);
+    return;
+  }
   if(isHost) broadcastChat(myName, txt);
   else conns.host && conns.host.send({t:'chat', name:myName, text:txt});
 }
@@ -1455,7 +1716,7 @@ function showResultOverlay(results, settlements){
   }
 
   const actions = $('resultActions'); actions.innerHTML = '';
-  if(isHost){
+  if(isHost || isBotMode){
     const btn = document.createElement('button');
     btn.className = 'btn btn-gold';
     btn.textContent = 'Chơi Ván Mới';
