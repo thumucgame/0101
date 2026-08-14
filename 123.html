@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
 <title>Tiến Lên Online - Bộ Luật Chuẩn & Chế Độ Đánh Nước / Quỳ</title>
-<!-- Firebase (dùng bản compat để giữ nguyên cú pháp firebase.xxx() cổ điển) -->
+<!-- Firebase compat SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
 <style>
@@ -89,7 +89,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 }
 .public-room-item:hover { border-color: var(--gold-dim); }
 
-/* COUNTDOWN */
+/* COUNTDOWN OVERLAY */
 .countdown-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex;
   flex-direction: column; align-items: center; justify-content: center; z-index: 500;
@@ -120,38 +120,37 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .p-slot .kneeling-badge{font-size:10px;color:#ff5252;font-weight:bold;margin-top:1px;}
 
 .slot-left { top: 45%; left: 4px; transform: translateY(-50%); }
-/* ĐỊNH VỊ SLOT TRÊN CÂN ĐỐI */
 .slot-top  { top: 10px; left: 50%; transform: translateX(-50%); }
 .slot-right{ top: 45%; right: 4px; transform: translateY(-50%); }
 .slot-bottom{position:relative;margin-bottom:2px;border:none;background:transparent;min-width:auto;}
 
 .table-center{
-  grid-row:2;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+  grid-row:2;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
   border:1px dashed var(--panel-line);border-radius:12px;margin:2px 42px;padding:8px 0;background:radial-gradient(ellipse at center, rgba(255,255,255,.03), transparent 70%);
 }
 
-/* ĐỔI VỊ TRÍ ĐỒNG HỒ ĐẾM XUỐNG DƯỚI CÂN ĐỐI VÀ KHÔNG CHE TÊN */
+.played-combo{display:flex;gap:4px;min-height:85px;align-items:center;justify-content:center;margin-top:auto;margin-bottom:auto;max-width:100%;overflow-x:auto;}
+.action-log{font-size:11px;color:rgba(250,246,238,.85);margin-top:4px;margin-bottom:2px;font-weight:600;text-align:center;padding:2px 8px;background:rgba(0,0,0,0.4);border-radius:6px;}
+
+/* DÒNG THÔNG BÁO VÀ ĐỒNG HỒ DỜI XUỐNG DƯỚI GẦN BÀI NGƯỜI CHƠI */
 .turn-timer-box{
-  position:relative;margin-top:auto;background:rgba(0,0,0,.85);border:1px solid var(--gold-dim);
-  padding:3px 12px;border-radius:12px;display:flex;align-items:center;gap:6px;font-size:11px;z-index:5;
+  position:relative;margin-top:4px;margin-bottom:2px;background:rgba(0,0,0,.85);border:1px solid var(--gold-dim);
+  padding:4px 14px;border-radius:12px;display:flex;align-items:center;gap:8px;font-size:12px;z-index:15;
   transition: all 0.3s ease;
 }
 .turn-timer-box.my-turn-timer {
   border-color: #ffe600;
-  box-shadow: 0 0 10px rgba(255,230,0,0.8);
-  background: rgba(180, 100, 0, 0.9);
+  box-shadow: 0 0 12px rgba(255,230,0,0.8);
+  background: rgba(180, 100, 0, 0.95);
   animation: pulseTimer 1s infinite alternate;
 }
 @keyframes pulseTimer {
   0% { transform: scale(1); }
-  100% { transform: scale(1.05); }
+  100% { transform: scale(1.04); }
 }
 
-.timer-sec{font-family:monospace;font-weight:700;color:var(--gold);font-size:12px;}
+.timer-sec{font-family:monospace;font-weight:700;color:var(--gold);font-size:13px;}
 .timer-sec.low{color:var(--bad);}
-
-.played-combo{display:flex;gap:4px;min-height:85px;align-items:center;justify-content:center;margin-top:auto;margin-bottom:auto;max-width:100%;overflow-x:auto;}
-.action-log{font-size:10px;color:rgba(250,246,238,.7);margin-bottom:4px;height:14px;text-align:center;padding:0 4px;}
 
 .live-score-sticker {
   position: absolute; top: 4px; right: 6px; background: rgba(0,0,0,0.75);
@@ -423,10 +422,10 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   <div id="oppSlots"></div>
 
   <div class="table-center">
-    <div class="action-log" id="actionLog"></div>
     <div class="played-combo" id="playedCombo"></div>
+    <div class="action-log" id="actionLog"></div>
     
-    <!-- CÂN ĐỐI ĐỒNG HỒ ĐẾM SỐ LƯỢT TRÁNH CHE TÊN NGƯỜI CHƠI -->
+    <!-- DÒNG THÔNG BÁO VÀ ĐỒNG HỒ ĐẾM SỐ LƯỢT ĐƯỢC CHUYỂN DỜI XUỐNG THẤP DƯỚI GẦN BÀI NGƯỜI CHƠI -->
     <div class="turn-timer-box" id="turnTimerBox">
       <span id="turnStatus">Lượt của...</span>
       <span class="timer-sec" id="turnTimerSecs">30</span>
@@ -482,9 +481,10 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
       <li><b>Bàn 3 người:</b> Nhất (+2), Nhì (0), Ba (-1), Bét (-1)</li>
       <li><b>Bàn 2 người:</b> Nhất (+1), Bét (-1)</li>
     </ul>
-    <p><b>Sự kiện phát sinh:</b></p>
+    <p><b>Sự kiện phát sinh & Phạt Thối Bài:</b></p>
     <ul>
       <li><b>Ăn Chặt / Chặt Bài:</b> Người bị chặt trả trực tiếp điểm/nước phạt cho người chặt.</li>
+      <li><b>Thối Heo / Thối Hàng:</b> Cuối ván người thối trả nước/điểm thưởng trực tiếp cho **Người về Nhất** (Heo đen: 1 nước, Heo đỏ: 2 nước, 3 đôi thông: 3 nước, Tứ quý/4 đôi thông: 4 nước).</li>
       <li><b>Đền Bài / Đền Làng:</b> Người vi phạm luật đền chịu toàn bộ số nước phạt của cả bàn cho người thắng.</li>
     </ul>
 
@@ -496,19 +496,6 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
       <li><b>Lựa chọn C — Quỳ Thế Chân:</b> Quỳ cho đến khi có người thua mới ở ván sau thế chân.</li>
       <li><b>Giải Hạn Quỳ:</b> Về Nhất hoặc Ù ở ván tiếp theo để được xóa án ngồi xuống.</li>
     </ul>
-
-    <h3>III. TỔNG HỢP SO SÁNH QUY TRÌNH</h3>
-    <table>
-      <thead>
-        <tr><th>Tiêu Chí</th><th>[I] ĐÁNH NƯỚC</th><th>[II] QUỲ</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>Đơn vị phạt</td><td>Nước / Điểm / Tiền</td><td>Tư thế quỳ tại bàn</td></tr>
-        <tr><td>Cơ cấu vị trí</td><td>Điều chỉnh linh hoạt theo số người</td><td>Chỉ phạt người thua (Bét/Cháy) quỳ</td></tr>
-        <tr><td>Xử lý Đền Bài</td><td>Trả thay toàn bộ tổng nước phạt</td><td>Quỳ thay toàn bàn / Nhân đôi ván quỳ</td></tr>
-        <tr><td>Xóa Phạt</td><td>Cộng/Trừ dồn điểm</td><td>Về Nhất/Ù ván sau để ngồi xuống</td></tr>
-      </tbody>
-    </table>
 
     <button class="btn btn-gold" id="btnCloseRules" style="width:100%;margin-top:14px;">Đã Hiểu</button>
   </div>
@@ -599,6 +586,7 @@ function playGlobalSound(item, customVolume = 0.9){
 
 let consecutivePlayCount = 0;
 let lastNotifiedTurnId = null;
+let lastGameWinnerId = null; // Lưu vết người thắng ván trước
 
 function generatePlayerId(){
   return 'p_' + Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4);
@@ -828,6 +816,50 @@ function calculateChopReward(next, curr, activePlayersCount = 4){
   if(curr.type === 'quad' && next.type === 'quad') return 3;
   if(curr.type === 'quad' && next.type === 'pairs_run' && next.count >= 4) return 4;
   return 0;
+}
+
+/* HÀM TÍNH PHẠT THỐI HEO, THỐI ĐÔI THÔNG, THỐI TỨ QUÝ TRÊN TAY KHI VÁN KẾT THÚC */
+function checkFoulPunishment(handCards) {
+  if (!handCards || handCards.length === 0) return { totalPenalty: 0, details: [] };
+  let totalPenalty = 0;
+  let details = [];
+
+  // 1. Phạt Thối Heo
+  handCards.forEach(c => {
+    if (c.r === 12) { // Lá 2
+      if (c.s === 2 || c.s === 3) { // Heo đỏ (♦, ♥)
+        totalPenalty += 2;
+        details.push(`Thối Heo Đỏ ${RANKS[c.r]}${SUITS[c.s]} (-2)`);
+      } else { // Heo đen (♠, ♣)
+        totalPenalty += 1;
+        details.push(`Thối Heo Đen ${RANKS[c.r]}${SUITS[c.s]} (-1)`);
+      }
+    }
+  });
+
+  // 2. Phạt Thối Tứ Quý & Đôi Thông
+  const combos = getAllPossibleCombos(handCards);
+  
+  // Kiểm tra Tứ quý
+  const quads = combos.filter(cb => cb.type === 'quad');
+  quads.forEach(q => {
+    totalPenalty += 4;
+    details.push(`Thối Tứ Quý ${RANKS[q.highR]} (-4)`);
+  });
+
+  // Kiểm tra Đôi thông (3 hoặc 4 đôi thông)
+  const pairRuns = combos.filter(cb => cb.type === 'pairs_run');
+  pairRuns.forEach(pr => {
+    if (pr.count === 3) {
+      totalPenalty += 3;
+      details.push(`Thối 3 Đôi Thông (-3)`);
+    } else if (pr.count >= 4) {
+      totalPenalty += 4;
+      details.push(`Thối 4 Đôi Thông (-4)`);
+    }
+  });
+
+  return { totalPenalty, details };
 }
 
 let myId=null, myName='', isHost=false, roomCode=null;
@@ -1221,22 +1253,27 @@ function dealNewGame(){
   players.forEach((p,i) => { hands[p.id] = sortHand(deck.slice(i*13, (i+1)*13)); });
 
   let leadIdx = 0;
-  let lowestCard = { r: 99, s: 99 };
-  let foundThreeSpade = false;
+  let isFirstGame = (lastGameWinnerId === null);
+  let requiredCard = null;
+  let logText = "";
 
-  players.forEach((p, i) => {
-    hands[p.id].forEach(c => {
-      if (isThreeSpade(c)) {
-        leadIdx = i; foundThreeSpade = true; lowestCard = c;
-      } else if (!foundThreeSpade) {
-        if (c.r < lowestCard.r || (c.r === lowestCard.r && c.s < lowestCard.s)) {
-          lowestCard = c; leadIdx = i;
+  if (isFirstGame) {
+    // VÁN ĐẦU TIÊN: Bắt buộc áp dụng bài có lá 3 bích
+    players.forEach((p, i) => {
+      hands[p.id].forEach(c => {
+        if (isThreeSpade(c)) {
+          leadIdx = i;
+          requiredCard = c;
         }
-      }
+      });
     });
-  });
-
-  const firstCardText = `${RANKS[lowestCard.r]}${SUITS[lowestCard.s]}`;
+    logText = `🎮 Ván đầu tiên: ${players[leadIdx].name} giữ 3 Bích (3♠) và phải ra 3 Bích đầu tiên!`;
+  } else {
+    // VÁN TIẾP THEO: Tự do ra bài, người về Nhất ván trước đánh đầu tiên
+    let winnerIdx = players.findIndex(p => p.id === lastGameWinnerId);
+    if (winnerIdx !== -1) leadIdx = winnerIdx;
+    logText = `🎮 Ván mới: ${players[leadIdx].name} về Nhất ván trước nên được đánh đầu tiên (Tự do)!`;
+  }
 
   gameState = {
     hands,
@@ -1246,7 +1283,7 @@ function dealNewGame(){
     leaderId: players[leadIdx].id,
     currentCombo: null,
     firstMove: true,
-    requiredCard: lowestCard,
+    requiredCard: requiredCard, // Chỉ bắt buộc ở ván đầu tiên
     finished: [],
     passed: new Set(),
     disconnected: new Set(),
@@ -1254,7 +1291,7 @@ function dealNewGame(){
     liveScores: Object.fromEntries(players.map(p=>[p.id, 0])),
     playedCardsCount: Object.fromEntries(players.map(p=>[p.id, 0])),
     kneelingStatus: { ...kneelingTracker },
-    log: `🎮 ${players[leadIdx].name} giữ ${firstCardText} và được đánh đầu tiên!`,
+    log: logText,
     gameMode: roomSettings.gameMode,
     turnSeconds: roomSettings.turnSeconds,
     stakeUnit: roomSettings.stakeUnit,
@@ -1522,11 +1559,27 @@ function endGame(){
 
   const results = {};
   const winnerId = gameState.finished[0];
+  lastGameWinnerId = winnerId; // Lưu lại người thắng cho ván tiếp theo
   const mode = gameState.gameMode;
   
   const activeCount = gameState.order.length; 
 
   if(mode === 'WATER'){
+    // Xử lý đền phạt Thối Heo/Thối Hàng cho người thắng (người về Nhất)
+    let foulPenaltiesTotal = 0;
+    let foulDetailsMap = {};
+
+    gameState.order.forEach(id => {
+      if (id !== winnerId) {
+        const pHand = safeArray(gameState.hands[id]);
+        const foulInfo = checkFoulPunishment(pHand);
+        if (foulInfo.totalPenalty > 0) {
+          foulPenaltiesTotal += foulInfo.totalPenalty;
+          foulDetailsMap[id] = foulInfo;
+        }
+      }
+    });
+
     gameState.order.forEach((id) => {
       let rank = gameState.finished.indexOf(id) + 1;
       let baseWater = 0;
@@ -1546,12 +1599,23 @@ function endGame(){
       }
 
       let extraChop = gameState.liveScores[id] || 0;
-      let total = baseWater + extraChop;
+      let foulScore = 0;
+      let foulText = "";
+
+      if (id === winnerId && foulPenaltiesTotal > 0) {
+        foulScore = foulPenaltiesTotal;
+        foulText = ` | Được đền thối bài: +${foulPenaltiesTotal}`;
+      } else if (foulDetailsMap[id]) {
+        foulScore = -foulDetailsMap[id].totalPenalty;
+        foulText = ` | Thối bài: -${foulDetailsMap[id].totalPenalty} (${foulDetailsMap[id].details.join(', ')})`;
+      }
+
+      let total = baseWater + extraChop + foulScore;
 
       results[id] = {
         rank,
         score: total,
-        note: `Vị trí (${activeCount} người): ${baseWater > 0 ? '+'+baseWater : baseWater} nước | Chặt: ${extraChop >= 0 ? '+'+extraChop : extraChop}`,
+        note: `Vị trí (${activeCount} người): ${baseWater > 0 ? '+'+baseWater : baseWater} nước | Chặt: ${extraChop >= 0 ? '+'+extraChop : extraChop}${foulText}`,
         name: gameState.names[id]
       };
     });
