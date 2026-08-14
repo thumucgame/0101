@@ -523,32 +523,17 @@ function playGlobalSound(item, customVolume = 0.9){
 let consecutivePlayCount = 0;
 
 // ==========================================
-// FIREBASE REALTIME DATABASE (thay cho PeerJS/WebRTC)
+// FIREBASE REALTIME DATABASE CONFIGURATION
 // ==========================================
-// Vì dùng Firebase làm "trạm trung chuyển" qua HTTPS/WebSocket của Google, nên KHÔNG cần
-// STUN/TURN, KHÔNG cần 2 người chung mạng/wifi nữa - ai có link + mã phòng đều vào chung
-// được, kể cả 4G, wifi công ty chặn NAT, khác quốc gia...
-//
-// CÁCH LẤY CẤU HÌNH CỦA BẠN (miễn phí, ~2 phút):
-// 1) Vào https://console.firebase.google.com -> "Add project" -> đặt tên tuỳ ý -> tạo project.
-// 2) Trong project, vào mục "Build" -> "Realtime Database" -> "Create Database" -> chọn 1 khu
-//    vực gần Việt Nam (vd Singapore) -> chọn "Start in test mode" (cho phép đọc/ghi tự do,
-//    phù hợp game vui không cần đăng nhập).
-// 3) Vào "Project settings" (biểu tượng bánh răng) -> cuộn xuống "Your apps" -> bấm biểu
-//    tượng "</>" để tạo Web App -> đặt tên bất kỳ -> Firebase sẽ hiện ra 1 đoạn config dạng
-//    { apiKey: "...", authDomain: "...", databaseURL: "...", ... } -> copy y nguyên object đó
-//    và dán đè vào FIREBASE_CONFIG bên dưới rồi lưu/deploy lại lên GitHub Pages là xong.
-// 4) (Khuyến nghị) Vào tab "Rules" của Realtime Database, đảm bảo rule đang là:
-//    { "rules": { ".read": true, ".write": true } }  (test mode mặc định thường sẵn vậy rồi).
-//    Đây là rule mở hoàn toàn - phù hợp game giải trí, không lưu thông tin nhạy cảm.
 const FIREBASE_CONFIG = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCsFosKRL5VQ_dBWIOhWj3zHO24c2ITCyw",
+  authDomain: "bai22-8dc04.firebaseapp.com",
+  databaseURL: "https://bai22-8dc04-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "bai22-8dc04",
+  storageBucket: "bai22-8dc04.firebasestorage.app",
+  messagingSenderId: "561768356844",
+  appId: "1:561768356844:web:015b905fdc54aa1f017ec9",
+  measurementId: "G-R491S9Z42L"
 };
 
 let fbApp = null, fbDb = null;
@@ -578,24 +563,21 @@ function roomRef(path){
   return fbDb.ref('tienlen_rooms/' + roomCode + (path ? '/' + path : ''));
 }
 
-// Gửi 1 message tới ĐÚNG 1 người chơi cụ thể (tương đương conns[id].send(msg) trước đây)
 function sendToPlayer(playerId, msg){
   if(isBotMode || !fbDb) return;
   roomRef('toClient/' + playerId).push(msg);
 }
-// Gửi 1 message tới TẤT CẢ người chơi khác (trừ chính mình) - tương đương
-// Object.values(conns).forEach(c=>c.send(msg)) trước đây
+
 function sendToAll(msg){
   if(isBotMode || !fbDb) return;
   players.forEach(p=>{ if(p.id !== myId) sendToPlayer(p.id, msg); });
 }
-// Client gửi message lên cho host xử lý (tương đương conns.host.send(msg) trước đây)
+
 function sendToHost(msg){
   if(isBotMode || !fbDb) return;
   fbDb.ref('tienlen_rooms/' + roomCode + '/toHost').push({from: myId, msg});
 }
 
-// Host lắng nghe hộp thư chung "toHost" - xử lý xong message nào thì xoá message đó đi
 function listenAsHost(){
   const ref = fbDb.ref('tienlen_rooms/' + roomCode + '/toHost');
   ref.on('child_added', snap => {
@@ -604,7 +586,7 @@ function listenAsHost(){
     if(data) onHostMessage(data.from, data.msg);
   });
 }
-// Client lắng nghe hộp thư riêng của mình "toClient/{myId}"
+
 function listenAsClient(){
   const ref = fbDb.ref('tienlen_rooms/' + roomCode + '/toClient/' + myId);
   ref.on('child_added', snap => {
@@ -613,8 +595,7 @@ function listenAsClient(){
     if(data) onClientMessage(data);
   });
 }
-// Đăng ký "di chúc rớt mạng": nếu trình duyệt của người này mất kết nối tới Firebase (đóng
-// tab, rớt mạng...) thì Firebase server TỰ ghi giúp 1 message báo rớt mạng cho host biết.
+
 function registerDisconnectNotice(){
   const noticeRef = fbDb.ref('tienlen_rooms/' + roomCode + '/toHost').push();
   noticeRef.onDisconnect().set({from: myId, msg: {t:'__disconnect__'}});
@@ -735,22 +716,21 @@ function combinations(arr, k){
   })(0, []);
   return res;
 }
-// Sinh toàn bộ tổ hợp bài hợp lệ (đơn, đôi, sám, sảnh, tứ quý, đôi thông) có thể tạo từ 1 bộ bài
+
 function generateAllCombos(hand){
   const rawCombos = [];
   const groups = getRankGroups(hand);
   const ranksPresent = Object.keys(groups).map(Number).sort((a,b)=>a-b);
 
-  hand.forEach(c=> rawCombos.push([c])); // đơn
+  hand.forEach(c=> rawCombos.push([c]));
 
   ranksPresent.forEach(r=>{
     const cards = groups[r];
-    if(cards.length>=2) combinations(cards,2).forEach(cc=>rawCombos.push(cc)); // đôi
-    if(cards.length>=3) combinations(cards,3).forEach(cc=>rawCombos.push(cc)); // sám cô
-    if(cards.length===4) rawCombos.push(cards.slice()); // tứ quý
+    if(cards.length>=2) combinations(cards,2).forEach(cc=>rawCombos.push(cc));
+    if(cards.length>=3) combinations(cards,3).forEach(cc=>rawCombos.push(cc));
+    if(cards.length===4) rawCombos.push(cards.slice());
   });
 
-  // sảnh (rồng)
   const distinctRanks = ranksPresent.filter(r=>r!==12);
   let runs = [], curRun = [];
   distinctRanks.forEach(r=>{
@@ -770,7 +750,6 @@ function generateAllCombos(hand){
     }
   });
 
-  // đôi thông (>=3 đôi liên tiếp)
   const pairRanks = distinctRanks.filter(r=>groups[r].length>=2);
   let pruns = [], curPR = [];
   pairRanks.forEach(r=>{
@@ -802,9 +781,6 @@ function generateAllCombos(hand){
 }
 function isBombCombo(c){ return c.type==='quad' || (c.type==='pairs_run' && c.count>=3); }
 
-// Rã cả bộ bài trên tay thành các "cụm" tối ưu: ưu tiên gom sảnh dài nhất, đôi thông dài nhất,
-// rồi tứ quý, sám cô, đôi, cuối cùng mới còn lại lá lẻ. Nhờ vậy khi ra bài bot sẽ chủ động tung
-// sảnh/đôi/sám cô ra thay vì chỉ biết đánh lá lẻ thấp nhất.
 function partitionHand(hand){
   let remaining = sortHand(hand).slice();
   const removeCards = (cards)=> cards.forEach(c=>{
@@ -813,12 +789,10 @@ function partitionHand(hand){
   });
   const parts = [];
 
-  // 1. Tứ quý (giữ riêng ra trước để không bị sảnh "ăn mất" 1 lá)
   Object.entries(getRankGroups(remaining)).forEach(([r,cards])=>{
     if(cards.length===4){ parts.push({cards:cards.slice(), reserved:true}); removeCards(cards); }
   });
 
-  // 2. Sảnh dài nhất, lặp lại tới khi hết sảnh khả dụng (>=3 lá liên tiếp, không tính lá 2)
   function extractLongestStraight(){
     const g = getRankGroups(remaining);
     const ranks = Object.keys(g).map(Number).sort((a,b)=>a-b).filter(r=>r!==12);
@@ -835,7 +809,6 @@ function partitionHand(hand){
   }
   while(extractLongestStraight()){}
 
-  // 3. Đôi thông dài nhất (>=3 đôi liên tiếp), lặp lại
   function extractLongestPairsRun(){
     const g = getRankGroups(remaining);
     const ranks = Object.keys(g).map(Number).sort((a,b)=>a-b).filter(r=> r!==12 && g[r].length>=2);
@@ -847,21 +820,18 @@ function partitionHand(hand){
     if(!best) return false;
     const cardsUsed=[];
     best.forEach(r=> cardsUsed.push(g[r][0], g[r][1]));
-    parts.push({cards:cardsUsed, reserved:true}); // đôi thông >=3 cũng là bom, đánh dấu reserved
+    parts.push({cards:cardsUsed, reserved:true});
     removeCards(cardsUsed);
     return true;
   }
   while(extractLongestPairsRun()){}
 
-  // 4. Sám cô còn lại
   Object.entries(getRankGroups(remaining)).forEach(([r,cards])=>{
     if(cards.length===3){ parts.push({cards:cards.slice(), reserved:false}); removeCards(cards); }
   });
-  // 5. Đôi còn lại
   Object.entries(getRankGroups(remaining)).forEach(([r,cards])=>{
     if(cards.length===2){ parts.push({cards:cards.slice(), reserved:false}); removeCards(cards); }
   });
-  // 6. Lá lẻ còn lại
   remaining.forEach(c=> parts.push({cards:[c], reserved:false}));
 
   return parts;
@@ -873,7 +843,6 @@ function getBotDifficulty(botId){
   return 'hard';
 }
 
-// Chọn bài để RA (khi được quyền đánh mới)
 function chooseLeadPlay(hand, gs, botId, difficulty){
   let combos = generateAllCombos(hand);
   if(gs.firstMove && gs.requiredCard){
@@ -884,19 +853,16 @@ function chooseLeadPlay(hand, gs, botId, difficulty){
       return reqCard ? [cardKey(reqCard)] : [cardKey(hand[0])];
     }
   }
-  // Nếu đánh hết bài trong 1 nước là thắng luôn -> đánh ngay
   const winCombo = combos.find(c=> c.cards.length===hand.length);
   if(winCombo) return winCombo.cards.map(cardKey);
 
-  // Rã cả tay bài thành các cụm tối ưu (sảnh/đôi thông/sám cô/đôi/lẻ) rồi đánh theo cụm nhỏ nhất
-  // trước, để bot chủ động tung sảnh/đôi/sám cô ra thay vì chỉ biết đánh lá lẻ.
   const isEndgame = hand.length <= 5;
   const parts = partitionHand(hand)
     .map(p=>({...p, cls: classify(p.cards)}))
     .filter(p=>p.cls);
 
   let candidateParts = parts.filter(p=> isEndgame || !p.reserved || difficulty==='hard');
-  if(candidateParts.length===0) candidateParts = parts; // hết cách thì phải dùng cả bom
+  if(candidateParts.length===0) candidateParts = parts;
 
   candidateParts.sort((a,b)=>{
     if(a.cls.highR!==b.cls.highR) return a.cls.highR-b.cls.highR;
@@ -912,7 +878,6 @@ function chooseLeadPlay(hand, gs, botId, difficulty){
   return chosen.cards.map(cardKey);
 }
 
-// Chọn bài để CHẶN/CHẶT khi có người đã đánh trước đó. Trả về null nghĩa là bỏ lượt.
 function chooseFollowPlay(hand, currentCombo, gs, botId, difficulty){
   const combos = generateAllCombos(hand);
   const validBeats = combos.filter(c=> canBeat(c, currentCombo));
@@ -931,7 +896,7 @@ function chooseFollowPlay(hand, currentCombo, gs, botId, difficulty){
 
   if(normalBeats.length>0){
     normalBeats.sort((a,b)=> a.highR-b.highR || a.highS-b.highS);
-    if(difficulty==='easy' && !dangerNext && Math.random()<0.25) return null; // gà mờ đôi khi bỏ lượt oan
+    if(difficulty==='easy' && !dangerNext && Math.random()<0.25) return null;
     return normalBeats[0].cards.map(cardKey);
   }
 
@@ -958,9 +923,8 @@ let isSpectator = false;
 let isBotMode = false;
 let botList = [];
 
-// Room Settings bao gồm Chế Độ Đánh Nước hoặc Quỳ
 let roomSettings = { gameMode: 'WATER', turnSeconds: 30, stakeUnit: 'Nước', hideCardCount: true };
-let kneelingTracker = {}; // Theo dõi ván quỳ cho từng player
+let kneelingTracker = {};
 
 const $=id=>document.getElementById(id);
 
@@ -1004,11 +968,9 @@ function refreshPublicRooms(){
     listEl.innerHTML = '<div style="font-size:12px;color:#ff9d8f;text-align:center;padding:10px;">⚠️ Chưa cấu hình Firebase (xem hướng dẫn trong file code) nên chưa thấy được phòng của người khác.</div>';
     return;
   }
-  if(publicRoomsListenerAttached) return; // đã lắng nghe realtime rồi, không cần quét lại thủ công
+  if(publicRoomsListenerAttached) return;
   listEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">Đang quét phòng...</div>';
   publicRoomsListenerAttached = true;
-  // Lắng nghe LIVE danh sách phòng công khai trên Firebase - ai mở phòng ở bất kỳ đâu trên
-  // thế giới cũng tự hiện ra ở đây ngay lập tức, không cần bấm làm mới.
   fbDb.ref('tienlen_public_rooms').on('value', snap => {
     const data = snap.val() || {};
     publicRooms = Object.keys(data).map(code => ({ code, ...data[code] }));
@@ -1042,8 +1004,6 @@ window.joinExistingRoom = function(code){
     if(!joined) $('homeErr').textContent = 'Không nối được phòng này. Kiểm tra lại mã phòng, hoặc chủ phòng chưa mở/đã đóng phòng.';
   }, 10000);
 
-  // Đăng ký lắng nghe hộp thư riêng TRƯỚC khi gửi tin 'join', để không bị lỡ tin nhắn 'lobby'
-  // mà host gửi lại ngay sau đó.
   listenAsClient();
   registerDisconnectNotice();
   onFirstLobbyMessage = () => { joined = true; clearTimeout(joinTimeout); };
@@ -1062,7 +1022,6 @@ $('btnCreate').onclick=()=>{
   myId = generatePlayerId();
   players = [{id:myId, name:myName}];
   publishRoomToPublic(roomCode, myName);
-  // Phòng công khai tự biến mất nếu host đóng tab / rớt mạng
   fbDb.ref('tienlen_public_rooms/' + roomCode).onDisconnect().remove();
   listenAsHost();
   showLobby();
@@ -1107,7 +1066,6 @@ function kickPlayerNow(disconnectedId){
   broadcastState(); broadcastLobby();
 }
 
-// Được gọi trên máy HOST khi có message mới trong hộp thư chung 'toHost'
 function onHostMessage(fromId, msg){
   if(msg.t === '__disconnect__'){
     if(gameState && !gameState.isEnded){
@@ -1135,7 +1093,6 @@ function onHostMessage(fromId, msg){
   }
 }
 
-// Được gọi trên máy CLIENT khi có message mới trong hộp thư riêng 'toClient/{myId}'
 let onFirstLobbyMessage = null;
 function onClientMessage(msg){
   if(msg.t==='lobby'){
@@ -1222,7 +1179,7 @@ $('btnStart').onclick = () => { if(isHost) broadcastCountdownAndStart(); };
 
 function broadcastCountdownAndStart(){
   sendToAll({t: 'countdown_start'});
-  removeRoomFromPublic(roomCode); // ván đã bắt đầu, không cho người lạ thấy phòng để vào nữa
+  removeRoomFromPublic(roomCode);
   triggerCountdownAnimation(() => dealNewGame());
 }
 
@@ -1455,9 +1412,6 @@ function checkNextTurn(){
   }
 }
 
-// ==========================================
-// KẾT THÚC VÁN: ĐÁNH NƯỚC CỐ ĐỊNH (+2, +1, -1, -2) & CHẾ ĐỘ QUỲ
-// ==========================================
 function endGame(){
   gameState.isEnded = true;
   if(timerLoop) clearInterval(timerLoop);
@@ -1468,7 +1422,6 @@ function endGame(){
   const mode = gameState.gameMode;
 
   if(mode === 'WATER'){
-    // CHẾ ĐỘ I: ĐÁNH NƯỚC (CỐ ĐỊNH NHẤT +2, NHÌ +1, BA -1, BÉT -2)
     gameState.order.forEach((id) => {
       let rank = gameState.finished.indexOf(id) + 1;
       let baseWater = 0;
@@ -1488,13 +1441,11 @@ function endGame(){
       };
     });
   } else {
-    // CHẾ ĐỘ II: QUỲ (TÁCH BIỆT HOÀN TOÀN KHÔNG TÍNH ĐIỂM)
     gameState.order.forEach((id) => {
       let rank = gameState.finished.indexOf(id) + 1;
       let statusText = "Ngồi chơi bình thường";
 
       if(mode === 'KNEEL_A'){
-        // Option A: Quỳ Chốt Ván (Chỉ Bét/Cháy Quỳ)
         if(rank === gameState.order.length){
           statusText = "🧎 QUỲ CHỐT VÁN (Tới ván tiếp theo)";
           kneelingTracker[id] = "Quỳ cả ván";
@@ -1502,7 +1453,6 @@ function endGame(){
           kneelingTracker[id] = null;
         }
       } else if(mode === 'KNEEL_B'){
-        // Option B: Quỳ Tích Lũy
         if(rank === gameState.order.length){
           let currentLevel = kneelingTracker[id] || 0;
           currentLevel = Math.min(currentLevel + 1, 3);
@@ -1511,11 +1461,10 @@ function endGame(){
           else if(currentLevel === 2) statusText = "🧎🧎 Quỳ 2 Chân (Thua 2 ván)";
           else statusText = "🙌 Quỳ 2 Chân + Giơ 2 Tay (Thua 3 ván)";
         } else if(rank === 1){
-          kneelingTracker[id] = 0; // Giải hạn
+          kneelingTracker[id] = 0;
           statusText = "🎉 Về Nhất - ĐƯỢC XÓA ÁN QUỲ";
         }
       } else if(mode === 'KNEEL_C'){
-        // Option C: Quỳ Thế Chân
         if(rank === gameState.order.length){
           gameState.order.forEach(p => kneelingTracker[p] = null);
           kneelingTracker[id] = "Quỳ thế chân";
