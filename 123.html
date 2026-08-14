@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
 <title>Tiến Lên Online - Bộ Luật Chuẩn & Chế Độ Đánh Nước / Quỳ</title>
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <!-- Firebase (chỉ dùng bản "compat" để giữ nguyên cú pháp firebase.xxx() cổ điển,
      tránh phải chuyển toàn bộ code sang ES module -> đỡ lỗi cấu trúc khi deploy GitHub Pages -->
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
@@ -557,46 +556,61 @@ function playGlobalSound(item, customVolume = 0.9){
 let consecutivePlayCount = 0;
 
 // ==========================================
-// TURN SERVER THẬT (Metered / Open Relay Project)
+// LỚP KẾT NỐI: FIREBASE REALTIME DATABASE (thay cho PeerJS/WebRTC)
 // ==========================================
-// Bộ credential "openrelayproject/openrelayproject" chỉ là VÍ DỤ trong tài liệu, KHÔNG
-// còn relay thật được nữa -> đây chính là lý do 2 người khác mạng/khác máy không thấy nhau
-// (2 tab trong CÙNG 1 trình duyệt thì vẫn nối được vì lúc đó không cần NAT traversal thật).
-// -> Đăng ký tài khoản MIỄN PHÍ tại https://dashboard.metered.ca/signup, tạo 1 App, rồi điền
-// TÊN APP và API KEY của bạn vào 2 dòng dưới đây:
-const METERED_APP_NAME = 'YOUR_APP_NAME'; // vd: 'tienlen-app'  (phần đứng trước .metered.live)
-const METERED_API_KEY   = 'YOUR_API_KEY';  // API Key lấy trong Dashboard
+// Vì dùng Firebase làm "trạm trung chuyển" qua HTTPS/WebSocket của Google, nên KHÔNG cần
+// STUN/TURN, KHÔNG cần 2 người chung mạng/wifi nữa - ai có link + mã phòng đều vào chung
+// được, kể cả 4G, wifi công ty chặn NAT, khác quốc gia. Đây chính là điểm yếu cũ (thiếu TURN
+// thật) đã được loại bỏ hoàn toàn bằng cách đổi kiến trúc, thay vì phải vá STUN/TURN.
+function generatePlayerId(){
+  return 'p_' + Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4);
+}
 
-let ICE_SERVERS = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' }
-  ]
-};
+function roomRef(path){
+  return fbDb.ref('tienlen_rooms/' + roomCode + (path ? '/' + path : ''));
+}
 
-// Gọi API lấy TURN server thật ngay khi mở trang. Nếu chưa điền APP_NAME/API_KEY,
-// hoặc gọi API thất bại, app vẫn chạy được với STUN mặc định ở trên (chỉ hoạt động
-// tốt khi cùng wifi/mạng đơn giản - khác mạng/NAT chặt vẫn sẽ không nối được).
-const iceServersReady = (async () => {
-  if(METERED_APP_NAME === 'YOUR_APP_NAME' || METERED_API_KEY === 'YOUR_API_KEY'){
-    console.warn('⚠️ Chưa cấu hình TURN server thật (METERED_APP_NAME / METERED_API_KEY). Khác mạng có thể không kết nối được.');
-    return;
-  }
-  try{
-    const res = await fetch(`https://${METERED_APP_NAME}.metered.live/api/v1/turn/credentials?apiKey=${METERED_API_KEY}`);
-    if(res.ok){
-      const servers = await res.json();
-      if(Array.isArray(servers) && servers.length){
-        ICE_SERVERS = { iceServers: servers };
-        console.log('✅ Đã tải TURN server thật từ Metered.');
-      }
-    } else {
-      console.warn('Không lấy được TURN server từ Metered (HTTP ' + res.status + '), dùng STUN mặc định.');
-    }
-  }catch(e){
-    console.warn('Lỗi khi tải TURN server, dùng STUN mặc định:', e);
-  }
-})();
+// Gửi 1 message tới ĐÚNG 1 người chơi cụ thể (tương đương conns[id].send(msg) trước đây)
+function sendToPlayer(playerId, msg){
+  if(isBotMode || !fbDb) return;
+  roomRef('toClient/' + playerId).push(msg);
+}
+// Gửi 1 message tới TẤT CẢ người chơi khác (trừ chính mình) - tương đương
+// Object.values(conns).forEach(c=>c.send(msg)) trước đây
+function sendToAll(msg){
+  if(isBotMode || !fbDb) return;
+  players.forEach(p=>{ if(p.id !== myId) sendToPlayer(p.id, msg); });
+}
+// Client gửi message lên cho host xử lý (tương đương conns.host.send(msg) trước đây)
+function sendToHost(msg){
+  if(isBotMode || !fbDb) return;
+  fbDb.ref('tienlen_rooms/' + roomCode + '/toHost').push({from: myId, msg});
+}
+
+// Host lắng nghe hộp thư chung "toHost" - xử lý xong message nào thì xoá message đó đi
+function listenAsHost(){
+  const ref = fbDb.ref('tienlen_rooms/' + roomCode + '/toHost');
+  ref.on('child_added', snap => {
+    const data = snap.val();
+    snap.ref.remove();
+    if(data) onHostMessage(data.from, data.msg);
+  });
+}
+// Client lắng nghe hộp thư riêng của mình "toClient/{myId}"
+function listenAsClient(){
+  const ref = fbDb.ref('tienlen_rooms/' + roomCode + '/toClient/' + myId);
+  ref.on('child_added', snap => {
+    const data = snap.val();
+    snap.ref.remove();
+    if(data) onClientMessage(data);
+  });
+}
+// Đăng ký "di chúc rớt mạng": nếu trình duyệt của người này mất kết nối tới Firebase (đóng
+// tab, rớt mạng...) thì Firebase server TỰ ghi giúp 1 message báo rớt mạng cho host biết.
+function registerDisconnectNotice(){
+  const noticeRef = fbDb.ref('tienlen_rooms/' + roomCode + '/toHost').push();
+  noticeRef.onDisconnect().set({from: myId, msg: {t:'__disconnect__'}});
+}
 
 const RANKS = ['3','4','5','6','7','8','9','10','J','Q','K','A','2'];
 const SUITS = ['♠','♣','♦','♥'];
@@ -698,8 +712,7 @@ function calculateChopReward(next, curr){
   return 0;
 }
 
-let myId=null, myName='', isHost=false, roomCode=null, peer=null;
-let conns={};
+let myId=null, myName='', isHost=false, roomCode=null;
 let players=[];
 let gameState=null;
 let myHand=[];
@@ -799,23 +812,21 @@ window.joinExistingRoom = function(code){
   if(!code){ $('homeErr').textContent = 'Vui lòng nhập mã phòng!'; return; }
   myName = $('nameInput').value.trim() || 'Người chơi';
   isHost = false; isBotMode = false; roomCode = code;
+  myId = generatePlayerId();
   $('homeErr').textContent = 'Đang kết nối tới phòng ' + code + '...';
-  initPeer(null, ()=>{
-    myId = peer.id;
-    const conn = peer.connect('tienlen-'+code, {reliable:true});
-    let joined = false;
-    const joinTimeout = setTimeout(() => {
-      if(!joined) $('homeErr').textContent = 'Không nối được phòng này. Kiểm tra lại mã phòng, hoặc chủ phòng chưa mở/đã đóng phòng.';
-    }, 10000);
-    conn.on('open', ()=>{
-      joined = true;
-      clearTimeout(joinTimeout);
-      conns.host = conn; wireConn(conn);
-      conn.send({t:'join', name:myName, id:myId});
-      showLobby();
-    });
-    conn.on('error', () => { clearTimeout(joinTimeout); $('homeErr').textContent = 'Không thể vào phòng này!'; });
-  });
+
+  let joined = false;
+  const joinTimeout = setTimeout(() => {
+    if(!joined) $('homeErr').textContent = 'Không nối được phòng này. Kiểm tra lại mã phòng, hoặc chủ phòng chưa mở/đã đóng phòng.';
+  }, 10000);
+
+  // Đăng ký lắng nghe hộp thư riêng TRƯỚC khi gửi tin 'join', để không bị lỡ tin nhắn 'lobby'
+  // mà host gửi lại ngay sau đó.
+  listenAsClient();
+  registerDisconnectNotice();
+  onFirstLobbyMessage = () => { joined = true; clearTimeout(joinTimeout); };
+  sendToHost({t:'join', name:myName, id:myId});
+  showLobby();
 };
 
 $('btnJoinCode').onclick = () => joinExistingRoom($('joinCodeInput').value);
@@ -825,15 +836,11 @@ $('btnCreate').onclick=()=>{
   myName = $('nameInput').value.trim() || 'Người chơi';
   isHost = true; isBotMode = false;
   roomCode = Math.random().toString(36).substring(2,8).toUpperCase();
-  initPeer('tienlen-'+roomCode, ()=>{
-    myId = peer.id;
-    players = [{id:myId, name:myName}];
-    publishRoomToPublic(roomCode, myName);
-    showLobby();
-    peer.on('connection', c => {
-      c.on('open', ()=>{ conns[c.peer]=c; wireConn(c); });
-    });
-  });
+  myId = generatePlayerId();
+  players = [{id:myId, name:myName}];
+  publishRoomToPublic(roomCode, myName);
+  listenAsHost();
+  showLobby();
 };
 
 $('btnBotGame').onclick = () => {
@@ -852,42 +859,6 @@ $('btnBotGame').onclick = () => {
   $('btnStart').disabled = false;
 };
 
-async function initPeer(customId, onOpen){
-  await iceServersReady; // đảm bảo đã có TURN server thật (nếu cấu hình) trước khi tạo Peer
-  peer = customId ? new Peer(customId, {config: ICE_SERVERS}) : new Peer({config: ICE_SERVERS});
-  peer.on('open', onOpen);
-  peer.on('error', err => {
-    console.error('Peer error:', err);
-    const msg = 'Lỗi kết nối: ' + err.type + (err.type === 'peer-unavailable' ? ' (Mã phòng sai hoặc phòng đã đóng)' : '');
-    if(!$('homeScreen').classList.contains('hidden')) $('homeErr').textContent = msg;
-    else if(!$('lobbyScreen').classList.contains('hidden')) $('lobbyErr').textContent = msg;
-    else if(gameState){ gameState.log = '⚠️ ' + msg; broadcastState(); }
-  });
-  // 'disconnected' = rớt kết nối tới máy chủ tín hiệu (signaling server), không phải rớt P2P
-  // giữa 2 người chơi. Nếu không tự nối lại, người chơi có thể không tạo/join được phòng mới
-  // dù ván đang chơi vẫn ổn — tự động reconnect để tránh lỗi mạng vặt này.
-  peer.on('disconnected', () => {
-    console.warn('Peer mất kết nối signaling, đang tự nối lại...');
-    setTimeout(() => { if(peer && !peer.destroyed) { try{ peer.reconnect(); }catch(e){} } }, 1000);
-  });
-}
-
-function wireConn(conn){
-  conn.on('data', data => onMessage(conn, data));
-  conn.on('close', ()=>{
-    if(isHost){
-      const disconnectedId = conn.peer;
-      if(gameState && !gameState.isEnded){
-        markPlayerDisconnected(disconnectedId);
-      } else {
-        players = players.filter(p=>p.id!==disconnectedId);
-        delete conns[disconnectedId];
-        broadcastLobby();
-      }
-    }
-  });
-}
-
 function markPlayerDisconnected(disconnectedId){
   if(!gameState || gameState.isEnded) return;
   if(!gameState.disconnected) gameState.disconnected = new Set();
@@ -899,7 +870,6 @@ function markPlayerDisconnected(disconnectedId){
 function kickPlayerNow(disconnectedId){
   gameState.log = `❌ ${gameState.names[disconnectedId] || 'Người chơi'} mất mạng -> Đã bị đuổi!`;
   players = players.filter(p => p.id !== disconnectedId);
-  delete conns[disconnectedId];
   if(!gameState.finished.includes(disconnectedId)){ gameState.finished.push(disconnectedId); }
   const activePlayers = gameState.order.filter(id => !gameState.finished.includes(id));
   if(activePlayers.length <= 1){
@@ -912,63 +882,72 @@ function kickPlayerNow(disconnectedId){
   broadcastState(); broadcastLobby();
 }
 
-function onMessage(conn, msg){
-  if(isHost){
-    if(msg.t==='join'){
-      if(!players.find(p=>p.id===msg.id) && players.length<4){
-        players.push({id:msg.id, name:msg.name});
-        publishRoomToPublic(roomCode, players[0].name);
-        if(gameState && !gameState.isEnded) isSpectator = true;
-      }
+// Được gọi trên máy HOST khi có message mới trong hộp thư chung 'toHost'
+function onHostMessage(fromId, msg){
+  if(msg.t === '__disconnect__'){
+    if(gameState && !gameState.isEnded){
+      markPlayerDisconnected(fromId);
+    } else {
+      players = players.filter(p=>p.id!==fromId);
       broadcastLobby();
-      if(gameState) conn.send({t:'state', state: getViewStateForPlayer(msg.id)});
-    } else if(msg.t==='action'){
-      handleAction(msg.id, msg.action);
-    } else if(msg.t==='chat'){
-      broadcastChat(msg.name, msg.text);
-    } else if(msg.t==='throwItem'){
-      broadcastThrowItem(msg.fromId, msg.toId, msg.item);
     }
-  } else {
-    if(msg.t==='lobby'){
-      players = msg.players; roomSettings = msg.settings; renderLobby();
-    } else if(msg.t==='state'){
-      applyState(msg.state);
-    } else if(msg.t==='chat'){
-      addChatLine(msg.name, msg.text);
-    } else if(msg.t==='result'){
-      showResultOverlay(msg.results, msg.settlements);
-    } else if(msg.t==='throwItem'){
-      animateItemThrow(msg.fromId, msg.toId, msg.item); playGlobalSound(msg.item, 0.9);
-    } else if(msg.t==='soundEvent'){
-      playGlobalSound(msg.soundKey, msg.volume || 0.9);
-    } else if(msg.t==='countdown_start'){
-      triggerCountdownAnimation(msg.callback);
+    return;
+  }
+  if(msg.t==='join'){
+    if(!players.find(p=>p.id===msg.id) && players.length<4){
+      players.push({id:msg.id, name:msg.name});
+      publishRoomToPublic(roomCode, players[0].name);
+      if(gameState && !gameState.isEnded) isSpectator = true;
     }
+    broadcastLobby();
+    if(gameState) sendToPlayer(msg.id, {t:'state', state: getViewStateForPlayer(msg.id)});
+  } else if(msg.t==='action'){
+    handleAction(msg.id, msg.action);
+  } else if(msg.t==='chat'){
+    broadcastChat(msg.name, msg.text);
+  } else if(msg.t==='throwItem'){
+    broadcastThrowItem(msg.fromId, msg.toId, msg.item);
+  }
+}
+
+// Được gọi trên máy CLIENT khi có message mới trong hộp thư riêng 'toClient/{myId}'
+let onFirstLobbyMessage = null;
+function onClientMessage(msg){
+  if(msg.t==='lobby'){
+    if(onFirstLobbyMessage){ onFirstLobbyMessage(); onFirstLobbyMessage = null; }
+    players = msg.players; roomSettings = msg.settings; renderLobby();
+  } else if(msg.t==='state'){
+    applyState(msg.state);
+  } else if(msg.t==='chat'){
+    addChatLine(msg.name, msg.text);
+  } else if(msg.t==='result'){
+    showResultOverlay(msg.results, msg.settlements);
+  } else if(msg.t==='throwItem'){
+    animateItemThrow(msg.fromId, msg.toId, msg.item); playGlobalSound(msg.item, 0.9);
+  } else if(msg.t==='soundEvent'){
+    playGlobalSound(msg.soundKey, msg.volume || 0.9);
+  } else if(msg.t==='countdown_start'){
+    triggerCountdownAnimation(msg.callback);
   }
 }
 
 function broadcastLobby(){
-  const msg = {t:'lobby', players, settings: roomSettings};
-  Object.values(conns).forEach(c=>c.send(msg));
+  sendToAll({t:'lobby', players, settings: roomSettings});
   renderLobby();
 }
 
 function broadcastChat(name, text){
-  const msg = {t:'chat', name, text};
-  Object.values(conns).forEach(c=>c.send(msg));
+  sendToAll({t:'chat', name, text});
   addChatLine(name, text);
 }
 
 function broadcastThrowItem(fromId, toId, item){
-  const msg = {t:'throwItem', fromId, toId, item};
-  Object.values(conns).forEach(c=>c.send(msg));
+  sendToAll({t:'throwItem', fromId, toId, item});
   animateItemThrow(fromId, toId, item); playGlobalSound(item, 0.9);
 }
 
 function broadcastSoundEvent(soundKey, volume = 0.9){
-  const msg = {t:'soundEvent', soundKey, volume};
-  Object.values(conns).forEach(c=>c.send(msg));
+  sendToAll({t:'soundEvent', soundKey, volume});
   playGlobalSound(soundKey, volume);
 }
 
@@ -1017,7 +996,7 @@ $('hideCardCountCheck').onchange = e => { roomSettings.hideCardCount = e.target.
 $('btnStart').onclick = () => { if(isHost) broadcastCountdownAndStart(); };
 
 function broadcastCountdownAndStart(){
-  Object.values(conns).forEach(c => c.send({t: 'countdown_start'}));
+  sendToAll({t: 'countdown_start'});
   triggerCountdownAnimation(() => dealNewGame());
 }
 
@@ -1359,7 +1338,7 @@ function endGame(){
 
 function broadcastResult(results, settlements){
   const msg = { t:'result', results, settlements };
-  if(!isBotMode) Object.values(conns).forEach(c => c.send(msg));
+  if(!isBotMode) sendToAll(msg);
   showResultOverlay(results, settlements);
 }
 
@@ -1392,7 +1371,7 @@ function broadcastState(){
   gameState.order.forEach(id => {
     const stateView = getViewStateForPlayer(id);
     if(id === myId) applyState(stateView);
-    else if(conns[id]) conns[id].send({t:'state', state:stateView});
+    else sendToPlayer(id, {t:'state', state:stateView});
   });
 }
 
@@ -1537,7 +1516,7 @@ $('btnPass').onclick = () => sendAction({kind:'pass'});
 function sendAction(act){
   if(isSpectator) return;
   if(isHost) handleAction(myId, act);
-  else conns.host && conns.host.send({t:'action', id:myId, action:act});
+  else sendToHost({t:'action', id:myId, action:act});
   selected.clear();
 }
 
@@ -1563,7 +1542,7 @@ window.triggerThrow = function(item){
     animateItemThrow(myId, activeTargetId, item); playGlobalSound(item, 0.9); return;
   }
   if(isHost) broadcastThrowItem(myId, activeTargetId, item);
-  else conns.host && conns.host.send({t:'throwItem', fromId:myId, toId:activeTargetId, item});
+  else sendToHost({t:'throwItem', fromId:myId, toId:activeTargetId, item});
 };
 
 function animateItemThrow(fromId, toId, item){
@@ -1612,7 +1591,7 @@ function sendChat(){
     return;
   }
   if(isHost) broadcastChat(myName, txt);
-  else conns.host && conns.host.send({t:'chat', name:myName, text:txt});
+  else sendToHost({t:'chat', name:myName, text:txt});
 }
 
 function addChatLine(name, text){
