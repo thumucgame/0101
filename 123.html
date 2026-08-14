@@ -260,11 +260,11 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .card .suit{font-size:14px;align-self:flex-end;line-height:1;}
 .card.selected{transform:translateY(-16px);box-shadow:0 8px 12px rgba(0,0,0,.55);border-color:var(--gold);}
 .card.table-card{
-  width:62px;height:90px;margin-left:-24px;pointer-events:none;box-shadow:-3px 3px 8px rgba(0,0,0,.6);border:1.5px solid rgba(0,0,0,.35);
+  width:76px;height:110px;margin-left:-28px;pointer-events:none;box-shadow:-3px 3px 8px rgba(0,0,0,.6);border:1.5px solid rgba(0,0,0,.35);
 }
 .card.table-card:first-child{margin-left:0;}
-.card.table-card .rank{font-size:18px;}
-.card.table-card .suit{font-size:18px;}
+.card.table-card .rank{font-size:22px;}
+.card.table-card .suit{font-size:22px;}
 
 .controls{display:flex;gap:6px;width:100%;max-width:320px;justify-content:center;padding:0 6px;}
 .controls .btn{flex:1;padding:7px 8px;font-size:12px;}
@@ -275,9 +275,9 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   .card .rank{font-size:12px;}
   .card .suit{font-size:12px;}
   .card.selected{transform:translateY(-14px);}
-  .card.table-card{width:52px;height:76px;margin-left:-20px;}
-  .card.table-card .rank{font-size:15px;}
-  .card.table-card .suit{font-size:15px;}
+  .card.table-card{width:64px;height:93px;margin-left:-22px;}
+  .card.table-card .rank{font-size:18px;}
+  .card.table-card .suit{font-size:18px;}
   .hand-cards{min-height:78px;margin-bottom:4px;}
   .p-slot{padding:3px 6px;min-width:64px;}
   .p-slot .avatar{width:22px;height:22px;font-size:11px;}
@@ -673,12 +673,43 @@ const REACTION_LABELS = {
   LAUGH3: '🐶 Cười sặc!'
 };
 
+// --- PRELOAD ÂM THANH: nạp sẵn tất cả file mp3 ngay khi trang tải xong,
+// để khi cần phát (đặc biệt PLAY_CARD) không bị trễ do phải tải mạng lúc đó. ---
+const SOUND_CACHE = {};
+function preloadAllSounds(){
+  Object.keys(SOUND_URLS).forEach(key => {
+    try {
+      const a = new Audio();
+      a.preload = 'auto';
+      a.src = SOUND_URLS[key];
+      a.load();
+      SOUND_CACHE[key] = a;
+    } catch(err){}
+  });
+}
+// Bắt đầu preload ngay (một số trình duyệt cần tương tác người dùng đầu tiên
+// mới cho phép audio autoplay, nhưng việc load/buffer file vẫn diễn ra được).
+preloadAllSounds();
+// Nạp lại một lần nữa sau khi có tương tác đầu tiên của người dùng, để chắc chắn
+// mọi thứ đã sẵn sàng trong bộ nhớ đệm của trình duyệt trước khi ván chơi bắt đầu.
+window.addEventListener('pointerdown', preloadAllSounds, { once: true });
+
 function playGlobalSound(item, customVolume = 0.9){
   const url = SOUND_URLS[item];
   if(!url) return;
+  const vol = Math.min(Math.max(customVolume, 0.1), 1.0);
   try {
+    const cached = SOUND_CACHE[item];
+    if(cached){
+      // Dùng cloneNode để phát tức thì từ bộ nhớ đệm, cho phép chồng nhiều lần phát
+      // (ví dụ nhiều lá bài đánh liên tiếp) mà không phải chờ tải lại từ mạng.
+      const instance = cached.cloneNode(true);
+      instance.volume = vol;
+      instance.play().catch(e => console.log(e));
+      return;
+    }
     const audio = new Audio(url);
-    audio.volume = Math.min(Math.max(customVolume, 0.1), 1.0);
+    audio.volume = vol;
     audio.play().catch(e => console.log(e));
   } catch(err){}
 }
@@ -715,6 +746,20 @@ function sanitizeForFirebase(obj){
     }
   });
   return out;
+}
+
+// --- CHỐNG XSS: mã hoá các ký tự đặc biệt (<,>,&,",') trước khi chèn
+// bất kỳ chuỗi nào có nguồn gốc từ người dùng (tên, chat...) vào innerHTML.
+// Nếu không có bước này, ai đó đặt tên/chat kiểu "<img src=x onerror=...>"
+// sẽ chạy được mã tuỳ ý trong trình duyệt của người chơi khác. ---
+function escapeHtml(str){
+  if(str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function safeArray(data) {
@@ -1066,8 +1111,8 @@ function renderPublicRoomsList(){
     const item = document.createElement('div');
     item.className = 'public-room-item';
     item.innerHTML = `
-      <div><b>Phòng ${r.code}</b><br><small style="color:rgba(250,246,238,0.6)">Chủ phòng: ${r.hostName} (${r.count}/4)</small></div>
-      <button class="btn btn-gold" style="padding:4px 10px;font-size:12px;" onclick="joinExistingRoom('${r.code}')">Vào</button>
+      <div><b>Phòng ${escapeHtml(r.code)}</b><br><small style="color:rgba(250,246,238,0.6)">Chủ phòng: ${escapeHtml(r.hostName)} (${r.count}/4)</small></div>
+      <button class="btn btn-gold" style="padding:4px 10px;font-size:12px;" onclick="joinExistingRoom('${escapeHtml(r.code)}')">Vào</button>
     `;
     listEl.appendChild(item);
   });
@@ -1352,7 +1397,7 @@ function renderLobby(){
       <li>
         <div class="player-info">
           <span class="dot"></span>
-          <span>${p.name}</span>
+          <span>${escapeHtml(p.name)}</span>
           ${i===0?'<span class="crown">♛ Host</span>':''}
         </div>
         ${removeBtn}
@@ -2369,7 +2414,7 @@ function renderOpponents(){
 
     slotDiv.innerHTML = `
       <div class="avatar" id="avatar-${pId}">👤</div>
-      <div class="name">${currentState.names[pId] || 'Người chơi'}</div>
+      <div class="name">${escapeHtml(currentState.names[pId]) || 'Người chơi'}</div>
       <div class="card-cnt">${cardCountDisplay}</div>
       ${waterSticker}
       ${kneelingSticker}
@@ -2657,7 +2702,7 @@ function sendChat(){
 
 function addChatLine(name, text){
   const log = $('chatLog');
-  log.innerHTML += `<div style="margin-bottom:6px;"><b>${name}:</b> ${text}</div>`;
+  log.innerHTML += `<div style="margin-bottom:6px;"><b>${escapeHtml(name)}:</b> ${escapeHtml(text)}</div>`;
   log.scrollTop = log.scrollHeight;
   if(!$('sidePanel').classList.contains('open')){ unreadChat++; updateChatBadge(); }
 }
