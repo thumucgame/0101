@@ -289,8 +289,16 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     </div>
 
     <div class="public-rooms-box">
+      <label style="margin:8px 0 4px;">🔑 Vào phòng bằng mã (dùng khi khác mạng/khác máy)</label>
+      <div class="row">
+        <input type="text" id="joinCodeInput" maxlength="6" placeholder="Nhập mã phòng bạn được chia sẻ..." style="text-transform:uppercase;">
+        <button class="btn btn-gold" id="btnJoinCode" style="flex:0 0 auto;">Vào</button>
+      </div>
+    </div>
+
+    <div class="public-rooms-box">
       <label style="margin:8px 0 4px;display:flex;justify-content:space-between;align-items:center;">
-        <span>🏠 Phòng đang mở trực tuyến</span>
+        <span>🏠 Phòng gần đây (chỉ trên máy này)</span>
         <button class="btn btn-outline" id="btnRefreshRooms" style="font-size:10px;padding:2px 6px;">🔄 Làm mới</button>
       </label>
       <div class="public-rooms-list" id="publicRoomsList">
@@ -697,19 +705,31 @@ function publishRoomToPublic(code, hostName){
 }
 
 window.joinExistingRoom = function(code){
+  code = (code || '').trim().toUpperCase();
+  if(!code){ $('homeErr').textContent = 'Vui lòng nhập mã phòng!'; return; }
   myName = $('nameInput').value.trim() || 'Người chơi';
   isHost = false; isBotMode = false; roomCode = code;
+  $('homeErr').textContent = 'Đang kết nối tới phòng ' + code + '...';
   initPeer(null, ()=>{
     myId = peer.id;
     const conn = peer.connect('tienlen-'+code, {reliable:true});
+    let joined = false;
+    const joinTimeout = setTimeout(() => {
+      if(!joined) $('homeErr').textContent = 'Không nối được phòng này. Kiểm tra lại mã phòng, hoặc chủ phòng chưa mở/đã đóng phòng.';
+    }, 10000);
     conn.on('open', ()=>{
+      joined = true;
+      clearTimeout(joinTimeout);
       conns.host = conn; wireConn(conn);
       conn.send({t:'join', name:myName, id:myId});
       showLobby();
     });
-    conn.on('error', () => { $('homeErr').textContent = 'Không thể vào phòng này!'; });
+    conn.on('error', () => { clearTimeout(joinTimeout); $('homeErr').textContent = 'Không thể vào phòng này!'; });
   });
 };
+
+$('btnJoinCode').onclick = () => joinExistingRoom($('joinCodeInput').value);
+$('joinCodeInput').onkeyup = (e) => { if(e.key === 'Enter') joinExistingRoom($('joinCodeInput').value); };
 
 $('btnCreate').onclick=()=>{
   myName = $('nameInput').value.trim() || 'Người chơi';
