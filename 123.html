@@ -521,18 +521,47 @@ function playGlobalSound(item, customVolume = 0.9){
 
 let consecutivePlayCount = 0;
 
-const ICE_SERVERS = {
+// ==========================================
+// TURN SERVER THẬT (Metered / Open Relay Project)
+// ==========================================
+// Bộ credential "openrelayproject/openrelayproject" chỉ là VÍ DỤ trong tài liệu, KHÔNG
+// còn relay thật được nữa -> đây chính là lý do 2 người khác mạng/khác máy không thấy nhau
+// (2 tab trong CÙNG 1 trình duyệt thì vẫn nối được vì lúc đó không cần NAT traversal thật).
+// -> Đăng ký tài khoản MIỄN PHÍ tại https://dashboard.metered.ca/signup, tạo 1 App, rồi điền
+// TÊN APP và API KEY của bạn vào 2 dòng dưới đây:
+const METERED_APP_NAME = 'YOUR_APP_NAME'; // vd: 'tienlen-app'  (phần đứng trước .metered.live)
+const METERED_API_KEY   = 'YOUR_API_KEY';  // API Key lấy trong Dashboard
+
+let ICE_SERVERS = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:openrelay.metered.ca:80' },
-    // Cần TURN server để 2 người ở 2 mạng wifi/4G khác nhau (khác NAT) vẫn nối được với nhau.
-    // Chỉ có STUN thì gặp NAT "đối xứng" (phổ biến ở 4G, wifi công cộng, wifi công ty) là bó tay.
-    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+    { urls: 'stun:stun1.l.google.com:19302' }
   ]
 };
+
+// Gọi API lấy TURN server thật ngay khi mở trang. Nếu chưa điền APP_NAME/API_KEY,
+// hoặc gọi API thất bại, app vẫn chạy được với STUN mặc định ở trên (chỉ hoạt động
+// tốt khi cùng wifi/mạng đơn giản - khác mạng/NAT chặt vẫn sẽ không nối được).
+const iceServersReady = (async () => {
+  if(METERED_APP_NAME === 'YOUR_APP_NAME' || METERED_API_KEY === 'YOUR_API_KEY'){
+    console.warn('⚠️ Chưa cấu hình TURN server thật (METERED_APP_NAME / METERED_API_KEY). Khác mạng có thể không kết nối được.');
+    return;
+  }
+  try{
+    const res = await fetch(`https://${METERED_APP_NAME}.metered.live/api/v1/turn/credentials?apiKey=${METERED_API_KEY}`);
+    if(res.ok){
+      const servers = await res.json();
+      if(Array.isArray(servers) && servers.length){
+        ICE_SERVERS = { iceServers: servers };
+        console.log('✅ Đã tải TURN server thật từ Metered.');
+      }
+    } else {
+      console.warn('Không lấy được TURN server từ Metered (HTTP ' + res.status + '), dùng STUN mặc định.');
+    }
+  }catch(e){
+    console.warn('Lỗi khi tải TURN server, dùng STUN mặc định:', e);
+  }
+})();
 
 const RANKS = ['3','4','5','6','7','8','9','10','J','Q','K','A','2'];
 const SUITS = ['♠','♣','♦','♥'];
@@ -633,6 +662,160 @@ function calculateChopReward(next, curr){
   if(curr.type === 'quad' && next.type === 'pairs_run' && next.count >= 4) return 4;
   return 0;
 }
+
+/* ===================== BOT AI NÂNG CAO ===================== */
+function getRankGroups(hand){
+  const groups = {};
+  hand.forEach(c=>{ (groups[c.r] = groups[c.r]||[]).push(c); });
+  Object.values(groups).forEach(arr=>arr.sort((a,b)=>a.s-b.s));
+  return groups;
+}
+function combinations(arr, k){
+  const res = []; const n = arr.length;
+  (function backtrack(start, combo){
+    if(combo.length===k){ res.push(combo.slice()); return; }
+    for(let i=start;i<n;i++){ combo.push(arr[i]); backtrack(i+1, combo); combo.pop(); }
+  })(0, []);
+  return res;
+}
+// Sinh toàn bộ tổ hợp bài hợp lệ (đơn, đôi, sám, sảnh, tứ quý, đôi thông) có thể tạo từ 1 bộ bài
+function generateAllCombos(hand){
+  const rawCombos = [];
+  const groups = getRankGroups(hand);
+  const ranksPresent = Object.keys(groups).map(Number).sort((a,b)=>a-b);
+
+  hand.forEach(c=> rawCombos.push([c])); // đơn
+
+  ranksPresent.forEach(r=>{
+    const cards = groups[r];
+    if(cards.length>=2) combinations(cards,2).forEach(cc=>rawCombos.push(cc)); // đôi
+    if(cards.length>=3) combinations(cards,3).forEach(cc=>rawCombos.push(cc)); // sám cô
+    if(cards.length===4) rawCombos.push(cards.slice()); // tứ quý
+  });
+
+  // sảnh (rồng)
+  const distinctRanks = ranksPresent.filter(r=>r!==12);
+  let runs = [], curRun = [];
+  distinctRanks.forEach(r=>{
+    if(curRun.length===0 || r===curRun[curRun.length-1]+1) curRun.push(r);
+    else { runs.push(curRun); curRun=[r]; }
+  });
+  if(curRun.length) runs.push(curRun);
+  runs.forEach(run=>{
+    for(let len=3; len<=run.length; len++){
+      for(let start=0; start+len<=run.length; start++){
+        const seq = run.slice(start,start+len);
+        const lowCards = seq.map(r=>groups[r][0]);
+        rawCombos.push(lowCards);
+        const highCards = seq.map(r=>groups[r][groups[r].length-1]);
+        if(highCards.some((c,i)=>c!==lowCards[i])) rawCombos.push(highCards);
+      }
+    }
+  });
+
+  // đôi thông (>=3 đôi liên tiếp)
+  const pairRanks = distinctRanks.filter(r=>groups[r].length>=2);
+  let pruns = [], curPR = [];
+  pairRanks.forEach(r=>{
+    if(curPR.length===0 || r===curPR[curPR.length-1]+1) curPR.push(r);
+    else { pruns.push(curPR); curPR=[r]; }
+  });
+  if(curPR.length) pruns.push(curPR);
+  pruns.forEach(run=>{
+    for(let count=3; count<=run.length; count++){
+      for(let start=0; start+count<=run.length; start++){
+        const seq = run.slice(start,start+count);
+        const cc = [];
+        seq.forEach(r=>{ cc.push(groups[r][0], groups[r][1]); });
+        rawCombos.push(cc);
+      }
+    }
+  });
+
+  const seen = new Set(); const result = [];
+  rawCombos.forEach(cardsArr=>{
+    const cls = classify(cardsArr);
+    if(!cls) return;
+    const key = cls.cards.map(cardKey).sort().join(',');
+    if(seen.has(key)) return;
+    seen.add(key);
+    result.push(cls);
+  });
+  return result;
+}
+function isBombCombo(c){ return c.type==='quad' || (c.type==='pairs_run' && c.count>=3); }
+
+function getBotDifficulty(botId){
+  if(botId==='bot_1') return 'easy';
+  if(botId==='bot_2') return 'medium';
+  return 'hard';
+}
+
+// Chọn bài để RA (khi được quyền đánh mới)
+function chooseLeadPlay(hand, gs, botId, difficulty){
+  let combos = generateAllCombos(hand);
+  if(gs.firstMove && gs.requiredCard){
+    const req = gs.requiredCard;
+    combos = combos.filter(c=> c.cards.some(cc=>cc.r===req.r && cc.s===req.s));
+    if(combos.length===0){
+      const reqCard = hand.find(c=>c.r===req.r && c.s===req.s);
+      return reqCard ? [cardKey(reqCard)] : [cardKey(hand[0])];
+    }
+  }
+  // Nếu đánh hết bài trong 1 nước là thắng luôn -> đánh ngay
+  const winCombo = combos.find(c=> c.cards.length===hand.length);
+  if(winCombo) return winCombo.cards.map(cardKey);
+
+  const nonBombs = combos.filter(c=> !isBombCombo(c));
+  const pool = nonBombs.length ? nonBombs : combos; // chỉ dùng bom nếu không còn lựa chọn nào khác
+
+  const typePriority = {straight:5, pairs_run:5, quad:4, triple:3, pair:2, single:1};
+  pool.sort((a,b)=>{
+    if(a.highR!==b.highR) return a.highR-b.highR;
+    if(b.len!==a.len) return b.len-a.len;
+    return (typePriority[b.type]||0)-(typePriority[a.type]||0);
+  });
+
+  if(difficulty==='easy' && Math.random()<0.55){
+    const singles = pool.filter(c=>c.type==='single');
+    if(singles.length) return singles[0].cards.map(cardKey);
+  }
+  return pool[0].cards.map(cardKey);
+}
+
+// Chọn bài để CHẶN/CHẶT khi có người đã đánh trước đó. Trả về null nghĩa là bỏ lượt.
+function chooseFollowPlay(hand, currentCombo, gs, botId, difficulty){
+  const combos = generateAllCombos(hand);
+  const validBeats = combos.filter(c=> canBeat(c, currentCombo));
+  if(validBeats.length===0) return null;
+
+  const normalBeats = validBeats.filter(c=> calculateChopReward(c, currentCombo)===0);
+  const chopBeats = validBeats.filter(c=> calculateChopReward(c, currentCombo)>0)
+    .sort((a,b)=> calculateChopReward(a,currentCombo)-calculateChopReward(b,currentCombo));
+
+  let dangerNext = false;
+  if(gs.hands){
+    Object.keys(gs.hands).forEach(pid=>{
+      if(pid!==botId && gs.hands[pid] && gs.hands[pid].length<=2) dangerNext = true;
+    });
+  }
+
+  if(normalBeats.length>0){
+    normalBeats.sort((a,b)=> a.highR-b.highR || a.highS-b.highS);
+    if(difficulty==='easy' && !dangerNext && Math.random()<0.25) return null; // gà mờ đôi khi bỏ lượt oan
+    return normalBeats[0].cards.map(cardKey);
+  }
+
+  if(chopBeats.length>0){
+    let willChop;
+    if(difficulty==='hard') willChop = true;
+    else if(difficulty==='medium') willChop = dangerNext || Math.random()<0.55;
+    else willChop = dangerNext && Math.random()<0.35;
+    if(willChop) return chopBeats[0].cards.map(cardKey);
+  }
+  return null;
+}
+/* =================== HẾT BOT AI NÂNG CAO =================== */
 
 let myId=null, myName='', isHost=false, roomCode=null, peer=null;
 let conns={};
@@ -762,7 +945,8 @@ $('btnBotGame').onclick = () => {
   $('btnStart').disabled = false;
 };
 
-function initPeer(customId, onOpen){
+async function initPeer(customId, onOpen){
+  await iceServersReady; // đảm bảo đã có TURN server thật (nếu cấu hình) trước khi tạo Peer
   peer = customId ? new Peer(customId, {config: ICE_SERVERS}) : new Peer({config: ICE_SERVERS});
   peer.on('open', onOpen);
   peer.on('error', err => {
@@ -1010,11 +1194,14 @@ function startTimerLoop(){
     if(isBotMode && botList.includes(currId)){
       if(!gameState.botThinking){
         gameState.botThinking = true;
+        const diff = getBotDifficulty(currId);
+        const baseDelay = diff==='easy' ? 500 : (diff==='medium' ? 900 : 1300);
+        const delay = baseDelay + Math.random()*700;
         setTimeout(() => {
           if(!gameState || gameState.isEnded) return;
           if(gameState.order[gameState.turnIdx] === currId) makeBotMove(currId);
           gameState.botThinking = false;
-        }, 1200);
+        }, delay);
       }
       return;
     }
@@ -1027,27 +1214,20 @@ function makeBotMove(botId){
   const hand = gameState.hands[botId];
   if(!hand || hand.length === 0) return;
   const currentCombo = gameState.currentCombo;
+  const difficulty = getBotDifficulty(botId);
 
   if(!currentCombo){
-    let chosenCards = [hand[0]];
-    if(gameState.firstMove && gameState.requiredCard){
-      const req = hand.find(c => c.r === gameState.requiredCard.r && c.s === gameState.requiredCard.s);
-      if(req) chosenCards = [req];
-    }
-    handleAction(botId, { kind: 'play', cards: chosenCards.map(c => cardKey(c)) }, true);
+    const cardKeys = chooseLeadPlay(hand, gameState, botId, difficulty);
+    handleAction(botId, { kind: 'play', cards: cardKeys }, true);
     return;
   }
 
-  for(let i=0; i<hand.length; i++){
-    if(currentCombo.type === 'single'){
-      let combo = classify([hand[i]]);
-      if(combo && canBeat(combo, currentCombo)){
-        handleAction(botId, { kind: 'play', cards: [cardKey(hand[i])] }, true);
-        return;
-      }
-    }
+  const followKeys = chooseFollowPlay(hand, currentCombo, gameState, botId, difficulty);
+  if(followKeys){
+    handleAction(botId, { kind: 'play', cards: followKeys }, true);
+  } else {
+    handleAction(botId, { kind: 'pass' }, true);
   }
-  handleAction(botId, { kind: 'pass' }, true);
 }
 
 function autoForceTurn(playerId){
