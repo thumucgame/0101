@@ -4,8 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
 <title>Tiến Lên Online - Bộ Luật Chuẩn & Chế Độ Đánh Nước / Quỳ</title>
-<!-- Firebase (chỉ dùng bản "compat" để giữ nguyên cú pháp firebase.xxx() cổ điển,
-     tránh phải chuyển toàn bộ code sang ES module -> đỡ lỗi cấu trúc khi deploy GitHub Pages -->
+<!-- Firebase compat -->
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
 <style>
@@ -119,9 +118,9 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .p-slot .card-cnt{font-size:9px;color:var(--gold);font-weight:bold;margin-top:1px;}
 .p-slot .kneeling-badge{font-size:10px;color:#ff5252;font-weight:bold;margin-top:1px;}
 
-.slot-left { top: 50%; left: 4px; transform: translateY(-50%); }
+.slot-left { top: 45%; left: 4px; transform: translateY(-50%); }
 .slot-top  { top: 36px; left: 50%; transform: translateX(-50%); }
-.slot-right{ top: 50%; right: 4px; transform: translateY(-50%); }
+.slot-right{ top: 45%; right: 4px; transform: translateY(-50%); }
 .slot-bottom{position:relative;margin-bottom:2px;border:none;background:transparent;min-width:auto;}
 
 .table-center{
@@ -180,7 +179,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .controls{display:flex;gap:6px;width:100%;max-width:320px;justify-content:center;padding:0 6px;}
 .controls .btn{flex:1;padding:7px 8px;font-size:12px;}
 
-/* OPTIMIZED MOBILE LAYOUT (FIXED UI) */
+/* OPTIMIZED MOBILE LAYOUT */
 @media (max-width: 600px) {
   .brand { display: none; }
   
@@ -192,6 +191,10 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   .table-center {
     margin: 2px 48px !important;
   }
+
+  .slot-left { top: 40% !important; left: 2px !important; transform: translateY(-50%) !important; }
+  .slot-top  { top: 30px !important; left: 50% !important; transform: translateX(-50%) !important; }
+  .slot-right{ top: 40% !important; right: 2px !important; transform: translateY(-50%) !important; }
 
   .p-slot {
     padding: 2px 4px !important;
@@ -595,7 +598,7 @@ try {
     firebase.initializeApp(FIREBASE_CONFIG);
     fbDb = firebase.database();
   } else {
-    console.warn('⚠️ SDK Firebase chưa load được (mạng chặn gstatic.com?) -> danh sách phòng công khai sẽ không hoạt động, nhưng tạo/vào phòng bằng MÃ vẫn chạy bình thường.');
+    console.warn('⚠️ SDK Firebase chưa load được');
   }
 } catch (e) {
   console.error('❌ Lỗi khởi tạo Firebase:', e);
@@ -1456,30 +1459,48 @@ function applyState(st){
   renderOpponents(); renderCenter(); renderHand();
 }
 
+/* KHẮC PHỤC TRIỆT ĐỂ LỖI LỆCH GIAO DIỆN KHÁCH / HOST */
 function renderOpponents(){
-  const wrap = $('oppSlots'); wrap.innerHTML = '';
+  const wrap = $('oppSlots'); 
+  wrap.innerHTML = '';
+  
   const order = currentState.order;
   let myIdx = order.indexOf(myId);
-  if(myIdx === -1) myIdx = 0;
-  const positions = ['slot-left', 'slot-top', 'slot-right'];
-  let posIdx = 0;
+  if (myIdx === -1) myIdx = 0; // Mặc định nếu là spectator
 
-  for(let i=1; i<order.length; i++){
-    const pId = order[(myIdx + i) % order.length];
-    const posClass = positions[posIdx++];
+  const totalPlayers = order.length;
+  const otherPlayers = [];
+
+  for (let i = 1; i < totalPlayers; i++) {
+    const pId = order[(myIdx + i) % totalPlayers];
+    otherPlayers.push(pId);
+  }
+
+  otherPlayers.forEach((pId, idx) => {
+    let posClass = '';
+    
+    if (otherPlayers.length === 1) {
+      posClass = 'slot-top';
+    } else if (otherPlayers.length === 2) {
+      posClass = (idx === 0) ? 'slot-left' : 'slot-right';
+    } else {
+      const positions4 = ['slot-left', 'slot-top', 'slot-right'];
+      posClass = positions4[idx] || 'slot-top';
+    }
+
     const isTurn = pId === currentState.turnId;
     const isFinished = currentState.finished.includes(pId);
     let cardCountDisplay = currentState.hideCardCount ? '🙈 Bài: ??' : `${currentState.counts[pId]} lá`;
     if(isFinished) cardCountDisplay = 'Về đích';
 
     const slotDiv = document.createElement('div');
-    slotDiv.className = `p-slot ${posClass} ${isTurn?'active':''}`;
+    slotDiv.className = `p-slot ${posClass} ${isTurn ? 'active' : ''}`;
     slotDiv.dataset.pid = pId;
 
     let waterSticker = '';
     if(currentState.gameMode === 'WATER'){
       const oppLiveVal = (currentState.liveScores && currentState.liveScores[pId]) ? currentState.liveScores[pId] : 0;
-      waterSticker = `<div class="live-score-sticker ${oppLiveVal>0?'plus':(oppLiveVal<0?'minus':'')}" style="position:relative;top:auto;right:auto;margin-top:2px;font-size:9px;padding:1px 4px;">${oppLiveVal>0?'+'+oppLiveVal:oppLiveVal} Nước</div>`;
+      waterSticker = `<div class="live-score-sticker ${oppLiveVal > 0 ? 'plus' : (oppLiveVal < 0 ? 'minus' : '')}" style="position:relative;top:auto;right:auto;margin-top:2px;font-size:9px;padding:1px 4px;">${oppLiveVal > 0 ? '+' + oppLiveVal : oppLiveVal} Nước</div>`;
     }
 
     let kneelingSticker = '';
@@ -1489,7 +1510,7 @@ function renderOpponents(){
 
     slotDiv.innerHTML = `
       <div class="avatar" id="avatar-${pId}">👤</div>
-      <div class="name">${currentState.names[pId]}</div>
+      <div class="name">${currentState.names[pId] || 'Người chơi'}</div>
       <div class="card-cnt">${cardCountDisplay}</div>
       ${waterSticker}
       ${kneelingSticker}
@@ -1497,7 +1518,7 @@ function renderOpponents(){
 
     slotDiv.onclick = (e) => { e.stopPropagation(); openThrowPopover(pId, slotDiv); };
     wrap.appendChild(slotDiv);
-  }
+  });
 }
 
 function renderCenter(){
