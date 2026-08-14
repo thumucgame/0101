@@ -745,6 +745,71 @@ function generateAllCombos(hand){
 }
 function isBombCombo(c){ return c.type==='quad' || (c.type==='pairs_run' && c.count>=3); }
 
+// Rã cả bộ bài trên tay thành các "cụm" tối ưu: ưu tiên gom sảnh dài nhất, đôi thông dài nhất,
+// rồi tứ quý, sám cô, đôi, cuối cùng mới còn lại lá lẻ. Nhờ vậy khi ra bài bot sẽ chủ động tung
+// sảnh/đôi/sám cô ra thay vì chỉ biết đánh lá lẻ thấp nhất.
+function partitionHand(hand){
+  let remaining = sortHand(hand).slice();
+  const removeCards = (cards)=> cards.forEach(c=>{
+    const idx = remaining.findIndex(x=>x.r===c.r && x.s===c.s);
+    if(idx>=0) remaining.splice(idx,1);
+  });
+  const parts = [];
+
+  // 1. Tứ quý (giữ riêng ra trước để không bị sảnh "ăn mất" 1 lá)
+  Object.entries(getRankGroups(remaining)).forEach(([r,cards])=>{
+    if(cards.length===4){ parts.push({cards:cards.slice(), reserved:true}); removeCards(cards); }
+  });
+
+  // 2. Sảnh dài nhất, lặp lại tới khi hết sảnh khả dụng (>=3 lá liên tiếp, không tính lá 2)
+  function extractLongestStraight(){
+    const g = getRankGroups(remaining);
+    const ranks = Object.keys(g).map(Number).sort((a,b)=>a-b).filter(r=>r!==12);
+    let runs=[], cur=[];
+    ranks.forEach(r=>{ if(cur.length===0||r===cur[cur.length-1]+1) cur.push(r); else {runs.push(cur); cur=[r];} });
+    if(cur.length) runs.push(cur);
+    let best=null;
+    runs.forEach(run=>{ if(run.length>=3 && (!best||run.length>best.length)) best=run; });
+    if(!best) return false;
+    const cardsUsed = best.map(r=>g[r][0]);
+    parts.push({cards:cardsUsed, reserved:false});
+    removeCards(cardsUsed);
+    return true;
+  }
+  while(extractLongestStraight()){}
+
+  // 3. Đôi thông dài nhất (>=3 đôi liên tiếp), lặp lại
+  function extractLongestPairsRun(){
+    const g = getRankGroups(remaining);
+    const ranks = Object.keys(g).map(Number).sort((a,b)=>a-b).filter(r=> r!==12 && g[r].length>=2);
+    let runs=[], cur=[];
+    ranks.forEach(r=>{ if(cur.length===0||r===cur[cur.length-1]+1) cur.push(r); else {runs.push(cur); cur=[r];} });
+    if(cur.length) runs.push(cur);
+    let best=null;
+    runs.forEach(run=>{ if(run.length>=3 && (!best||run.length>best.length)) best=run; });
+    if(!best) return false;
+    const cardsUsed=[];
+    best.forEach(r=> cardsUsed.push(g[r][0], g[r][1]));
+    parts.push({cards:cardsUsed, reserved:true}); // đôi thông >=3 cũng là bom, đánh dấu reserved
+    removeCards(cardsUsed);
+    return true;
+  }
+  while(extractLongestPairsRun()){}
+
+  // 4. Sám cô còn lại
+  Object.entries(getRankGroups(remaining)).forEach(([r,cards])=>{
+    if(cards.length===3){ parts.push({cards:cards.slice(), reserved:false}); removeCards(cards); }
+  });
+  // 5. Đôi còn lại
+  Object.entries(getRankGroups(remaining)).forEach(([r,cards])=>{
+    if(cards.length===2){ parts.push({cards:cards.slice(), reserved:false}); removeCards(cards); }
+  });
+  // 6. Lá lẻ còn lại
+  remaining.forEach(c=> parts.push({cards:[c], reserved:false}));
+
+  return parts;
+}
+
 function getBotDifficulty(botId){
   if(botId==='bot_1') return 'easy';
   if(botId==='bot_2') return 'medium';
@@ -766,21 +831,28 @@ function chooseLeadPlay(hand, gs, botId, difficulty){
   const winCombo = combos.find(c=> c.cards.length===hand.length);
   if(winCombo) return winCombo.cards.map(cardKey);
 
-  const nonBombs = combos.filter(c=> !isBombCombo(c));
-  const pool = nonBombs.length ? nonBombs : combos; // chỉ dùng bom nếu không còn lựa chọn nào khác
+  // Rã cả tay bài thành các cụm tối ưu (sảnh/đôi thông/sám cô/đôi/lẻ) rồi đánh theo cụm nhỏ nhất
+  // trước, để bot chủ động tung sảnh/đôi/sám cô ra thay vì chỉ biết đánh lá lẻ.
+  const isEndgame = hand.length <= 5;
+  const parts = partitionHand(hand)
+    .map(p=>({...p, cls: classify(p.cards)}))
+    .filter(p=>p.cls);
 
-  const typePriority = {straight:5, pairs_run:5, quad:4, triple:3, pair:2, single:1};
-  pool.sort((a,b)=>{
-    if(a.highR!==b.highR) return a.highR-b.highR;
-    if(b.len!==a.len) return b.len-a.len;
-    return (typePriority[b.type]||0)-(typePriority[a.type]||0);
+  let candidateParts = parts.filter(p=> isEndgame || !p.reserved || difficulty==='hard');
+  if(candidateParts.length===0) candidateParts = parts; // hết cách thì phải dùng cả bom
+
+  candidateParts.sort((a,b)=>{
+    if(a.cls.highR!==b.cls.highR) return a.cls.highR-b.cls.highR;
+    return b.cls.len-a.cls.len;
   });
 
-  if(difficulty==='easy' && Math.random()<0.55){
-    const singles = pool.filter(c=>c.type==='single');
-    if(singles.length) return singles[0].cards.map(cardKey);
+  let chosen = candidateParts[0];
+
+  if(difficulty==='easy' && Math.random()<0.5){
+    const singles = candidateParts.filter(p=>p.cls.type==='single');
+    if(singles.length) chosen = singles[0];
   }
-  return pool[0].cards.map(cardKey);
+  return chosen.cards.map(cardKey);
 }
 
 // Chọn bài để CHẶN/CHẶT khi có người đã đánh trước đó. Trả về null nghĩa là bỏ lượt.
