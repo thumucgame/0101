@@ -73,7 +73,8 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .room-code .code:hover{background:rgba(212,175,55,.1);}
 .room-code .hint{font-size:11px;color:rgba(250,246,238,.5);margin-top:4px;}
 .player-list{list-style:none;margin:12px 0;padding:0;}
-.player-list li{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(0,0,0,.15);border-radius:8px;margin-bottom:6px;font-size:14px;}
+.player-list li{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(0,0,0,.15);border-radius:8px;margin-bottom:6px;font-size:14px;}
+.player-info{display:flex;align-items:center;gap:8px;}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--good);}
 .crown{color:var(--gold);font-size:12px;}
 .checkbox-row{display:flex;align-items:center;gap:8px;margin:12px 0;font-size:13px;cursor:pointer;}
@@ -119,20 +120,20 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .p-slot .kneeling-badge{font-size:10px;color:#ff5252;font-weight:bold;margin-top:1px;}
 
 .slot-left { top: 45%; left: 4px; transform: translateY(-50%); }
-/* CÂN ĐỐI VỊ TRÍ SLOT TÊN NGƯỜI CHƠI PHÍA TRÊN */
-.slot-top  { top: 42px; left: 50%; transform: translateX(-50%); }
+/* ĐỊNH VỊ SLOT TRÊN CÂN ĐỐI */
+.slot-top  { top: 10px; left: 50%; transform: translateX(-50%); }
 .slot-right{ top: 45%; right: 4px; transform: translateY(-50%); }
 .slot-bottom{position:relative;margin-bottom:2px;border:none;background:transparent;min-width:auto;}
 
 .table-center{
-  grid-row:2;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  border:1px dashed var(--panel-line);border-radius:12px;margin:2px 42px;background:radial-gradient(ellipse at center, rgba(255,255,255,.03), transparent 70%);
+  grid-row:2;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+  border:1px dashed var(--panel-line);border-radius:12px;margin:2px 42px;padding:8px 0;background:radial-gradient(ellipse at center, rgba(255,255,255,.03), transparent 70%);
 }
 
-/* CÂN ĐỐI ĐỒNG HỒ ĐẾM SỐ LƯỢT TRÁNH CHE TÊN NGƯỜI CHƠI */
+/* ĐỔI VỊ TRÍ ĐỒNG HỒ ĐẾM XUỐNG DƯỚI CÂN ĐỐI VÀ KHÔNG CHE TÊN */
 .turn-timer-box{
-  position:absolute;top:2px;background:rgba(0,0,0,.85);border:1px solid var(--gold-dim);
-  padding:2px 8px;border-radius:12px;display:flex;align-items:center;gap:4px;font-size:10px;z-index:5;
+  position:relative;margin-top:auto;background:rgba(0,0,0,.85);border:1px solid var(--gold-dim);
+  padding:3px 12px;border-radius:12px;display:flex;align-items:center;gap:6px;font-size:11px;z-index:5;
   transition: all 0.3s ease;
 }
 .turn-timer-box.my-turn-timer {
@@ -146,11 +147,11 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   100% { transform: scale(1.05); }
 }
 
-.timer-sec{font-family:monospace;font-weight:700;color:var(--gold);font-size:11px;}
+.timer-sec{font-family:monospace;font-weight:700;color:var(--gold);font-size:12px;}
 .timer-sec.low{color:var(--bad);}
 
-.played-combo{display:flex;gap:4px;min-height:85px;align-items:center;justify-content:center;margin-top:16px;max-width:100%;overflow-x:auto;}
-.action-log{font-size:10px;color:rgba(250,246,238,.7);margin-top:4px;height:14px;text-align:center;padding:0 4px;}
+.played-combo{display:flex;gap:4px;min-height:85px;align-items:center;justify-content:center;margin-top:auto;margin-bottom:auto;max-width:100%;overflow-x:auto;}
+.action-log{font-size:10px;color:rgba(250,246,238,.7);margin-bottom:4px;height:14px;text-align:center;padding:0 4px;}
 
 .live-score-sticker {
   position: absolute; top: 4px; right: 6px; background: rgba(0,0,0,0.75);
@@ -309,7 +310,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   text-shadow: 0 0 4px #000, 0 0 8px #ff0000; pointer-events: none; z-index: 350;
   white-space: nowrap; animation: floatUp 1.2s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
 }
-@keyframes floatUp { 0% { transform: translateY(0) scale(0.7); opacity: 0; } 20% { transform: translateY(-10px) scale(1.2); opacity: 1; } 80% { transform: translateY(-25px) scale(15); opacity: 1; } 100% { transform: translateY(-35px) scale(0.8); opacity: 0; } }
+@keyframes floatUp { 0% { transform: translateY(0) scale(0.7); opacity: 0; } 20% { transform: translateY(-10px) scale(1.2); opacity: 1; } 80% { transform: translateY(-25px) scale(1.5); opacity: 1; } 100% { transform: translateY(-35px) scale(0.8); opacity: 0; } }
 </style>
 </head>
 <body>
@@ -361,6 +362,11 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     <div class="room-code">
       <div class="code" id="roomCodeDisplay" title="Bấm để sao chép mã phòng">------</div>
       <div class="hint" id="copyHint">📋 Nhấp vào mã để sao chép</div>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
+      <label style="margin:0;">Thành viên bàn</label>
+      <button class="btn btn-outline" id="btnAddBotInLobby" style="font-size:11px; padding:3px 8px;">🤖 + Thêm Bot</button>
     </div>
     <ul class="player-list" id="lobbyPlayers"></ul>
 
@@ -417,12 +423,14 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   <div id="oppSlots"></div>
 
   <div class="table-center">
+    <div class="action-log" id="actionLog"></div>
+    <div class="played-combo" id="playedCombo"></div>
+    
+    <!-- CÂN ĐỐI ĐỒNG HỒ ĐẾM SỐ LƯỢT TRÁNH CHE TÊN NGƯỜI CHƠI -->
     <div class="turn-timer-box" id="turnTimerBox">
       <span id="turnStatus">Lượt của...</span>
       <span class="timer-sec" id="turnTimerSecs">30</span>
     </div>
-    <div class="played-combo" id="playedCombo"></div>
-    <div class="action-log" id="actionLog"></div>
   </div>
 
   <div class="hand-area" id="myHandArea">
@@ -940,6 +948,7 @@ $('btnCreate').onclick=()=>{
   roomCode = Math.random().toString(36).substring(2,8).toUpperCase();
   myId = generatePlayerId();
   players = [{id:myId, name:myName}];
+  botList = [];
   publishRoomToPublic(roomCode, myName);
   listenAsHost();
   showLobby();
@@ -960,6 +969,46 @@ $('btnBotGame').onclick = () => {
   showLobby();
   $('btnStart').disabled = false;
 };
+
+/* CHỨC NĂNG THÊM BOT TRONG LOBBY PHÒNG */
+$('btnAddBotInLobby').onclick = () => {
+  if (!isHost) {
+    alert("Chỉ chủ phòng mới có thể thêm Bot!");
+    return;
+  }
+  if (players.length >= 4) {
+    alert("Phòng đã đủ 4 người chơi!");
+    return;
+  }
+
+  const botNamesPool = ['🤖 Cao Thủ Bot', '🤖 Thần Bài AI', '🤖 Máy Gà Mờ', '🤖 Bot Siêu Cấp', '🤖 Bot Lão Luyện'];
+  const currentNames = players.map(p => p.name);
+  const availableNames = botNamesPool.filter(n => !currentNames.includes(n));
+  const botName = availableNames[0] || `🤖 Bot ${players.length}`;
+
+  const newBotId = 'bot_' + Date.now().toString(36).slice(-4) + Math.floor(Math.random()*100);
+  players.push({ id: newBotId, name: botName });
+  botList.push(newBotId);
+
+  if (!isBotMode) {
+    publishRoomToPublic(roomCode, players[0].name);
+    broadcastLobby();
+  } else {
+    renderLobby();
+  }
+};
+
+function removeBotInLobby(botId) {
+  if (!isHost) return;
+  players = players.filter(p => p.id !== botId);
+  botList = botList.filter(id => id !== botId);
+  if (!isBotMode) {
+    publishRoomToPublic(roomCode, players[0].name);
+    broadcastLobby();
+  } else {
+    renderLobby();
+  }
+}
 
 function markPlayerDisconnected(disconnectedId){
   if(!gameState || gameState.isEnded) return;
@@ -1068,9 +1117,11 @@ function showLobby(){
   if(isHost){
     $('hostControls').classList.remove('hidden');
     $('guestWait').classList.add('hidden');
+    $('btnAddBotInLobby').style.display = 'inline-block';
   } else {
     $('hostControls').classList.add('hidden');
     $('guestWait').classList.remove('hidden');
+    $('btnAddBotInLobby').style.display = 'none';
   }
   renderLobby();
 }
@@ -1084,7 +1135,20 @@ function setLobbySettingsInteractive(enabled){
 function renderLobby(){
   const ul = $('lobbyPlayers'); ul.innerHTML = '';
   players.forEach((p,i)=>{
-    ul.innerHTML += `<li><span class="dot"></span>${p.name} ${i===0?'<span class="crown">♛ Host</span>':''}</li>`;
+    const isBot = botList.includes(p.id);
+    let removeBtn = '';
+    if (isHost && isBot) {
+      removeBtn = `<button class="btn btn-outline" style="font-size:10px; padding:2px 6px; color:#ff7777; border-color:#ff7777;" onclick="removeBotInLobby('${p.id}')">Xóa</button>`;
+    }
+    ul.innerHTML += `
+      <li>
+        <div class="player-info">
+          <span class="dot"></span>
+          <span>${p.name}</span>
+          ${i===0?'<span class="crown">♛ Host</span>':''}
+        </div>
+        ${removeBtn}
+      </li>`;
   });
 
   $('gameModeSelect').value = roomSettings.gameMode;
@@ -1100,7 +1164,12 @@ function renderLobby(){
   }
 
   if(isHost){
-    $('btnStart').disabled = players.length < (isBotMode ? 1 : 2);
+    $('btnStart').disabled = players.length < 2;
+    if (players.length >= 4) {
+      $('btnAddBotInLobby').disabled = true;
+    } else {
+      $('btnAddBotInLobby').disabled = false;
+    }
   }
 }
 
@@ -1205,7 +1274,7 @@ function startTimerLoop(){
   timerLoop = setInterval(()=>{
     if(!isHost || !gameState || gameState.isEnded) return;
     const currId = gameState.order[gameState.turnIdx];
-    if(isBotMode && botList.includes(currId)){
+    if(botList.includes(currId)){
       if(!gameState.botThinking){
         gameState.botThinking = true;
         setTimeout(() => {
@@ -1220,22 +1289,19 @@ function startTimerLoop(){
   }, 400);
 }
 
-/* THUẬT TOÁN BOT THÔNG MINH GẤP 10 LẦN */
+/* THUẬT TOÁN BOT THÔNG MINH */
 function getAllPossibleCombos(hand) {
   const sorted = [...hand].sort((a,b) => a.r - b.r || a.s - b.s);
   const combos = [];
 
-  // 1. Lá đơn
   sorted.forEach(c => combos.push(classify([c])));
 
-  // 2. Đôi
   for(let i=0; i<sorted.length; i++) {
     for(let j=i+1; j<sorted.length; j++) {
       if(sorted[i].r === sorted[j].r) combos.push(classify([sorted[i], sorted[j]]));
     }
   }
 
-  // 3. Sám cô
   for(let i=0; i<sorted.length; i++) {
     for(let j=i+1; j<sorted.length; j++) {
       for(let k=j+1; k<sorted.length; k++) {
@@ -1246,14 +1312,12 @@ function getAllPossibleCombos(hand) {
     }
   }
 
-  // 4. Tứ quý
   for(let i=0; i<sorted.length-3; i++) {
     if(sorted[i].r === sorted[i+1].r && sorted[i+1].r === sorted[i+2].r && sorted[i+2].r === sorted[i+3].r) {
       combos.push(classify([sorted[i], sorted[i+1], sorted[i+2], sorted[i+3]]));
     }
   }
 
-  // 5. Sảnh (độ dài 3 -> 12)
   for(let len=3; len<=sorted.length; len++) {
     for(let i=0; i<=sorted.length-len; i++) {
       const sub = sorted.slice(i, i+len);
@@ -1262,7 +1326,6 @@ function getAllPossibleCombos(hand) {
     }
   }
 
-  // 6. Đôi thông (3 đôi trở lên)
   for(let len=6; len<=sorted.length; len+=2) {
     for(let i=0; i<=sorted.length-len; i++) {
       const sub = sorted.slice(i, i+len);
@@ -1288,47 +1351,38 @@ function makeBotMove(botId){
     allCombos = allCombos.filter(cb => cb.cards.some(c => c.r === reqCard.r && c.s === reqCard.s));
   }
 
-  // LƯỢT ĐÁNH TỰ DO (ĐẦU VÒNG)
   if(!currentCombo) {
-    // Ưu tiên 1: Đánh sảnh dài nhất
     let straights = allCombos.filter(c => c.type === 'straight').sort((a,b) => b.len - a.len || a.highR - b.highR);
     if(straights.length > 0 && !reqCard) {
       handleAction(botId, { kind: 'play', cards: straights[0].cards.map(cardKey) }, true);
       return;
     }
 
-    // Ưu tiên 2: Đánh đôi nhỏ
     let pairs = allCombos.filter(c => c.type === 'pair').sort((a,b) => a.highR - b.highR);
     if(pairs.length > 0) {
       handleAction(botId, { kind: 'play', cards: pairs[0].cards.map(cardKey) }, true);
       return;
     }
 
-    // Ưu tiên 3: Đánh sám cô nhỏ
     let triples = allCombos.filter(c => c.type === 'triple').sort((a,b) => a.highR - b.highR);
     if(triples.length > 0) {
       handleAction(botId, { kind: 'play', cards: triples[0].cards.map(cardKey) }, true);
       return;
     }
 
-    // Mặc định: Đánh lá rác nhỏ nhất (không phải 2)
     let nonTwos = hand.filter(c => c.r !== 12).sort((a,b) => a.r - b.r || a.s - b.s);
     if(nonTwos.length > 0) {
       handleAction(botId, { kind: 'play', cards: [cardKey(nonTwos[0])] }, true);
       return;
     }
 
-    // Nếu chỉ còn toàn 2
     handleAction(botId, { kind: 'play', cards: [cardKey(hand[0])] }, true);
     return;
   }
 
-  // ĐÃ CÓ BÀI TRÊN BÀN - TÌM BÀI ĐÈ
   let validBeatCombos = allCombos.filter(cb => canBeat(cb, currentCombo));
 
   if(validBeatCombos.length > 0) {
-    // Phân loại: Xử lý thông minh không lãng phí hàng
-    // Nếu không phải bắt Heo thì ưu tiên giữ lại Tứ Quý & Đôi thông
     if(currentCombo.type !== 'single' || currentCombo.cards[0].r !== 12) {
       let normalCombos = validBeatCombos.filter(cb => cb.type === currentCombo.type).sort((a,b) => a.highR - b.highR || a.highS - b.highS);
       if(normalCombos.length > 0) {
@@ -1337,13 +1391,11 @@ function makeBotMove(botId){
       }
     }
 
-    // Sắp xếp bài đè tăng dần giá trị để tối ưu
     validBeatCombos.sort((a,b) => a.highR - b.highR || a.highS - b.highS);
     handleAction(botId, { kind: 'play', cards: validBeatCombos[0].cards.map(cardKey) }, true);
     return;
   }
 
-  // Không đè được -> Bỏ lượt
   handleAction(botId, { kind: 'pass' }, true);
 }
 
