@@ -109,7 +109,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 
 .p-slot{
   position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  background:rgba(0,0,0,.55);border:1px solid var(--panel-line);border-radius:8px;padding:4px 8px;z-index:2;
+  background:rgba(0,0,0,.55);border:1px solid var(--panel-line);border-radius:8px;padding:4px 8px;z-index:10;
   cursor:pointer;min-width:76px;
 }
 .p-slot.active{border-color:var(--gold);box-shadow:0 0 10px rgba(212,175,55,.5);}
@@ -118,32 +118,35 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .p-slot .card-cnt{font-size:9px;color:var(--gold);font-weight:bold;margin-top:1px;}
 .p-slot .kneeling-badge{font-size:10px;color:#ff5252;font-weight:bold;margin-top:1px;}
 
-.slot-left { top: 50%; left: 4px; transform: translateY(-50%); }
-.slot-top  { top: 36px; left: 50%; transform: translateX(-50%); }
-.slot-right{ top: 50%; right: 4px; transform: translateY(-50%); }
+.slot-left { top: 45%; left: 4px; transform: translateY(-50%); }
+/* CÂN ĐỐI VỊ TRÍ SLOT TÊN NGƯỜI CHƠI PHÍA TRÊN */
+.slot-top  { top: 42px; left: 50%; transform: translateX(-50%); }
+.slot-right{ top: 45%; right: 4px; transform: translateY(-50%); }
 .slot-bottom{position:relative;margin-bottom:2px;border:none;background:transparent;min-width:auto;}
 
 .table-center{
   grid-row:2;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
   border:1px dashed var(--panel-line);border-radius:12px;margin:2px 42px;background:radial-gradient(ellipse at center, rgba(255,255,255,.03), transparent 70%);
 }
+
+/* CÂN ĐỐI ĐỒNG HỒ ĐẾM SỐ LƯỢT TRÁNH CHE TÊN NGƯỜI CHƠI */
 .turn-timer-box{
-  position:absolute;top:6px;background:rgba(0,0,0,.75);border:1px solid var(--gold-dim);
-  padding:3px 10px;border-radius:16px;display:flex;align-items:center;gap:6px;font-size:11px;z-index:3;
+  position:absolute;top:2px;background:rgba(0,0,0,.85);border:1px solid var(--gold-dim);
+  padding:2px 8px;border-radius:12px;display:flex;align-items:center;gap:4px;font-size:10px;z-index:5;
   transition: all 0.3s ease;
 }
 .turn-timer-box.my-turn-timer {
   border-color: #ffe600;
-  box-shadow: 0 0 12px rgba(255,230,0,0.8);
-  background: rgba(180, 100, 0, 0.85);
+  box-shadow: 0 0 10px rgba(255,230,0,0.8);
+  background: rgba(180, 100, 0, 0.9);
   animation: pulseTimer 1s infinite alternate;
 }
 @keyframes pulseTimer {
   0% { transform: scale(1); }
-  100% { transform: scale(1.08); }
+  100% { transform: scale(1.05); }
 }
 
-.timer-sec{font-family:monospace;font-weight:700;color:var(--gold);font-size:12px;}
+.timer-sec{font-family:monospace;font-weight:700;color:var(--gold);font-size:11px;}
 .timer-sec.low{color:var(--bad);}
 
 .played-combo{display:flex;gap:4px;min-height:85px;align-items:center;justify-content:center;margin-top:16px;max-width:100%;overflow-x:auto;}
@@ -164,7 +167,6 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   border-radius: 12px; transition: background 0.3s, box-shadow 0.3s;
 }
 
-/* YÊU CẦU 2: HIỆU ỨNG CẢNH BÁO / NHẮC NHỞ KHI TỚI LƯỢT ĐÁNH NỔI BẬT */
 .hand-area.turn-active {
   background: rgba(212, 175, 55, 0.15);
   box-shadow: 0 0 15px rgba(255, 230, 0, 0.4) inset, 0 0 10px rgba(255, 215, 0, 0.5);
@@ -277,7 +279,6 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .chat-toggle.has-unread{background:var(--bad);color:#fff;animation:pulse 1s infinite alternate;}
 @keyframes pulse{0%{transform:scale(1);}100%{transform:scale(1.12);}}
 
-/* YÊU CẦU 1: CẢI TIẾN POPOVER NÉM ĐỒ TỰ ĐỘNG CO GIÃN CO GIỚI HẠN MÀN HÌNH MOBILE */
 .throw-popover {
   position: fixed; background: rgba(10, 46, 35, 0.96); border: 1px solid var(--gold);
   border-radius: 12px; padding: 6px; display: flex; flex-wrap: wrap; gap: 6px; z-index: 200;
@@ -308,7 +309,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   text-shadow: 0 0 4px #000, 0 0 8px #ff0000; pointer-events: none; z-index: 350;
   white-space: nowrap; animation: floatUp 1.2s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
 }
-@keyframes floatUp { 0% { transform: translateY(0) scale(0.7); opacity: 0; } 20% { transform: translateY(-10px) scale(1.2); opacity: 1; } 80% { transform: translateY(-25px) scale(1); opacity: 1; } 100% { transform: translateY(-35px) scale(0.8); opacity: 0; } }
+@keyframes floatUp { 0% { transform: translateY(0) scale(0.7); opacity: 0; } 20% { transform: translateY(-10px) scale(1.2); opacity: 1; } 80% { transform: translateY(-25px) scale(15); opacity: 1; } 100% { transform: translateY(-35px) scale(0.8); opacity: 0; } }
 </style>
 </head>
 <body>
@@ -589,7 +590,7 @@ function playGlobalSound(item, customVolume = 0.9){
 }
 
 let consecutivePlayCount = 0;
-let lastNotifiedTurnId = null; // Dùng theo dõi lượt để nhắc nhở người chơi
+let lastNotifiedTurnId = null;
 
 function generatePlayerId(){
   return 'p_' + Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4);
@@ -1211,7 +1212,7 @@ function startTimerLoop(){
           if(!gameState || gameState.isEnded) return;
           if(gameState.order[gameState.turnIdx] === currId) makeBotMove(currId);
           gameState.botThinking = false;
-        }, 1200);
+        }, 1000);
       }
       return;
     }
@@ -1219,31 +1220,130 @@ function startTimerLoop(){
   }, 400);
 }
 
+/* THUẬT TOÁN BOT THÔNG MINH GẤP 10 LẦN */
+function getAllPossibleCombos(hand) {
+  const sorted = [...hand].sort((a,b) => a.r - b.r || a.s - b.s);
+  const combos = [];
+
+  // 1. Lá đơn
+  sorted.forEach(c => combos.push(classify([c])));
+
+  // 2. Đôi
+  for(let i=0; i<sorted.length; i++) {
+    for(let j=i+1; j<sorted.length; j++) {
+      if(sorted[i].r === sorted[j].r) combos.push(classify([sorted[i], sorted[j]]));
+    }
+  }
+
+  // 3. Sám cô
+  for(let i=0; i<sorted.length; i++) {
+    for(let j=i+1; j<sorted.length; j++) {
+      for(let k=j+1; k<sorted.length; k++) {
+        if(sorted[i].r === sorted[j].r && sorted[j].r === sorted[k].r) {
+          combos.push(classify([sorted[i], sorted[j], sorted[k]]));
+        }
+      }
+    }
+  }
+
+  // 4. Tứ quý
+  for(let i=0; i<sorted.length-3; i++) {
+    if(sorted[i].r === sorted[i+1].r && sorted[i+1].r === sorted[i+2].r && sorted[i+2].r === sorted[i+3].r) {
+      combos.push(classify([sorted[i], sorted[i+1], sorted[i+2], sorted[i+3]]));
+    }
+  }
+
+  // 5. Sảnh (độ dài 3 -> 12)
+  for(let len=3; len<=sorted.length; len++) {
+    for(let i=0; i<=sorted.length-len; i++) {
+      const sub = sorted.slice(i, i+len);
+      const res = classify(sub);
+      if(res && res.type === 'straight') combos.push(res);
+    }
+  }
+
+  // 6. Đôi thông (3 đôi trở lên)
+  for(let len=6; len<=sorted.length; len+=2) {
+    for(let i=0; i<=sorted.length-len; i++) {
+      const sub = sorted.slice(i, i+len);
+      const res = classify(sub);
+      if(res && res.type === 'pairs_run') combos.push(res);
+    }
+  }
+
+  return combos.filter(Boolean);
+}
+
 function makeBotMove(botId){
   if(!gameState || gameState.isEnded) return;
   const hand = safeArray(gameState.hands[botId]);
   if(!hand || hand.length === 0) return;
-  const currentCombo = gameState.currentCombo;
 
-  if(!currentCombo){
-    let chosenCards = [hand[0]];
-    if(gameState.firstMove && gameState.requiredCard){
-      const req = hand.find(c => c.r === gameState.requiredCard.r && c.s === gameState.requiredCard.s);
-      if(req) chosenCards = [req];
+  const currentCombo = gameState.currentCombo;
+  const reqCard = (gameState.firstMove && gameState.requiredCard) ? gameState.requiredCard : null;
+
+  let allCombos = getAllPossibleCombos(hand);
+
+  if(reqCard) {
+    allCombos = allCombos.filter(cb => cb.cards.some(c => c.r === reqCard.r && c.s === reqCard.s));
+  }
+
+  // LƯỢT ĐÁNH TỰ DO (ĐẦU VÒNG)
+  if(!currentCombo) {
+    // Ưu tiên 1: Đánh sảnh dài nhất
+    let straights = allCombos.filter(c => c.type === 'straight').sort((a,b) => b.len - a.len || a.highR - b.highR);
+    if(straights.length > 0 && !reqCard) {
+      handleAction(botId, { kind: 'play', cards: straights[0].cards.map(cardKey) }, true);
+      return;
     }
-    handleAction(botId, { kind: 'play', cards: chosenCards.map(c => cardKey(c)) }, true);
+
+    // Ưu tiên 2: Đánh đôi nhỏ
+    let pairs = allCombos.filter(c => c.type === 'pair').sort((a,b) => a.highR - b.highR);
+    if(pairs.length > 0) {
+      handleAction(botId, { kind: 'play', cards: pairs[0].cards.map(cardKey) }, true);
+      return;
+    }
+
+    // Ưu tiên 3: Đánh sám cô nhỏ
+    let triples = allCombos.filter(c => c.type === 'triple').sort((a,b) => a.highR - b.highR);
+    if(triples.length > 0) {
+      handleAction(botId, { kind: 'play', cards: triples[0].cards.map(cardKey) }, true);
+      return;
+    }
+
+    // Mặc định: Đánh lá rác nhỏ nhất (không phải 2)
+    let nonTwos = hand.filter(c => c.r !== 12).sort((a,b) => a.r - b.r || a.s - b.s);
+    if(nonTwos.length > 0) {
+      handleAction(botId, { kind: 'play', cards: [cardKey(nonTwos[0])] }, true);
+      return;
+    }
+
+    // Nếu chỉ còn toàn 2
+    handleAction(botId, { kind: 'play', cards: [cardKey(hand[0])] }, true);
     return;
   }
 
-  for(let i=0; i<hand.length; i++){
-    if(currentCombo.type === 'single'){
-      let combo = classify([hand[i]]);
-      if(combo && canBeat(combo, currentCombo)){
-        handleAction(botId, { kind: 'play', cards: [cardKey(hand[i])] }, true);
+  // ĐÃ CÓ BÀI TRÊN BÀN - TÌM BÀI ĐÈ
+  let validBeatCombos = allCombos.filter(cb => canBeat(cb, currentCombo));
+
+  if(validBeatCombos.length > 0) {
+    // Phân loại: Xử lý thông minh không lãng phí hàng
+    // Nếu không phải bắt Heo thì ưu tiên giữ lại Tứ Quý & Đôi thông
+    if(currentCombo.type !== 'single' || currentCombo.cards[0].r !== 12) {
+      let normalCombos = validBeatCombos.filter(cb => cb.type === currentCombo.type).sort((a,b) => a.highR - b.highR || a.highS - b.highS);
+      if(normalCombos.length > 0) {
+        handleAction(botId, { kind: 'play', cards: normalCombos[0].cards.map(cardKey) }, true);
         return;
       }
     }
+
+    // Sắp xếp bài đè tăng dần giá trị để tối ưu
+    validBeatCombos.sort((a,b) => a.highR - b.highR || a.highS - b.highS);
+    handleAction(botId, { kind: 'play', cards: validBeatCombos[0].cards.map(cardKey) }, true);
+    return;
   }
+
+  // Không đè được -> Bỏ lượt
   handleAction(botId, { kind: 'pass' }, true);
 }
 
@@ -1270,7 +1370,7 @@ function handleAction(playerId, action, isAuto=false){
   if(playerId !== currId) return;
 
   const pName = gameState.names[playerId];
-  const prefix = isAuto ? '⏰ (Hết giờ/Bot) ' : '';
+  const prefix = isAuto ? '⏰ (Tự động/Bot) ' : '';
 
   if(action.kind === 'pass'){
     if(!gameState.currentCombo) return;
@@ -1301,7 +1401,7 @@ function handleAction(playerId, action, isAuto=false){
         gameState.liveScores[gameState.leaderId] = (gameState.liveScores[gameState.leaderId] || 0) - chopReward;
         gameState.log = `${prefix}${pName} chặt thành công! Thưởng +${chopReward} Nước!`;
       } else {
-        gameState.log = `${prefix}${pName} chặt bài thành công! Người bị chặt chuẩn bị tinh thần quỳ!`;
+        gameState.log = `${prefix}${pName} chặt bài thành công! Người bị chặt chuẩn bị quỳ!`;
       }
       broadcastSoundEvent('CHOP', 0.9);
     } else {
@@ -1560,7 +1660,6 @@ function applyState(st){
     kneelingBadge.classList.add('hidden');
   }
 
-  // YÊU CẦU 2: NHẮC NHỞ NGƯỜI CHƠI BẰNG ÂM THANH, RUNG MÁY VÀ HIGHLIGHT RÕ RÀNG KHI ĐẾN LƯỢT HỌ
   if (st.turnId === myId && !st.isEnded && !isSpectator && lastNotifiedTurnId !== st.turnId) {
     lastNotifiedTurnId = st.turnId;
     playGlobalSound('MY_TURN', 1.0);
@@ -1626,7 +1725,6 @@ function renderCenter(){
 
   $('turnStatus').textContent = isSpectator ? `👀 CHẾ ĐỘ XEM` : (isMyTurn ? '👉 LƯỢT BẠN' : `Lượt của ${st.names[st.turnId] || 'người chơi'}`);
   
-  // Nổi bật đồng hồ khi tới lượt mình
   const timerBox = $('turnTimerBox');
   if (timerBox) {
     if (isMyTurn) timerBox.classList.add('my-turn-timer');
@@ -1648,7 +1746,6 @@ function renderHand(){
   const handArea = $('myHandArea');
   const turnBanner = $('turnBanner');
 
-  // YÊU CẦU 2: HIỂN THỊ VIỀN SÁNG VÀ BANNER ĐẾN LƯỢT
   if (handArea) {
     if (isMyTurn) handArea.classList.add('turn-active');
     else handArea.classList.remove('turn-active');
@@ -1721,7 +1818,6 @@ function sendAction(act){
   selected.clear();
 }
 
-// YÊU CẦU 1: TÍNH TOÁN VỊ TRÍ POPOVER TRÁNH BỊ TRÀN BỊ KHUẤT TRÊN MOBILE
 function openThrowPopover(pId, targetEl){
   activeTargetId = pId;
   const pop = $('throwPopover');
@@ -1797,7 +1893,7 @@ function sendChat(){
   $('chatInput').value = '';
   if(isBotMode){
     addChatLine(myName, txt);
-    setTimeout(() => addChatLine('🤖 Cao Thủ Bot', 'Hay lắm bạn ơi! 😎'), 1000);
+    setTimeout(() => addChatLine('🤖 Cao Thủ Bot', 'Chơi cẩn thận nha bạn ơi! 😎'), 1000);
     return;
   }
   if(isHost) broadcastChat(myName, txt);
