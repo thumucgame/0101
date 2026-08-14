@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
-<title>Tiến Lên Online - Bản Fix Mobile & Ném Đồ & Âm Thanh Online Chuẩn</title>
+<title>Tiến Lên Online - Bộ Luật Chuẩn & Chế Độ Đánh Nước / Quỳ</title>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
 :root{
@@ -22,22 +22,22 @@
 *{box-sizing:border-box;}
 html,body{height:100%;height:100dvh;margin:0;padding:0;overflow:hidden;}
 body{
-  font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji";
+  font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
   background:radial-gradient(ellipse at 50% -10%, var(--felt-2) 0%, var(--felt-1) 55%, #062319 100%);
   color:var(--cream);
   display:flex;
   flex-direction:column;
   user-select:none;
 }
-h1,h2,h3{font-family:Georgia,"Times New Roman",serif;letter-spacing:.5px;margin:0 0 8px;}
+h1,h2,h3,h4{font-family:Georgia,"Times New Roman",serif;letter-spacing:.5px;margin:0 0 8px;}
 .brand{text-align:center;padding:4px 4px 0;}
 .brand h1{font-size:18px;color:var(--gold);margin:0;text-shadow:0 2px 6px rgba(0,0,0,.5);}
 .brand .sub{color:rgba(250,246,238,.65);font-size:9px;letter-spacing:1px;text-transform:uppercase;}
 
-.wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:16px;}
+.wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;}
 .card-panel{
   background:var(--panel);border:1px solid var(--panel-line);border-radius:16px;
-  padding:22px;width:100%;max-width:400px;box-shadow:0 20px 50px rgba(0,0,0,.45);
+  padding:22px;width:100%;max-width:460px;box-shadow:0 20px 50px rgba(0,0,0,.45);
 }
 label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--gold);margin:12px 0 6px;}
 input[type=text], select.sel{
@@ -76,13 +76,9 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .crown{color:var(--gold);font-size:12px;}
 .checkbox-row{display:flex;align-items:center;gap:8px;margin:12px 0;font-size:13px;cursor:pointer;}
 
-/* DANH SÁCH PHÒNG CÓ SẴN (PUBLIC ROOMS LIST) */
-.public-rooms-box {
-  margin-top: 14px; border-top: 1px solid var(--panel-line); padding-top: 10px;
-}
-.public-rooms-list {
-  max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-top: 6px;
-}
+/* PUBLIC ROOMS */
+.public-rooms-box { margin-top: 14px; border-top: 1px solid var(--panel-line); padding-top: 10px; }
+.public-rooms-list { max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
 .public-room-item {
   display: flex; justify-content: space-between; align-items: center;
   background: rgba(0,0,0,0.25); padding: 8px 10px; border-radius: 8px; font-size: 13px;
@@ -90,25 +86,19 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 }
 .public-room-item:hover { border-color: var(--gold-dim); }
 
-/* COUNTDOWN OVERLAY KHI BẮT ĐẦU VÁN */
+/* COUNTDOWN */
 .countdown-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex;
   flex-direction: column; align-items: center; justify-content: center; z-index: 500;
 }
 .countdown-number {
   font-size: 100px; font-weight: 900; color: var(--gold); font-family: Georgia, serif;
-  text-shadow: 0 0 20px rgba(212,175,55,0.6);
-  animation: pulseCount 1s infinite alternate;
+  text-shadow: 0 0 20px rgba(212,175,55,0.6); animation: pulseCount 1s infinite alternate;
 }
-@keyframes pulseCount {
-  0% { transform: scale(0.9); opacity: 0.8; }
-  100% { transform: scale(1.15); opacity: 1; }
-}
-.countdown-text {
-  font-size: 20px; color: var(--cream); margin-top: 10px; font-weight: 600; letter-spacing: 1px;
-}
+@keyframes pulseCount { 0% { transform: scale(0.9); opacity: 0.8; } 100% { transform: scale(1.15); opacity: 1; } }
+.countdown-text { font-size: 20px; color: var(--cream); margin-top: 10px; font-weight: 600; letter-spacing: 1px; }
 
-/* TABLE LAYOUT - ĐỊNH VỊ 4 ĐỐI THỦ CÂN ĐỐI 4 HƯỚNG TRÁNH TRÀN VÀ CHE TEXT */
+/* TABLE LAYOUT */
 #tableScreen{
   flex:1;display:grid;grid-template-rows:32px 1fr auto;
   height:100vh;height:100dvh;position:relative;padding:2px 4px;overflow:hidden;
@@ -124,12 +114,11 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .p-slot .avatar{width:26px;height:26px;border-radius:50%;background:#1d4d3e;display:flex;align-items:center;justify-content:center;font-size:13px;position:relative;}
 .p-slot .name{font-size:10px;font-weight:600;margin-top:2px;max-width:70px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .p-slot .card-cnt{font-size:9px;color:var(--gold);font-weight:bold;margin-top:1px;}
+.p-slot .kneeling-badge{font-size:10px;color:#ff5252;font-weight:bold;margin-top:1px;}
 
-/* 4 HƯỚNG CÂN ĐỐI TUYỆT ĐỐI KHÔNG CHE TIMER GIỮA BÀN */
 .slot-left { top: 50%; left: 4px; transform: translateY(-50%); }
 .slot-top  { top: 36px; left: 50%; transform: translateX(-50%); }
 .slot-right{ top: 50%; right: 4px; transform: translateY(-50%); }
-
 .slot-bottom{position:relative;margin-bottom:2px;border:none;background:transparent;min-width:auto;}
 
 .table-center{
@@ -143,11 +132,9 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .timer-sec{font-family:monospace;font-weight:700;color:var(--gold);font-size:12px;}
 .timer-sec.low{color:var(--bad);}
 
-/* TĂNG KÍCH THƯỚC BÀI ĐÁNH TRÊN BÀN VÀ TAY BÀI NGƯỜI CHƠI CHO DỄ NHÌN HƠN */
 .played-combo{display:flex;gap:4px;min-height:85px;align-items:center;justify-content:center;margin-top:16px;max-width:100%;overflow-x:auto;}
 .action-log{font-size:10px;color:rgba(250,246,238,.7);margin-top:4px;height:14px;text-align:center;padding:0 4px;}
 
-/* BẢNG SỐ VỐN TRỰC TIẾP (LIVE MONEY/SCORE STICKER) */
 .live-score-sticker {
   position: absolute; top: 4px; right: 6px; background: rgba(0,0,0,0.75);
   border: 1px solid var(--gold); border-radius: 8px; padding: 2px 6px;
@@ -157,22 +144,6 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .live-score-sticker.plus { color: var(--good); border-color: var(--good); }
 .live-score-sticker.minus { color: var(--bad); border-color: var(--bad); }
 
-/* FLOATING SCORE POPUP (HIỆU ỨNG BAY +3 DỪA KHI CHẶT) */
-.floating-score-anim {
-  position: absolute; font-weight: 900; font-size: 15px; z-index: 400; pointer-events: none;
-  text-shadow: 0 0 4px #000, 0 0 8px rgba(0,0,0,0.8);
-  animation: floatScoreUp 1.4s cubic-bezier(0.15, 0.85, 0.35, 1.25) forwards;
-}
-.floating-score-anim.plus { color: #51ff95; }
-.floating-score-anim.minus { color: #ff5252; }
-@keyframes floatScoreUp {
-  0% { transform: translateY(0) scale(0.6); opacity: 0; }
-  25% { transform: translateY(-16px) scale(1.25); opacity: 1; }
-  75% { transform: translateY(-38px) scale(1); opacity: 1; }
-  100% { transform: translateY(-52px) scale(0.9); opacity: 0; }
-}
-
-/* HAND AREA */
 .hand-area{
   grid-row:3;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
   padding-bottom:6px;padding-top:2px;width:100%;
@@ -183,7 +154,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   padding:0 6px;box-sizing:border-box;
 }
 
-/* CARD STYLING - ĐÃ PHÓNG TO HƠN MỘT CHÚT ĐỂ DỄ NHẬN DIỆN */
+/* CARDS */
 .card{
   width:50px;height:74px;background:linear-gradient(180deg,var(--cream),#f0ead9);border-radius:6px;
   border:1px solid rgba(0,0,0,.3);box-shadow:-2px 2px 5px rgba(0,0,0,.45);
@@ -196,11 +167,6 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .card .rank{font-size:14px;line-height:1;}
 .card .suit{font-size:14px;align-self:flex-end;line-height:1;}
 .card.selected{transform:translateY(-16px);box-shadow:0 8px 12px rgba(0,0,0,.55);border-color:var(--gold);}
-.card.small{width:28px;height:40px;margin-left:-10px;pointer-events:none;}
-.card.small .rank{font-size:9px;}
-.card.small .suit{font-size:9px;}
-
-/* KIỂU DÁNG LÁ BÀI RÕ NÉT TRÊN BÀN (TABLE CARD) */
 .card.table-card{
   width:62px;height:90px;margin-left:-24px;pointer-events:none;box-shadow:-3px 3px 8px rgba(0,0,0,.6);border:1.5px solid rgba(0,0,0,.35);
 }
@@ -226,9 +192,9 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   .table-center{margin:2px 34px;}
 }
 
-/* OVERLAY RESULT */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px;}
-.result-panel{background:var(--panel);border:1px solid var(--gold);border-radius:16px;padding:22px;max-width:440px;width:100%;text-align:center;max-height:90vh;overflow-y:auto;}
+/* OVERLAYS & MODALS */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px;}
+.result-panel{background:var(--panel);border:1px solid var(--gold);border-radius:16px;padding:22px;max-width:520px;width:100%;text-align:center;max-height:90vh;overflow-y:auto;}
 .result-table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px;}
 .result-table th, .result-table td{padding:5px 6px;border-bottom:1px solid var(--panel-line);text-align:left;}
 .result-table td.amt{text-align:right;font-weight:700;}
@@ -247,6 +213,15 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   padding: 3px 6px; background: rgba(255,255,255,0.03); border-radius: 4px;
 }
 
+.rules-panel {
+  text-align: left; font-size: 13px; line-height: 1.5; color: var(--cream);
+}
+.rules-panel h2 { color: var(--gold); text-align: center; }
+.rules-panel h3 { color: var(--gold); margin-top: 12px; border-bottom: 1px solid var(--gold-dim); padding-bottom: 4px; }
+.rules-panel table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 12px; }
+.rules-panel th, .rules-panel td { border: 1px solid var(--panel-line); padding: 4px 6px; text-align: center; }
+.rules-panel th { background: rgba(212,175,55,0.15); color: var(--gold); }
+
 /* CHAT PANEL */
 .side-panel{position:fixed;right:0;top:0;bottom:0;width:260px;background:rgba(6,20,15,.96);border-left:1px solid var(--panel-line);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .2s;z-index:90;}
 .side-panel.open{transform:translateX(0);}
@@ -257,61 +232,47 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   width:40px;height:40px;font-size:16px;cursor:pointer;z-index:80;box-shadow:0 4px 10px rgba(0,0,0,.4);
   display:flex;align-items:center;justify-content:center;transition:transform .1s;
 }
-.chat-toggle:active{transform:scale(.9);}
 .chat-toggle.has-unread{background:var(--bad);color:#fff;animation:pulse 1s infinite alternate;}
 @keyframes pulse{0%{transform:scale(1);}100%{transform:scale(1.12);}}
 
-/* POPOVER NÉM ĐỒ VUI NHỘN */
+/* POPOVER NÉM ĐỒ */
 .throw-popover {
   position: fixed; background: rgba(10, 46, 35, 0.95); border: 1px solid var(--gold);
   border-radius: 12px; padding: 6px 10px; display: flex; gap: 8px; z-index: 200;
   box-shadow: 0 10px 25px rgba(0,0,0,0.6); backdrop-filter: blur(4px);
   animation: popIn 0.15s ease-out;
-  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
 }
 @keyframes popIn { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .throw-btn {
   font-size: 22px; background: rgba(255,255,255,0.1); border: none; border-radius: 8px;
   width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
   cursor: pointer; transition: transform 0.1s, background 0.1s;
-  font-family: inherit;
 }
 .throw-btn:active { transform: scale(1.2); background: rgba(212,175,55,0.3); }
 
 .flying-item {
   position: fixed; font-size: 32px; z-index: 300; pointer-events: none;
   transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s;
-  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
 }
 .splat-effect {
   position: absolute; font-size: 36px; pointer-events: none; z-index: 50;
   animation: splatAnim 0.8s ease-out forwards;
-  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
 }
-@keyframes splatAnim {
-  0% { transform: scale(0.5); opacity: 1; }
-  70% { transform: scale(1.3); opacity: 0.9; }
-  100% { transform: scale(1.4); opacity: 0; }
-}
+@keyframes splatAnim { 0% { transform: scale(0.5); opacity: 1; } 70% { transform: scale(1.3); opacity: 0.9; } 100% { transform: scale(1.4); opacity: 0; } }
 
 .sound-text-pop {
   position: absolute; font-weight: 800; font-size: 13px; color: #ffe600;
   text-shadow: 0 0 4px #000, 0 0 8px #ff0000; pointer-events: none; z-index: 350;
   white-space: nowrap; animation: floatUp 1.2s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
 }
-@keyframes floatUp {
-  0% { transform: translateY(0) scale(0.7); opacity: 0; }
-  20% { transform: translateY(-10px) scale(1.2); opacity: 1; }
-  80% { transform: translateY(-25px) scale(1); opacity: 1; }
-  100% { transform: translateY(-35px) scale(0.8); opacity: 0; }
-}
+@keyframes floatUp { 0% { transform: translateY(0) scale(0.7); opacity: 0; } 20% { transform: translateY(-10px) scale(1.2); opacity: 1; } 80% { transform: translateY(-25px) scale(1); opacity: 1; } 100% { transform: translateY(-35px) scale(0.8); opacity: 0; } }
 </style>
 </head>
 <body>
 
 <div class="brand" id="brandHeader">
   <h1>♠ Tiến Lên Online ♥</h1>
-  <div class="sub">Đánh Bài Tiến Lên Miền Nam</div>
+  <div class="sub">Đánh Bài Tiến Lên Miền Nam - Luật Chuẩn Mới</div>
 </div>
 
 <!-- HOME SCREEN -->
@@ -323,8 +284,10 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
       <button class="btn btn-gold" id="btnCreate">Tạo phòng</button>
       <button class="btn btn-outline" id="btnBotGame">🤖 Đánh với Bot</button>
     </div>
+    <div style="margin-top: 10px;">
+      <button class="btn btn-outline" id="btnOpenRules" style="width: 100%;">📜 Xem Bộ Luật Hoàn Chỉnh</button>
+    </div>
 
-    <!-- DANH SÁCH PHÒNG ĐANG CÓ (KHÔNG CẦN NHẬP MÃ THỦ CÔNG) -->
     <div class="public-rooms-box">
       <label style="margin:8px 0 4px;display:flex;justify-content:space-between;align-items:center;">
         <span>🏠 Phòng đang mở trực tuyến</span>
@@ -350,6 +313,14 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     <ul class="player-list" id="lobbyPlayers"></ul>
 
     <div class="hidden" id="hostSettings">
+      <label>⚙️ CHẾ ĐỘ CHƠI (CHỌN 1 TRƯỚC TRẬN)</label>
+      <select class="sel" id="gameModeSelect">
+        <option value="WATER" selected>[I] CHẾ ĐỘ ĐÁNH NƯỚC (Nhất +2, Nhì +1, Ba -1, Bét -2)</option>
+        <option value="KNEEL_A">[II] CHẾ ĐỘ QUỲ - Option A (Quỳ Chốt Ván)</option>
+        <option value="KNEEL_B">[II] CHẾ ĐỘ QUỲ - Option B (Quỳ Tích Lũy)</option>
+        <option value="KNEEL_C">[II] CHẾ ĐỘ QUỲ - Option C (Quỳ Thế Chân)</option>
+      </select>
+
       <label>⏱ Thời gian lượt</label>
       <select class="sel" id="turnSecondsSelect">
         <option value="15">15 Giây</option>
@@ -357,13 +328,12 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
         <option value="30" selected>30 Giây</option>
       </select>
 
-      <label>🥥 Mức đặt cược</label>
+      <label id="stakeLabel">🥥 Mức đặt cược</label>
       <select class="sel" id="stakeSelect">
+        <option value="Nước">💧 Nước</option>
         <option value="Trái Dừa">🥥 Trái Dừa</option>
-        <option value="Ly Nước">💧 Ly Nước</option>
         <option value="Lon Nước Ngọt">🥤 Lon Nước Ngọt</option>
         <option value="Ly Cà Phê">☕ Ly Cà Phê</option>
-        <option value="Ly Trà Sữa">2 Ly Trà Sữa</option>
       </select>
 
       <label class="checkbox-row">
@@ -388,6 +358,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 <div id="tableScreen" class="hidden">
   <div class="table-header">
     <span id="roomTag" style="color:var(--gold);font-weight:700;">Phòng: ----</span>
+    <span id="modeTag" style="color:var(--cream);">Chế độ: Đánh Nước</span>
     <span id="stakeTag">Cược: ---</span>
   </div>
 
@@ -406,6 +377,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     <div class="p-slot slot-bottom" id="mySlot" style="cursor:default;">
       <div class="avatar" id="myAvatar">👤</div>
       <div id="myLiveScoreBox" class="live-score-sticker">0</div>
+      <div id="myKneelingBadge" class="kneeling-badge hidden">🧎 Đang Quỳ</div>
     </div>
     <div class="hand-cards" id="handCards"></div>
     <div class="controls">
@@ -416,7 +388,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   </div>
 </div>
 
-<!-- COUNTDOWN OVERLAY (4 GIÂY ĐẾM NGƯỢC KHI BẮT ĐẦU VÁN) -->
+<!-- COUNTDOWN OVERLAY -->
 <div class="countdown-overlay hidden" id="countdownOverlay">
   <div class="countdown-number" id="countdownNum">4</div>
   <div class="countdown-text">Trận đấu sắp bắt đầu! Chuẩn bị tinh thần...</div>
@@ -436,25 +408,71 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   </div>
 </div>
 
+<!-- OVERLAY BỘ LUẬT HOÀN CHỈNH -->
+<div class="overlay hidden" id="rulesOverlay">
+  <div class="result-panel rules-panel">
+    <h2>📜 BỘ LUẬT HOÀN CHỈNH (MẪU CHUẨN MỚI)</h2>
+    <p><b>QUY TẮC BẮT BUỘC TRƯỚC VÁN ĐẤU:</b> Trước khi bắt đầu, tất cả người chơi phải thống nhất chọn MỘT trong hai chế độ: <b>[I] CHẾ ĐỘ ĐÁNH NƯỚC</b> hoặc <b>[II] CHẾ ĐỘ QUỲ</b>. Hai chế độ này hoàn toàn độc lập và không chơi chồng chéo trong cùng một ván.</p>
+    
+    <h3>I. CHẾ ĐỘ ĐÁNH NƯỚC (PHẠT NƯỚC / TÍNH ĐIỂM)</h3>
+    <p>Chế độ áp dụng tính toán thưởng/phạt bằng đơn vị "Nước" hoặc quy đổi tiền mặt.</p>
+    <ul>
+      <li><b>Người về Nhất:</b> Ăn 2 Nước (+2)</li>
+      <li><b>Người về Nhì:</b> Ăn 1 Nước (+1)</li>
+      <li><b>Người về Ba:</b> Trả 1 Nước (-1)</li>
+      <li><b>Người về Bét:</b> Trả 2 Nước (-2)</li>
+    </ul>
+    <p><b>Sự kiện phát sinh:</b></p>
+    <ul>
+      <li><b>Ăn Chặt / Chặt Bài:</b> Người bị chặt trả trực tiếp X nước cho người chặt.</li>
+      <li><b>Đền Bài / Đền Làng:</b> Người vi phạm luật đền chịu toàn bộ số nước phạt của cả bàn cho người thắng.</li>
+    </ul>
+
+    <h3>II. CHẾ ĐỘ QUỲ (TÁCH BIỆT HOÀN TOÀN)</h3>
+    <p>Chế độ dùng hình phạt tư thế thể chất tại bàn. KHÔNG áp dụng tính Nước hay tính tiền.</p>
+    <ul>
+      <li><b>Lựa chọn A — Quỳ Chốt Ván:</b> Bét/Cháy quỳ ngay ván tiếp theo.</li>
+      <li><b>Lựa chọn B — Quỳ Tích Luỹ:</b> Thua 1 ván: Quỳ 1 chân | Thua 2 ván: Quỳ 2 chân | Thua 3 ván: Quỳ 2 chân + Giơ 2 tay.</li>
+      <li><b>Lựa chọn C — Quỳ Thế Chân:</b> Quỳ cho đến khi có người thua mới ở ván sau thế chân.</li>
+      <li><b>Giải Hạn Quỳ:</b> Về Nhất hoặc Ù ở ván tiếp theo để được xóa án ngồi xuống.</li>
+    </ul>
+
+    <h3>III. TỔNG HỢP SO SÁNH QUY TRÌNH</h3>
+    <table>
+      <thead>
+        <tr><th>Tiêu Chí</th><th>[I] ĐÁNH NƯỚC</th><th>[II] QUỲ</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Đơn vị phạt</td><td>Nước / Điểm / Tiền</td><td>Tư thế quỳ tại bàn</td></tr>
+        <tr><td>Cơ cấu vị trí</td><td>Nhất (+2), Nhì (+1), Ba (-1), Bét (-2)</td><td>Chỉ phạt người thua (Bét/Cháy) quỳ</td></tr>
+        <tr><td>Xử lý Đền Bài</td><td>Trả thay toàn bộ tổng nước phạt</td><td>Quỳ thay toàn bàn / Nhân đôi ván quỳ</td></tr>
+        <tr><td>Xóa Phạt</td><td>Cộng/Trừ dồn điểm</td><td>Về Nhất/Ù ván sau để ngồi xuống</td></tr>
+      </tbody>
+    </table>
+
+    <button class="btn btn-gold" id="btnCloseRules" style="width:100%;margin-top:14px;">Đã Hiểu</button>
+  </div>
+</div>
+
 <!-- OVERLAY RESULT -->
 <div class="overlay hidden" id="resultOverlay">
   <div class="result-panel">
     <h2 style="color:var(--gold);margin-top:0;" id="resultTitle">KẾT THÚC VÁN</h2>
     <table class="result-table">
       <thead>
-        <tr><th>Hạng</th><th>Tên</th><th style="text-align:right">Cược</th></tr>
+        <tr><th>Hạng</th><th>Tên</th><th style="text-align:right" id="resultHeaderUnit">Kết Quả</th></tr>
       </thead>
       <tbody id="resultBody"></tbody>
     </table>
     <div class="settlement-box" id="settlementBox">
-      <h4>💡 Thống kê đền bù (Ai phải đền cho ai)</h4>
+      <h4 id="settlementTitle">💡 Thống kê chi tiết từng ván</h4>
       <div id="settlementContent"></div>
     </div>
     <div id="resultActions" style="margin-top:14px;"></div>
   </div>
 </div>
 
-<!-- POPOVER NÉM ĐỒ VUI NHỘN -->
+<!-- POPOVER NÉM ĐỒ -->
 <div class="throw-popover hidden" id="throwPopover">
   <button class="throw-btn" onclick="triggerThrow('🍅')" title="Cà chua">🍅</button>
   <button class="throw-btn" onclick="triggerThrow('🥚')" title="Trứng vỡ">🥚</button>
@@ -489,10 +507,8 @@ function playGlobalSound(item, customVolume = 0.9){
   try {
     const audio = new Audio(url);
     audio.volume = Math.min(Math.max(customVolume, 0.1), 1.0);
-    audio.play().catch(e => console.log("Audio play blocked/error:", e));
-  } catch(err){
-    console.log(err);
-  }
+    audio.play().catch(e => console.log(e));
+  } catch(err){}
 }
 
 let consecutivePlayCount = 0;
@@ -521,10 +537,7 @@ function shuffle(arr){
   return arr;
 }
 function cardKey(c){return c.r+'-'+c.s;}
-function sortHand(hand){
-  return [...hand].sort((a,b)=> a.r-b.r || a.s-b.s);
-}
-
+function sortHand(hand){ return [...hand].sort((a,b)=> a.r-b.r || a.s-b.s); }
 function isThreeSpade(c){ return Number(c.r) === 0 && Number(c.s) === 0; }
 
 function classify(cards){
@@ -567,7 +580,6 @@ function isStraight(cs){
 
 function canBeat(next, curr){
   if(!curr) return true;
-
   if(curr.type==='single' && curr.cards[0].r===12){
     if(next.type==='quad') return true;
     if(next.type==='pairs_run' && next.count>=3) return true;
@@ -596,24 +608,15 @@ function canBeat(next, curr){
 
 function calculateChopReward(next, curr){
   if(!curr) return 0;
-  const isCurrPigSingle = (curr.type === 'single' && curr.cards[0].r === 12);
-  const isCurrPigPair = (curr.type === 'pair' && curr.cards[0].r === 12);
-  const isCurr3Pairs = (curr.type === 'pairs_run' && curr.count === 3);
-  const isCurr4Pairs = (curr.type === 'pairs_run' && curr.count === 4);
-  const isCurrQuad = (curr.type === 'quad');
-
-  if(isCurrPigSingle){
-    if(next.type === 'quad') return 2;
-    if(next.type === 'pairs_run' && next.count >= 3) return 2;
+  if(curr.type === 'single' && curr.cards[0].r === 12){
+    if(next.type === 'quad' || (next.type === 'pairs_run' && next.count >= 3)) return 2;
   }
-  if(isCurrPigPair){
-    if(next.type === 'quad') return 4;
-    if(next.type === 'pairs_run' && next.count >= 4) return 4;
+  if(curr.type === 'pair' && curr.cards[0].r === 12){
+    if(next.type === 'quad' || (next.type === 'pairs_run' && next.count >= 4)) return 4;
   }
-  if(isCurr3Pairs && next.type === 'quad') return 3;
-  if(isCurr3Pairs && next.type === 'pairs_run' && next.count >= 4) return 3;
-  if(isCurrQuad && next.type === 'quad') return 3;
-  if(isCurrQuad && next.type === 'pairs_run' && next.count >= 4) return 4;
+  if(curr.type === 'pairs_run' && curr.count === 3 && (next.type === 'quad' || (next.type === 'pairs_run' && next.count >= 4))) return 3;
+  if(curr.type === 'quad' && next.type === 'quad') return 3;
+  if(curr.type === 'quad' && next.type === 'pairs_run' && next.count >= 4) return 4;
   return 0;
 }
 
@@ -627,21 +630,23 @@ let unreadChat = 0;
 let activeTargetId = null;
 let isSpectator = false;
 
-// Biến hỗ trợ Bot Mode
 let isBotMode = false;
 let botList = [];
 
-let roomSettings = { turnSeconds: 30, stakeUnit: 'Trái Dừa', hideCardCount: true };
+// Room Settings bao gồm Chế Độ Đánh Nước hoặc Quỳ
+let roomSettings = { gameMode: 'WATER', turnSeconds: 30, stakeUnit: 'Nước', hideCardCount: true };
+let kneelingTracker = {}; // Theo dõi ván quỳ cho từng player
 
 const $=id=>document.getElementById(id);
+
+$('btnOpenRules').onclick = () => $('rulesOverlay').classList.remove('hidden');
+$('btnCloseRules').onclick = () => $('rulesOverlay').classList.add('hidden');
 
 $('roomCodeDisplay').onclick = () => {
   if(!roomCode) return;
   navigator.clipboard.writeText(roomCode).then(() => {
     $('copyHint').textContent = '✅ Đã sao chép mã phòng!';
-    setTimeout(() => {
-      $('copyHint').textContent = '📋 Nhấp vào mã để sao chép';
-    }, 2000);
+    setTimeout(() => { $('copyHint').textContent = '📋 Nhấp vào mã để sao chép'; }, 2000);
   });
 };
 
@@ -650,27 +655,21 @@ let publicRooms = [];
 function refreshPublicRooms(){
   const listEl = $('publicRoomsList');
   listEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">Đang quét phòng...</div>';
-  
   setTimeout(() => {
     let savedRooms = [];
-    try {
-      savedRooms = JSON.parse(localStorage.getItem('tienlen_public_rooms') || '[]');
-    } catch(e){ savedRooms = []; }
-    
+    try { savedRooms = JSON.parse(localStorage.getItem('tienlen_public_rooms') || '[]'); } catch(e){}
     const now = Date.now();
     publicRooms = savedRooms.filter(r => now - r.time < 15 * 60 * 1000);
-    
     listEl.innerHTML = '';
     if(publicRooms.length === 0){
       listEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">Chưa có phòng nào mở. Hãy bấm "Tạo phòng"!</div>';
       return;
     }
-    
     publicRooms.forEach(r => {
       const item = document.createElement('div');
       item.className = 'public-room-item';
       item.innerHTML = `
-        <div><b>Phòng ${r.code}</b><br><small style="color:rgba(250,246,238,0.6)">Chủ phòng: ${r.hostName} (${r.count}/4 người)</small></div>
+        <div><b>Phòng ${r.code}</b><br><small style="color:rgba(250,246,238,0.6)">Chủ phòng: ${r.hostName} (${r.count}/4)</small></div>
         <button class="btn btn-gold" style="padding:4px 10px;font-size:12px;" onclick="joinExistingRoom('${r.code}')">Vào</button>
       `;
       listEl.appendChild(item);
@@ -679,9 +678,7 @@ function refreshPublicRooms(){
 }
 
 $('btnRefreshRooms').onclick = refreshPublicRooms;
-window.onload = () => {
-  refreshPublicRooms();
-};
+window.onload = () => { refreshPublicRooms(); };
 
 function publishRoomToPublic(code, hostName){
   try {
@@ -695,28 +692,22 @@ function publishRoomToPublic(code, hostName){
 
 window.joinExistingRoom = function(code){
   myName = $('nameInput').value.trim() || 'Người chơi';
-  isHost = false; 
-  isBotMode = false;
-  roomCode = code;
+  isHost = false; isBotMode = false; roomCode = code;
   initPeer(null, ()=>{
     myId = peer.id;
     const conn = peer.connect('tienlen-'+code, {reliable:true});
     conn.on('open', ()=>{
-      conns.host = conn;
-      wireConn(conn);
+      conns.host = conn; wireConn(conn);
       conn.send({t:'join', name:myName, id:myId});
       showLobby();
     });
-    conn.on('error', err => {
-      $('homeErr').textContent = 'Không thể vào phòng này!';
-    });
+    conn.on('error', () => { $('homeErr').textContent = 'Không thể vào phòng này!'; });
   });
 };
 
 $('btnCreate').onclick=()=>{
   myName = $('nameInput').value.trim() || 'Người chơi';
-  isHost = true;
-  isBotMode = false;
+  isHost = true; isBotMode = false;
   roomCode = Math.random().toString(36).substring(2,8).toUpperCase();
   initPeer('tienlen-'+roomCode, ()=>{
     myId = peer.id;
@@ -731,14 +722,9 @@ $('btnCreate').onclick=()=>{
 
 $('btnBotGame').onclick = () => {
   myName = $('nameInput').value.trim() || 'Người chơi';
-  isHost = true;
-  isBotMode = true;
-  roomCode = 'BOT999';
-  myId = 'player_me';
-  
+  isHost = true; isBotMode = true; roomCode = 'BOT999'; myId = 'player_me';
   const botNames = ['🤖 Máy Gà Mờ', '🤖 Cao Thủ Bot', '🤖 Thần Bài AI'];
   shuffle(botNames);
-  
   players = [
     { id: myId, name: myName },
     { id: 'bot_1', name: botNames[0] },
@@ -746,7 +732,6 @@ $('btnBotGame').onclick = () => {
     { id: 'bot_3', name: botNames[2] }
   ];
   botList = ['bot_1', 'bot_2', 'bot_3'];
-  
   showLobby();
   $('btnStart').disabled = false;
 };
@@ -777,38 +762,24 @@ function markPlayerDisconnected(disconnectedId){
   if(!gameState || gameState.isEnded) return;
   if(!gameState.disconnected) gameState.disconnected = new Set();
   gameState.disconnected.add(disconnectedId);
-
-  const pName = gameState.names[disconnectedId] || 'Người chơi';
-  gameState.log = `⚠️ ${pName} đã mất mạng! Đợi hết thời gian lượt nếu không đánh sẽ bị đuổi.`;
+  gameState.log = `⚠️ ${gameState.names[disconnectedId] || 'Người chơi'} đã mất mạng!`;
   broadcastState();
 }
 
 function kickPlayerNow(disconnectedId){
-  const pName = gameState.names[disconnectedId] || 'Người chơi';
-  gameState.log = `❌ ${pName} mất mạng và hết giờ không đánh -> Đã bị đuổi khỏi phòng!`;
-
+  gameState.log = `❌ ${gameState.names[disconnectedId] || 'Người chơi'} mất mạng -> Đã bị đuổi!`;
   players = players.filter(p => p.id !== disconnectedId);
   delete conns[disconnectedId];
-
-  if(!gameState.finished.includes(disconnectedId)){
-    gameState.finished.push(disconnectedId);
-  }
-
+  if(!gameState.finished.includes(disconnectedId)){ gameState.finished.push(disconnectedId); }
   const activePlayers = gameState.order.filter(id => !gameState.finished.includes(id));
   if(activePlayers.length <= 1){
     if(activePlayers.length === 1) gameState.finished.push(activePlayers[0]);
     endGame();
     return;
   }
-
-  const currId = gameState.order[gameState.turnIdx];
-  if(currId === disconnectedId){
-    checkNextTurn();
-  }
-
+  if(gameState.order[gameState.turnIdx] === disconnectedId) checkNextTurn();
   gameState.turnDeadline = Date.now() + gameState.turnSeconds * 1000;
-  broadcastState();
-  broadcastLobby();
+  broadcastState(); broadcastLobby();
 }
 
 function onMessage(conn, msg){
@@ -817,14 +788,10 @@ function onMessage(conn, msg){
       if(!players.find(p=>p.id===msg.id) && players.length<4){
         players.push({id:msg.id, name:msg.name});
         publishRoomToPublic(roomCode, players[0].name);
-        if(gameState && !gameState.isEnded){
-          isSpectator = true;
-        }
+        if(gameState && !gameState.isEnded) isSpectator = true;
       }
       broadcastLobby();
-      if(gameState){
-        conn.send({t:'state', state: getViewStateForPlayer(msg.id)});
-      }
+      if(gameState) conn.send({t:'state', state: getViewStateForPlayer(msg.id)});
     } else if(msg.t==='action'){
       handleAction(msg.id, msg.action);
     } else if(msg.t==='chat'){
@@ -834,9 +801,7 @@ function onMessage(conn, msg){
     }
   } else {
     if(msg.t==='lobby'){
-      players = msg.players;
-      roomSettings = msg.settings;
-      renderLobby();
+      players = msg.players; roomSettings = msg.settings; renderLobby();
     } else if(msg.t==='state'){
       applyState(msg.state);
     } else if(msg.t==='chat'){
@@ -844,8 +809,7 @@ function onMessage(conn, msg){
     } else if(msg.t==='result'){
       showResultOverlay(msg.results, msg.settlements);
     } else if(msg.t==='throwItem'){
-      animateItemThrow(msg.fromId, msg.toId, msg.item);
-      playGlobalSound(msg.item, 0.9);
+      animateItemThrow(msg.fromId, msg.toId, msg.item); playGlobalSound(msg.item, 0.9);
     } else if(msg.t==='soundEvent'){
       playGlobalSound(msg.soundKey, msg.volume || 0.9);
     } else if(msg.t==='countdown_start'){
@@ -869,8 +833,7 @@ function broadcastChat(name, text){
 function broadcastThrowItem(fromId, toId, item){
   const msg = {t:'throwItem', fromId, toId, item};
   Object.values(conns).forEach(c=>c.send(msg));
-  animateItemThrow(fromId, toId, item);
-  playGlobalSound(item, 0.9);
+  animateItemThrow(fromId, toId, item); playGlobalSound(item, 0.9);
 }
 
 function broadcastSoundEvent(soundKey, volume = 0.9){
@@ -901,41 +864,42 @@ function renderLobby(){
   if(isHost){
     $('btnStart').disabled = players.length < (isBotMode ? 1 : 2);
   } else {
-    $('guestSettingsView').innerHTML = `⏱ Thời gian: <b>${roomSettings.turnSeconds}s</b> | 🥥 Cược: <b>${roomSettings.stakeUnit}</b> | 🙈 Ẩn bài: <b>${roomSettings.hideCardCount?'Bật':'Tắt'}</b>`;
+    let modeText = roomSettings.gameMode === 'WATER' ? 'Đánh Nước' : 'Quỳ ('+roomSettings.gameMode+')';
+    $('guestSettingsView').innerHTML = `⚙️ Chế độ: <b>${modeText}</b> | ⏱ <b>${roomSettings.turnSeconds}s</b> | 🙈 Ẩn bài: <b>${roomSettings.hideCardCount?'Bật':'Tắt'}</b>`;
   }
 }
 
+$('gameModeSelect').onchange = e => {
+  roomSettings.gameMode = e.target.value;
+  if(roomSettings.gameMode !== 'WATER'){
+    $('stakeSelect').style.display = 'none';
+    $('stakeLabel').style.display = 'none';
+  } else {
+    $('stakeSelect').style.display = '';
+    $('stakeLabel').style.display = '';
+  }
+  broadcastLobby();
+};
 $('turnSecondsSelect').onchange = e => { roomSettings.turnSeconds = parseInt(e.target.value); broadcastLobby(); };
 $('stakeSelect').onchange = e => { roomSettings.stakeUnit = e.target.value; broadcastLobby(); };
 $('hideCardCountCheck').onchange = e => { roomSettings.hideCardCount = e.target.checked; broadcastLobby(); };
 
-$('btnStart').onclick = () => {
-  if(!isHost) return;
-  broadcastCountdownAndStart();
-};
+$('btnStart').onclick = () => { if(isHost) broadcastCountdownAndStart(); };
 
 function broadcastCountdownAndStart(){
-  Object.values(conns).forEach(c => {
-    c.send({t: 'countdown_start'});
-  });
-  triggerCountdownAnimation(() => {
-    dealNewGame();
-  });
+  Object.values(conns).forEach(c => c.send({t: 'countdown_start'}));
+  triggerCountdownAnimation(() => dealNewGame());
 }
 
 function triggerCountdownAnimation(onComplete){
   const overlay = $('countdownOverlay');
   const numEl = $('countdownNum');
   overlay.classList.remove('hidden');
-  
-  let count = 4;
-  numEl.textContent = count;
-  
+  let count = 4; numEl.textContent = count;
   const countInterval = setInterval(() => {
     count--;
     if(count > 0){
-      numEl.textContent = count;
-      playGlobalSound('PLAY_CARD', 0.5);
+      numEl.textContent = count; playGlobalSound('PLAY_CARD', 0.5);
     } else {
       clearInterval(countInterval);
       overlay.classList.add('hidden');
@@ -948,9 +912,7 @@ function dealNewGame(){
   consecutivePlayCount = 0;
   const deck = shuffle(buildDeck());
   const hands = {};
-  players.forEach((p,i) => {
-    hands[p.id] = sortHand(deck.slice(i*13, (i+1)*13));
-  });
+  players.forEach((p,i) => { hands[p.id] = sortHand(deck.slice(i*13, (i+1)*13)); });
 
   let leadIdx = 0;
   let lowestCard = { r: 99, s: 99 };
@@ -959,13 +921,10 @@ function dealNewGame(){
   players.forEach((p, i) => {
     hands[p.id].forEach(c => {
       if (isThreeSpade(c)) {
-        leadIdx = i;
-        foundThreeSpade = true;
-        lowestCard = c;
+        leadIdx = i; foundThreeSpade = true; lowestCard = c;
       } else if (!foundThreeSpade) {
         if (c.r < lowestCard.r || (c.r === lowestCard.r && c.s < lowestCard.s)) {
-          lowestCard = c;
-          leadIdx = i;
+          lowestCard = c; leadIdx = i;
         }
       }
     });
@@ -988,7 +947,9 @@ function dealNewGame(){
     scores: Object.fromEntries(players.map(p=>[p.id, 0])),
     liveScores: Object.fromEntries(players.map(p=>[p.id, 0])),
     playedCardsCount: Object.fromEntries(players.map(p=>[p.id, 0])),
+    kneelingStatus: { ...kneelingTracker },
     log: `🎮 ${players[leadIdx].name} giữ ${firstCardText} và được đánh đầu tiên!`,
+    gameMode: roomSettings.gameMode,
     turnSeconds: roomSettings.turnSeconds,
     stakeUnit: roomSettings.stakeUnit,
     hideCardCount: roomSettings.hideCardCount,
@@ -1006,26 +967,19 @@ function startTimerLoop(){
   if(timerLoop) clearInterval(timerLoop);
   timerLoop = setInterval(()=>{
     if(!isHost || !gameState || gameState.isEnded) return;
-    
     const currId = gameState.order[gameState.turnIdx];
-    
     if(isBotMode && botList.includes(currId)){
       if(!gameState.botThinking){
         gameState.botThinking = true;
         setTimeout(() => {
           if(!gameState || gameState.isEnded) return;
-          if(gameState.order[gameState.turnIdx] === currId){
-            makeBotMove(currId);
-          }
+          if(gameState.order[gameState.turnIdx] === currId) makeBotMove(currId);
           gameState.botThinking = false;
         }, 1200);
       }
       return;
     }
-
-    if(Date.now() >= gameState.turnDeadline){
-      autoForceTurn(currId);
-    }
+    if(Date.now() >= gameState.turnDeadline) autoForceTurn(currId);
   }, 400);
 }
 
@@ -1033,7 +987,6 @@ function makeBotMove(botId){
   if(!gameState || gameState.isEnded) return;
   const hand = gameState.hands[botId];
   if(!hand || hand.length === 0) return;
-
   const currentCombo = gameState.currentCombo;
 
   if(!currentCombo){
@@ -1041,38 +994,20 @@ function makeBotMove(botId){
     if(gameState.firstMove && gameState.requiredCard){
       const req = hand.find(c => c.r === gameState.requiredCard.r && c.s === gameState.requiredCard.s);
       if(req) chosenCards = [req];
-    } else {
-      chosenCards = [hand[0]];
     }
     handleAction(botId, { kind: 'play', cards: chosenCards.map(c => cardKey(c)) }, true);
     return;
   }
 
-  let validMoveFound = false;
-  
   for(let i=0; i<hand.length; i++){
     if(currentCombo.type === 'single'){
-      let subCards = [hand[i]];
-      let combo = classify(subCards);
+      let combo = classify([hand[i]]);
       if(combo && canBeat(combo, currentCombo)){
         handleAction(botId, { kind: 'play', cards: [cardKey(hand[i])] }, true);
-        validMoveFound = true;
         return;
       }
     }
-    if(currentCombo.type === 'pair' && i < hand.length - 1){
-      if(hand[i].r === hand[i+1].r){
-        let subCards = [hand[i], hand[i+1]];
-        let combo = classify(subCards);
-        if(combo && canBeat(combo, currentCombo)){
-          handleAction(botId, { kind: 'play', cards: [cardKey(hand[i]), cardKey(hand[i+1])] }, true);
-          validMoveFound = true;
-          return;
-        }
-      }
-    }
   }
-
   handleAction(botId, { kind: 'pass' }, true);
 }
 
@@ -1080,11 +1015,7 @@ function autoForceTurn(playerId){
   if(!gameState || gameState.isEnded) return;
   const hand = gameState.hands[playerId];
   if(!hand || hand.length === 0) return;
-
-  if(gameState.disconnected && gameState.disconnected.has(playerId)){
-    kickPlayerNow(playerId);
-    return;
-  }
+  if(gameState.disconnected && gameState.disconnected.has(playerId)){ kickPlayerNow(playerId); return; }
 
   if(gameState.currentCombo){
     handleAction(playerId, {kind:'pass'}, true);
@@ -1118,27 +1049,22 @@ function handleAction(playerId, action, isAuto=false){
     const combo = classify(cards);
 
     if(!combo) return;
-
     if(gameState.firstMove && gameState.requiredCard){
-      const hasReq = cards.some(c => c.r === gameState.requiredCard.r && c.s === gameState.requiredCard.s);
-      if(!hasReq) return;
+      if(!cards.some(c => c.r === gameState.requiredCard.r && c.s === gameState.requiredCard.s)) return;
     }
-
     if(!canBeat(combo, gameState.currentCombo)) return;
 
     broadcastSoundEvent('PLAY_CARD', 0.8);
 
-    consecutivePlayCount++;
-    if(consecutivePlayCount >= 4){
-      let chanchatVol = consecutivePlayCount >= 8 ? 1.0 : (0.7 + ((consecutivePlayCount - 4) * 0.08));
-      broadcastSoundEvent('CHANCHAT', Math.min(chanchatVol, 1.0));
-    }
-
     const chopReward = calculateChopReward(combo, gameState.currentCombo);
     if(chopReward > 0 && gameState.leaderId && gameState.leaderId !== playerId){
-      gameState.liveScores[playerId] = (gameState.liveScores[playerId] || 0) + chopReward;
-      gameState.liveScores[gameState.leaderId] = (gameState.liveScores[gameState.leaderId] || 0) - chopReward;
-      gameState.log = `${prefix}${pName} chặt thành công, bỏ túi +${chopReward} ${gameState.stakeUnit}!`;
+      if(gameState.gameMode === 'WATER'){
+        gameState.liveScores[playerId] = (gameState.liveScores[playerId] || 0) + chopReward;
+        gameState.liveScores[gameState.leaderId] = (gameState.liveScores[gameState.leaderId] || 0) - chopReward;
+        gameState.log = `${prefix}${pName} chặt thành công! Thưởng +${chopReward} Nước!`;
+      } else {
+        gameState.log = `${prefix}${pName} chặt bài thành công! Người bị chặt chuẩn bị tinh thần quỳ!`;
+      }
       broadcastSoundEvent('CHOP', 0.9);
     } else {
       gameState.log = `${prefix}${pName} đánh ${describeCombo(combo)}.`;
@@ -1172,18 +1098,13 @@ function handleAction(playerId, action, isAuto=false){
 function checkNextTurn(){
   let nextIdx = (gameState.turnIdx + 1) % gameState.order.length;
   let count = 0;
-
   while(count < gameState.order.length * 2){
     let candId = gameState.order[nextIdx];
-
     const activeChallengers = gameState.order.filter(id => !gameState.finished.includes(id) && id !== gameState.leaderId);
     const allPassed = activeChallengers.length === 0 || activeChallengers.every(id => gameState.passed.has(id));
 
     if(allPassed){
-      gameState.currentCombo = null;
-      gameState.passed.clear();
-      consecutivePlayCount = 0;
-
+      gameState.currentCombo = null; gameState.passed.clear(); consecutivePlayCount = 0;
       if(gameState.finished.includes(gameState.leaderId)){
         let nextLeader = gameState.order[(gameState.order.indexOf(gameState.leaderId) + 1) % gameState.order.length];
         while(gameState.finished.includes(nextLeader)){
@@ -1191,24 +1112,20 @@ function checkNextTurn(){
         }
         gameState.leaderId = nextLeader;
       }
-
       gameState.turnIdx = gameState.order.indexOf(gameState.leaderId);
       gameState.log += ` 🌟 Vòng mới cho ${gameState.names[gameState.leaderId]}.`;
       return;
     }
 
     if(!gameState.finished.includes(candId) && !gameState.passed.has(candId)){
-      gameState.turnIdx = nextIdx;
-      return;
+      gameState.turnIdx = nextIdx; return;
     }
-
-    nextIdx = (nextIdx + 1) % gameState.order.length;
-    count++;
+    nextIdx = (nextIdx + 1) % gameState.order.length; count++;
   }
 }
 
 // ==========================================
-// HÀM KẾT THÚC VÁN - ĐÃ GIẢM NHẸ PHẠT HẠNG 2, 3, 4
+// KẾT THÚC VÁN: ĐÁNH NƯỚC CỐ ĐỊNH (+2, +1, -1, -2) & CHẾ ĐỘ QUỲ
 // ==========================================
 function endGame(){
   gameState.isEnded = true;
@@ -1217,83 +1134,90 @@ function endGame(){
 
   const results = {};
   const winnerId = gameState.finished[0];
-  let totalWinnerGain = 0;
+  const mode = gameState.gameMode;
 
-  gameState.order.forEach((id) => {
-    let rank = gameState.finished.indexOf(id) + 1;
-    let penalty = 0;
-    let notes = [];
+  if(mode === 'WATER'){
+    // CHẾ ĐỘ I: ĐÁNH NƯỚC (CỐ ĐỊNH NHẤT +2, NHÌ +1, BA -1, BÉT -2)
+    gameState.order.forEach((id) => {
+      let rank = gameState.finished.indexOf(id) + 1;
+      let baseWater = 0;
+      if(rank === 1) baseWater = 2;
+      else if(rank === 2) baseWater = 1;
+      else if(rank === 3) baseWater = -1;
+      else baseWater = -2;
 
-    if(id !== winnerId){
-      // ĐÃ GIẢM NHẸ MỨC PHẠT THEO HẠNG:
-      if(rank === 2) penalty += 0;       // Hạng 2: 0 điểm (Hòa, không mất gì)
-      else if(rank === 3) penalty += 1;  // Hạng 3: Trừ 1 đơn vị cược
-      else if(rank === 4 || rank === 0) penalty += 2; // Hạng 4 (Bét): Trừ 2 đơn vị cược
+      let extraChop = gameState.liveScores[id] || 0;
+      let total = baseWater + extraChop;
 
-      const isCong = gameState.playedCardsCount[id] === 0;
-      if(isCong){
-        penalty += 2;
-        notes.push("Cóng (Cháy bài)");
-      }
+      results[id] = {
+        rank,
+        score: total,
+        note: `Vị trí: ${baseWater > 0 ? '+'+baseWater : baseWater} nước | Chặt: ${extraChop >= 0 ? '+'+extraChop : extraChop}`,
+        name: gameState.names[id]
+      };
+    });
+  } else {
+    // CHẾ ĐỘ II: QUỲ (TÁCH BIỆT HOÀN TOÀN KHÔNG TÍNH ĐIỂM)
+    gameState.order.forEach((id) => {
+      let rank = gameState.finished.indexOf(id) + 1;
+      let statusText = "Ngồi chơi bình thường";
 
-      const remHand = gameState.hands[id] || [];
-      if(remHand.length > 0){
-        remHand.forEach(c => {
-          if(c.r === 12){
-            if(c.s === 0 || c.s === 1) { penalty += 1; notes.push("Thối 2 đen"); }
-            else { penalty += 2; notes.push("Thối 2 đỏ"); }
-          }
-        });
-
-        const remCombo = classify(remHand);
-        if(remCombo){
-          if(remCombo.type === 'quad'){ penalty += 3; notes.push("Thối Tứ Quý"); }
-          else if(remCombo.type === 'pairs_run'){ penalty += remCombo.count; notes.push(`Thối ${remCombo.count} Đôi Thông`); }
+      if(mode === 'KNEEL_A'){
+        // Option A: Quỳ Chốt Ván (Chỉ Bét/Cháy Quỳ)
+        if(rank === gameState.order.length){
+          statusText = "🧎 QUỲ CHỐT VÁN (Tới ván tiếp theo)";
+          kneelingTracker[id] = "Quỳ cả ván";
+        } else {
+          kneelingTracker[id] = null;
+        }
+      } else if(mode === 'KNEEL_B'){
+        // Option B: Quỳ Tích Lũy
+        if(rank === gameState.order.length){
+          let currentLevel = kneelingTracker[id] || 0;
+          currentLevel = Math.min(currentLevel + 1, 3);
+          kneelingTracker[id] = currentLevel;
+          if(currentLevel === 1) statusText = "🧎 Quỳ 1 Chân (Thua 1 ván)";
+          else if(currentLevel === 2) statusText = "🧎🧎 Quỳ 2 Chân (Thua 2 ván)";
+          else statusText = "🙌 Quỳ 2 Chân + Giơ 2 Tay (Thua 3 ván)";
+        } else if(rank === 1){
+          kneelingTracker[id] = 0; // Giải hạn
+          statusText = "🎉 Về Nhất - ĐƯỢC XÓA ÁN QUỲ";
+        }
+      } else if(mode === 'KNEEL_C'){
+        // Option C: Quỳ Thế Chân
+        if(rank === gameState.order.length){
+          gameState.order.forEach(p => kneelingTracker[p] = null);
+          kneelingTracker[id] = "Quỳ thế chân";
+          statusText = "🧎 QUỲ THẾ CHÂN (Đợi ván sau có người thua mới)";
         }
       }
 
-      let finalScore = -penalty + (gameState.liveScores[id] || 0);
-      let noteText = notes.length > 0 ? notes.join(', ') : `Hạng ${rank > 0 ? rank : 'Bét'}`;
-      results[id] = { rank: rank > 0 ? rank : gameState.order.length, score: finalScore, note: noteText, name: gameState.names[id] };
-      totalWinnerGain += Math.abs(finalScore);
-    }
-  });
-
-  if(winnerId){
-    let winnerLive = gameState.liveScores[winnerId] || 0;
-    results[winnerId] = { rank: 1, score: totalWinnerGain + winnerLive, note: "Tới Nhất 🎉", name: gameState.names[winnerId] };
+      results[id] = {
+        rank,
+        score: statusText,
+        note: rank === 1 ? "🎉 Giải Hạn Quỳ / Về Nhất" : `Hạng #${rank}`,
+        name: gameState.names[id]
+      };
+    });
   }
 
   const settlements = [];
-  const balances = {};
-  Object.keys(results).forEach(id => {
-    balances[id] = results[id].score;
-  });
-
-  let debtors = Object.keys(balances).filter(id => balances[id] < 0).sort((a,b) => balances[a] - balances[b]);
-  let creditors = Object.keys(balances).filter(id => balances[id] > 0).sort((a,b) => balances[b] - balances[a]);
-
-  let dIdx = 0, cIdx = 0;
-  while(dIdx < debtors.length && cIdx < creditors.length){
-    let debtorId = debtors[dIdx];
-    let creditorId = creditors[cIdx];
-
-    let debtAmount = -balances[debtorId];
-    let creditAmount = balances[creditorId];
-
-    let transfer = Math.min(debtAmount, creditAmount);
-    if(transfer > 0){
-      settlements.push({
-        fromName: gameState.names[debtorId],
-        toName: gameState.names[creditorId],
-        amount: transfer
-      });
-      balances[debtorId] += transfer;
-      balances[creditorId] -= transfer;
+  if(mode === 'WATER'){
+    let balances = {};
+    Object.keys(results).forEach(id => balances[id] = results[id].score);
+    let debtors = Object.keys(balances).filter(id => balances[id] < 0).sort((a,b) => balances[a] - balances[b]);
+    let creditors = Object.keys(balances).filter(id => balances[id] > 0).sort((a,b) => balances[b] - balances[a]);
+    let dIdx = 0, cIdx = 0;
+    while(dIdx < debtors.length && cIdx < creditors.length){
+      let debtorId = debtors[dIdx], creditorId = creditors[cIdx];
+      let transfer = Math.min(-balances[debtorId], balances[creditorId]);
+      if(transfer > 0){
+        settlements.push({ fromName: gameState.names[debtorId], toName: gameState.names[creditorId], amount: transfer });
+        balances[debtorId] += transfer; balances[creditorId] -= transfer;
+      }
+      if(balances[debtorId] === 0) dIdx++;
+      if(balances[creditorId] === 0) cIdx++;
     }
-
-    if(balances[debtorId] === 0) dIdx++;
-    if(balances[creditorId] === 0) cIdx++;
   }
 
   broadcastResult(results, settlements);
@@ -1301,9 +1225,7 @@ function endGame(){
 
 function broadcastResult(results, settlements){
   const msg = { t:'result', results, settlements };
-  if(!isBotMode) {
-    Object.values(conns).forEach(c => c.send(msg));
-  }
+  if(!isBotMode) Object.values(conns).forEach(c => c.send(msg));
   showResultOverlay(results, settlements);
 }
 
@@ -1319,7 +1241,9 @@ function getViewStateForPlayer(id){
     currentCombo: gameState.currentCombo,
     finished: gameState.finished,
     liveScores: gameState.liveScores || {},
+    kneelingStatus: gameState.kneelingStatus || {},
     log: gameState.log,
+    gameMode: gameState.gameMode,
     turnDeadline: gameState.turnDeadline,
     turnSeconds: gameState.turnSeconds,
     stakeUnit: gameState.stakeUnit,
@@ -1330,22 +1254,11 @@ function getViewStateForPlayer(id){
 }
 
 function broadcastState(){
-  if(isBotMode){
-    const stateView = getViewStateForPlayer(myId);
-    applyState(stateView);
-    return;
-  }
-
+  if(isBotMode){ applyState(getViewStateForPlayer(myId)); return; }
   gameState.order.forEach(id => {
     const stateView = getViewStateForPlayer(id);
     if(id === myId) applyState(stateView);
     else if(conns[id]) conns[id].send({t:'state', state:stateView});
-  });
-  
-  Object.keys(conns).forEach(id => {
-    if(!gameState.order.includes(id)){
-      conns[id].send({t:'state', state: getViewStateForPlayer(id)});
-    }
   });
 }
 
@@ -1354,33 +1267,37 @@ function applyState(st){
   currentState = st;
   myHand = sortHand(st.myHand || []);
   selected.clear();
-  
-  if(st.isSpectator !== undefined){
-    isSpectator = st.isSpectator;
-  } else {
-    isSpectator = !st.order.includes(myId);
-  }
+  isSpectator = st.isSpectator !== undefined ? st.isSpectator : !st.order.includes(myId);
 
-  if(!st.isEnded){
-    $('resultOverlay').classList.add('hidden');
-  }
+  if(!st.isEnded) $('resultOverlay').classList.add('hidden');
 
   $('lobbyScreen').classList.add('hidden');
   $('tableScreen').classList.remove('hidden');
   $('chatToggle').classList.remove('hidden');
   $('roomTag').textContent = 'Phòng: ' + roomCode;
-  $('stakeTag').textContent = 'Cược: ' + st.stakeUnit;
+  $('modeTag').textContent = 'Chế độ: ' + (st.gameMode === 'WATER' ? 'Đánh Nước' : 'Quỳ');
+  $('stakeTag').textContent = st.gameMode === 'WATER' ? 'Cược: ' + st.stakeUnit : 'Hình phạt: Quỳ';
 
   const myLiveVal = (st.liveScores && st.liveScores[myId]) ? st.liveScores[myId] : 0;
   const myScoreBox = $('myLiveScoreBox');
   if(myScoreBox){
-    myScoreBox.textContent = (myLiveVal > 0 ? `+${myLiveVal}` : myLiveVal) + ' ' + st.stakeUnit;
-    myScoreBox.className = 'live-score-sticker ' + (myLiveVal > 0 ? 'plus' : (myLiveVal < 0 ? 'minus' : ''));
+    if(st.gameMode === 'WATER'){
+      myScoreBox.style.display = '';
+      myScoreBox.textContent = (myLiveVal > 0 ? `+${myLiveVal}` : myLiveVal) + ' Nước';
+      myScoreBox.className = 'live-score-sticker ' + (myLiveVal > 0 ? 'plus' : (myLiveVal < 0 ? 'minus' : ''));
+    } else {
+      myScoreBox.style.display = 'none';
+    }
   }
 
-  renderOpponents();
-  renderCenter();
-  renderHand();
+  const kneelingBadge = $('myKneelingBadge');
+  if(st.kneelingStatus && st.kneelingStatus[myId]){
+    kneelingBadge.classList.remove('hidden');
+  } else {
+    kneelingBadge.classList.add('hidden');
+  }
+
+  renderOpponents(); renderCenter(); renderHand();
 }
 
 function renderOpponents(){
@@ -1388,7 +1305,6 @@ function renderOpponents(){
   const order = currentState.order;
   let myIdx = order.indexOf(myId);
   if(myIdx === -1) myIdx = 0;
-
   const positions = ['slot-left', 'slot-top', 'slot-right'];
   let posIdx = 0;
 
@@ -1397,74 +1313,59 @@ function renderOpponents(){
     const posClass = positions[posIdx++];
     const isTurn = pId === currentState.turnId;
     const isFinished = currentState.finished.includes(pId);
-
     let cardCountDisplay = currentState.hideCardCount ? '🙈 Bài: ??' : `${currentState.counts[pId]} lá`;
     if(isFinished) cardCountDisplay = 'Về đích';
-
-    const oppLiveVal = (currentState.liveScores && currentState.liveScores[pId]) ? currentState.liveScores[pId] : 0;
-    const oppScoreStr = (oppLiveVal > 0 ? `+${oppLiveVal}` : oppLiveVal);
-    const oppScoreCls = oppLiveVal > 0 ? 'plus' : (oppLiveVal < 0 ? 'minus' : '');
 
     const slotDiv = document.createElement('div');
     slotDiv.className = `p-slot ${posClass} ${isTurn?'active':''}`;
     slotDiv.dataset.pid = pId;
+
+    let waterSticker = '';
+    if(currentState.gameMode === 'WATER'){
+      const oppLiveVal = (currentState.liveScores && currentState.liveScores[pId]) ? currentState.liveScores[pId] : 0;
+      waterSticker = `<div class="live-score-sticker ${oppLiveVal>0?'plus':(oppLiveVal<0?'minus':'')}" style="position:relative;top:auto;right:auto;margin-top:2px;font-size:9px;padding:1px 4px;">${oppLiveVal>0?'+'+oppLiveVal:oppLiveVal} Nước</div>`;
+    }
+
+    let kneelingSticker = '';
+    if(currentState.kneelingStatus && currentState.kneelingStatus[pId]){
+      kneelingSticker = `<div class="kneeling-badge">🧎 Đang Quỳ</div>`;
+    }
+
     slotDiv.innerHTML = `
       <div class="avatar" id="avatar-${pId}">👤</div>
       <div class="name">${currentState.names[pId]}</div>
       <div class="card-cnt">${cardCountDisplay}</div>
-      <div class="live-score-sticker ${oppScoreCls}" style="position:relative;top:auto;right:auto;margin-top:2px;font-size:9px;padding:1px 4px;">${oppScoreStr}</div>
+      ${waterSticker}
+      ${kneelingSticker}
     `;
 
-    slotDiv.onclick = (e) => {
-      e.stopPropagation();
-      openThrowPopover(pId, slotDiv);
-    };
-
+    slotDiv.onclick = (e) => { e.stopPropagation(); openThrowPopover(pId, slotDiv); };
     wrap.appendChild(slotDiv);
   }
 }
 
 function renderCenter(){
   const st = currentState;
-  if(isSpectator){
-    $('turnStatus').textContent = `👀 CHẾ ĐỘ XEM (Đang xem ván đấu)`;
-  } else {
-    $('turnStatus').textContent = st.turnId === myId ? '👉 LƯỢT BẠN' : `Lượt của ${st.names[st.turnId]}`;
-  }
-  
+  $('turnStatus').textContent = isSpectator ? `👀 CHẾ ĐỘ XEM` : (st.turnId === myId ? '👉 LƯỢT BẠN' : `Lượt của ${st.names[st.turnId]}`);
   const pc = $('playedCombo'); pc.innerHTML = '';
   if(st.currentCombo){
     st.currentCombo.cards.forEach(c => pc.appendChild(createCardEl(c, false, false, true)));
   } else {
     pc.innerHTML = '<span style="color:rgba(250,246,238,.4);font-size:11px;">Bàn trống (Tự do đánh)</span>';
   }
-
   $('actionLog').textContent = st.log || '';
 }
 
 function renderHand(){
   const hc = $('handCards'); hc.innerHTML = '';
   if(isSpectator){
-    hc.innerHTML = '<div style="color:var(--gold);font-size:12px;padding:8px;text-align:center;">Bạn đang xem trận đấu diễn ra. Sẽ tham gia vào ván sau!</div>';
+    hc.innerHTML = '<div style="color:var(--gold);font-size:12px;padding:8px;text-align:center;">Bạn đang xem trận đấu. Sẽ tham gia ván sau!</div>';
   } else {
-    myHand.forEach(c => {
-      const el = createCardEl(c, true, false, false);
-      hc.appendChild(el);
-    });
+    myHand.forEach(c => hc.appendChild(createCardEl(c, true, false, false)));
   }
-
   const isMyTurn = !isSpectator && currentState.turnId === myId && !currentState.finished.includes(myId) && !currentState.isEnded;
   $('btnPlay').disabled = !isMyTurn || selected.size === 0;
   $('btnPass').disabled = !isMyTurn || !currentState.currentCombo;
-  if(isSpectator){
-    $('btnSort').style.display = 'none';
-    $('btnPlay').style.display = 'none';
-    $('btnPass').style.display = 'none';
-  } else {
-    $('btnSort').style.display = '';
-    $('btnPlay').style.display = '';
-    $('btnPass').style.display = '';
-  }
 }
 
 function createCardEl(c, selectable, small, tableCard){
@@ -1475,7 +1376,6 @@ function createCardEl(c, selectable, small, tableCard){
   if(SUIT_COLOR[SUITS[c.s]]==='red') cls += ' red';
   el.className = cls;
   el.innerHTML = `<span class="rank">${RANKS[c.r]}</span><span class="suit">${SUITS[c.s]}</span>`;
-  
   if(selectable){
     const key = cardKey(c);
     if(selected.has(key)) el.classList.add('selected');
@@ -1511,7 +1411,6 @@ function openThrowPopover(pId, targetEl){
   activeTargetId = pId;
   const pop = $('throwPopover');
   const rect = targetEl.getBoundingClientRect();
-  
   pop.style.top = Math.min(window.innerHeight - 60, rect.bottom + 5) + 'px';
   pop.style.left = Math.max(10, Math.min(window.innerWidth - 260, rect.left - 40)) + 'px';
   pop.classList.remove('hidden');
@@ -1526,13 +1425,9 @@ document.addEventListener('click', (e)=>{
 window.triggerThrow = function(item){
   $('throwPopover').classList.add('hidden');
   if(!activeTargetId) return;
-
   if(isBotMode){
-    animateItemThrow(myId, activeTargetId, item);
-    playGlobalSound(item, 0.9);
-    return;
+    animateItemThrow(myId, activeTargetId, item); playGlobalSound(item, 0.9); return;
   }
-
   if(isHost) broadcastThrowItem(myId, activeTargetId, item);
   else conns.host && conns.host.send({t:'throwItem', fromId:myId, toId:activeTargetId, item});
 };
@@ -1540,87 +1435,35 @@ window.triggerThrow = function(item){
 function animateItemThrow(fromId, toId, item){
   const fromEl = (fromId === myId) ? $('myAvatar') : $(`avatar-${fromId}`);
   const toEl = (toId === myId) ? $('myAvatar') : $(`avatar-${toId}`);
-
   if(!fromEl || !toEl) return;
-
   const startRect = fromEl.getBoundingClientRect();
   const endRect = toEl.getBoundingClientRect();
 
   const flyEl = document.createElement('div');
-  flyEl.className = 'flying-item';
-  flyEl.textContent = item;
+  flyEl.className = 'flying-item'; flyEl.textContent = item;
   flyEl.style.left = (startRect.left + startRect.width/2 - 16) + 'px';
   flyEl.style.top = (startRect.top + startRect.height/2 - 16) + 'px';
-
   document.body.appendChild(flyEl);
 
   requestAnimationFrame(() => {
     const deltaX = (endRect.left + endRect.width/2) - (startRect.left + startRect.width/2);
     const deltaY = (endRect.top + endRect.height/2) - (startRect.top + startRect.height/2);
-    
-    let rotate = item === '🩴' ? 720 : (item === '🍺' ? 360 : 0);
-    flyEl.style.transform = `translate(${deltaX}px, ${deltaY}px) rotate(${rotate}deg)`;
+    flyEl.style.transform = `translate(${deltaX}px, ${deltaY}px) rotate(360deg)`;
   });
 
-  setTimeout(() => {
-    flyEl.remove();
-    showSplatEffect(toEl, item);
-  }, 600);
+  setTimeout(() => { flyEl.remove(); showSplatEffect(toEl, item); }, 600);
 }
 
 function showSplatEffect(targetEl, item){
-  const splat = document.createElement('div');
-  splat.className = 'splat-effect';
-
-  const textPop = document.createElement('div');
-  textPop.className = 'sound-text-pop';
-
-  if(item === '🍅'){
-    splat.textContent = '💥';
-    textPop.textContent = 'Aughh! Trúng mặt 🍅';
-  }
-  else if(item === '🥚'){
-    splat.textContent = '🍳';
-    textPop.textContent = 'Boing! Trứng vỡ! 🥚';
-  }
-  else if(item === '🩴'){
-    splat.textContent = '💫';
-    textPop.textContent = 'Vine Boom! Chát! 🩴';
-  }
-  else if(item === '🌹'){
-    splat.textContent = '💔';
-    textPop.textContent = 'Emotional Damage! 🌹';
-  }
-  else if(item === '🍺'){
-    splat.textContent = '🍻';
-    textPop.textContent = 'Cạn ly vô! Dô dô! 🍺';
-  }
-  else if(item === '💩'){
-    splat.textContent = '💨';
-    textPop.textContent = 'Fart reverb! Thúi quá! 💩';
-  }
-  else if(item === '🔥'){
-    splat.textContent = '✨';
-    textPop.textContent = 'Bruh! Cháy nhà! 🔥';
-  }
-
-  splat.style.left = '0px';
-  splat.style.top = '0px';
-  targetEl.appendChild(splat);
-
-  textPop.style.left = '50%';
-  textPop.style.top = '-20px';
-  textPop.style.transform = 'translateX(-50%)';
-  targetEl.appendChild(textPop);
-
+  const splat = document.createElement('div'); splat.className = 'splat-effect';
+  const textPop = document.createElement('div'); textPop.className = 'sound-text-pop';
+  splat.textContent = '💥'; textPop.textContent = 'Trúng mặt! ' + item;
+  splat.style.left = '0px'; splat.style.top = '0px'; targetEl.appendChild(splat);
+  textPop.style.left = '50%'; textPop.style.top = '-20px'; textPop.style.transform = 'translateX(-50%)'; targetEl.appendChild(textPop);
   setTimeout(() => { splat.remove(); textPop.remove(); }, 1200);
 }
 
-$('chatToggle').onclick = () => {
-  $('sidePanel').classList.add('open');
-  unreadChat = 0;
-  updateChatBadge();
-};
+$('chatToggle').onclick = () => { $('sidePanel').classList.add('open'); unreadChat = 0; updateChatBadge(); };
 $('chatClose').onclick = () => $('sidePanel').classList.remove('open');
 $('chatSend').onclick = sendChat;
 $('chatInput').onkeyup = (e) => { if(e.key === 'Enter') sendChat(); };
@@ -1631,9 +1474,7 @@ function sendChat(){
   $('chatInput').value = '';
   if(isBotMode){
     addChatLine(myName, txt);
-    setTimeout(() => {
-      addChatLine('🤖 Cao Thủ Bot', 'Hay lắm bạn ơi! 😎');
-    }, 1000);
+    setTimeout(() => addChatLine('🤖 Cao Thủ Bot', 'Hay lắm bạn ơi! 😎'), 1000);
     return;
   }
   if(isHost) broadcastChat(myName, txt);
@@ -1644,35 +1485,24 @@ function addChatLine(name, text){
   const log = $('chatLog');
   log.innerHTML += `<div style="margin-bottom:6px;"><b>${name}:</b> ${text}</div>`;
   log.scrollTop = log.scrollHeight;
-
-  if(!$('sidePanel').classList.contains('open')){
-    unreadChat++;
-    updateChatBadge();
-  }
+  if(!$('sidePanel').classList.contains('open')){ unreadChat++; updateChatBadge(); }
 }
 
 function updateChatBadge(){
   const btn = $('chatToggle');
-  if(unreadChat > 0){
-    btn.classList.add('has-unread');
-    btn.textContent = `💬 (${unreadChat})`;
-  } else {
-    btn.classList.remove('has-unread');
-    btn.textContent = '💬';
-  }
+  if(unreadChat > 0){ btn.classList.add('has-unread'); btn.textContent = `💬 (${unreadChat})`; }
+  else { btn.classList.remove('has-unread'); btn.textContent = '💬'; }
 }
 
 function showResultOverlay(results, settlements){
   const tbody = $('resultBody'); tbody.innerHTML = '';
-  const unit = currentState ? currentState.stakeUnit : 'Dừa';
+  const isWater = currentState && currentState.gameMode === 'WATER';
+
+  $('resultHeaderUnit').textContent = isWater ? 'Số Nước' : 'Hình Phạt Quỳ';
 
   Object.values(results).sort((a,b)=>a.rank-b.rank).forEach(r => {
-    const cls = r.score > 0 ? 'plus' : (r.score < 0 ? 'minus' : '');
-    
-    let scoreTxt = '';
-    if(r.score > 0) scoreTxt = `+${r.score} ${unit}`;
-    else if(r.score < 0) scoreTxt = `${r.score} ${unit}`;
-    else scoreTxt = `0 ${unit}`;
+    let cls = isWater ? (r.score > 0 ? 'plus' : (r.score < 0 ? 'minus' : '')) : '';
+    let scoreTxt = isWater ? (r.score > 0 ? `+${r.score} Nước` : `${r.score} Nước`) : r.score;
 
     tbody.innerHTML += `
       <tr>
@@ -1682,26 +1512,23 @@ function showResultOverlay(results, settlements){
       </tr>`;
   });
 
-  const stContent = $('settlementContent');
-  stContent.innerHTML = '';
-  if(settlements && settlements.length > 0){
+  const stContent = $('settlementContent'); stContent.innerHTML = '';
+  if(isWater && settlements && settlements.length > 0){
     settlements.forEach(s => {
       stContent.innerHTML += `
         <div class="settlement-item">
           <span><b>${s.fromName}</b> ➔ <b>${s.toName}</b></span>
-          <span style="color:var(--gold);font-weight:bold;">${s.amount} ${unit}</span>
+          <span style="color:var(--gold);font-weight:bold;">${s.amount} Nước</span>
         </div>`;
     });
   } else {
-    stContent.innerHTML = '<div style="text-align:center;color:rgba(250,246,238,.5)">Ván này hòa vốn / Không có phát sinh đền bù.</div>';
+    stContent.innerHTML = '<div style="text-align:center;color:rgba(250,246,238,.5)">' + (isWater ? 'Hòa vốn / Không có đền bù.' : 'Ghi nhận tư thế quỳ trực tiếp tại bàn.') + '</div>';
   }
 
   const actions = $('resultActions'); actions.innerHTML = '';
   if(isHost || isBotMode){
     const btn = document.createElement('button');
-    btn.className = 'btn btn-gold';
-    btn.textContent = 'Chơi Ván Mới';
-    btn.style.width = '100%';
+    btn.className = 'btn btn-gold'; btn.textContent = 'Chơi Ván Mới'; btn.style.width = '100%';
     btn.onclick = () => { dealNewGame(); };
     actions.appendChild(btn);
   } else {
