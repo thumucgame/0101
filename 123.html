@@ -180,19 +180,99 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .controls{display:flex;gap:6px;width:100%;max-width:320px;justify-content:center;padding:0 6px;}
 .controls .btn{flex:1;padding:7px 8px;font-size:12px;}
 
+/* OPTIMIZED MOBILE LAYOUT (FIXED UI) */
 @media (max-width: 600px) {
-  .brand{display:none;}
-  .card{width:42px;height:62px;margin-left:-20px;padding:2px;}
-  .card .rank{font-size:12px;}
-  .card .suit{font-size:12px;}
-  .card.selected{transform:translateY(-14px);}
-  .card.table-card{width:52px;height:76px;margin-left:-20px;}
-  .card.table-card .rank{font-size:15px;}
-  .card.table-card .suit{font-size:15px;}
-  .hand-cards{min-height:78px;margin-bottom:4px;}
-  .p-slot{padding:3px 6px;min-width:64px;}
-  .p-slot .avatar{width:22px;height:22px;font-size:11px;}
-  .table-center{margin:2px 34px;}
+  .brand { display: none; }
+  
+  #tableScreen {
+    grid-template-rows: 28px 1fr auto;
+    padding: 2px 2px;
+  }
+  
+  .table-center {
+    margin: 2px 48px !important;
+  }
+
+  .p-slot {
+    padding: 2px 4px !important;
+    min-width: 58px !important;
+  }
+  .p-slot .avatar {
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 10px !important;
+  }
+  .p-slot .name {
+    font-size: 9px !important;
+    max-width: 52px !important;
+  }
+  .p-slot .card-cnt, .p-slot .kneeling-badge {
+    font-size: 8px !important;
+  }
+
+  .live-score-sticker {
+    font-size: 9px !important;
+    padding: 1px 4px !important;
+    top: 2px !important;
+    right: 2px !important;
+  }
+
+  .hand-area {
+    padding-bottom: 4px !important;
+  }
+  .hand-cards {
+    min-height: 68px !important;
+    margin-bottom: 2px !important;
+    padding: 0 4px !important;
+  }
+
+  .card {
+    width: 38px !important;
+    height: 56px !important;
+    margin-left: -17px !important;
+    padding: 2px !important;
+    border-radius: 4px !important;
+    flex-shrink: 0 !important;
+  }
+  .card:first-child { 
+    margin-left: 0 !important; 
+  }
+  .card .rank { 
+    font-size: 11px !important; 
+    line-height: 1 !important; 
+  }
+  .card .suit { 
+    font-size: 11px !important; 
+    line-height: 1 !important; 
+  }
+  .card.selected { 
+    transform: translateY(-10px) !important; 
+  }
+
+  .card.table-card {
+    width: 46px !important;
+    height: 66px !important;
+    margin-left: -18px !important;
+  }
+  .card.table-card:first-child { 
+    margin-left: 0 !important; 
+  }
+  .card.table-card .rank { 
+    font-size: 14px !important; 
+  }
+  .card.table-card .suit { 
+    font-size: 14px !important; 
+  }
+
+  .controls {
+    max-width: 100% !important;
+    padding: 0 4px !important;
+    gap: 4px !important;
+  }
+  .controls .btn {
+    padding: 6px 4px !important;
+    font-size: 11px !important;
+  }
 }
 
 /* OVERLAYS & MODALS */
@@ -498,11 +578,6 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 (function(){
 "use strict";
 
-// ==========================================
-// FIREBASE (chỉ dùng để lưu & đồng bộ DANH SÁCH PHÒNG CÔNG KHAI giữa mọi người chơi
-// trên GitHub Pages. Việc chơi bài vẫn là P2P qua PeerJS như cũ, Firebase KHÔNG
-// truyền dữ liệu ván bài, nên chi phí/băng thông rất nhẹ).
-// ==========================================
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyCsFosKRL5VQ_dBWIOhWj3zHO24c2ITCyw",
   authDomain: "bai22-8dc04.firebaseapp.com",
@@ -526,8 +601,8 @@ try {
   console.error('❌ Lỗi khởi tạo Firebase:', e);
   fbDb = null;
 }
-const PUBLIC_ROOMS_PATH = 'tienlen_public_rooms'; // node gốc trên Realtime Database
-const ROOM_TTL_MS = 15 * 60 * 1000; // phòng "chết" (không cập nhật) quá 15 phút sẽ bị lọc bỏ khi hiển thị
+const PUBLIC_ROOMS_PATH = 'tienlen_public_rooms';
+const ROOM_TTL_MS = 15 * 60 * 1000;
 
 const SOUND_URLS = {
   '🩴': 'https://www.myinstants.com/media/sounds/vine-boom.mp3',
@@ -555,13 +630,6 @@ function playGlobalSound(item, customVolume = 0.9){
 
 let consecutivePlayCount = 0;
 
-// ==========================================
-// LỚP KẾT NỐI: FIREBASE REALTIME DATABASE (thay cho PeerJS/WebRTC)
-// ==========================================
-// Vì dùng Firebase làm "trạm trung chuyển" qua HTTPS/WebSocket của Google, nên KHÔNG cần
-// STUN/TURN, KHÔNG cần 2 người chung mạng/wifi nữa - ai có link + mã phòng đều vào chung
-// được, kể cả 4G, wifi công ty chặn NAT, khác quốc gia. Đây chính là điểm yếu cũ (thiếu TURN
-// thật) đã được loại bỏ hoàn toàn bằng cách đổi kiến trúc, thay vì phải vá STUN/TURN.
 function generatePlayerId(){
   return 'p_' + Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4);
 }
@@ -570,24 +638,21 @@ function roomRef(path){
   return fbDb.ref('tienlen_rooms/' + roomCode + (path ? '/' + path : ''));
 }
 
-// Gửi 1 message tới ĐÚNG 1 người chơi cụ thể (tương đương conns[id].send(msg) trước đây)
 function sendToPlayer(playerId, msg){
   if(isBotMode || !fbDb) return;
   roomRef('toClient/' + playerId).push(msg);
 }
-// Gửi 1 message tới TẤT CẢ người chơi khác (trừ chính mình) - tương đương
-// Object.values(conns).forEach(c=>c.send(msg)) trước đây
+
 function sendToAll(msg){
   if(isBotMode || !fbDb) return;
   players.forEach(p=>{ if(p.id !== myId) sendToPlayer(p.id, msg); });
 }
-// Client gửi message lên cho host xử lý (tương đương conns.host.send(msg) trước đây)
+
 function sendToHost(msg){
   if(isBotMode || !fbDb) return;
   fbDb.ref('tienlen_rooms/' + roomCode + '/toHost').push({from: myId, msg});
 }
 
-// Host lắng nghe hộp thư chung "toHost" - xử lý xong message nào thì xoá message đó đi
 function listenAsHost(){
   const ref = fbDb.ref('tienlen_rooms/' + roomCode + '/toHost');
   ref.on('child_added', snap => {
@@ -596,7 +661,7 @@ function listenAsHost(){
     if(data) onHostMessage(data.from, data.msg);
   });
 }
-// Client lắng nghe hộp thư riêng của mình "toClient/{myId}"
+
 function listenAsClient(){
   const ref = fbDb.ref('tienlen_rooms/' + roomCode + '/toClient/' + myId);
   ref.on('child_added', snap => {
@@ -605,8 +670,7 @@ function listenAsClient(){
     if(data) onClientMessage(data);
   });
 }
-// Đăng ký "di chúc rớt mạng": nếu trình duyệt của người này mất kết nối tới Firebase (đóng
-// tab, rớt mạng...) thì Firebase server TỰ ghi giúp 1 message báo rớt mạng cho host biết.
+
 function registerDisconnectNotice(){
   const noticeRef = fbDb.ref('tienlen_rooms/' + roomCode + '/toHost').push();
   noticeRef.onDisconnect().set({from: myId, msg: {t:'__disconnect__'}});
@@ -724,9 +788,8 @@ let isSpectator = false;
 let isBotMode = false;
 let botList = [];
 
-// Room Settings bao gồm Chế Độ Đánh Nước hoặc Quỳ
 let roomSettings = { gameMode: 'WATER', turnSeconds: 30, stakeUnit: 'Nước', hideCardCount: true };
-let kneelingTracker = {}; // Theo dõi ván quỳ cho từng player
+let kneelingTracker = {};
 
 const $=id=>document.getElementById(id);
 
@@ -770,9 +833,6 @@ function refreshPublicRooms(){
   }
   listEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">Đang quét phòng...</div>';
 
-  // Chỉ gắn listener 'value' MỘT LẦN duy nhất -> mọi lần cập nhật (phòng mới/đóng) trên
-  // Firebase sẽ tự động render lại danh sách theo thời gian thực cho tất cả người chơi,
-  // không cần họ bấm "Làm mới" liên tục.
   if(!publicRoomsListenerAttached){
     publicRoomsListenerAttached = true;
     fbDb.ref(PUBLIC_ROOMS_PATH).on('value', snap => {
@@ -782,7 +842,7 @@ function refreshPublicRooms(){
       renderPublicRoomsList();
     }, err => {
       console.error('Lỗi lắng nghe danh sách phòng:', err);
-      listEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">⚠️ Không tải được danh sách phòng (kiểm tra Rules của Realtime Database).</div>';
+      listEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">⚠️ Không tải được danh sách phòng.</div>';
     });
   } else {
     renderPublicRoomsList();
@@ -797,8 +857,6 @@ function publishRoomToPublic(code, hostName){
   const roomRef = fbDb.ref(PUBLIC_ROOMS_PATH + '/' + code);
   roomRef.set({ code, hostName, count: players.length, time: Date.now() })
     .catch(e => console.error('Lỗi đăng phòng công khai:', e));
-  // Nếu host mất mạng/đóng tab đột ngột mà không kịp dọn phòng, Firebase sẽ TỰ ĐỘNG
-  // xoá node này -> phòng "ma" không còn hiện trong danh sách công khai cho người khác.
   roomRef.onDisconnect().remove();
 }
 
@@ -820,8 +878,6 @@ window.joinExistingRoom = function(code){
     if(!joined) $('homeErr').textContent = 'Không nối được phòng này. Kiểm tra lại mã phòng, hoặc chủ phòng chưa mở/đã đóng phòng.';
   }, 10000);
 
-  // Đăng ký lắng nghe hộp thư riêng TRƯỚC khi gửi tin 'join', để không bị lỡ tin nhắn 'lobby'
-  // mà host gửi lại ngay sau đó.
   listenAsClient();
   registerDisconnectNotice();
   onFirstLobbyMessage = () => { joined = true; clearTimeout(joinTimeout); };
@@ -882,7 +938,6 @@ function kickPlayerNow(disconnectedId){
   broadcastState(); broadcastLobby();
 }
 
-// Được gọi trên máy HOST khi có message mới trong hộp thư chung 'toHost'
 function onHostMessage(fromId, msg){
   if(msg.t === '__disconnect__'){
     if(gameState && !gameState.isEnded){
@@ -910,7 +965,6 @@ function onHostMessage(fromId, msg){
   }
 }
 
-// Được gọi trên máy CLIENT khi có message mới trong hộp thư riêng 'toClient/{myId}'
 let onFirstLobbyMessage = null;
 function onClientMessage(msg){
   if(msg.t==='lobby'){
@@ -1018,9 +1072,6 @@ function triggerCountdownAnimation(onComplete){
 }
 
 function dealNewGame(){
-  // LƯU Ý: KHÔNG xoá phòng khỏi danh sách công khai khi ván bắt đầu -> giữ đúng hành vi bản
-  // gốc, để người khác vẫn thấy phòng và bấm "Vào" được (sẽ tự động vào với vai trò KHÁCH
-  // XEM/SPECTATOR nhờ logic isSpectator có sẵn trong onMessage() khi msg.t === 'join').
   if(isHost && !isBotMode) publishRoomToPublic(roomCode, players[0] ? players[0].name : myName);
   consecutivePlayCount = 0;
   const deck = shuffle(buildDeck());
@@ -1237,9 +1288,6 @@ function checkNextTurn(){
   }
 }
 
-// ==========================================
-// KẾT THÚC VÁN: ĐÁNH NƯỚC CỐ ĐỊNH (+2, +1, -1, -2) & CHẾ ĐỘ QUỲ
-// ==========================================
 function endGame(){
   gameState.isEnded = true;
   if(timerLoop) clearInterval(timerLoop);
@@ -1250,7 +1298,6 @@ function endGame(){
   const mode = gameState.gameMode;
 
   if(mode === 'WATER'){
-    // CHẾ ĐỘ I: ĐÁNH NƯỚC (CỐ ĐỊNH NHẤT +2, NHÌ +1, BA -1, BÉT -2)
     gameState.order.forEach((id) => {
       let rank = gameState.finished.indexOf(id) + 1;
       let baseWater = 0;
@@ -1270,13 +1317,11 @@ function endGame(){
       };
     });
   } else {
-    // CHẾ ĐỘ II: QUỲ (TÁCH BIỆT HOÀN TOÀN KHÔNG TÍNH ĐIỂM)
     gameState.order.forEach((id) => {
       let rank = gameState.finished.indexOf(id) + 1;
       let statusText = "Ngồi chơi bình thường";
 
       if(mode === 'KNEEL_A'){
-        // Option A: Quỳ Chốt Ván (Chỉ Bét/Cháy Quỳ)
         if(rank === gameState.order.length){
           statusText = "🧎 QUỲ CHỐT VÁN (Tới ván tiếp theo)";
           kneelingTracker[id] = "Quỳ cả ván";
@@ -1284,7 +1329,6 @@ function endGame(){
           kneelingTracker[id] = null;
         }
       } else if(mode === 'KNEEL_B'){
-        // Option B: Quỳ Tích Lũy
         if(rank === gameState.order.length){
           let currentLevel = kneelingTracker[id] || 0;
           currentLevel = Math.min(currentLevel + 1, 3);
@@ -1293,11 +1337,10 @@ function endGame(){
           else if(currentLevel === 2) statusText = "🧎🧎 Quỳ 2 Chân (Thua 2 ván)";
           else statusText = "🙌 Quỳ 2 Chân + Giơ 2 Tay (Thua 3 ván)";
         } else if(rank === 1){
-          kneelingTracker[id] = 0; // Giải hạn
+          kneelingTracker[id] = 0;
           statusText = "🎉 Về Nhất - ĐƯỢC XÓA ÁN QUỲ";
         }
       } else if(mode === 'KNEEL_C'){
-        // Option C: Quỳ Thế Chân
         if(rank === gameState.order.length){
           gameState.order.forEach(p => kneelingTracker[p] = null);
           kneelingTracker[id] = "Quỳ thế chân";
