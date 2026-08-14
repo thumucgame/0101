@@ -4,8 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
 <title>Tiến Lên Online - Bộ Luật Chuẩn & Chế Độ Đánh Nước / Quỳ</title>
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<!-- Firebase (chỉ dùng bản "compat" để giữ nguyên cú pháp firebase.xxx() cổ điển,
+     tránh phải chuyển toàn bộ code sang ES module -> đỡ lỗi cấu trúc khi deploy GitHub Pages -->
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
 <style>
 :root{
   --felt-1:#0b3d2e;
@@ -496,6 +499,37 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 (function(){
 "use strict";
 
+// ==========================================
+// FIREBASE (chỉ dùng để lưu & đồng bộ DANH SÁCH PHÒNG CÔNG KHAI giữa mọi người chơi
+// trên GitHub Pages. Việc chơi bài vẫn là P2P qua PeerJS như cũ, Firebase KHÔNG
+// truyền dữ liệu ván bài, nên chi phí/băng thông rất nhẹ).
+// ==========================================
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCsFosKRL5VQ_dBWIOhWj3zHO24c2ITCyw",
+  authDomain: "bai22-8dc04.firebaseapp.com",
+  databaseURL: "https://bai22-8dc04-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "bai22-8dc04",
+  storageBucket: "bai22-8dc04.firebasestorage.app",
+  messagingSenderId: "561768356844",
+  appId: "1:561768356844:web:015b905fdc54aa1f017ec9",
+  measurementId: "G-R491S9Z42L"
+};
+
+let fbDb = null;
+try {
+  if (typeof firebase !== 'undefined') {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    fbDb = firebase.database();
+  } else {
+    console.warn('⚠️ SDK Firebase chưa load được (mạng chặn gstatic.com?) -> danh sách phòng công khai sẽ không hoạt động, nhưng tạo/vào phòng bằng MÃ vẫn chạy bình thường.');
+  }
+} catch (e) {
+  console.error('❌ Lỗi khởi tạo Firebase:', e);
+  fbDb = null;
+}
+const PUBLIC_ROOMS_PATH = 'tienlen_public_rooms'; // node gốc trên Realtime Database
+const ROOM_TTL_MS = 15 * 60 * 1000; // phòng "chết" (không cập nhật) quá 15 phút sẽ bị lọc bỏ khi hiển thị
+
 const SOUND_URLS = {
   '🩴': 'https://www.myinstants.com/media/sounds/vine-boom.mp3',
   '🥚': 'https://www.myinstants.com/media/sounds/cartoon-boing.mp3',
@@ -523,83 +557,46 @@ function playGlobalSound(item, customVolume = 0.9){
 let consecutivePlayCount = 0;
 
 // ==========================================
-// FIREBASE REALTIME DATABASE CONFIGURATION
+// TURN SERVER THẬT (Metered / Open Relay Project)
 // ==========================================
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyCsFosKRL5VQ_dBWIOhWj3zHO24c2ITCyw",
-  authDomain: "bai22-8dc04.firebaseapp.com",
-  databaseURL: "https://bai22-8dc04-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "bai22-8dc04",
-  storageBucket: "bai22-8dc04.firebasestorage.app",
-  messagingSenderId: "561768356844",
-  appId: "1:561768356844:web:015b905fdc54aa1f017ec9",
-  measurementId: "G-R491S9Z42L"
+// Bộ credential "openrelayproject/openrelayproject" chỉ là VÍ DỤ trong tài liệu, KHÔNG
+// còn relay thật được nữa -> đây chính là lý do 2 người khác mạng/khác máy không thấy nhau
+// (2 tab trong CÙNG 1 trình duyệt thì vẫn nối được vì lúc đó không cần NAT traversal thật).
+// -> Đăng ký tài khoản MIỄN PHÍ tại https://dashboard.metered.ca/signup, tạo 1 App, rồi điền
+// TÊN APP và API KEY của bạn vào 2 dòng dưới đây:
+const METERED_APP_NAME = 'YOUR_APP_NAME'; // vd: 'tienlen-app'  (phần đứng trước .metered.live)
+const METERED_API_KEY   = 'YOUR_API_KEY';  // API Key lấy trong Dashboard
+
+let ICE_SERVERS = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' }
+  ]
 };
 
-let fbApp = null, fbDb = null;
-let fbConfigured = FIREBASE_CONFIG.apiKey !== 'YOUR_API_KEY';
-
-function initFirebase(){
-  if(fbApp) return true;
-  if(!fbConfigured){
-    console.warn('⚠️ Chưa điền FIREBASE_CONFIG - xem hướng dẫn trong code để lấy cấu hình miễn phí.');
-    return false;
+// Gọi API lấy TURN server thật ngay khi mở trang. Nếu chưa điền APP_NAME/API_KEY,
+// hoặc gọi API thất bại, app vẫn chạy được với STUN mặc định ở trên (chỉ hoạt động
+// tốt khi cùng wifi/mạng đơn giản - khác mạng/NAT chặt vẫn sẽ không nối được).
+const iceServersReady = (async () => {
+  if(METERED_APP_NAME === 'YOUR_APP_NAME' || METERED_API_KEY === 'YOUR_API_KEY'){
+    console.warn('⚠️ Chưa cấu hình TURN server thật (METERED_APP_NAME / METERED_API_KEY). Khác mạng có thể không kết nối được.');
+    return;
   }
   try{
-    fbApp = firebase.initializeApp(FIREBASE_CONFIG);
-    fbDb = firebase.database();
-    return true;
+    const res = await fetch(`https://${METERED_APP_NAME}.metered.live/api/v1/turn/credentials?apiKey=${METERED_API_KEY}`);
+    if(res.ok){
+      const servers = await res.json();
+      if(Array.isArray(servers) && servers.length){
+        ICE_SERVERS = { iceServers: servers };
+        console.log('✅ Đã tải TURN server thật từ Metered.');
+      }
+    } else {
+      console.warn('Không lấy được TURN server từ Metered (HTTP ' + res.status + '), dùng STUN mặc định.');
+    }
   }catch(e){
-    console.error('Lỗi khởi tạo Firebase:', e);
-    return false;
+    console.warn('Lỗi khi tải TURN server, dùng STUN mặc định:', e);
   }
-}
-
-function generatePlayerId(){
-  return 'p_' + Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4);
-}
-
-function roomRef(path){
-  return fbDb.ref('tienlen_rooms/' + roomCode + (path ? '/' + path : ''));
-}
-
-function sendToPlayer(playerId, msg){
-  if(isBotMode || !fbDb) return;
-  roomRef('toClient/' + playerId).push(msg);
-}
-
-function sendToAll(msg){
-  if(isBotMode || !fbDb) return;
-  players.forEach(p=>{ if(p.id !== myId) sendToPlayer(p.id, msg); });
-}
-
-function sendToHost(msg){
-  if(isBotMode || !fbDb) return;
-  fbDb.ref('tienlen_rooms/' + roomCode + '/toHost').push({from: myId, msg});
-}
-
-function listenAsHost(){
-  const ref = fbDb.ref('tienlen_rooms/' + roomCode + '/toHost');
-  ref.on('child_added', snap => {
-    const data = snap.val();
-    snap.ref.remove();
-    if(data) onHostMessage(data.from, data.msg);
-  });
-}
-
-function listenAsClient(){
-  const ref = fbDb.ref('tienlen_rooms/' + roomCode + '/toClient/' + myId);
-  ref.on('child_added', snap => {
-    const data = snap.val();
-    snap.ref.remove();
-    if(data) onClientMessage(data);
-  });
-}
-
-function registerDisconnectNotice(){
-  const noticeRef = fbDb.ref('tienlen_rooms/' + roomCode + '/toHost').push();
-  noticeRef.onDisconnect().set({from: myId, msg: {t:'__disconnect__'}});
-}
+})();
 
 const RANKS = ['3','4','5','6','7','8','9','10','J','Q','K','A','2'];
 const SUITS = ['♠','♣','♦','♥'];
@@ -701,217 +698,8 @@ function calculateChopReward(next, curr){
   return 0;
 }
 
-/* ===================== BOT AI NÂNG CAO ===================== */
-function getRankGroups(hand){
-  const groups = {};
-  hand.forEach(c=>{ (groups[c.r] = groups[c.r]||[]).push(c); });
-  Object.values(groups).forEach(arr=>arr.sort((a,b)=>a.s-b.s));
-  return groups;
-}
-function combinations(arr, k){
-  const res = []; const n = arr.length;
-  (function backtrack(start, combo){
-    if(combo.length===k){ res.push(combo.slice()); return; }
-    for(let i=start;i<n;i++){ combo.push(arr[i]); backtrack(i+1, combo); combo.pop(); }
-  })(0, []);
-  return res;
-}
-
-function generateAllCombos(hand){
-  const rawCombos = [];
-  const groups = getRankGroups(hand);
-  const ranksPresent = Object.keys(groups).map(Number).sort((a,b)=>a-b);
-
-  hand.forEach(c=> rawCombos.push([c]));
-
-  ranksPresent.forEach(r=>{
-    const cards = groups[r];
-    if(cards.length>=2) combinations(cards,2).forEach(cc=>rawCombos.push(cc));
-    if(cards.length>=3) combinations(cards,3).forEach(cc=>rawCombos.push(cc));
-    if(cards.length===4) rawCombos.push(cards.slice());
-  });
-
-  const distinctRanks = ranksPresent.filter(r=>r!==12);
-  let runs = [], curRun = [];
-  distinctRanks.forEach(r=>{
-    if(curRun.length===0 || r===curRun[curRun.length-1]+1) curRun.push(r);
-    else { runs.push(curRun); curRun=[r]; }
-  });
-  if(curRun.length) runs.push(curRun);
-  runs.forEach(run=>{
-    for(let len=3; len<=run.length; len++){
-      for(let start=0; start+len<=run.length; start++){
-        const seq = run.slice(start,start+len);
-        const lowCards = seq.map(r=>groups[r][0]);
-        rawCombos.push(lowCards);
-        const highCards = seq.map(r=>groups[r][groups[r].length-1]);
-        if(highCards.some((c,i)=>c!==lowCards[i])) rawCombos.push(highCards);
-      }
-    }
-  });
-
-  const pairRanks = distinctRanks.filter(r=>groups[r].length>=2);
-  let pruns = [], curPR = [];
-  pairRanks.forEach(r=>{
-    if(curPR.length===0 || r===curPR[curPR.length-1]+1) curPR.push(r);
-    else { pruns.push(curPR); curPR=[r]; }
-  });
-  if(curPR.length) pruns.push(curPR);
-  pruns.forEach(run=>{
-    for(let count=3; count<=run.length; count++){
-      for(let start=0; start+count<=run.length; start++){
-        const seq = run.slice(start,start+count);
-        const cc = [];
-        seq.forEach(r=>{ cc.push(groups[r][0], groups[r][1]); });
-        rawCombos.push(cc);
-      }
-    }
-  });
-
-  const seen = new Set(); const result = [];
-  rawCombos.forEach(cardsArr=>{
-    const cls = classify(cardsArr);
-    if(!cls) return;
-    const key = cls.cards.map(cardKey).sort().join(',');
-    if(seen.has(key)) return;
-    seen.add(key);
-    result.push(cls);
-  });
-  return result;
-}
-function isBombCombo(c){ return c.type==='quad' || (c.type==='pairs_run' && c.count>=3); }
-
-function partitionHand(hand){
-  let remaining = sortHand(hand).slice();
-  const removeCards = (cards)=> cards.forEach(c=>{
-    const idx = remaining.findIndex(x=>x.r===c.r && x.s===c.s);
-    if(idx>=0) remaining.splice(idx,1);
-  });
-  const parts = [];
-
-  Object.entries(getRankGroups(remaining)).forEach(([r,cards])=>{
-    if(cards.length===4){ parts.push({cards:cards.slice(), reserved:true}); removeCards(cards); }
-  });
-
-  function extractLongestStraight(){
-    const g = getRankGroups(remaining);
-    const ranks = Object.keys(g).map(Number).sort((a,b)=>a-b).filter(r=>r!==12);
-    let runs=[], cur=[];
-    ranks.forEach(r=>{ if(cur.length===0||r===cur[cur.length-1]+1) cur.push(r); else {runs.push(cur); cur=[r];} });
-    if(cur.length) runs.push(cur);
-    let best=null;
-    runs.forEach(run=>{ if(run.length>=3 && (!best||run.length>best.length)) best=run; });
-    if(!best) return false;
-    const cardsUsed = best.map(r=>g[r][0]);
-    parts.push({cards:cardsUsed, reserved:false});
-    removeCards(cardsUsed);
-    return true;
-  }
-  while(extractLongestStraight()){}
-
-  function extractLongestPairsRun(){
-    const g = getRankGroups(remaining);
-    const ranks = Object.keys(g).map(Number).sort((a,b)=>a-b).filter(r=> r!==12 && g[r].length>=2);
-    let runs=[], cur=[];
-    ranks.forEach(r=>{ if(cur.length===0||r===cur[cur.length-1]+1) cur.push(r); else {runs.push(cur); cur=[r];} });
-    if(cur.length) runs.push(cur);
-    let best=null;
-    runs.forEach(run=>{ if(run.length>=3 && (!best||run.length>best.length)) best=run; });
-    if(!best) return false;
-    const cardsUsed=[];
-    best.forEach(r=> cardsUsed.push(g[r][0], g[r][1]));
-    parts.push({cards:cardsUsed, reserved:true});
-    removeCards(cardsUsed);
-    return true;
-  }
-  while(extractLongestPairsRun()){}
-
-  Object.entries(getRankGroups(remaining)).forEach(([r,cards])=>{
-    if(cards.length===3){ parts.push({cards:cards.slice(), reserved:false}); removeCards(cards); }
-  });
-  Object.entries(getRankGroups(remaining)).forEach(([r,cards])=>{
-    if(cards.length===2){ parts.push({cards:cards.slice(), reserved:false}); removeCards(cards); }
-  });
-  remaining.forEach(c=> parts.push({cards:[c], reserved:false}));
-
-  return parts;
-}
-
-function getBotDifficulty(botId){
-  if(botId==='bot_1') return 'easy';
-  if(botId==='bot_2') return 'medium';
-  return 'hard';
-}
-
-function chooseLeadPlay(hand, gs, botId, difficulty){
-  let combos = generateAllCombos(hand);
-  if(gs.firstMove && gs.requiredCard){
-    const req = gs.requiredCard;
-    combos = combos.filter(c=> c.cards.some(cc=>cc.r===req.r && cc.s===req.s));
-    if(combos.length===0){
-      const reqCard = hand.find(c=>c.r===req.r && c.s===req.s);
-      return reqCard ? [cardKey(reqCard)] : [cardKey(hand[0])];
-    }
-  }
-  const winCombo = combos.find(c=> c.cards.length===hand.length);
-  if(winCombo) return winCombo.cards.map(cardKey);
-
-  const isEndgame = hand.length <= 5;
-  const parts = partitionHand(hand)
-    .map(p=>({...p, cls: classify(p.cards)}))
-    .filter(p=>p.cls);
-
-  let candidateParts = parts.filter(p=> isEndgame || !p.reserved || difficulty==='hard');
-  if(candidateParts.length===0) candidateParts = parts;
-
-  candidateParts.sort((a,b)=>{
-    if(a.cls.highR!==b.cls.highR) return a.cls.highR-b.cls.highR;
-    return b.cls.len-a.cls.len;
-  });
-
-  let chosen = candidateParts[0];
-
-  if(difficulty==='easy' && Math.random()<0.5){
-    const singles = candidateParts.filter(p=>p.cls.type==='single');
-    if(singles.length) chosen = singles[0];
-  }
-  return chosen.cards.map(cardKey);
-}
-
-function chooseFollowPlay(hand, currentCombo, gs, botId, difficulty){
-  const combos = generateAllCombos(hand);
-  const validBeats = combos.filter(c=> canBeat(c, currentCombo));
-  if(validBeats.length===0) return null;
-
-  const normalBeats = validBeats.filter(c=> calculateChopReward(c, currentCombo)===0);
-  const chopBeats = validBeats.filter(c=> calculateChopReward(c, currentCombo)>0)
-    .sort((a,b)=> calculateChopReward(a,currentCombo)-calculateChopReward(b,currentCombo));
-
-  let dangerNext = false;
-  if(gs.hands){
-    Object.keys(gs.hands).forEach(pid=>{
-      if(pid!==botId && gs.hands[pid] && gs.hands[pid].length<=2) dangerNext = true;
-    });
-  }
-
-  if(normalBeats.length>0){
-    normalBeats.sort((a,b)=> a.highR-b.highR || a.highS-b.highS);
-    if(difficulty==='easy' && !dangerNext && Math.random()<0.25) return null;
-    return normalBeats[0].cards.map(cardKey);
-  }
-
-  if(chopBeats.length>0){
-    let willChop;
-    if(difficulty==='hard') willChop = true;
-    else if(difficulty==='medium') willChop = dangerNext || Math.random()<0.55;
-    else willChop = dangerNext && Math.random()<0.35;
-    if(willChop) return chopBeats[0].cards.map(cardKey);
-  }
-  return null;
-}
-/* =================== HẾT BOT AI NÂNG CAO =================== */
-
-let myId=null, myName='', isHost=false, roomCode=null;
+let myId=null, myName='', isHost=false, roomCode=null, peer=null;
+let conns={};
 let players=[];
 let gameState=null;
 let myHand=[];
@@ -923,8 +711,9 @@ let isSpectator = false;
 let isBotMode = false;
 let botList = [];
 
+// Room Settings bao gồm Chế Độ Đánh Nước hoặc Quỳ
 let roomSettings = { gameMode: 'WATER', turnSeconds: 30, stakeUnit: 'Nước', hideCardCount: true };
-let kneelingTracker = {};
+let kneelingTracker = {}; // Theo dõi ván quỳ cho từng player
 
 const $=id=>document.getElementById(id);
 
@@ -944,14 +733,12 @@ let publicRoomsListenerAttached = false;
 
 function renderPublicRoomsList(){
   const listEl = $('publicRoomsList');
-  const now = Date.now();
-  const rooms = publicRooms.filter(r => now - r.time < 15 * 60 * 1000);
   listEl.innerHTML = '';
-  if(rooms.length === 0){
+  if(publicRooms.length === 0){
     listEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">Chưa có phòng nào mở. Hãy bấm "Tạo phòng"!</div>';
     return;
   }
-  rooms.sort((a,b)=>b.time-a.time).forEach(r => {
+  publicRooms.slice().sort((a,b)=>b.time-a.time).forEach(r => {
     const item = document.createElement('div');
     item.className = 'public-room-item';
     item.innerHTML = `
@@ -964,67 +751,89 @@ function renderPublicRoomsList(){
 
 function refreshPublicRooms(){
   const listEl = $('publicRoomsList');
-  if(!initFirebase()){
-    listEl.innerHTML = '<div style="font-size:12px;color:#ff9d8f;text-align:center;padding:10px;">⚠️ Chưa cấu hình Firebase (xem hướng dẫn trong file code) nên chưa thấy được phòng của người khác.</div>';
+  if(!fbDb){
+    listEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">⚠️ Không kết nối được máy chủ danh sách phòng.</div>';
     return;
   }
-  if(publicRoomsListenerAttached) return;
   listEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">Đang quét phòng...</div>';
-  publicRoomsListenerAttached = true;
-  fbDb.ref('tienlen_public_rooms').on('value', snap => {
-    const data = snap.val() || {};
-    publicRooms = Object.keys(data).map(code => ({ code, ...data[code] }));
+
+  // Chỉ gắn listener 'value' MỘT LẦN duy nhất -> mọi lần cập nhật (phòng mới/đóng) trên
+  // Firebase sẽ tự động render lại danh sách theo thời gian thực cho tất cả người chơi,
+  // không cần họ bấm "Làm mới" liên tục.
+  if(!publicRoomsListenerAttached){
+    publicRoomsListenerAttached = true;
+    fbDb.ref(PUBLIC_ROOMS_PATH).on('value', snap => {
+      const now = Date.now();
+      const data = snap.val() || {};
+      publicRooms = Object.values(data).filter(r => r && now - r.time < ROOM_TTL_MS);
+      renderPublicRoomsList();
+    }, err => {
+      console.error('Lỗi lắng nghe danh sách phòng:', err);
+      listEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">⚠️ Không tải được danh sách phòng (kiểm tra Rules của Realtime Database).</div>';
+    });
+  } else {
     renderPublicRoomsList();
-  });
+  }
 }
 
 $('btnRefreshRooms').onclick = refreshPublicRooms;
 window.onload = () => { refreshPublicRooms(); };
 
 function publishRoomToPublic(code, hostName){
-  if(!fbDb) return;
-  fbDb.ref('tienlen_public_rooms/' + code).set({ hostName, count: players.length, time: Date.now() });
+  if(!fbDb || !code) return;
+  const roomRef = fbDb.ref(PUBLIC_ROOMS_PATH + '/' + code);
+  roomRef.set({ code, hostName, count: players.length, time: Date.now() })
+    .catch(e => console.error('Lỗi đăng phòng công khai:', e));
+  // Nếu host mất mạng/đóng tab đột ngột mà không kịp dọn phòng, Firebase sẽ TỰ ĐỘNG
+  // xoá node này -> phòng "ma" không còn hiện trong danh sách công khai cho người khác.
+  roomRef.onDisconnect().remove();
 }
+
 function removeRoomFromPublic(code){
-  if(!fbDb) return;
-  fbDb.ref('tienlen_public_rooms/' + code).remove();
+  if(!fbDb || !code) return;
+  fbDb.ref(PUBLIC_ROOMS_PATH + '/' + code).remove().catch(()=>{});
 }
 
 window.joinExistingRoom = function(code){
   code = (code || '').trim().toUpperCase();
   if(!code){ $('homeErr').textContent = 'Vui lòng nhập mã phòng!'; return; }
-  if(!initFirebase()){ $('homeErr').textContent = '⚠️ Chưa cấu hình Firebase - xem hướng dẫn trong file code (FIREBASE_CONFIG).'; return; }
   myName = $('nameInput').value.trim() || 'Người chơi';
   isHost = false; isBotMode = false; roomCode = code;
-  myId = generatePlayerId();
   $('homeErr').textContent = 'Đang kết nối tới phòng ' + code + '...';
-
-  let joined = false;
-  const joinTimeout = setTimeout(() => {
-    if(!joined) $('homeErr').textContent = 'Không nối được phòng này. Kiểm tra lại mã phòng, hoặc chủ phòng chưa mở/đã đóng phòng.';
-  }, 10000);
-
-  listenAsClient();
-  registerDisconnectNotice();
-  onFirstLobbyMessage = () => { joined = true; clearTimeout(joinTimeout); };
-  sendToHost({t:'join', name:myName, id:myId});
-  showLobby();
+  initPeer(null, ()=>{
+    myId = peer.id;
+    const conn = peer.connect('tienlen-'+code, {reliable:true});
+    let joined = false;
+    const joinTimeout = setTimeout(() => {
+      if(!joined) $('homeErr').textContent = 'Không nối được phòng này. Kiểm tra lại mã phòng, hoặc chủ phòng chưa mở/đã đóng phòng.';
+    }, 10000);
+    conn.on('open', ()=>{
+      joined = true;
+      clearTimeout(joinTimeout);
+      conns.host = conn; wireConn(conn);
+      conn.send({t:'join', name:myName, id:myId});
+      showLobby();
+    });
+    conn.on('error', () => { clearTimeout(joinTimeout); $('homeErr').textContent = 'Không thể vào phòng này!'; });
+  });
 };
 
 $('btnJoinCode').onclick = () => joinExistingRoom($('joinCodeInput').value);
 $('joinCodeInput').onkeyup = (e) => { if(e.key === 'Enter') joinExistingRoom($('joinCodeInput').value); };
 
 $('btnCreate').onclick=()=>{
-  if(!initFirebase()){ $('homeErr').textContent = '⚠️ Chưa cấu hình Firebase - xem hướng dẫn trong file code (FIREBASE_CONFIG).'; return; }
   myName = $('nameInput').value.trim() || 'Người chơi';
   isHost = true; isBotMode = false;
   roomCode = Math.random().toString(36).substring(2,8).toUpperCase();
-  myId = generatePlayerId();
-  players = [{id:myId, name:myName}];
-  publishRoomToPublic(roomCode, myName);
-  fbDb.ref('tienlen_public_rooms/' + roomCode).onDisconnect().remove();
-  listenAsHost();
-  showLobby();
+  initPeer('tienlen-'+roomCode, ()=>{
+    myId = peer.id;
+    players = [{id:myId, name:myName}];
+    publishRoomToPublic(roomCode, myName);
+    showLobby();
+    peer.on('connection', c => {
+      c.on('open', ()=>{ conns[c.peer]=c; wireConn(c); });
+    });
+  });
 };
 
 $('btnBotGame').onclick = () => {
@@ -1043,6 +852,42 @@ $('btnBotGame').onclick = () => {
   $('btnStart').disabled = false;
 };
 
+async function initPeer(customId, onOpen){
+  await iceServersReady; // đảm bảo đã có TURN server thật (nếu cấu hình) trước khi tạo Peer
+  peer = customId ? new Peer(customId, {config: ICE_SERVERS}) : new Peer({config: ICE_SERVERS});
+  peer.on('open', onOpen);
+  peer.on('error', err => {
+    console.error('Peer error:', err);
+    const msg = 'Lỗi kết nối: ' + err.type + (err.type === 'peer-unavailable' ? ' (Mã phòng sai hoặc phòng đã đóng)' : '');
+    if(!$('homeScreen').classList.contains('hidden')) $('homeErr').textContent = msg;
+    else if(!$('lobbyScreen').classList.contains('hidden')) $('lobbyErr').textContent = msg;
+    else if(gameState){ gameState.log = '⚠️ ' + msg; broadcastState(); }
+  });
+  // 'disconnected' = rớt kết nối tới máy chủ tín hiệu (signaling server), không phải rớt P2P
+  // giữa 2 người chơi. Nếu không tự nối lại, người chơi có thể không tạo/join được phòng mới
+  // dù ván đang chơi vẫn ổn — tự động reconnect để tránh lỗi mạng vặt này.
+  peer.on('disconnected', () => {
+    console.warn('Peer mất kết nối signaling, đang tự nối lại...');
+    setTimeout(() => { if(peer && !peer.destroyed) { try{ peer.reconnect(); }catch(e){} } }, 1000);
+  });
+}
+
+function wireConn(conn){
+  conn.on('data', data => onMessage(conn, data));
+  conn.on('close', ()=>{
+    if(isHost){
+      const disconnectedId = conn.peer;
+      if(gameState && !gameState.isEnded){
+        markPlayerDisconnected(disconnectedId);
+      } else {
+        players = players.filter(p=>p.id!==disconnectedId);
+        delete conns[disconnectedId];
+        broadcastLobby();
+      }
+    }
+  });
+}
+
 function markPlayerDisconnected(disconnectedId){
   if(!gameState || gameState.isEnded) return;
   if(!gameState.disconnected) gameState.disconnected = new Set();
@@ -1054,6 +899,7 @@ function markPlayerDisconnected(disconnectedId){
 function kickPlayerNow(disconnectedId){
   gameState.log = `❌ ${gameState.names[disconnectedId] || 'Người chơi'} mất mạng -> Đã bị đuổi!`;
   players = players.filter(p => p.id !== disconnectedId);
+  delete conns[disconnectedId];
   if(!gameState.finished.includes(disconnectedId)){ gameState.finished.push(disconnectedId); }
   const activePlayers = gameState.order.filter(id => !gameState.finished.includes(id));
   if(activePlayers.length <= 1){
@@ -1066,70 +912,63 @@ function kickPlayerNow(disconnectedId){
   broadcastState(); broadcastLobby();
 }
 
-function onHostMessage(fromId, msg){
-  if(msg.t === '__disconnect__'){
-    if(gameState && !gameState.isEnded){
-      markPlayerDisconnected(fromId);
-    } else {
-      players = players.filter(p=>p.id!==fromId);
+function onMessage(conn, msg){
+  if(isHost){
+    if(msg.t==='join'){
+      if(!players.find(p=>p.id===msg.id) && players.length<4){
+        players.push({id:msg.id, name:msg.name});
+        publishRoomToPublic(roomCode, players[0].name);
+        if(gameState && !gameState.isEnded) isSpectator = true;
+      }
       broadcastLobby();
+      if(gameState) conn.send({t:'state', state: getViewStateForPlayer(msg.id)});
+    } else if(msg.t==='action'){
+      handleAction(msg.id, msg.action);
+    } else if(msg.t==='chat'){
+      broadcastChat(msg.name, msg.text);
+    } else if(msg.t==='throwItem'){
+      broadcastThrowItem(msg.fromId, msg.toId, msg.item);
     }
-    return;
-  }
-  if(msg.t==='join'){
-    if(!players.find(p=>p.id===msg.id) && players.length<4){
-      players.push({id:msg.id, name:msg.name});
-      publishRoomToPublic(roomCode, players[0].name);
-      if(gameState && !gameState.isEnded) isSpectator = true;
+  } else {
+    if(msg.t==='lobby'){
+      players = msg.players; roomSettings = msg.settings; renderLobby();
+    } else if(msg.t==='state'){
+      applyState(msg.state);
+    } else if(msg.t==='chat'){
+      addChatLine(msg.name, msg.text);
+    } else if(msg.t==='result'){
+      showResultOverlay(msg.results, msg.settlements);
+    } else if(msg.t==='throwItem'){
+      animateItemThrow(msg.fromId, msg.toId, msg.item); playGlobalSound(msg.item, 0.9);
+    } else if(msg.t==='soundEvent'){
+      playGlobalSound(msg.soundKey, msg.volume || 0.9);
+    } else if(msg.t==='countdown_start'){
+      triggerCountdownAnimation(msg.callback);
     }
-    broadcastLobby();
-    if(gameState) sendToPlayer(msg.id, {t:'state', state: getViewStateForPlayer(msg.id)});
-  } else if(msg.t==='action'){
-    handleAction(msg.id, msg.action);
-  } else if(msg.t==='chat'){
-    broadcastChat(msg.name, msg.text);
-  } else if(msg.t==='throwItem'){
-    broadcastThrowItem(msg.fromId, msg.toId, msg.item);
-  }
-}
-
-let onFirstLobbyMessage = null;
-function onClientMessage(msg){
-  if(msg.t==='lobby'){
-    if(onFirstLobbyMessage){ onFirstLobbyMessage(); onFirstLobbyMessage = null; }
-    players = msg.players; roomSettings = msg.settings; renderLobby();
-  } else if(msg.t==='state'){
-    applyState(msg.state);
-  } else if(msg.t==='chat'){
-    addChatLine(msg.name, msg.text);
-  } else if(msg.t==='result'){
-    showResultOverlay(msg.results, msg.settlements);
-  } else if(msg.t==='throwItem'){
-    animateItemThrow(msg.fromId, msg.toId, msg.item); playGlobalSound(msg.item, 0.9);
-  } else if(msg.t==='soundEvent'){
-    playGlobalSound(msg.soundKey, msg.volume || 0.9);
-  } else if(msg.t==='countdown_start'){
-    triggerCountdownAnimation(msg.callback);
   }
 }
 
 function broadcastLobby(){
-  sendToAll({t:'lobby', players, settings: roomSettings});
+  const msg = {t:'lobby', players, settings: roomSettings};
+  Object.values(conns).forEach(c=>c.send(msg));
   renderLobby();
 }
 
 function broadcastChat(name, text){
-  sendToAll({t:'chat', name, text});
+  const msg = {t:'chat', name, text};
+  Object.values(conns).forEach(c=>c.send(msg));
   addChatLine(name, text);
 }
 
 function broadcastThrowItem(fromId, toId, item){
-  sendToAll({t:'throwItem', fromId, toId, item});
+  const msg = {t:'throwItem', fromId, toId, item};
+  Object.values(conns).forEach(c=>c.send(msg));
   animateItemThrow(fromId, toId, item); playGlobalSound(item, 0.9);
 }
 
 function broadcastSoundEvent(soundKey, volume = 0.9){
-  sendToAll({t:'soundEvent', soundKey, volume});
+  const msg = {t:'soundEvent', soundKey, volume};
+  Object.values(conns).forEach(c=>c.send(msg));
   playGlobalSound(soundKey, volume);
 }
 
@@ -1178,8 +1017,7 @@ $('hideCardCountCheck').onchange = e => { roomSettings.hideCardCount = e.target.
 $('btnStart').onclick = () => { if(isHost) broadcastCountdownAndStart(); };
 
 function broadcastCountdownAndStart(){
-  sendToAll({t: 'countdown_start'});
-  removeRoomFromPublic(roomCode);
+  Object.values(conns).forEach(c => c.send({t: 'countdown_start'}));
   triggerCountdownAnimation(() => dealNewGame());
 }
 
@@ -1201,6 +1039,7 @@ function triggerCountdownAnimation(onComplete){
 }
 
 function dealNewGame(){
+  if(isHost && !isBotMode) removeRoomFromPublic(roomCode);
   consecutivePlayCount = 0;
   const deck = shuffle(buildDeck());
   const hands = {};
@@ -1263,14 +1102,11 @@ function startTimerLoop(){
     if(isBotMode && botList.includes(currId)){
       if(!gameState.botThinking){
         gameState.botThinking = true;
-        const diff = getBotDifficulty(currId);
-        const baseDelay = diff==='easy' ? 500 : (diff==='medium' ? 900 : 1300);
-        const delay = baseDelay + Math.random()*700;
         setTimeout(() => {
           if(!gameState || gameState.isEnded) return;
           if(gameState.order[gameState.turnIdx] === currId) makeBotMove(currId);
           gameState.botThinking = false;
-        }, delay);
+        }, 1200);
       }
       return;
     }
@@ -1283,20 +1119,27 @@ function makeBotMove(botId){
   const hand = gameState.hands[botId];
   if(!hand || hand.length === 0) return;
   const currentCombo = gameState.currentCombo;
-  const difficulty = getBotDifficulty(botId);
 
   if(!currentCombo){
-    const cardKeys = chooseLeadPlay(hand, gameState, botId, difficulty);
-    handleAction(botId, { kind: 'play', cards: cardKeys }, true);
+    let chosenCards = [hand[0]];
+    if(gameState.firstMove && gameState.requiredCard){
+      const req = hand.find(c => c.r === gameState.requiredCard.r && c.s === gameState.requiredCard.s);
+      if(req) chosenCards = [req];
+    }
+    handleAction(botId, { kind: 'play', cards: chosenCards.map(c => cardKey(c)) }, true);
     return;
   }
 
-  const followKeys = chooseFollowPlay(hand, currentCombo, gameState, botId, difficulty);
-  if(followKeys){
-    handleAction(botId, { kind: 'play', cards: followKeys }, true);
-  } else {
-    handleAction(botId, { kind: 'pass' }, true);
+  for(let i=0; i<hand.length; i++){
+    if(currentCombo.type === 'single'){
+      let combo = classify([hand[i]]);
+      if(combo && canBeat(combo, currentCombo)){
+        handleAction(botId, { kind: 'play', cards: [cardKey(hand[i])] }, true);
+        return;
+      }
+    }
   }
+  handleAction(botId, { kind: 'pass' }, true);
 }
 
 function autoForceTurn(playerId){
@@ -1412,6 +1255,9 @@ function checkNextTurn(){
   }
 }
 
+// ==========================================
+// KẾT THÚC VÁN: ĐÁNH NƯỚC CỐ ĐỊNH (+2, +1, -1, -2) & CHẾ ĐỘ QUỲ
+// ==========================================
 function endGame(){
   gameState.isEnded = true;
   if(timerLoop) clearInterval(timerLoop);
@@ -1422,6 +1268,7 @@ function endGame(){
   const mode = gameState.gameMode;
 
   if(mode === 'WATER'){
+    // CHẾ ĐỘ I: ĐÁNH NƯỚC (CỐ ĐỊNH NHẤT +2, NHÌ +1, BA -1, BÉT -2)
     gameState.order.forEach((id) => {
       let rank = gameState.finished.indexOf(id) + 1;
       let baseWater = 0;
@@ -1441,11 +1288,13 @@ function endGame(){
       };
     });
   } else {
+    // CHẾ ĐỘ II: QUỲ (TÁCH BIỆT HOÀN TOÀN KHÔNG TÍNH ĐIỂM)
     gameState.order.forEach((id) => {
       let rank = gameState.finished.indexOf(id) + 1;
       let statusText = "Ngồi chơi bình thường";
 
       if(mode === 'KNEEL_A'){
+        // Option A: Quỳ Chốt Ván (Chỉ Bét/Cháy Quỳ)
         if(rank === gameState.order.length){
           statusText = "🧎 QUỲ CHỐT VÁN (Tới ván tiếp theo)";
           kneelingTracker[id] = "Quỳ cả ván";
@@ -1453,6 +1302,7 @@ function endGame(){
           kneelingTracker[id] = null;
         }
       } else if(mode === 'KNEEL_B'){
+        // Option B: Quỳ Tích Lũy
         if(rank === gameState.order.length){
           let currentLevel = kneelingTracker[id] || 0;
           currentLevel = Math.min(currentLevel + 1, 3);
@@ -1461,10 +1311,11 @@ function endGame(){
           else if(currentLevel === 2) statusText = "🧎🧎 Quỳ 2 Chân (Thua 2 ván)";
           else statusText = "🙌 Quỳ 2 Chân + Giơ 2 Tay (Thua 3 ván)";
         } else if(rank === 1){
-          kneelingTracker[id] = 0;
+          kneelingTracker[id] = 0; // Giải hạn
           statusText = "🎉 Về Nhất - ĐƯỢC XÓA ÁN QUỲ";
         }
       } else if(mode === 'KNEEL_C'){
+        // Option C: Quỳ Thế Chân
         if(rank === gameState.order.length){
           gameState.order.forEach(p => kneelingTracker[p] = null);
           kneelingTracker[id] = "Quỳ thế chân";
@@ -1505,7 +1356,7 @@ function endGame(){
 
 function broadcastResult(results, settlements){
   const msg = { t:'result', results, settlements };
-  if(!isBotMode) sendToAll(msg);
+  if(!isBotMode) Object.values(conns).forEach(c => c.send(msg));
   showResultOverlay(results, settlements);
 }
 
@@ -1538,7 +1389,7 @@ function broadcastState(){
   gameState.order.forEach(id => {
     const stateView = getViewStateForPlayer(id);
     if(id === myId) applyState(stateView);
-    else sendToPlayer(id, {t:'state', state:stateView});
+    else if(conns[id]) conns[id].send({t:'state', state:stateView});
   });
 }
 
@@ -1683,7 +1534,7 @@ $('btnPass').onclick = () => sendAction({kind:'pass'});
 function sendAction(act){
   if(isSpectator) return;
   if(isHost) handleAction(myId, act);
-  else sendToHost({t:'action', id:myId, action:act});
+  else conns.host && conns.host.send({t:'action', id:myId, action:act});
   selected.clear();
 }
 
@@ -1709,7 +1560,7 @@ window.triggerThrow = function(item){
     animateItemThrow(myId, activeTargetId, item); playGlobalSound(item, 0.9); return;
   }
   if(isHost) broadcastThrowItem(myId, activeTargetId, item);
-  else sendToHost({t:'throwItem', fromId:myId, toId:activeTargetId, item});
+  else conns.host && conns.host.send({t:'throwItem', fromId:myId, toId:activeTargetId, item});
 };
 
 function animateItemThrow(fromId, toId, item){
@@ -1758,7 +1609,7 @@ function sendChat(){
     return;
   }
   if(isHost) broadcastChat(myName, txt);
-  else sendToHost({t:'chat', name:myName, text:txt});
+  else conns.host && conns.host.send({t:'chat', name:myName, text:txt});
 }
 
 function addChatLine(name, text){
