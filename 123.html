@@ -1016,14 +1016,32 @@ function showLobby(){
   $('homeScreen').classList.add('hidden');
   $('lobbyScreen').classList.remove('hidden');
   $('roomCodeDisplay').textContent = roomCode;
+  // TRƯỚC ĐÂY: chủ phòng thấy form cài đặt đầy đủ (#hostSettings), còn khách chỉ thấy 1 dòng
+  // chữ tóm tắt (#guestSettingsView) -> nhìn "hoàn toàn khác nhau". BÂY GIỜ: dùng chung ĐÚNG 1
+  // giao diện (#hostSettings) cho TẤT CẢ mọi người, khách chỉ bị khoá (disabled) không cho
+  // chỉnh sửa các mục chọn, còn lại nhìn giống hệt chủ phòng.
+  $('hostSettings').classList.remove('hidden');
+  $('guestSettingsView').classList.add('hidden');
+  setLobbySettingsInteractive(isHost);
+  // BUG THẬT: trước đây #hostControls (nút "Bắt đầu") KHÔNG BAO GIỜ bị ẩn cho khách, và
+  // #guestWait (dòng "Đang chờ chủ phòng...") KHÔNG BAO GIỜ được hiện ra -> khách vẫn nhìn
+  // thấy y hệt nút Bắt đầu như chủ phòng (dù bấm vô tác dụng) thay vì thấy thông báo đang chờ.
   if(isHost){
-    $('hostSettings').classList.remove('hidden');
-    $('guestSettingsView').classList.add('hidden');
+    $('hostControls').classList.remove('hidden');
+    $('guestWait').classList.add('hidden');
   } else {
-    $('hostSettings').classList.add('hidden');
-    $('guestSettingsView').classList.remove('hidden');
+    $('hostControls').classList.add('hidden');
+    $('guestWait').classList.remove('hidden');
   }
   renderLobby();
+}
+
+// Bật/khoá khả năng chỉnh sửa các mục cài đặt phòng chờ. Chỉ chủ phòng được chỉnh (enabled=true),
+// khách nhìn thấy y hệt nhưng bị khoá không bấm/đổi được (enabled=false).
+function setLobbySettingsInteractive(enabled){
+  ['gameModeSelect','turnSecondsSelect','stakeSelect','hideCardCountCheck'].forEach(id => {
+    $(id).disabled = !enabled;
+  });
 }
 
 function renderLobby(){
@@ -1031,11 +1049,24 @@ function renderLobby(){
   players.forEach((p,i)=>{
     ul.innerHTML += `<li><span class="dot"></span>${p.name} ${i===0?'<span class="crown">♛ Host</span>':''}</li>`;
   });
+
+  // Đồng bộ hiển thị các mục cài đặt theo roomSettings hiện tại cho MỌI người chơi (kể cả
+  // khách, vì các mục này đang bị khoá nên chỉ có thể cập nhật qua đây khi nhận 'lobby' mới từ
+  // chủ phòng) -> đảm bảo khách luôn thấy đúng những gì chủ phòng đã chọn, y hệt giao diện.
+  $('gameModeSelect').value = roomSettings.gameMode;
+  $('turnSecondsSelect').value = String(roomSettings.turnSeconds);
+  $('stakeSelect').value = roomSettings.stakeUnit;
+  $('hideCardCountCheck').checked = !!roomSettings.hideCardCount;
+  if(roomSettings.gameMode !== 'WATER'){
+    $('stakeSelect').style.display = 'none';
+    $('stakeLabel').style.display = 'none';
+  } else {
+    $('stakeSelect').style.display = '';
+    $('stakeLabel').style.display = '';
+  }
+
   if(isHost){
     $('btnStart').disabled = players.length < (isBotMode ? 1 : 2);
-  } else {
-    let modeText = roomSettings.gameMode === 'WATER' ? 'Đánh Nước' : 'Quỳ ('+roomSettings.gameMode+')';
-    $('guestSettingsView').innerHTML = `⚙️ Chế độ: <b>${modeText}</b> | ⏱ <b>${roomSettings.turnSeconds}s</b> | 🙈 Ẩn bài: <b>${roomSettings.hideCardCount?'Bật':'Tắt'}</b>`;
   }
 }
 
