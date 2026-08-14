@@ -1039,7 +1039,10 @@ function triggerCountdownAnimation(onComplete){
 }
 
 function dealNewGame(){
-  if(isHost && !isBotMode) removeRoomFromPublic(roomCode);
+  // LƯU Ý: KHÔNG xoá phòng khỏi danh sách công khai khi ván bắt đầu -> giữ đúng hành vi bản
+  // gốc, để người khác vẫn thấy phòng và bấm "Vào" được (sẽ tự động vào với vai trò KHÁCH
+  // XEM/SPECTATOR nhờ logic isSpectator có sẵn trong onMessage() khi msg.t === 'join').
+  if(isHost && !isBotMode) publishRoomToPublic(roomCode, players[0] ? players[0].name : myName);
   consecutivePlayCount = 0;
   const deck = shuffle(buildDeck());
   const hands = {};
