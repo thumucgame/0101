@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
 <title>Tiến Lên Online - Bộ Luật Chuẩn & Chế Độ Đánh Nước / Quỳ</title>
-<!-- Firebase compat -->
+<!-- Firebase (chỉ dùng bản "compat" để giữ nguyên cú pháp firebase.xxx() cổ điển,
+     tránh phải chuyển toàn bộ code sang ES module -> đỡ lỗi cấu trúc khi deploy GitHub Pages -->
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
 <style>
@@ -118,9 +119,9 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .p-slot .card-cnt{font-size:9px;color:var(--gold);font-weight:bold;margin-top:1px;}
 .p-slot .kneeling-badge{font-size:10px;color:#ff5252;font-weight:bold;margin-top:1px;}
 
-.slot-left { top: 45%; left: 4px; transform: translateY(-50%); }
+.slot-left { top: 50%; left: 4px; transform: translateY(-50%); }
 .slot-top  { top: 36px; left: 50%; transform: translateX(-50%); }
-.slot-right{ top: 45%; right: 4px; transform: translateY(-50%); }
+.slot-right{ top: 50%; right: 4px; transform: translateY(-50%); }
 .slot-bottom{position:relative;margin-bottom:2px;border:none;background:transparent;min-width:auto;}
 
 .table-center{
@@ -179,103 +180,19 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .controls{display:flex;gap:6px;width:100%;max-width:320px;justify-content:center;padding:0 6px;}
 .controls .btn{flex:1;padding:7px 8px;font-size:12px;}
 
-/* OPTIMIZED MOBILE LAYOUT */
 @media (max-width: 600px) {
-  .brand { display: none; }
-  
-  #tableScreen {
-    grid-template-rows: 28px 1fr auto;
-    padding: 2px 2px;
-  }
-  
-  .table-center {
-    margin: 2px 48px !important;
-  }
-
-  .slot-left { top: 40% !important; left: 2px !important; transform: translateY(-50%) !important; }
-  .slot-top  { top: 30px !important; left: 50% !important; transform: translateX(-50%) !important; }
-  .slot-right{ top: 40% !important; right: 2px !important; transform: translateY(-50%) !important; }
-
-  .p-slot {
-    padding: 2px 4px !important;
-    min-width: 58px !important;
-  }
-  .p-slot .avatar {
-    width: 22px !important;
-    height: 22px !important;
-    font-size: 10px !important;
-  }
-  .p-slot .name {
-    font-size: 9px !important;
-    max-width: 52px !important;
-  }
-  .p-slot .card-cnt, .p-slot .kneeling-badge {
-    font-size: 8px !important;
-  }
-
-  .live-score-sticker {
-    font-size: 9px !important;
-    padding: 1px 4px !important;
-    top: 2px !important;
-    right: 2px !important;
-  }
-
-  .hand-area {
-    padding-bottom: 4px !important;
-  }
-  .hand-cards {
-    min-height: 68px !important;
-    margin-bottom: 2px !important;
-    padding: 0 4px !important;
-  }
-
-  .card {
-    width: 38px !important;
-    height: 56px !important;
-    margin-left: -17px !important;
-    padding: 2px !important;
-    border-radius: 4px !important;
-    flex-shrink: 0 !important;
-  }
-  .card:first-child { 
-    margin-left: 0 !important; 
-  }
-  .card .rank { 
-    font-size: 11px !important; 
-    line-height: 1 !important; 
-  }
-  .card .suit { 
-    font-size: 11px !important; 
-    line-height: 1 !important; 
-  }
-  .card.selected { 
-    transform: translateY(-10px) !important; 
-  }
-
-  .card.table-card {
-    width: 46px !important;
-    height: 66px !important;
-    margin-left: -18px !important;
-  }
-  .card.table-card:first-child { 
-    margin-left: 0 !important; 
-  }
-  .card.table-card .rank { 
-    font-size: 14px !important; 
-  }
-  .card.table-card .suit { 
-    font-size: 14px !important; 
-  }
-
-  .controls {
-    max-width: 100% !important;
-    padding: 0 4px !important;
-    gap: 4px !important;
-  }
-  .controls .btn {
-    padding: 6px 4px !important;
-    font-size: 11px !important;
-  }
+  .brand{display:none;}
+  .card{width:42px;height:62px;margin-left:-20px;padding:2px;}
+  .card .rank{font-size:12px;}
+  .card .suit{font-size:12px;}
+  .card.selected{transform:translateY(-14px);}
+  .card.table-card{width:52px;height:76px;margin-left:-20px;}
+  .card.table-card .rank{font-size:15px;}
+  .card.table-card .suit{font-size:15px;}
+  .hand-cards{min-height:78px;margin-bottom:4px;}
+  .p-slot{padding:3px 6px;min-width:64px;}
+  .p-slot .avatar{width:22px;height:22px;font-size:11px;}
+  .table-center{margin:2px 34px;}
 }
 
 /* OVERLAYS & MODALS */
@@ -581,6 +498,11 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 (function(){
 "use strict";
 
+// ==========================================
+// FIREBASE (chỉ dùng để lưu & đồng bộ DANH SÁCH PHÒNG CÔNG KHAI giữa mọi người chơi
+// trên GitHub Pages. Việc chơi bài vẫn là P2P qua PeerJS như cũ, Firebase KHÔNG
+// truyền dữ liệu ván bài, nên chi phí/băng thông rất nhẹ).
+// ==========================================
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyCsFosKRL5VQ_dBWIOhWj3zHO24c2ITCyw",
   authDomain: "bai22-8dc04.firebaseapp.com",
@@ -598,14 +520,14 @@ try {
     firebase.initializeApp(FIREBASE_CONFIG);
     fbDb = firebase.database();
   } else {
-    console.warn('⚠️ SDK Firebase chưa load được');
+    console.warn('⚠️ SDK Firebase chưa load được (mạng chặn gstatic.com?) -> danh sách phòng công khai sẽ không hoạt động, nhưng tạo/vào phòng bằng MÃ vẫn chạy bình thường.');
   }
 } catch (e) {
   console.error('❌ Lỗi khởi tạo Firebase:', e);
   fbDb = null;
 }
-const PUBLIC_ROOMS_PATH = 'tienlen_public_rooms';
-const ROOM_TTL_MS = 15 * 60 * 1000;
+const PUBLIC_ROOMS_PATH = 'tienlen_public_rooms'; // node gốc trên Realtime Database
+const ROOM_TTL_MS = 15 * 60 * 1000; // phòng "chết" (không cập nhật) quá 15 phút sẽ bị lọc bỏ khi hiển thị
 
 const SOUND_URLS = {
   '🩴': 'https://www.myinstants.com/media/sounds/vine-boom.mp3',
@@ -633,6 +555,13 @@ function playGlobalSound(item, customVolume = 0.9){
 
 let consecutivePlayCount = 0;
 
+// ==========================================
+// LỚP KẾT NỐI: FIREBASE REALTIME DATABASE (thay cho PeerJS/WebRTC)
+// ==========================================
+// Vì dùng Firebase làm "trạm trung chuyển" qua HTTPS/WebSocket của Google, nên KHÔNG cần
+// STUN/TURN, KHÔNG cần 2 người chung mạng/wifi nữa - ai có link + mã phòng đều vào chung
+// được, kể cả 4G, wifi công ty chặn NAT, khác quốc gia. Đây chính là điểm yếu cũ (thiếu TURN
+// thật) đã được loại bỏ hoàn toàn bằng cách đổi kiến trúc, thay vì phải vá STUN/TURN.
 function generatePlayerId(){
   return 'p_' + Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4);
 }
@@ -641,39 +570,91 @@ function roomRef(path){
   return fbDb.ref('tienlen_rooms/' + roomCode + (path ? '/' + path : ''));
 }
 
+// Làm sạch dữ liệu trước khi gửi qua Firebase: loại bỏ mọi giá trị `undefined` (kể cả lồng
+// sâu bên trong object/array). Đây là NGUYÊN NHÂN GỐC gây lỗi "chủ phòng OK, người chơi lỗi":
+// Firebase SDK sẽ NÉM LỖI NGAY LẬP TỨC (đồng bộ, không phải async) nếu payload chứa
+// `undefined` ở bất kỳ đâu -> làm vòng lặp gửi state cho từng người chơi (sendToPlayer bên
+// trong broadcastState) DỪNG NGANG giữa chừng, khiến những người chơi đứng sau trong vòng lặp
+// KHÔNG BAO GIỜ nhận được state mới -> họ bị kẹt màn hình cũ (không thấy bài, nút không bấm
+// được, giao diện không cập nhật/lệch so với chủ phòng vì chủ phòng luôn tự cập nhật local,
+// không đi qua bước gửi mạng này nên không bao giờ bị ảnh hưởng).
+function sanitizeForFirebase(obj){
+  if(obj === undefined) return null;
+  if(obj === null || typeof obj !== 'object') return obj;
+  if(Array.isArray(obj)) return obj.map(sanitizeForFirebase);
+  const out = {};
+  Object.keys(obj).forEach(k => {
+    const v = obj[k];
+    if(v === undefined) return; // bỏ hẳn field undefined thay vì để lọt vào payload
+    out[k] = sanitizeForFirebase(v);
+  });
+  return out;
+}
+
+// Gửi 1 message tới ĐÚNG 1 người chơi cụ thể (tương đương conns[id].send(msg) trước đây)
+// Bọc try/catch + .catch() để lỗi ghi Firebase của 1 người chơi KHÔNG làm dừng việc gửi
+// cho những người chơi còn lại (xem giải thích ở sanitizeForFirebase phía trên).
 function sendToPlayer(playerId, msg){
   if(isBotMode || !fbDb) return;
-  roomRef('toClient/' + playerId).push(msg);
+  try{
+    roomRef('toClient/' + playerId).push(sanitizeForFirebase(msg))
+      .catch(err => console.error('❌ Gửi dữ liệu tới người chơi ' + playerId + ' thất bại:', err));
+  } catch(err){
+    console.error('❌ Lỗi khi chuẩn bị gửi dữ liệu tới người chơi ' + playerId + ':', err);
+  }
 }
-
+// Gửi 1 message tới TẤT CẢ người chơi khác (trừ chính mình) - tương đương
+// Object.values(conns).forEach(c=>c.send(msg)) trước đây
+// Dùng try/catch riêng cho từng người để 1 người lỗi không chặn những người còn lại trong vòng lặp.
 function sendToAll(msg){
   if(isBotMode || !fbDb) return;
-  players.forEach(p=>{ if(p.id !== myId) sendToPlayer(p.id, msg); });
+  players.forEach(p=>{
+    if(p.id !== myId){
+      try{ sendToPlayer(p.id, msg); } catch(err){ console.error('❌ Lỗi gửi broadcast tới ' + p.id + ':', err); }
+    }
+  });
 }
-
+// Client gửi message lên cho host xử lý (tương đương conns.host.send(msg) trước đây)
 function sendToHost(msg){
   if(isBotMode || !fbDb) return;
-  fbDb.ref('tienlen_rooms/' + roomCode + '/toHost').push({from: myId, msg});
+  try{
+    fbDb.ref('tienlen_rooms/' + roomCode + '/toHost').push(sanitizeForFirebase({from: myId, msg}))
+      .catch(err => console.error('❌ Gửi dữ liệu lên chủ phòng thất bại:', err));
+  } catch(err){
+    console.error('❌ Lỗi khi chuẩn bị gửi dữ liệu lên chủ phòng:', err);
+  }
 }
 
+// Host lắng nghe hộp thư chung "toHost" - xử lý xong message nào thì xoá message đó đi
 function listenAsHost(){
   const ref = fbDb.ref('tienlen_rooms/' + roomCode + '/toHost');
   ref.on('child_added', snap => {
     const data = snap.val();
     snap.ref.remove();
-    if(data) onHostMessage(data.from, data.msg);
+    // Bọc try/catch: nếu xử lý 1 message của 1 người chơi bị lỗi, các message tiếp theo
+    // (của người chơi khác) vẫn tiếp tục được xử lý bình thường, không bị "đứng hình" theo.
+    try{
+      if(data) onHostMessage(data.from, data.msg);
+    } catch(err){
+      console.error('❌ Lỗi xử lý message từ người chơi ' + (data && data.from) + ':', err);
+    }
   });
 }
-
+// Client lắng nghe hộp thư riêng của mình "toClient/{myId}"
 function listenAsClient(){
   const ref = fbDb.ref('tienlen_rooms/' + roomCode + '/toClient/' + myId);
   ref.on('child_added', snap => {
     const data = snap.val();
     snap.ref.remove();
-    if(data) onClientMessage(data);
+    try{
+      if(data) onClientMessage(data);
+    } catch(err){
+      console.error('❌ Lỗi xử lý dữ liệu nhận từ chủ phòng:', err);
+    }
   });
 }
-
+// Đăng ký "di chúc rớt mạng": nếu trình duyệt của người này mất kết nối tới Firebase (đóng
+// tab, rớt mạng...) thì Firebase server TỰ ghi giúp 1 message báo rớt mạng cho host biết.
 function registerDisconnectNotice(){
   const noticeRef = fbDb.ref('tienlen_rooms/' + roomCode + '/toHost').push();
   noticeRef.onDisconnect().set({from: myId, msg: {t:'__disconnect__'}});
@@ -791,8 +772,9 @@ let isSpectator = false;
 let isBotMode = false;
 let botList = [];
 
+// Room Settings bao gồm Chế Độ Đánh Nước hoặc Quỳ
 let roomSettings = { gameMode: 'WATER', turnSeconds: 30, stakeUnit: 'Nước', hideCardCount: true };
-let kneelingTracker = {};
+let kneelingTracker = {}; // Theo dõi ván quỳ cho từng player
 
 const $=id=>document.getElementById(id);
 
@@ -836,6 +818,9 @@ function refreshPublicRooms(){
   }
   listEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">Đang quét phòng...</div>';
 
+  // Chỉ gắn listener 'value' MỘT LẦN duy nhất -> mọi lần cập nhật (phòng mới/đóng) trên
+  // Firebase sẽ tự động render lại danh sách theo thời gian thực cho tất cả người chơi,
+  // không cần họ bấm "Làm mới" liên tục.
   if(!publicRoomsListenerAttached){
     publicRoomsListenerAttached = true;
     fbDb.ref(PUBLIC_ROOMS_PATH).on('value', snap => {
@@ -845,7 +830,7 @@ function refreshPublicRooms(){
       renderPublicRoomsList();
     }, err => {
       console.error('Lỗi lắng nghe danh sách phòng:', err);
-      listEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">⚠️ Không tải được danh sách phòng.</div>';
+      listEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">⚠️ Không tải được danh sách phòng (kiểm tra Rules của Realtime Database).</div>';
     });
   } else {
     renderPublicRoomsList();
@@ -858,8 +843,10 @@ window.onload = () => { refreshPublicRooms(); };
 function publishRoomToPublic(code, hostName){
   if(!fbDb || !code) return;
   const roomRef = fbDb.ref(PUBLIC_ROOMS_PATH + '/' + code);
-  roomRef.set({ code, hostName, count: players.length, time: Date.now() })
+  roomRef.set(sanitizeForFirebase({ code, hostName: hostName || 'Người chơi', count: players.length, time: Date.now() }))
     .catch(e => console.error('Lỗi đăng phòng công khai:', e));
+  // Nếu host mất mạng/đóng tab đột ngột mà không kịp dọn phòng, Firebase sẽ TỰ ĐỘNG
+  // xoá node này -> phòng "ma" không còn hiện trong danh sách công khai cho người khác.
   roomRef.onDisconnect().remove();
 }
 
@@ -881,6 +868,8 @@ window.joinExistingRoom = function(code){
     if(!joined) $('homeErr').textContent = 'Không nối được phòng này. Kiểm tra lại mã phòng, hoặc chủ phòng chưa mở/đã đóng phòng.';
   }, 10000);
 
+  // Đăng ký lắng nghe hộp thư riêng TRƯỚC khi gửi tin 'join', để không bị lỡ tin nhắn 'lobby'
+  // mà host gửi lại ngay sau đó.
   listenAsClient();
   registerDisconnectNotice();
   onFirstLobbyMessage = () => { joined = true; clearTimeout(joinTimeout); };
@@ -941,6 +930,7 @@ function kickPlayerNow(disconnectedId){
   broadcastState(); broadcastLobby();
 }
 
+// Được gọi trên máy HOST khi có message mới trong hộp thư chung 'toHost'
 function onHostMessage(fromId, msg){
   if(msg.t === '__disconnect__'){
     if(gameState && !gameState.isEnded){
@@ -955,7 +945,12 @@ function onHostMessage(fromId, msg){
     if(!players.find(p=>p.id===msg.id) && players.length<4){
       players.push({id:msg.id, name:msg.name});
       publishRoomToPublic(roomCode, players[0].name);
-      if(gameState && !gameState.isEnded) isSpectator = true;
+      // LƯU Ý: trước đây dòng này gán nhầm biến isSpectator TOÀN CỤC (biến này đại diện cho
+      // "CHÍNH MÁY ĐANG CHẠY ĐOẠN CODE NÀY", tức là máy CHỦ PHÒNG) thành true mỗi khi có người
+      // mới vào phòng giữa ván -> khiến CHỦ PHÒNG tự nhiên bị hiểu nhầm là khán giả ngay sau
+      // khi có người vào phòng. Trạng thái "người mới vào có phải khán giả hay không" đã được
+      // tính đúng và gửi riêng cho họ qua getViewStateForPlayer(msg.id).isSpectator bên dưới
+      // rồi, nên KHÔNG cần và KHÔNG được đụng vào biến isSpectator của máy chủ phòng ở đây.
     }
     broadcastLobby();
     if(gameState) sendToPlayer(msg.id, {t:'state', state: getViewStateForPlayer(msg.id)});
@@ -968,23 +963,32 @@ function onHostMessage(fromId, msg){
   }
 }
 
+// Được gọi trên máy CLIENT khi có message mới trong hộp thư riêng 'toClient/{myId}'
 let onFirstLobbyMessage = null;
 function onClientMessage(msg){
-  if(msg.t==='lobby'){
-    if(onFirstLobbyMessage){ onFirstLobbyMessage(); onFirstLobbyMessage = null; }
-    players = msg.players; roomSettings = msg.settings; renderLobby();
-  } else if(msg.t==='state'){
-    applyState(msg.state);
-  } else if(msg.t==='chat'){
-    addChatLine(msg.name, msg.text);
-  } else if(msg.t==='result'){
-    showResultOverlay(msg.results, msg.settlements);
-  } else if(msg.t==='throwItem'){
-    animateItemThrow(msg.fromId, msg.toId, msg.item); playGlobalSound(msg.item, 0.9);
-  } else if(msg.t==='soundEvent'){
-    playGlobalSound(msg.soundKey, msg.volume || 0.9);
-  } else if(msg.t==='countdown_start'){
-    triggerCountdownAnimation(msg.callback);
+  if(!msg || !msg.t){ console.error('⚠️ Message nhận được không hợp lệ:', msg); return; }
+  // Mỗi loại message được xử lý độc lập trong try/catch riêng: nếu 1 message (vd: 'state')
+  // có dữ liệu bất thường và gây lỗi khi render, các message tiếp theo (chat, kết quả, v.v.)
+  // vẫn hoạt động bình thường thay vì làm "đứng" toàn bộ đồng bộ phía người chơi.
+  try{
+    if(msg.t==='lobby'){
+      if(onFirstLobbyMessage){ onFirstLobbyMessage(); onFirstLobbyMessage = null; }
+      players = msg.players || players; roomSettings = msg.settings || roomSettings; renderLobby();
+    } else if(msg.t==='state'){
+      applyState(msg.state);
+    } else if(msg.t==='chat'){
+      addChatLine(msg.name, msg.text);
+    } else if(msg.t==='result'){
+      showResultOverlay(msg.results, msg.settlements);
+    } else if(msg.t==='throwItem'){
+      animateItemThrow(msg.fromId, msg.toId, msg.item); playGlobalSound(msg.item, 0.9);
+    } else if(msg.t==='soundEvent'){
+      playGlobalSound(msg.soundKey, msg.volume || 0.9);
+    } else if(msg.t==='countdown_start'){
+      triggerCountdownAnimation(msg.callback);
+    }
+  } catch(err){
+    console.error('❌ Lỗi khi xử lý message loại "' + msg.t + '":', err);
   }
 }
 
@@ -1075,6 +1079,9 @@ function triggerCountdownAnimation(onComplete){
 }
 
 function dealNewGame(){
+  // LƯU Ý: KHÔNG xoá phòng khỏi danh sách công khai khi ván bắt đầu -> giữ đúng hành vi bản
+  // gốc, để người khác vẫn thấy phòng và bấm "Vào" được (sẽ tự động vào với vai trò KHÁCH
+  // XEM/SPECTATOR nhờ logic isSpectator có sẵn trong onMessage() khi msg.t === 'join').
   if(isHost && !isBotMode) publishRoomToPublic(roomCode, players[0] ? players[0].name : myName);
   consecutivePlayCount = 0;
   const deck = shuffle(buildDeck());
@@ -1291,6 +1298,9 @@ function checkNextTurn(){
   }
 }
 
+// ==========================================
+// KẾT THÚC VÁN: ĐÁNH NƯỚC CỐ ĐỊNH (+2, +1, -1, -2) & CHẾ ĐỘ QUỲ
+// ==========================================
 function endGame(){
   gameState.isEnded = true;
   if(timerLoop) clearInterval(timerLoop);
@@ -1301,6 +1311,7 @@ function endGame(){
   const mode = gameState.gameMode;
 
   if(mode === 'WATER'){
+    // CHẾ ĐỘ I: ĐÁNH NƯỚC (CỐ ĐỊNH NHẤT +2, NHÌ +1, BA -1, BÉT -2)
     gameState.order.forEach((id) => {
       let rank = gameState.finished.indexOf(id) + 1;
       let baseWater = 0;
@@ -1320,11 +1331,13 @@ function endGame(){
       };
     });
   } else {
+    // CHẾ ĐỘ II: QUỲ (TÁCH BIỆT HOÀN TOÀN KHÔNG TÍNH ĐIỂM)
     gameState.order.forEach((id) => {
       let rank = gameState.finished.indexOf(id) + 1;
       let statusText = "Ngồi chơi bình thường";
 
       if(mode === 'KNEEL_A'){
+        // Option A: Quỳ Chốt Ván (Chỉ Bét/Cháy Quỳ)
         if(rank === gameState.order.length){
           statusText = "🧎 QUỲ CHỐT VÁN (Tới ván tiếp theo)";
           kneelingTracker[id] = "Quỳ cả ván";
@@ -1332,6 +1345,7 @@ function endGame(){
           kneelingTracker[id] = null;
         }
       } else if(mode === 'KNEEL_B'){
+        // Option B: Quỳ Tích Lũy
         if(rank === gameState.order.length){
           let currentLevel = kneelingTracker[id] || 0;
           currentLevel = Math.min(currentLevel + 1, 3);
@@ -1340,10 +1354,11 @@ function endGame(){
           else if(currentLevel === 2) statusText = "🧎🧎 Quỳ 2 Chân (Thua 2 ván)";
           else statusText = "🙌 Quỳ 2 Chân + Giơ 2 Tay (Thua 3 ván)";
         } else if(rank === 1){
-          kneelingTracker[id] = 0;
+          kneelingTracker[id] = 0; // Giải hạn
           statusText = "🎉 Về Nhất - ĐƯỢC XÓA ÁN QUỲ";
         }
       } else if(mode === 'KNEEL_C'){
+        // Option C: Quỳ Thế Chân
         if(rank === gameState.order.length){
           gameState.order.forEach(p => kneelingTracker[p] = null);
           kneelingTracker[id] = "Quỳ thế chân";
@@ -1414,15 +1429,26 @@ function getViewStateForPlayer(id){
 
 function broadcastState(){
   if(isBotMode){ applyState(getViewStateForPlayer(myId)); return; }
+  // Xử lý từng người chơi trong try/catch riêng: đây là điểm mấu chốt để "đồng bộ nhau" thật sự
+  // đáng tin cậy -> dù việc tính/gửi state cho 1 người chơi bị lỗi bất ngờ, những người chơi
+  // còn lại (và chủ phòng) vẫn nhận được cập nhật đầy đủ, không ai bị bỏ sót/kẹt màn hình.
   gameState.order.forEach(id => {
-    const stateView = getViewStateForPlayer(id);
-    if(id === myId) applyState(stateView);
-    else sendToPlayer(id, {t:'state', state:stateView});
+    try{
+      const stateView = getViewStateForPlayer(id);
+      if(id === myId) applyState(stateView);
+      else sendToPlayer(id, {t:'state', state:stateView});
+    } catch(err){
+      console.error('❌ Lỗi khi gửi trạng thái ván chơi cho ' + id + ':', err);
+    }
   });
 }
 
 let currentState = null;
 function applyState(st){
+  if(!st || !Array.isArray(st.order)){
+    console.error('⚠️ Nhận được state không hợp lệ, bỏ qua để tránh kẹt màn hình:', st);
+    return;
+  }
   currentState = st;
   myHand = sortHand(st.myHand || []);
   selected.clear();
@@ -1456,51 +1482,38 @@ function applyState(st){
     kneelingBadge.classList.add('hidden');
   }
 
-  renderOpponents(); renderCenter(); renderHand();
+  // Mỗi hàm render được gọi riêng lẻ trong try/catch: nếu render khu vực đối thủ bị lỗi vì
+  // dữ liệu bất thường, khu vực bài trên tay và trung tâm bàn vẫn hiển thị bình thường (và
+  // ngược lại) thay vì cả màn hình bị trắng/đứng vì 1 lỗi nhỏ ở một phần.
+  try{ renderOpponents(); } catch(err){ console.error('❌ Lỗi renderOpponents:', err); }
+  try{ renderCenter(); } catch(err){ console.error('❌ Lỗi renderCenter:', err); }
+  try{ renderHand(); } catch(err){ console.error('❌ Lỗi renderHand:', err); }
 }
 
-/* KHẮC PHỤC TRIỆT ĐỂ LỖI LỆCH GIAO DIỆN KHÁCH / HOST */
 function renderOpponents(){
-  const wrap = $('oppSlots'); 
-  wrap.innerHTML = '';
-  
+  const wrap = $('oppSlots'); wrap.innerHTML = '';
   const order = currentState.order;
   let myIdx = order.indexOf(myId);
-  if (myIdx === -1) myIdx = 0; // Mặc định nếu là spectator
+  if(myIdx === -1) myIdx = 0;
+  const positions = ['slot-left', 'slot-top', 'slot-right'];
+  let posIdx = 0;
 
-  const totalPlayers = order.length;
-  const otherPlayers = [];
-
-  for (let i = 1; i < totalPlayers; i++) {
-    const pId = order[(myIdx + i) % totalPlayers];
-    otherPlayers.push(pId);
-  }
-
-  otherPlayers.forEach((pId, idx) => {
-    let posClass = '';
-    
-    if (otherPlayers.length === 1) {
-      posClass = 'slot-top';
-    } else if (otherPlayers.length === 2) {
-      posClass = (idx === 0) ? 'slot-left' : 'slot-right';
-    } else {
-      const positions4 = ['slot-left', 'slot-top', 'slot-right'];
-      posClass = positions4[idx] || 'slot-top';
-    }
-
+  for(let i=1; i<order.length; i++){
+    const pId = order[(myIdx + i) % order.length];
+    const posClass = positions[posIdx++];
     const isTurn = pId === currentState.turnId;
     const isFinished = currentState.finished.includes(pId);
     let cardCountDisplay = currentState.hideCardCount ? '🙈 Bài: ??' : `${currentState.counts[pId]} lá`;
     if(isFinished) cardCountDisplay = 'Về đích';
 
     const slotDiv = document.createElement('div');
-    slotDiv.className = `p-slot ${posClass} ${isTurn ? 'active' : ''}`;
+    slotDiv.className = `p-slot ${posClass} ${isTurn?'active':''}`;
     slotDiv.dataset.pid = pId;
 
     let waterSticker = '';
     if(currentState.gameMode === 'WATER'){
       const oppLiveVal = (currentState.liveScores && currentState.liveScores[pId]) ? currentState.liveScores[pId] : 0;
-      waterSticker = `<div class="live-score-sticker ${oppLiveVal > 0 ? 'plus' : (oppLiveVal < 0 ? 'minus' : '')}" style="position:relative;top:auto;right:auto;margin-top:2px;font-size:9px;padding:1px 4px;">${oppLiveVal > 0 ? '+' + oppLiveVal : oppLiveVal} Nước</div>`;
+      waterSticker = `<div class="live-score-sticker ${oppLiveVal>0?'plus':(oppLiveVal<0?'minus':'')}" style="position:relative;top:auto;right:auto;margin-top:2px;font-size:9px;padding:1px 4px;">${oppLiveVal>0?'+'+oppLiveVal:oppLiveVal} Nước</div>`;
     }
 
     let kneelingSticker = '';
@@ -1510,7 +1523,7 @@ function renderOpponents(){
 
     slotDiv.innerHTML = `
       <div class="avatar" id="avatar-${pId}">👤</div>
-      <div class="name">${currentState.names[pId] || 'Người chơi'}</div>
+      <div class="name">${currentState.names[pId]}</div>
       <div class="card-cnt">${cardCountDisplay}</div>
       ${waterSticker}
       ${kneelingSticker}
@@ -1518,7 +1531,7 @@ function renderOpponents(){
 
     slotDiv.onclick = (e) => { e.stopPropagation(); openThrowPopover(pId, slotDiv); };
     wrap.appendChild(slotDiv);
-  });
+  }
 }
 
 function renderCenter(){
