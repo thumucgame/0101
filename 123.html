@@ -641,7 +641,8 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
       <li><b>Bàn 3 người:</b> Nhất (+2), Nhì (0), Bét (-2)</li>
       <li><b>Bàn 2 người:</b> Nhất (+1), Bét (-1)</li>
     </ul>
-    <p><b>Luật Tới Trắng (Ù ngay khi chia bài):</b> Nếu vừa chia bài xong mà có người sở hữu Sảnh Rồng (3→A), Lục Đôi (6 đôi) hoặc Ngũ Đôi Thông (5 đôi liên tiếp), ván đấu kết thúc ngay lập tức, người đó thắng trắng và nhận thưởng cố định từ tất cả người chơi còn lại, không chia bài đánh tiếp.</p>
+    <p><b>Luật Tới Trắng (Ù ngay khi chia bài):</b> Ngay sau khi chia đủ 13 lá, hệ thống kiểm tra bài Tới Trắng trước khi bắt đầu lượt. Nếu có người sở hữu <b>Sảnh Rồng (3→A)</b>, <b>Tứ Quý Heo (đủ 4 quân 2)</b>, <b>Lục Đôi (6 đôi)</b> hoặc <b>Ngũ Đôi Thông (5 đôi liên tiếp)</b>, ván đấu kết thúc ngay lập tức, người đó thắng trắng và nhận thưởng cố định từ tất cả người chơi còn lại, không đánh tiếp.</p>
+    <p><b>Tứ Quý 3 — Tới Trắng ván đầu tiên:</b> Chỉ ở <b>ván đầu tiên của trận đấu</b>, nếu một người cầm đủ <b>4 quân 3</b> (3♠, 3♣, 3♦, 3♥) thì được <b>Tới Trắng</b> ngay khi chia bài. Từ ván thứ hai trở đi, Tứ Quý 3 <b>không</b> còn là điều kiện Tới Trắng.</p>
     <p><b>Luật Phạt Cóng/Đốt:</b> Người thua mà không đánh được lá bài nào trong suốt ván (bị chặn/giết ngộp hoàn toàn) sẽ bị phạt CỐ ĐỊNH bằng gấp đôi mức Bét chuẩn của bàn (Bàn 2 người: -2, Bàn 3-4 người: -4), áp dụng như nhau cho mọi hạng bị Cóng — kể cả hạng nhì, không chỉ hạng bét.</p>
     <p><b>Luật Chặt Ngang (không cần đúng lượt):</b> Khi trên bàn đang có Heo đơn/đôi, 3 Đôi Thông hoặc Tứ Quý bị lộ, bất kỳ ai giữ bộ chặt hợp lệ đều có thể chặt ngay lập tức bằng nút "⚡ Chặt Ngang", không cần chờ đến lượt. Thứ bậc chặt cụ thể:</p>
     <table>
@@ -654,7 +655,9 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
         <tr><td>4 (hoặc nhiều hơn) Đôi Thông</td><td>Đôi Thông dài hơn (nhiều đôi hơn); cùng số đôi thì so hàng cao hơn — Tứ Quý KHÔNG chặt được</td></tr>
       </tbody>
     </table>
-    <p><b>Chặt Chồng (chặt liên hoàn — DỒN NƯỚC):</b> Bài vừa dùng để chặt mà vẫn còn nằm trong bảng trên (Heo/3-4-5+ Đôi Thông/Tứ Quý) thì có thể tiếp tục bị người khác chặt đè lên, không giới hạn số lần, miễn còn người giữ bộ chặt hợp lệ mạnh hơn. Giá trị nước của từng bộ bị triệt trong CẢ CHUỖI được <b>DỒN LẠI VỚI NHAU</b> (không tính riêng lẻ từng lượt) — người bị chặt ở lượt cuối cùng của chuỗi phải gánh trọn số nước đã dồn từ đầu chuỗi cho người chặt cuối cùng. Càng nhiều người chặt chồng lên nhau, "quả bom" càng to!</p>
+    <p><b>Chặt Chồng (chặt liên hoàn — DỒN NƯỚC):</b> Bài vừa dùng để chặt mà vẫn còn nằm trong bảng trên (Heo/3-4-5+ Đôi Thông/Tứ Quý) thì có thể tiếp tục bị người khác chặt đè lên, không giới hạn số lần, miễn còn người giữ bộ chặt hợp lệ mạnh hơn. Giá trị nước của từng bộ bị triệt trong CẢ CHUỖI được <b>DỒN LẠI VỚI NHAU</b> (không tính riêng lẻ từng lượt). <b>Người bị chặt ở mắt xích cuối cùng của chuỗi phải gánh toàn bộ số nước đã dồn từ đầu chuỗi cho người chặt cuối cùng.</b> Khi chuỗi kết thúc (người tiếp theo đánh thường, tất cả bỏ lượt hoặc ván kết thúc), hệ thống mới kết sổ quả bom. Càng nhiều người chặt chồng lên nhau, "quả bom" càng lớn!</p>
+    <p><b>Thứ tự đánh:</b> Ở <b>ván đầu tiên</b>, người cầm <b>3♠</b> phải đánh 3♠ trong nước đầu tiên (nếu không có Tới Trắng). Từ <b>ván thứ hai</b>, người về Nhất ván trước được đánh đầu và được tự do chọn bộ bài.</p>
+    <p><b>Đè bài thông thường:</b> Nếu không phải tình huống chặt Heo/Đôi Thông/Tứ Quý, người sau phải đánh <b>cùng loại và cùng số lá</b> nhưng lớn hơn. Khi mọi người khác đã bỏ lượt, người đang giữ quyền (người vừa ra bộ cuối) được mở vòng mới và đánh tự do.</p>
     <p><b>Luật Báo Bài:</b> Hệ thống sẽ tự động thông báo cho cả bàn khi có người chỉ còn 1 lá bài trên tay.</p>
     <p><b>Sự kiện phát sinh & Phạt Thối Bài:</b></p>
     <ul>
