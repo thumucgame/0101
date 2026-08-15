@@ -826,6 +826,9 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   <button class="throw-btn" onclick="triggerReaction('LAUGH2')" title="Cười sảng khoái">🤣</button>
   <button class="throw-btn" onclick="triggerReaction('LAUGH3')" title="Cười sặc">🐶</button>
   <button class="throw-btn" onclick="triggerReaction('WAIT1')" title="Chị chờ nãy giờ Linda">⏳</button>
+  <button class="throw-btn" onclick="triggerReaction('CRY4')" title="Bạn cay không, khó chịu không, khóc đê">😾</button>
+  <button class="throw-btn" onclick="triggerReaction('TAUNT1')" title="Huấn Rose">🌹</button>
+  <button class="throw-btn" onclick="triggerReaction('TAUNT2')" title="Thôi ông im mẹ nó mồm đi">🤐</button>
 </div>
 
 <script>
@@ -883,7 +886,13 @@ const SOUND_URLS = {
   'LAUGH1': 'https://www.myinstants.com/media/sounds/evillaugh.swf.mp3',
   'LAUGH2': 'https://www.myinstants.com/media/sounds/ny-video-online-audio-converter.mp3',
   'LAUGH3': 'https://www.myinstants.com/media/sounds/laughing-dog-meme.mp3',
-  'WAIT1': 'https://www.myinstants.com/media/sounds/linda-chi-cho-cung-nay-gio-ne.mp3' // Chị chờ nãy giờ Linda - hối người chơi lâu ra bài
+  'WAIT1': 'https://www.myinstants.com/media/sounds/linda-chi-cho-cung-nay-gio-ne.mp3', // Chị chờ nãy giờ Linda - hối người chơi lâu ra bài
+  'CRY4': 'https://www.myinstants.com/media/sounds/ban-cay-khong-kho-chiu-khong-khoc-de_xTW4U8q.mp3', // Bạn cay không, khó chịu không, khóc đê
+  'TAUNT1': 'https://www.myinstants.com/media/sounds/khong-lam-ma-oi-co-an-thi-an-cut-mp3cut.mp3', // huấn rose
+  'TAUNT2': 'https://www.myinstants.com/media/sounds/thoi-ong-im-me-cai-mom-i-_-tuan-tien-ti_8as8efd6f5k.mp3', // Thôi ông im mẹ nó mồm đi
+  // ÂM "VỀ ĐÍCH": phát khi có người hết bài. Hạng 1 dùng FINISH_1ST, hạng 2-3 dùng FINISH_23.
+  'FINISH_1ST': 'https://www.myinstants.com/media/sounds/day-no-phai-the-chu-li-thang-nay-kha-va-gioi.mp3', // Đấy nó phải thế chứ lị, thằng này khá và giỏi
+  'FINISH_23': 'https://www.myinstants.com/media/sounds/kids-saying-yay-sound-effect_3.mp3' // YAAAAAAAAY
 };
 
 // Danh sách các key âm "chặt" để random mỗi lần chặt
@@ -892,15 +901,18 @@ function pickRandomChopSound(){
   return CHOP_SOUND_KEYS[Math.floor(Math.random() * CHOP_SOUND_KEYS.length)];
 }
 
-// Nhãn hiện trong bong bóng thoại tại ghế khi ai đó bấm reaction khóc/cười/hối
+// Nhãn hiện trong bong bóng thoại tại ghế khi ai đó bấm reaction khóc/cười/hối/cà khịa
 const REACTION_LABELS = {
   CRY1: '😭 Khóc thét!',
   CRY2: '😢 Hức hức...',
   CRY3: '👶 Mít ướt!',
+  CRY4: '😾 Cay không, khóc đê!',
   LAUGH1: '😂 Cười khinh!',
   LAUGH2: '🤣 Hahaha!',
   LAUGH3: '🐶 Cười sặc!',
-  WAIT1: '⏳ Chị chờ nãy giờ Linda!'
+  WAIT1: '⏳ Chị chờ nãy giờ Linda!',
+  TAUNT1: '🌹 Huấn Rose!',
+  TAUNT2: '🤐 Im mẹ nó mồm đi!'
 };
 
 // --- PRELOAD ÂM THANH: nạp sẵn tất cả file mp3 ngay khi trang tải xong,
@@ -2660,12 +2672,26 @@ function checkNextTurn(){
 // Ghi ngay Nước cơ bản khi người chơi vừa về hạng 1 hoặc hạng 2.
 // Điều này giúp người về Nhất/Nhì nhìn thấy điểm ngay, không phải chờ endGame().
 // Các khoản chặt/đền vẫn cộng dồn riêng và được trừ phần base đã hiển thị khi chốt ván.
+// Phát âm "về đích" khi có người hết bài: hạng 1 dùng FINISH_1ST, hạng 2-3 dùng FINISH_23.
+// Tách riêng khỏi awardLiveBaseScore (chỉ tính tiền cho hạng 1-2 ở chế độ WATER) để áp dụng
+// cho MỌI chế độ chơi và đúng cả hạng 3.
+function playFinishSound(rank){
+  if(rank === 1){
+    broadcastSoundEvent('FINISH_1ST', 0.9);
+  } else if(rank === 2 || rank === 3){
+    broadcastSoundEvent('FINISH_23', 0.9);
+  }
+}
+
 function awardLiveBaseScore(playerId, forcedRank){
-  if(!gameState || gameState.gameMode !== 'WATER' || !playerId) return;
+  if(!playerId) return;
+  const finishRank = Number.isInteger(forcedRank) ? forcedRank : (gameState && gameState.finished.indexOf(playerId) + 1);
+  playFinishSound(finishRank);
+  if(!gameState || gameState.gameMode !== 'WATER') return;
 
   // Ưu tiên thứ hạng đã được chốt ngay lúc người chơi hết bài.
   // Không phụ thuộc vào việc foldColdPlayers() có thêm người vào finished sau đó.
-  const rank = Number.isInteger(forcedRank) ? forcedRank : (gameState.finished.indexOf(playerId) + 1);
+  const rank = finishRank;
   if(rank < 1 || rank > 2) return;
 
   const activeCount = gameState.order.length;
