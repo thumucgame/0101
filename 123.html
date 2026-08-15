@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -136,20 +137,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   border:1px dashed var(--panel-line);border-radius:12px;margin:2px 42px;padding:8px 0;background:radial-gradient(ellipse at center, rgba(255,255,255,.03), transparent 70%);
 }
 
-.played-combo{display:flex;min-height:85px;align-items:center;justify-content:center;margin-top:auto;margin-bottom:auto;max-width:100%;overflow-x:auto;}
-/* FIX: canh giữa thật sự cho bài giữa bàn — width của inner được JS (layoutPlayedCombo) tính
-   cố định vừa khít số lá thực tế rồi margin:0 auto tự canh giữa, giống hệt cách #handCardsInner
-   canh giữa bài trên tay. Không dùng justify-content:center trên khung có overflow-x:auto vì
-   khi nội dung tràn, trình duyệt neo vị trí cuộn về đầu -> bài bị lệch trái. */
-.played-combo-inner{display:flex;margin:0 auto;}
-#playedComboInner{ --pc-card-w:76px; --pc-overlap:28px; }
-#playedComboInner .card.table-card{
-  width:var(--pc-card-w);height:calc(var(--pc-card-w) * 1.447);
-  margin-left:calc(var(--pc-overlap) * -1);
-}
-#playedComboInner .card.table-card:first-child{margin-left:0;}
-#playedComboInner .card.table-card .rank{font-size:calc(var(--pc-card-w) * 0.29);}
-#playedComboInner .card.table-card .suit{font-size:calc(var(--pc-card-w) * 0.29);}
+.played-combo{display:flex;gap:4px;min-height:85px;align-items:center;justify-content:center;margin-top:auto;margin-bottom:auto;max-width:100%;overflow-x:auto;}
 .action-log{font-size:11px;color:rgba(250,246,238,.85);margin-top:4px;margin-bottom:2px;font-weight:600;text-align:center;padding:2px 8px;background:rgba(0,0,0,0.4);border-radius:6px;}
 
 /* BONG BÓNG THÔNG BÁO NGAY TẠI VỊ TRÍ NGƯỜI VỪA HÀNH ĐỘNG (đánh/bỏ lượt/chặt/phạt...) */
@@ -526,10 +514,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 
   <div class="table-center">
     <div id="oppSlots"></div>
-    <div class="played-combo" id="playedCombo">
-      <div class="played-combo-inner" id="playedComboInner"></div>
-      <span id="playedComboEmpty" style="color:rgba(250,246,238,.4);font-size:11px;">Bàn trống (Tự do đánh)</span>
-    </div>
+    <div class="played-combo" id="playedCombo"></div>
     <div class="action-log" id="actionLog"></div>
     
     <!-- DÒNG THÔNG BÁO VÀ ĐỒNG HỒ ĐẾM SỐ LƯỢT ĐƯỢC CHUYỂN DỜI XUỐNG THẤP DƯỚI GẦN BÀI NGƯỜI CHƠI -->
@@ -1530,7 +1515,7 @@ function revealInstantWin(hands, winnerId, info){
   gameState = {
     hands, order: players.map(p=>p.id), names: Object.fromEntries(players.map(p=>[p.id, p.name])),
     hostId: players[0].id,
-    turnIdx: 0, leaderId: winnerId, currentCombo: { cards: hands[winnerId] }, firstMove: true, requiredCard: null,
+    turnIdx: 0, leaderId: winnerId, currentCombo: null, firstMove: true, requiredCard: null,
     finished: [], passed: new Set(), disconnected: new Set(), coldFolded: new Set(),
     scores: Object.fromEntries(players.map(p=>[p.id, 0])),
     liveScores: Object.fromEntries(players.map(p=>[p.id, 0])),
@@ -2537,22 +2522,15 @@ function renderCenter(){
     else timerBox.classList.remove('my-turn-timer');
   }
 
-  const pc = $('playedCombo');
-  const pcInner = $('playedComboInner');
-  const pcEmpty = $('playedComboEmpty');
-  pcInner.innerHTML = '';
+  const pc = $('playedCombo'); pc.innerHTML = '';
   if(st.currentCombo && st.currentCombo.cards){
     const comboCards = safeArray(st.currentCombo.cards);
-    pcEmpty.style.display = 'none';
-    pcInner.style.display = 'flex';
-    comboCards.forEach(c => pcInner.appendChild(createCardEl(c, false, false, true)));
-    // FIX: canh giữa thật + không bị tràn/lệch trái — tự tính lại kích thước & độ chồng lá
-    // vừa khít bề rộng khung .table-center thực tế (giống hệt cơ chế layoutHandCards cho bài
-    // trên tay), rồi margin:0 auto trên inner sẽ canh giữa chính xác dù có bao nhiêu lá.
-    layoutPlayedCombo(pc, pcInner, comboCards.length);
+    // FIX: sảnh/đôi thông dài (>6 lá) tự thu nhỏ (compact) để luôn hiện đủ, không bị tràn/cắt cụt
+    pc.classList.toggle('compact', comboCards.length > 6);
+    comboCards.forEach(c => pc.appendChild(createCardEl(c, false, false, true)));
   } else {
-    pcInner.style.display = 'none';
-    pcEmpty.style.display = 'inline';
+    pc.classList.remove('compact');
+    pc.innerHTML = '<span style="color:rgba(250,246,238,.4);font-size:11px;">Bàn trống (Tự do đánh)</span>';
   }
   $('actionLog').textContent = st.log || '';
 }
@@ -2670,61 +2648,7 @@ function layoutHandCards(outer, inner, n, retries){
 window.addEventListener('resize', () => {
   const hc = $('handCards'); const inner = $('handCardsInner');
   if(hc && inner && myHand && myHand.length && !isSpectator) layoutHandCards(hc, inner, myHand.length);
-  const pc = $('playedCombo'); const pcInner = $('playedComboInner');
-  if(pc && pcInner && pcInner.children.length) layoutPlayedCombo(pc, pcInner, pcInner.children.length);
 });
-
-// FIX: tính kích thước + độ chồng lá cho bài GIỮA BÀN (đánh ra / ngửa bài Tới Trắng) vừa khít
-// đúng bề rộng khung .table-center thực tế, y hệt nguyên lý layoutHandCards() ở trên — nhờ vậy
-// dù đánh 1 lá hay ngửa nguyên bộ 13 lá (Tới Trắng) vẫn LUÔN đủ, không tràn, và canh giữa thật
-// (margin:0 auto trên inner có width cố định do hàm này gán) thay vì bị lệch trái khi tràn khung.
-function layoutPlayedCombo(outer, inner, n, retries){
-  if(!outer || !inner || n <= 0) return;
-  retries = retries || 0;
-  const fullW = outer.clientWidth;
-  if(fullW < 20 && retries < 20){
-    requestAnimationFrame(() => layoutPlayedCombo(outer, inner, n, retries + 1));
-    return;
-  }
-  const safeW = fullW > 0 ? fullW : 280;
-  const isMobile = window.innerWidth <= 600;
-
-  // FIX: khi ngửa combo dài (sảnh/đôi thông >6 lá, hay 13 lá Tới Trắng), giới hạn kích thước
-  // TỐI ĐA nhỏ hơn ngay từ đầu (giống 2 mốc cố định cũ 52px desktop / 44px mobile) thay vì để
-  // thuật toán giữ cardW=76 rồi ép chồng lá gần hết (chỉ hở ~19px/lá) -> lá bài quá CAO, tràn
-  // đè lên ghế đối thủ / nhãn phía trên trong .table-center. Giới hạn thấp hơn giữ chiều cao lá
-  // bài vừa phải, không che các thành phần khác, mà vẫn đủ hở để đọc được rank/suit.
-  const maxW = n > 6 ? (isMobile ? 44 : 52) : 76;
-  const minW = 22;
-  const minSliver = 10;
-  const defaultOverlapRatio = 0.368;
-  const basePad = 8;
-  const avail = Math.max(safeW - basePad, minW);
-
-  let cardW = maxW;
-  let overlap = cardW * defaultOverlapRatio;
-
-  if(n > 1){
-    const totalAtDefault = cardW + (n - 1) * (cardW - overlap);
-    if(totalAtDefault > avail){
-      let sliver = (avail - cardW) / (n - 1);
-      if(sliver < minSliver){
-        cardW = Math.max((avail - (n - 1) * minSliver), minW);
-        sliver = Math.max((avail - cardW) / (n - 1), 2);
-      }
-      overlap = cardW - sliver;
-    }
-  } else {
-    cardW = Math.min(maxW, avail);
-    overlap = 0;
-  }
-
-  const totalWidth = (n <= 1) ? cardW : (cardW + (n - 1) * (cardW - overlap));
-
-  inner.style.width = totalWidth + 'px';
-  inner.style.setProperty('--pc-card-w', cardW + 'px');
-  inner.style.setProperty('--pc-overlap', overlap + 'px');
-}
 
 function createCardEl(c, selectable, small, tableCard){
   const el = document.createElement('div');
