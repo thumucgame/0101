@@ -3379,13 +3379,13 @@ function renderHand(){
       btnChop.classList.remove('hidden');
       btnChop.textContent = `⚡ Chặt Ngang (${sec}s)`;
       btnChop.disabled = selected.size === 0;
-      if(!btnChop.dataset.timer){
-        btnChop.dataset.timer = '1';
-        setTimeout(() => { btnChop.dataset.timer = ''; if(typeof applyState === 'function') applyState(currentState); }, 250);
-      }
+      // TỐI ƯU MOBILE: trước đây cứ mỗi 250ms lại gọi applyState(currentState) để cập nhật
+      // số giây đếm ngược -> mỗi lần đó render lại TOÀN BỘ bàn (renderOpponents + renderCenter +
+      // renderHand, dựng lại toàn bộ DOM tay bài) chỉ để đổi 1 con số -> giật/lag trên điện thoại
+      // trong suốt 3 giây mở cửa sổ Chặt Ngang. Giờ việc đếm ngược được giao cho interval nhẹ bên
+      // dưới (updateChopCountdownTick), chỉ đổi textContent của đúng nút này, không đụng DOM khác.
     } else {
       btnChop.classList.add('hidden');
-      btnChop.dataset.timer = '';
       btnChop.textContent = '⚡ Chặt Ngang';
     }
   }
@@ -3505,10 +3505,31 @@ function createCardEl(c, selectable, small, tableCard){
     el.onclick = () => {
       if(isSpectator || currentState.turnId !== myId || currentState.isEnded) return;
       if(selected.has(key)) selected.delete(key); else selected.add(key);
-      renderHand();
+      // TỐI ƯU MOBILE: trước đây bấm chọn 1 lá là gọi lại renderHand() -> xoá sạch rồi dựng lại
+      // TOÀN BỘ DOM của cả bộ bài trên tay + đo lại layout 2 lần liên tiếp (double rAF) chỉ để đổi
+      // viền vàng của đúng 1 lá vừa chạm -> đây là nguyên nhân chính gây giật mỗi khi chọn bài trên
+      // điện thoại (máy yếu càng rõ). Giờ chỉ toggle class trên đúng phần tử vừa bấm (rẻ, không
+      // reflow toàn khung) rồi cập nhật trạng thái nút Đánh/Chặt Ngang — không đụng gì khác.
+      el.classList.toggle('selected', selected.has(key));
+      updateHandActionButtonsOnly();
     };
   }
   return el;
+}
+
+// TỐI ƯU MOBILE: cập nhật trạng thái disable của nút "Đánh bài" / "Chặt Ngang" khi người chơi
+// chọn/bỏ chọn lá bài, KHÔNG render lại toàn bộ bàn (đây là phần duy nhất thực sự cần đổi khi
+// chỉ có selected thay đổi — mọi thứ khác trên bàn vẫn y nguyên).
+function updateHandActionButtonsOnly(){
+  if(!currentState) return;
+  const iAmColdFolded = safeArray(currentState.coldFolded).includes(myId);
+  const isMyTurn = !isSpectator && currentState.turnId === myId && !safeArray(currentState.finished).includes(myId) && !currentState.isEnded;
+  const btnPlay = $('btnPlay');
+  if(btnPlay) btnPlay.disabled = !isMyTurn || selected.size === 0 || iAmColdFolded;
+  const btnChop = $('btnChopInterrupt');
+  if(btnChop && !btnChop.classList.contains('hidden')){
+    btnChop.disabled = selected.size === 0;
+  }
 }
 
 setInterval(()=>{
@@ -3517,6 +3538,20 @@ setInterval(()=>{
   const el = $('turnTimerSecs');
   el.textContent = rem;
   el.classList.toggle('low', rem <= 5);
+}, 250);
+
+// TỐI ƯU MOBILE: cập nhật số giây đếm ngược của nút "Chặt Ngang" bằng cách chỉ đổi textContent
+// của riêng nút này (không render lại toàn bàn) — thay cho cách cũ gọi applyState() toàn bộ mỗi
+// 250ms trong renderHand(), vốn là nguyên nhân chính gây giật/lag trên điện thoại mỗi khi có
+// người đủ điều kiện Chặt Ngang (dựng lại toàn bộ DOM bàn+tay bài liên tục trong 3 giây).
+setInterval(()=>{
+  const btnChop = $('btnChopInterrupt');
+  if(!btnChop || btnChop.classList.contains('hidden')) return;
+  if(!currentState) return;
+  const chopDeadline = Number(currentState.chopInterruptDeadline || 0);
+  if(chopDeadline <= Date.now()){ btnChop.classList.add('hidden'); return; }
+  const sec = Math.max(1, Math.ceil((chopDeadline - Date.now()) / 1000));
+  btnChop.textContent = `⚡ Chặt Ngang (${sec}s)`;
 }, 250);
 
 $('btnSort').onclick = () => { 
