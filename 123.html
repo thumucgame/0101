@@ -241,14 +241,16 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 }
 
 .hand-cards{
-  display:flex;justify-content:flex-start;align-items:flex-end;
   min-height:130px;margin-bottom:4px;width:100%;max-width:100%;
   padding:0 6px;box-sizing:border-box;
-  overflow-x:auto;-webkit-overflow-scrolling:touch; /* QUAN TRỌNG: giữ flex-start, KHÔNG dùng
-    justify-content:center ở đây — center kết hợp overflow-x:auto khiến hầu hết trình duyệt
-    (đặc biệt Safari/iOS) không cuộn được tới phần đầu bị tràn sang trái, dễ gây lệch/mất lá.
-    Việc canh giữa dải bài được JS (layoutHandCards) đảm nhiệm bằng cách tính padding trái/phải
-    động, luôn giữ đúng bố cục flex-start bên trong. */
+  overflow-x:auto;-webkit-overflow-scrolling:touch; /* khung cuộn ngoài — chỉ là "cửa sổ nhìn",
+    KHÔNG tự canh giữa nội dung (tránh lỗi center+overflow trên Safari/iOS). Việc canh giữa
+    thật sự do .hand-cards-inner đảm nhiệm bằng margin:0 auto với width cố định do JS tính,
+    đây là cách canh giữa ổn định nhất, không phụ thuộc trình duyệt hay lỗi đo kích thước 0px
+    lúc khung còn ẩn (layoutHandCards tự chờ retry tới khi đo được kích thước thật). */
+}
+.hand-cards-inner{
+  display:flex;align-items:flex-end;margin:0 auto;
 }
 .hand-cards::-webkit-scrollbar{height:4px;}
 .hand-cards::-webkit-scrollbar-thumb{background:rgba(250,246,238,.25);border-radius:4px;}
@@ -529,7 +531,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
       <div id="myKneelingBadge" class="kneeling-badge hidden">🧎 Đang Quỳ</div>
       <div id="myLastCardBadge" class="last-card-badge hidden">⚠️ 1 LÁ!</div>
     </div>
-    <div class="hand-cards" id="handCards"></div>
+    <div class="hand-cards" id="handCards"><div class="hand-cards-inner" id="handCardsInner"></div></div>
     <div class="controls">
       <button class="btn btn-outline" id="btnSort">Xếp bài (Giá Trị)</button>
       <button class="btn btn-danger" id="btnPass">Bỏ lượt</button>
@@ -2554,8 +2556,10 @@ function renderHand(){
   } else if(iAmColdFolded){
     hc.innerHTML = '<div style="color:#5aa9d6;font-size:12px;padding:8px;text-align:center;">❄️ Bạn đã bị loại khỏi ván này vì CÓNG (chưa đánh được lá nào khi có người về Nhất).</div>';
   } else {
-    myHand.forEach(c => hc.appendChild(createCardEl(c, true, false, false)));
-    layoutHandCards(hc, myHand.length);
+    hc.innerHTML = '<div class="hand-cards-inner" id="handCardsInner"></div>';
+    const inner = $('handCardsInner');
+    myHand.forEach(c => inner.appendChild(createCardEl(c, true, false, false)));
+    layoutHandCards(hc, inner, myHand.length);
   }
 
   $('btnPlay').disabled = !isMyTurn || selected.size === 0 || iAmColdFolded;
@@ -2587,48 +2591,62 @@ function renderHand(){
 }
 
 // FIX: tính kích thước + độ chồng lá của 13 lá bài trên tay sao cho LUÔN dàn đều, vừa khít
-// đúng bề rộng khung nhìn thực tế (kể cả các màn hình điện thoại hẹp/lệch tỉ lệ khác nhau),
-// tránh trường hợp lá bài ngoài cùng bên trái bị tràn ra ngoài / bị cắt mất do kích thước
-// bài cố định (trước đây fix cứng 76px hoặc 64px không co giãn theo màn hình thực tế).
-// Đồng thời tự tính padding trái/phải để dải bài nằm ĐÚNG GIỮA khung — cố tình KHÔNG dùng
-// justify-content:center (xem giải thích trong CSS .hand-cards) vì sẽ gây lệch khi có tràn.
-function layoutHandCards(container, n){
-  if(n <= 0) return;
-  const maxW = 76;          // kích thước lá bài tối đa (giống lá bài trên bàn ở desktop)
-  const minW = 30;          // kích thước lá bài nhỏ nhất chấp nhận được (vẫn đọc được)
-  const minSliver = 12;     // phần hở tối thiểu của mỗi lá bị chồng, để còn bấm/nhìn được rõ
-  const basePad = 8;        // lề tối thiểu hai bên (4px mỗi bên) tránh lá dính sát mép/scrollbar
-  const fullW = container.clientWidth;
-  const avail = Math.max(fullW - basePad, minW);
+// đúng bề rộng khung nhìn thực tế, tránh trường hợp lá bài ngoài cùng bị tràn ra ngoài/mất do
+// kích thước cố định trước đây. Việc canh giữa do CSS đảm nhiệm (.hand-cards-inner{margin:0 auto})
+// với width cố định do hàm này gán — KHÔNG dùng justify-content:center hay tự set padding thủ công,
+// vì 2 cách đó dễ tính sai/lệch khi container đo được kích thước 0px lúc khung còn đang ẩn (loạn bài).
+// outer = khung cuộn ngoài (#handCards, dùng để ĐO bề rộng thật); inner = khối chứa các lá bài
+// thật sự (#handCardsInner, được gán width cố định + margin:auto để tự canh giữa).
+function layoutHandCards(outer, inner, n, retries){
+  if(!outer || !inner || n <= 0) return;
+  retries = retries || 0;
+  const fullW = outer.clientWidth;
+  // Khung có thể đang bị ẩn (display:none ở cha) nên đo ra 0px lúc mới vào ván — thử lại vài
+  // lần ở frame kế tiếp thay vì tính bừa ra bố cục sai/lộn xộn.
+  if(fullW < 20 && retries < 20){
+    requestAnimationFrame(() => layoutHandCards(outer, inner, n, retries + 1));
+    return;
+  }
+  const safeW = fullW > 0 ? fullW : 320; // rơi vào TH hiếm khi vẫn không đo được, dùng ước lượng hợp lý
+
+  const maxW = 76;              // kích thước lá bài tối đa (giống lá bài trên bàn ở desktop)
+  const minW = 30;               // kích thước lá bài nhỏ nhất chấp nhận được (vẫn đọc được)
+  const minSliver = 12;          // phần hở tối thiểu của mỗi lá bị chồng, để còn bấm/nhìn được rõ
+  const defaultOverlapRatio = 0.368; // độ chồng "tự nhiên" mặc định (~28px ở cardW 76px, giống bố cục gốc)
+  const basePad = 8;             // lề tối thiểu hai bên tránh lá cuối dính sát mép/scrollbar
+  const avail = Math.max(safeW - basePad, minW);
 
   let cardW = maxW;
-  let overlap = 0;
+  let overlap = cardW * defaultOverlapRatio;
+
   if(n > 1){
-    let sliver = (avail - cardW) / (n - 1);
-    if(sliver < minSliver){
-      cardW = Math.max((avail - (n - 1) * minSliver), minW);
-      sliver = Math.max((avail - cardW) / (n - 1), 2);
+    const totalAtDefault = cardW + (n - 1) * (cardW - overlap);
+    if(totalAtDefault > avail){
+      // Không đủ chỗ để giữ độ chồng mặc định -> tăng độ chồng (giảm phần hở) cho vừa khung
+      let sliver = (avail - cardW) / (n - 1);
+      if(sliver < minSliver){
+        // Vẫn không đủ dù chồng gần hết -> mới bắt đầu thu nhỏ kích thước lá bài
+        cardW = Math.max((avail - (n - 1) * minSliver), minW);
+        sliver = Math.max((avail - cardW) / (n - 1), 2);
+      }
+      overlap = cardW - sliver;
     }
-    overlap = cardW - sliver;
+    // Nếu dư chỗ (totalAtDefault <= avail): GIỮ NGUYÊN độ chồng mặc định, không ép các lá
+    // giãn cách xa nhau lấp đầy khung — để dải bài compact tự nhiên, canh giữa nhờ margin:auto.
   } else {
     cardW = Math.min(maxW, avail);
+    overlap = 0;
   }
 
-  // Tổng bề rộng thực tế của cả dải bài (từ mép trái lá đầu tới mép phải lá cuối)
   const totalWidth = (n <= 1) ? cardW : (cardW + (n - 1) * (cardW - overlap));
-  // Phần trống còn lại chia đều hai bên để dải bài nằm chính giữa khung, dùng padding
-  // (không dùng justify-content:center) để tránh lỗi cuộn ngang lệch tâm nêu trên.
-  const extra = Math.max(fullW - totalWidth - basePad, 0);
-  const sidePad = (basePad / 2) + (extra / 2);
 
-  container.style.paddingLeft = sidePad + 'px';
-  container.style.paddingRight = sidePad + 'px';
-  container.style.setProperty('--hand-card-w', cardW + 'px');
-  container.style.setProperty('--hand-overlap', overlap + 'px');
+  inner.style.width = totalWidth + 'px';
+  inner.style.setProperty('--hand-card-w', cardW + 'px');
+  inner.style.setProperty('--hand-overlap', overlap + 'px');
 }
 window.addEventListener('resize', () => {
-  const hc = $('handCards');
-  if(hc && myHand && myHand.length && !isSpectator) layoutHandCards(hc, myHand.length);
+  const hc = $('handCards'); const inner = $('handCardsInner');
+  if(hc && inner && myHand && myHand.length && !isSpectator) layoutHandCards(hc, inner, myHand.length);
 });
 
 function createCardEl(c, selectable, small, tableCard){
