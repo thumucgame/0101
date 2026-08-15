@@ -242,8 +242,9 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 
 .hand-cards{
   display:flex;justify-content:center;align-items:flex-end;
-  min-height:92px;margin-bottom:4px;width:100%;max-width:100%;
+  min-height:130px;margin-bottom:4px;width:100%;max-width:100%;
   padding:0 6px;box-sizing:border-box;
+  overflow-x:auto;-webkit-overflow-scrolling:touch; /* lưới an toàn: nếu vẫn tràn ở màn quá hẹp, cho cuộn ngang thay vì cắt cụt */
 }
 
 /* CARDS */
@@ -274,14 +275,15 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .played-combo.compact .card.table-card .rank{font-size:15px;}
 .played-combo.compact .card.table-card .suit{font-size:15px;}
 
-/* FIX: bài trên tay của người đánh (chính mình) tăng kích thước lớn hơn nữa để dễ nhìn,
-   tách riêng khỏi kích thước .card mặc định (dùng chung cho các nơi khác). */
+/* FIX: bài trên tay bằng đúng kích thước bài trên bàn (table-card) để đồng bộ, dễ nhìn hơn.
+   Margin-left ÂM HƠN nhiều so với table-card (vốn chỉ cần hiện tối đa ~6-8 lá) vì tay bài
+   có thể có tới 13 lá cùng lúc — cần chồng sâu hơn để không tràn viền mobile. */
 #handCards .card{
-  width:64px;height:94px;margin-left:-26px;
+  width:76px;height:110px;margin-left:-40px;
 }
-#handCards .card .rank{font-size:17px;}
-#handCards .card .suit{font-size:17px;}
-#handCards .card.selected{transform:translateY(-18px);}
+#handCards .card .rank{font-size:22px;}
+#handCards .card .suit{font-size:22px;}
+#handCards .card.selected{transform:translateY(-20px);}
 
 .controls{display:flex;gap:6px;width:100%;max-width:320px;justify-content:center;padding:0 6px;}
 .controls .btn{flex:1;padding:7px 8px;font-size:12px;}
@@ -298,10 +300,10 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   .played-combo.compact .card.table-card{width:44px;height:64px;margin-left:-17px;}
   .played-combo.compact .card.table-card .rank{font-size:12px;}
   .played-combo.compact .card.table-card .suit{font-size:12px;}
-  #handCards .card{width:54px;height:80px;margin-left:-24px;}
-  #handCards .card .rank{font-size:15px;}
-  #handCards .card .suit{font-size:15px;}
-  .hand-cards{min-height:78px;margin-bottom:4px;}
+  #handCards .card{width:64px;height:93px;margin-left:-42px;}
+  #handCards .card .rank{font-size:18px;}
+  #handCards .card .suit{font-size:18px;}
+  .hand-cards{min-height:110px;margin-bottom:4px;}
   .p-slot{padding:3px 6px;min-width:64px;}
   .p-slot .avatar{width:22px;height:22px;font-size:11px;}
   .table-center{margin:2px 34px;}
@@ -562,7 +564,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
       <li><b>Bàn 2 người:</b> Nhất (+1), Bét (-1)</li>
     </ul>
     <p><b>Luật Tới Trắng (Ù ngay khi chia bài):</b> Nếu vừa chia bài xong mà có người sở hữu Sảnh Rồng (3→A), Lục Đôi (6 đôi) hoặc Ngũ Đôi Thông (5 đôi liên tiếp), ván đấu kết thúc ngay lập tức, người đó thắng trắng và nhận thưởng cố định từ tất cả người chơi còn lại, không chia bài đánh tiếp.</p>
-    <p><b>Luật Phạt Cóng/Đốt:</b> Người thua mà không đánh được lá bài nào trong suốt ván (bị chặn/giết ngộp hoàn toàn) sẽ bị phạt gấp đôi số nước so với mức phạt thông thường của hạng đó.</p>
+    <p><b>Luật Phạt Cóng/Đốt:</b> Người thua mà không đánh được lá bài nào trong suốt ván (bị chặn/giết ngộp hoàn toàn) sẽ bị phạt CỐ ĐỊNH bằng gấp đôi mức Bét chuẩn của bàn (Bàn 2 người: -2, Bàn 3-4 người: -4), áp dụng như nhau cho mọi hạng bị Cóng — kể cả hạng nhì, không chỉ hạng bét.</p>
     <p><b>Luật Chặt Ngang (không cần đúng lượt):</b> Khi trên bàn đang có Heo đơn/đôi, 3 Đôi Thông hoặc Tứ Quý bị lộ, bất kỳ ai giữ bộ chặt hợp lệ đều có thể chặt ngay lập tức bằng nút "⚡ Chặt Ngang", không cần chờ đến lượt. Thứ bậc chặt cụ thể:</p>
     <table>
       <thead><tr><th>Bị chặt</th><th>Được chặt bởi</th></tr></thead>
@@ -579,7 +581,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     <p><b>Sự kiện phát sinh & Phạt Thối Bài:</b></p>
     <ul>
       <li><b>Ăn Chặt / Chặt Bài:</b> Người bị chặt trả trực tiếp điểm/nước phạt cho người chặt.</li>
-      <li><b>Thối Heo / Thối Hàng:</b> Cuối ván người thối trả nước/điểm thưởng trực tiếp cho **Người về Nhất** (Heo đen: 1 nước, Heo đỏ: 2 nước, 3 đôi thông: 3 nước, Tứ quý/4 đôi thông: 4 nước).</li>
+      <li><b>Thối Heo / Thối Hàng:</b> Cuối ván người thối trả nước/điểm thưởng trực tiếp cho **Người về Nhất** (Heo đen: 1 nước, Heo đỏ: 2 nước, 3 đôi thông: 3 nước, Tứ quý/4 đôi thông: 4 nước). Riêng người về <b>Bét</b> bị thối thì đền cho <b>hạng kế Bét</b> (người vừa đấu 1-chọi-1 với họ ở pha cuối), không đền cho Nhất.</li>
       <li><b>Đền Bài / Đền Làng:</b> Người vi phạm luật đền chịu toàn bộ số nước phạt của cả bàn cho người thắng. Bất kỳ người chơi nào cũng có thể bấm "🚩 Báo Vi Phạm", chủ phòng xác nhận và nhập số nước phạt để cộng/trừ trực tiếp.</li>
     </ul>
 
@@ -1543,7 +1545,7 @@ function finalizeInstantWin(){
       if (id === winnerId) {
         results[id] = { rank: 1, score: reward * (activeCount - 1), note: `🌟 Tới Trắng: ${label} (+${reward} nước/người)`, name, cards: winnerHandCards };
       } else {
-        results[id] = { rank: 2, score: -reward, note: `Thua Trắng trước ${label} (-${reward})`, name };
+        results[id] = { rank: 2, score: -reward, note: `Thua Trắng trước ${label} (-${reward})`, name, cards: safeArray(gameState.hands[id]) };
       }
     });
     let balances = {};
@@ -1558,7 +1560,7 @@ function finalizeInstantWin(){
         kneelingTracker[id] = (mode === 'KNEEL_B') ? 0 : kneelingTracker[id];
         results[id] = { rank: 1, score: '🎉 TỚI TRẮNG', note: `🌟 ${label} - Giải Hạn Quỳ / Về Nhất`, name, cards: winnerHandCards };
       } else {
-        results[id] = { rank: 2, score: 'Miễn Quỳ Ván Này', note: `Bị Trắng Bài (${label}) - không tính là thua ván thường`, name };
+        results[id] = { rank: 2, score: 'Miễn Quỳ Ván Này', note: `Bị Trắng Bài (${label}) - không tính là thua ván thường`, name, cards: safeArray(gameState.hands[id]) };
       }
     });
     broadcastResult(results, []);
