@@ -146,7 +146,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   min-width:0;max-width:calc(100% - 84px);box-sizing:border-box;
 }
 
-.played-combo{display:flex;gap:4px;min-height:85px;align-items:center;justify-content:center;margin-top:auto;margin-bottom:auto;width:100%;max-width:100%;min-width:0;overflow-x:auto;box-sizing:border-box;}
+.played-combo{display:flex;gap:4px;min-height:85px;align-items:center;justify-content:center;margin-top:auto;margin-bottom:auto;width:100%;max-width:100%;min-width:0;overflow:hidden;box-sizing:border-box;padding:0 4px;}
 .action-log{font-size:11px;color:rgba(250,246,238,.85);margin:8px auto 8px;font-weight:600;text-align:center;padding:3px 10px;background:rgba(0,0,0,0.4);border-radius:6px;max-width:92%;box-sizing:border-box;white-space:normal;word-break:break-word;overflow-wrap:anywhere;line-height:1.25;position:relative;z-index:8;}
 
 /* BONG BÓNG THÔNG BÁO NGAY TẠI VỊ TRÍ NGƯỜI VỪA HÀNH ĐỘNG (đánh/bỏ lượt/chặt/phạt...) */
@@ -175,15 +175,15 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 /* Ghế trên cùng (slot-top) sát mép trên màn hình, dễ bị #tableScreen (overflow:hidden) cắt cụt
    khi bong bóng bung lên phía trên -> lật bong bóng xuống PHÍA DƯỚI avatar thay vì phía trên */
 .slot-top .seat-bubble{
-  bottom:auto;top:100%;margin-bottom:0;margin-top:7px;
-  transform:translateX(-50%) translateY(-6px) scale(.85);
+  bottom:100%;top:auto;margin-top:0;margin-bottom:7px;
+  transform:translateX(-50%) translateY(6px) scale(.85);
 }
 .slot-top .seat-bubble.show{transform:translateX(-50%) translateY(0) scale(1);}
 .slot-top .seat-bubble::after{
-  top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:var(--gold,#d4af37);
+  top:100%;bottom:auto;border-bottom-color:transparent;border-top-color:var(--gold,#d4af37);
 }
-.slot-top .seat-bubble.penalty::after{border-bottom-color:#ff5252;border-top-color:transparent;}
-.slot-top .seat-bubble.chop::after{border-bottom-color:#ffb020;border-top-color:transparent;}
+.slot-top .seat-bubble.penalty::after{border-top-color:#ff5252;border-bottom-color:transparent;}
+.slot-top .seat-bubble.chop::after{border-top-color:#ffb020;border-bottom-color:transparent;}
 
 @media (max-width:420px){ .seat-bubble{font-size:10.5px;max-width:104px;padding:4px 8px;-webkit-line-clamp:3;} }
 
@@ -336,6 +336,15 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 }
 .played-combo.compact .card.table-card .rank{font-size:15px;}
 .played-combo.compact .card.table-card .suit{font-size:15px;}
+/* Sảnh/đôi thông rất dài: thu nhỏ thêm để TOÀN BỘ bộ bài luôn nằm gọn trong bàn,
+   không tạo thanh cuộn và không đẩy/đè sang vùng chữ. */
+.played-combo.ultra-compact{gap:2px;}
+.played-combo.ultra-compact .card.table-card{
+  width:30px;height:44px;margin-left:-9px;border-width:1px;
+}
+.played-combo.ultra-compact .card.table-card:first-child{margin-left:0;}
+.played-combo.ultra-compact .card.table-card .rank,
+.played-combo.ultra-compact .card.table-card .suit{font-size:10px;}
 
 /* FIX: 13 lá bài trên tay giờ tự co giãn kích thước + độ chồng lá theo đúng bề rộng màn hình
    (tính bằng JS trong layoutHandCards(), gán qua 2 biến CSS --hand-card-w / --hand-overlap).
@@ -381,6 +390,9 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 }
 
 @media (max-width:360px){
+  .played-combo.ultra-compact .card.table-card{width:26px;height:38px;margin-left:-8px;}
+  .played-combo.ultra-compact .card.table-card .rank,
+  .played-combo.ultra-compact .card.table-card .suit{font-size:9px;}
   .table-center{margin:2px 30px;max-width:calc(100% - 60px);}
   .slot-left{left:-24px;}
   .slot-right{right:-24px;}
@@ -397,7 +409,9 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .result-table td.amt{text-align:right;font-weight:700;}
 .amt.plus{color:var(--good);}
 .amt.minus{color:var(--bad);}
-.reveal-hand-row{display:flex;flex-wrap:wrap;align-items:center;margin-top:4px;gap:0;}
+.reveal-hand-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;margin-top:5px;padding-top:3px;gap:0;max-width:100%;overflow:visible;}
+.result-table td:nth-child(2){min-width:0;}
+.reveal-hand-row .card.small{flex:0 0 auto;}
 .card.small{width:26px;height:37px;margin-left:-13px;padding:2px;border-radius:4px;box-shadow:-1px 1px 3px rgba(0,0,0,.4);}
 .card.small:first-child{margin-left:0;}
 .card.small .rank{font-size:9.5px;}
@@ -1647,6 +1661,7 @@ function revealInstantWin(hands, winnerId, info){
     scores: Object.fromEntries(players.map(p=>[p.id, 0])),
     liveScores: Object.fromEntries(players.map(p=>[p.id, 0])),
     playedCardsCount: Object.fromEntries(players.map(p=>[p.id, 0])),
+    revealedCards: Object.fromEntries(players.map(p=>[p.id, safeArray(hands[p.id]).map(c=>({r:c.r,s:c.s}))])),
     kneelingStatus: { ...kneelingTracker },
     roundLog: [{ icon:'🌟', text: `${winnerName} chia được ${info.label} — Tới Trắng, kết thúc ván ngay lập tức!` }],
     log: `🌟 TỚI TRẮNG! ${winnerName} có ${info.label} — kết thúc ván ngay.`,
@@ -1782,6 +1797,7 @@ function dealNewGame(){
     scores: Object.fromEntries(players.map(p=>[p.id, 0])),
     liveScores: Object.fromEntries(players.map(p=>[p.id, 0])),
     playedCardsCount: Object.fromEntries(players.map(p=>[p.id, 0])),
+    revealedCards: Object.fromEntries(players.map(p=>[p.id, []])),
     kneelingStatus: { ...kneelingTracker },
     roundLog: [],
     log: logText,
@@ -2071,6 +2087,9 @@ function handleAction(playerId, action, isAuto=false){
 
     gameState.hands[playerId] = hand.filter(c => !cards.some(sc => sc.r === c.r && sc.s === c.s));
     gameState.playedCardsCount[playerId] += cards.length;
+    if(!gameState.revealedCards) gameState.revealedCards = {};
+    if(!gameState.revealedCards[playerId]) gameState.revealedCards[playerId] = [];
+    gameState.revealedCards[playerId].push(...cards.map(c=>({r:c.r,s:c.s})));
     gameState.currentCombo = combo;
     gameState.leaderId = playerId;
     gameState.firstMove = false;
@@ -2182,6 +2201,9 @@ function handleAction(playerId, action, isAuto=false){
 
     gameState.hands[playerId] = hand.filter(c => !cards.some(sc => sc.r === c.r && sc.s === c.s));
     gameState.playedCardsCount[playerId] += cards.length;
+    if(!gameState.revealedCards) gameState.revealedCards = {};
+    if(!gameState.revealedCards[playerId]) gameState.revealedCards[playerId] = [];
+    gameState.revealedCards[playerId].push(...cards.map(c=>({r:c.r,s:c.s})));
     gameState.currentCombo = combo;
     gameState.leaderId = playerId;
     gameState.firstMove = false;
@@ -2264,7 +2286,17 @@ function endGame(){
   // NGỬA BÀI CUỐI VÁN: chụp lại đúng số lá còn sót trên tay từng người (đặc biệt người
   // về cuối / bị thối Heo-Tứ Quý-Đôi Thông) để cả bàn XEM ĐƯỢC MẶT BÀI thật, tránh tranh cãi.
   const finalHandsSnapshot = {};
-  gameState.order.forEach(id => { finalHandsSnapshot[id] = safeArray(gameState.hands[id]); });
+  gameState.order.forEach(id => {
+    const played = safeArray(gameState.revealedCards && gameState.revealedCards[id]);
+    const remaining = safeArray(gameState.hands[id]);
+    const all = [...played, ...remaining];
+    const seen = new Set();
+    finalHandsSnapshot[id] = all.filter(c => {
+      const k = cardKey(c);
+      if(seen.has(k)) return false;
+      seen.add(k); return true;
+    });
+  });
 
   if(mode === 'WATER'){
     // Xử lý đền phạt Thối Heo/Thối Hàng khi kết ván.
@@ -2694,9 +2726,10 @@ function renderCenter(){
     const comboCards = safeArray(st.currentCombo.cards);
     // FIX: sảnh/đôi thông dài (>6 lá) tự thu nhỏ (compact) để luôn hiện đủ, không bị tràn/cắt cụt
     pc.classList.toggle('compact', comboCards.length > 6);
+    pc.classList.toggle('ultra-compact', comboCards.length > 10);
     comboCards.forEach(c => pc.appendChild(createCardEl(c, false, false, true)));
   } else {
-    pc.classList.remove('compact');
+    pc.classList.remove('compact','ultra-compact');
     pc.innerHTML = '<span style="color:rgba(250,246,238,.4);font-size:11px;">Bàn trống (Tự do đánh)</span>';
   }
   $('actionLog').textContent = st.log || '';
@@ -3105,8 +3138,8 @@ function showResultOverlay(results, settlements){
 
     const hasCards = r.cards && r.cards.length > 0;
     const revealId = `revealCards-${idx}`;
-    // NGỬA BÀI CÒN LẠI (thối Heo/Tứ Quý/Đôi Thông, hoặc bài Tới Trắng) ngay dưới tên
-    // để cả bàn nhìn thấy mặt bài thật trước khi đóng kết quả ván, tránh tranh cãi.
+    // NGỬA TOÀN BỘ 13 LÁ CUỐI VÁN ngay dưới tên từng người để cả bàn
+    // xem đầy đủ bài đã đánh + bài còn trên tay, không chỉ riêng người Bét.
     const revealRow = hasCards
       ? `<div class="reveal-hand-row" id="${revealId}"></div>`
       : '';
