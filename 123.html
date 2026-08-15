@@ -244,8 +244,12 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   display:flex;justify-content:center;align-items:flex-end;
   min-height:130px;margin-bottom:4px;width:100%;max-width:100%;
   padding:0 6px;box-sizing:border-box;
-  overflow-x:auto;-webkit-overflow-scrolling:touch; /* lưới an toàn: nếu vẫn tràn ở màn quá hẹp, cho cuộn ngang thay vì cắt cụt */
+  overflow-x:auto;-webkit-overflow-scrolling:touch; /* JS (layoutHandCards) luôn tính kích thước lá bài
+    vừa khít khung trước khi render, nên overflow-x chỉ còn là lưới an toàn dự phòng, không phải cơ chế
+    chính để xem hết bài nữa. Dùng justify-content:center để bài dàn đều, cân giữa khung tay bài. */
 }
+.hand-cards::-webkit-scrollbar{height:4px;}
+.hand-cards::-webkit-scrollbar-thumb{background:rgba(250,246,238,.25);border-radius:4px;}
 
 /* CARDS */
 .card{
@@ -275,15 +279,20 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .played-combo.compact .card.table-card .rank{font-size:15px;}
 .played-combo.compact .card.table-card .suit{font-size:15px;}
 
-/* FIX: bài trên tay bằng đúng kích thước bài trên bàn (table-card) để đồng bộ, dễ nhìn hơn.
-   Margin-left ÂM HƠN nhiều so với table-card (vốn chỉ cần hiện tối đa ~6-8 lá) vì tay bài
-   có thể có tới 13 lá cùng lúc — cần chồng sâu hơn để không tràn viền mobile. */
+/* FIX: 13 lá bài trên tay giờ tự co giãn kích thước + độ chồng lá theo đúng bề rộng màn hình
+   (tính bằng JS trong layoutHandCards(), gán qua 2 biến CSS --hand-card-w / --hand-overlap).
+   Nhờ vậy bài luôn dàn đều vừa khít khung nhìn, không bị cắt/mất lá bên trái do tràn ngang,
+   và không cần cuộn ngang trên điện thoại (trừ trường hợp quá nhỏ mới cần cuộn dự phòng). */
+#handCards{ --hand-card-w:76px; --hand-overlap:28px; }
 #handCards .card{
-  width:76px;height:110px;margin-left:-40px;
+  width:var(--hand-card-w);
+  height:calc(var(--hand-card-w) * 1.447);
+  margin-left:calc(var(--hand-overlap) * -1);
+  flex-shrink:0;
 }
-#handCards .card .rank{font-size:22px;}
-#handCards .card .suit{font-size:22px;}
-#handCards .card.selected{transform:translateY(-20px);}
+#handCards .card .rank{font-size:calc(var(--hand-card-w) * 0.29);}
+#handCards .card .suit{font-size:calc(var(--hand-card-w) * 0.29);}
+#handCards .card.selected{transform:translateY(calc(var(--hand-card-w) * -0.26));}
 
 .controls{display:flex;gap:6px;width:100%;max-width:320px;justify-content:center;padding:0 6px;}
 .controls .btn{flex:1;padding:7px 8px;font-size:12px;}
@@ -300,9 +309,8 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   .played-combo.compact .card.table-card{width:44px;height:64px;margin-left:-17px;}
   .played-combo.compact .card.table-card .rank{font-size:12px;}
   .played-combo.compact .card.table-card .suit{font-size:12px;}
-  #handCards .card{width:64px;height:93px;margin-left:-42px;}
-  #handCards .card .rank{font-size:18px;}
-  #handCards .card .suit{font-size:18px;}
+  /* #handCards .card KHÔNG đặt width/margin cố định ở đây nữa — JS (layoutHandCards) luôn
+     tính lại --hand-card-w / --hand-overlap vừa khít màn hình mỗi lần render bài. */
   .hand-cards{min-height:110px;margin-bottom:4px;}
   .p-slot{padding:3px 6px;min-width:64px;}
   .p-slot .avatar{width:22px;height:22px;font-size:11px;}
@@ -1508,15 +1516,19 @@ function revealInstantWin(hands, winnerId, info){
     liveScores: Object.fromEntries(players.map(p=>[p.id, 0])),
     playedCardsCount: Object.fromEntries(players.map(p=>[p.id, 0])),
     kneelingStatus: { ...kneelingTracker },
-    roundLog: [{ icon:'🌟', text: `${winnerName} chia được ${info.label} — ngửa toàn bộ bài để cả bàn xác nhận trước khi báo Tới Trắng.` }],
-    log: `🌟 TỚI TRẮNG! ${winnerName} có ${info.label} — đang ngửa bài xác nhận, chưa kết thúc ván.`,
+    roundLog: [{ icon:'🌟', text: `${winnerName} chia được ${info.label} — Tới Trắng, kết thúc ván ngay lập tức!` }],
+    log: `🌟 TỚI TRẮNG! ${winnerName} có ${info.label} — kết thúc ván ngay.`,
     gameMode: roomSettings.gameMode, turnSeconds: roomSettings.turnSeconds, stakeUnit: roomSettings.stakeUnit,
     hideCardCount: roomSettings.hideCardCount, turnDeadline: Date.now(), isEnded: false,
-    instantWin: { winnerId, type: info.type, label: info.label, reward: info.reward, confirmed: false }
+    // FIX: Tới Trắng giờ không cần chủ phòng xác nhận nữa (bước xác nhận cũ hay bị lỗi/treo bàn).
+    // confirmed luôn = true ngay từ đầu, kết thúc ván tự động giống hệt lúc "giết ngộp" bình
+    // thường (đánh hết bài / chặt hết bàn) — chỉ khác lý do thắng ghi trong roundLog/kết quả.
+    instantWin: { winnerId, type: info.type, label: info.label, reward: info.reward, confirmed: true }
   };
   bumpActor(winnerId, `🌟 TỚI TRẮNG! ${info.label}`);
   isSpectator = false;
-  broadcastState();
+  broadcastState();   // đồng bộ trạng thái ván (bài đã chia, tên người thắng...) cho cả bàn
+  finalizeInstantWin(); // kết thúc & tính kết quả ngay, không chờ chủ phòng bấm xác nhận nữa
 }
 
 function finalizeInstantWin(){
@@ -1535,7 +1547,7 @@ function finalizeInstantWin(){
 
   lastGameWinnerId = winnerId;
   gameState.finished = [winnerId, ...gameState.order.filter(id => id !== winnerId)];
-  gameState.roundLog.push({ icon:'✅', text: `Chủ phòng đã xác nhận: ${winnerName} thắng trắng với ${label}.` });
+  gameState.roundLog.push({ icon:'✅', text: `${winnerName} thắng Tới Trắng với ${label} — ván kết thúc.` });
 
   const results = {};
   const winnerHandCards = safeArray(gameState.hands[winnerId]); // ngửa nguyên bộ bài Tới Trắng để cả bàn xác nhận lại
@@ -2541,6 +2553,7 @@ function renderHand(){
     hc.innerHTML = '<div style="color:#5aa9d6;font-size:12px;padding:8px;text-align:center;">❄️ Bạn đã bị loại khỏi ván này vì CÓNG (chưa đánh được lá nào khi có người về Nhất).</div>';
   } else {
     myHand.forEach(c => hc.appendChild(createCardEl(c, true, false, false)));
+    layoutHandCards(hc, myHand.length);
   }
 
   $('btnPlay').disabled = !isMyTurn || selected.size === 0 || iAmColdFolded;
@@ -2570,6 +2583,39 @@ function renderHand(){
     if(iAmActive) btnFoul.classList.remove('hidden'); else btnFoul.classList.add('hidden');
   }
 }
+
+// FIX: tính kích thước + độ chồng lá của 13 lá bài trên tay sao cho LUÔN dàn đều, vừa khít
+// đúng bề rộng khung nhìn thực tế (kể cả các màn hình điện thoại hẹp/lệch tỉ lệ khác nhau),
+// tránh trường hợp lá bài ngoài cùng bên trái bị tràn ra ngoài / bị cắt mất do kích thước
+// bài cố định (trước đây fix cứng 76px hoặc 64px không co giãn theo màn hình thực tế).
+function layoutHandCards(container, n){
+  if(n <= 0) return;
+  const maxW = 76;          // kích thước lá bài tối đa (giống lá bài trên bàn ở desktop)
+  const minW = 30;          // kích thước lá bài nhỏ nhất chấp nhận được (vẫn đọc được)
+  const minSliver = 12;     // phần hở tối thiểu của mỗi lá bị chồng, để còn bấm/nhìn được rõ
+  const safePad = 10;       // chừa lề an toàn hai bên tránh lá cuối dính sát mép/scrollbar
+  const avail = Math.max(container.clientWidth - safePad, minW);
+
+  let cardW = maxW;
+  let overlap = 0;
+  if(n > 1){
+    let sliver = (avail - cardW) / (n - 1);
+    if(sliver < minSliver){
+      cardW = Math.max((avail - (n - 1) * minSliver), minW);
+      sliver = Math.max((avail - cardW) / (n - 1), 2);
+    }
+    overlap = cardW - sliver;
+  } else {
+    cardW = Math.min(maxW, avail);
+  }
+
+  container.style.setProperty('--hand-card-w', cardW + 'px');
+  container.style.setProperty('--hand-overlap', overlap + 'px');
+}
+window.addEventListener('resize', () => {
+  const hc = $('handCards');
+  if(hc && myHand && myHand.length && !isSpectator) layoutHandCards(hc, myHand.length);
+});
 
 function createCardEl(c, selectable, small, tableCard){
   const el = document.createElement('div');
