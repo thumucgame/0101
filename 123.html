@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -265,10 +266,6 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .card.table-card:first-child{margin-left:0;}
 .card.table-card .rank{font-size:22px;}
 .card.table-card .suit{font-size:22px;}
-/* SẢNH DÀI (>6 lá): thu nhỏ bài trên bàn để luôn vừa khít màn hình, không bị tràn/cắt cụt khi xem trên điện thoại */
-.card.table-card.compact{width:38px;height:55px;margin-left:-19px;padding:2px;}
-.card.table-card.compact .rank{font-size:12px;}
-.card.table-card.compact .suit{font-size:12px;}
 
 .controls{display:flex;gap:6px;width:100%;max-width:320px;justify-content:center;padding:0 6px;}
 .controls .btn{flex:1;padding:7px 8px;font-size:12px;}
@@ -282,9 +279,6 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   .card.table-card{width:64px;height:93px;margin-left:-22px;}
   .card.table-card .rank{font-size:18px;}
   .card.table-card .suit{font-size:18px;}
-  .card.table-card.compact{width:28px;height:41px;margin-left:-15px;}
-  .card.table-card.compact .rank{font-size:9.5px;}
-  .card.table-card.compact .suit{font-size:9.5px;}
   .hand-cards{min-height:78px;margin-bottom:4px;}
   .p-slot{padding:3px 6px;min-width:64px;}
   .p-slot .avatar{width:22px;height:22px;font-size:11px;}
@@ -546,7 +540,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
       <li><b>Bàn 2 người:</b> Nhất (+1), Bét (-1)</li>
     </ul>
     <p><b>Luật Tới Trắng (Ù ngay khi chia bài):</b> Nếu vừa chia bài xong mà có người sở hữu Sảnh Rồng (3→A), Lục Đôi (6 đôi) hoặc Ngũ Đôi Thông (5 đôi liên tiếp), ván đấu kết thúc ngay lập tức, người đó thắng trắng và nhận thưởng cố định từ tất cả người chơi còn lại, không chia bài đánh tiếp.</p>
-    <p><b>Luật Phạt Cóng/Đốt:</b> Người thua mà không đánh được lá bài nào trong suốt ván (bị chặn/giết ngộp hoàn toàn) sẽ bị phạt một mức NHƯ NHAU (gấp đôi mức Bét chuẩn của bàn), bất kể họ về hạng nhì hay hạng bét — không còn tình trạng "may mắn" thoát phạt chỉ vì hạng của họ vốn dĩ có số nước dương.</p>
+    <p><b>Luật Phạt Cóng/Đốt:</b> Người thua mà không đánh được lá bài nào trong suốt ván (bị chặn/giết ngộp hoàn toàn) sẽ bị phạt gấp đôi số nước so với mức phạt thông thường của hạng đó.</p>
     <p><b>Luật Chặt Ngang (không cần đúng lượt):</b> Khi trên bàn đang có Heo đơn/đôi, 3 Đôi Thông hoặc Tứ Quý bị lộ, bất kỳ ai giữ bộ chặt hợp lệ đều có thể chặt ngay lập tức bằng nút "⚡ Chặt Ngang", không cần chờ đến lượt. Thứ bậc chặt cụ thể:</p>
     <table>
       <thead><tr><th>Bị chặt</th><th>Được chặt bởi</th></tr></thead>
@@ -558,13 +552,12 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
         <tr><td>4 (hoặc nhiều hơn) Đôi Thông</td><td>Đôi Thông dài hơn (nhiều đôi hơn); cùng số đôi thì so hàng cao hơn — Tứ Quý KHÔNG chặt được</td></tr>
       </tbody>
     </table>
-    <p><b>Giá trị Chặt Heo:</b> Heo Đen (♠,♣) bị chặt = <b>1 nước/lá</b>, Heo Đỏ (♦,♥) bị chặt = <b>2 nước/lá</b>. Với Heo đôi, giá trị bị chặt là TỔNG của 2 lá trong đôi (Đen+Đen=2, Đen+Đỏ=3, Đỏ+Đỏ=4) — không còn một mức cố định chung cho mọi đôi Heo.</p>
     <p><b>Chặt Chồng (chặt liên hoàn — DỒN NƯỚC):</b> Bài vừa dùng để chặt mà vẫn còn nằm trong bảng trên (Heo/3-4-5+ Đôi Thông/Tứ Quý) thì có thể tiếp tục bị người khác chặt đè lên, không giới hạn số lần, miễn còn người giữ bộ chặt hợp lệ mạnh hơn. Giá trị nước của từng bộ bị triệt trong CẢ CHUỖI được <b>DỒN LẠI VỚI NHAU</b> (không tính riêng lẻ từng lượt) — người bị chặt ở lượt cuối cùng của chuỗi phải gánh trọn số nước đã dồn từ đầu chuỗi cho người chặt cuối cùng. Càng nhiều người chặt chồng lên nhau, "quả bom" càng to!</p>
     <p><b>Luật Báo Bài:</b> Hệ thống sẽ tự động thông báo cho cả bàn khi có người chỉ còn 1 lá bài trên tay.</p>
     <p><b>Sự kiện phát sinh & Phạt Thối Bài:</b></p>
     <ul>
       <li><b>Ăn Chặt / Chặt Bài:</b> Người bị chặt trả trực tiếp điểm/nước phạt cho người chặt.</li>
-      <li><b>Thối Heo / Thối Hàng:</b> Cuối ván người thối trả nước/điểm thưởng trực tiếp cho **Người về Nhất** (Heo đen: 1 nước, Heo đỏ: 2 nước, 3 đôi thông: 3 nước, Tứ quý/4 đôi thông: 4 nước) — RIÊNG nếu người thối là người về CUỐI CÙNG (Bét), số nước thối này được trả cho người vừa về ngay trước đó (hạng kế Bét), vì chính người này mới là người "có công" trực tiếp dồn Bét vào thế bí ở cặp đấu cuối cùng khi bàn chỉ còn 2 người, chứ không phải Người về Nhất (người đã thắng và rời cuộc từ trước, không liên quan đến pha đấu cuối này).</li>
+      <li><b>Thối Heo / Thối Hàng:</b> Cuối ván người thối trả nước/điểm thưởng trực tiếp cho **Người về Nhất** (Heo đen: 1 nước, Heo đỏ: 2 nước, 3 đôi thông: 3 nước, Tứ quý/4 đôi thông: 4 nước).</li>
       <li><b>Đền Bài / Đền Làng:</b> Người vi phạm luật đền chịu toàn bộ số nước phạt của cả bàn cho người thắng. Bất kỳ người chơi nào cũng có thể bấm "🚩 Báo Vi Phạm", chủ phòng xác nhận và nhập số nước phạt để cộng/trừ trực tiếp.</li>
     </ul>
 
@@ -952,23 +945,13 @@ function canBeat(next, curr){
   return next.highS > curr.highS;
 }
 
-// Giá trị 1 lá Heo (quân 2) khi bị chặt: Heo Đen (♠,♣) = 1 nước, Heo Đỏ (♦,♥) = 2 nước
-// (đồng bộ với mức phạt Thối Heo cuối ván trong checkFoulPunishment bên dưới).
-function heoCardValue(card){
-  return (card.s === 2 || card.s === 3) ? 2 : 1;
-}
-
 function calculateChopReward(next, curr, activePlayersCount = 4){
   if(!curr) return 0;
   if(curr.type === 'single' && curr.cards[0].r === 12){
-    if(next.type === 'quad' || (next.type === 'pairs_run' && next.count >= 3)) return heoCardValue(curr.cards[0]);
+    if(next.type === 'quad' || (next.type === 'pairs_run' && next.count >= 3)) return 2;
   }
   if(curr.type === 'pair' && curr.cards[0].r === 12){
-    // LUẬT DỒN HEO ĐÔI: giá trị đôi Heo bị chặt = TỔNG giá trị từng lá Heo trong đôi đó
-    // (không dùng một con số cố định) — vd đôi Heo Đen+Đen = 1+1 = 2, Đen+Đỏ = 1+2 = 3, Đỏ+Đỏ = 2+2 = 4.
-    if(next.type === 'quad' || (next.type === 'pairs_run' && next.count >= 4)) {
-      return curr.cards.reduce((sum, c) => sum + heoCardValue(c), 0);
-    }
+    if(next.type === 'quad' || (next.type === 'pairs_run' && next.count >= 4)) return 4;
   }
   if(curr.type === 'pairs_run' && curr.count === 3 && (next.type === 'quad' || (next.type === 'pairs_run' && next.count >= 4))) return 3;
   if(curr.type === 'quad' && next.type === 'quad') return 3;
@@ -1496,13 +1479,6 @@ function finalizeInstantWin(){
   const activeCount = gameState.order.length;
   const mode = gameState.gameMode;
   const winnerName = gameState.names[winnerId];
-
-  // FIX LỖI "TỚI TRẮNG BỊ TREO": trước đây hàm này quên đánh dấu ván đã kết thúc (isEnded)
-  // và không dừng timerLoop, khiến bộ đếm giờ lượt cứ chạy ngầm (turnDeadline cũ đã hết hạn)
-  // và liên tục autoForceTurn/ẩn lại bảng kết quả (applyState luôn ẩn resultOverlay khi isEnded=false)
-  // -> bàn chơi bị "treo", không ai đánh tiếp được. Phải set isEnded=true + dừng timer giống hệt endGame().
-  gameState.isEnded = true;
-  if(timerLoop) clearInterval(timerLoop);
 
   lastGameWinnerId = winnerId;
   gameState.finished = [winnerId, ...gameState.order.filter(id => id !== winnerId)];
@@ -2054,31 +2030,26 @@ function endGame(){
   gameState.order.forEach(id => { finalHandsSnapshot[id] = safeArray(gameState.hands[id]); });
 
   if(mode === 'WATER'){
-    // Xử lý đền phạt Thối Heo/Thối Hàng: mặc định đền cho người về Nhất — RIÊNG thối bài của người
-    // về CUỐI CÙNG (bét) thì đền cho người vừa về ngay trước đó (hạng kế chót), vì chính người này
-    // mới là người "có công" trực tiếp dồn bét vào thế bí trong cặp đấu cuối cùng khi bàn chỉ còn lại
-    // 2 người, chứ không phải người về Nhất — người đã thắng và rời cuộc từ trước, không liên quan.
+    // Xử lý đền phạt Thối Heo/Thối Hàng cho người thắng (người về Nhất)
+    let foulPenaltiesTotal = 0;
     let foulDetailsMap = {};
-    let foulCreditMap = {}; // beneficiaryId -> tổng nước được thối về cho người đó
 
     gameState.order.forEach(id => {
       if (id !== winnerId) {
         const pHand = safeArray(gameState.hands[id]);
         const foulInfo = checkFoulPunishment(pHand);
         if (foulInfo.totalPenalty > 0) {
-          const rank = gameState.finished.indexOf(id) + 1;
-          const isBet = (rank === activeCount); // người về cuối cùng (bét)
-          const beneficiaryId = (isBet && activeCount >= 2) ? gameState.finished[activeCount - 2] : winnerId;
-
+          foulPenaltiesTotal += foulInfo.totalPenalty;
           foulDetailsMap[id] = foulInfo;
-          foulCreditMap[beneficiaryId] = (foulCreditMap[beneficiaryId] || 0) + foulInfo.totalPenalty;
-          gameState.roundLog.push({ icon:'🐷', text: `${gameState.names[id]} bị Thối bài trên tay: ${foulInfo.details.join(', ')} → đền ${foulInfo.totalPenalty} nước cho ${gameState.names[beneficiaryId]}${isBet ? ' (người có công dồn về bét)' : ''}.` });
+          gameState.roundLog.push({ icon:'🐷', text: `${gameState.names[id]} bị Thối bài trên tay: ${foulInfo.details.join(', ')} → đền ${foulInfo.totalPenalty} nước cho ${gameState.names[winnerId]}.` });
         }
       }
     });
 
-    // Bước 1: tính baseWater gốc theo vị trí (chưa gồm Cóng/thối bài)
+    // Bước 1: tính baseWater gốc + gộp phần phạt Cóng thêm (để cộng bù cho người thắng, giữ tổng = 0)
     let baseWaterMap = {};
+    let congExtraTotal = 0;
+    let congIds = new Set();
     gameState.order.forEach((id) => {
       let rank = gameState.finished.indexOf(id) + 1;
       let baseWater = 0;
@@ -2097,25 +2068,15 @@ function endGame(){
         else baseWater = -2;
       }
 
-      baseWaterMap[id] = baseWater;
-    });
-
-    // Bước 2: LUẬT CÓNG — bất kỳ ai bị Cóng (không đánh được lá nào cả ván, và không phải người thắng)
-    // đều phải đền MỘT MỨC NHƯ NHAU, bất kể họ xếp hạng nhì hay bét (trước đây chỉ những ai có
-    // baseWater âm mới bị nhân đôi, nên người về nhì với baseWater dương lại KHÔNG bị trừ gì cả dù
-    // cũng bị Cóng — nay sửa lại cho công bằng: mức phạt Cóng = gấp đôi mức "bét" chuẩn của bàn).
-    const betBase = (activeCount === 2) ? -1 : -2; // mức nước 'bét' chuẩn theo số người đang chơi
-    const congValue = betBase * 2; // mức phạt Cóng đồng nhất, áp dụng như nhau cho MỌI người bị Cóng
-    let congExtraTotal = 0;
-    let congIds = new Set();
-    gameState.order.forEach((id) => {
-      if (id !== winnerId && (gameState.playedCardsCount[id] || 0) === 0) {
-        const original = baseWaterMap[id];
-        congExtraTotal += (original - congValue); // phần chênh dồn thêm cho người thắng để tổng bàn = 0
+      // Phạt Cóng/Đốt: thua mà không đánh được lá bài nào trong cả ván -> gấp đôi phần âm
+      if (id !== winnerId && (gameState.playedCardsCount[id] || 0) === 0 && baseWater < 0) {
+        congExtraTotal += (-baseWater); // phần thêm do nhân đôi
         congIds.add(id);
-        baseWaterMap[id] = congValue;
-        gameState.roundLog.push({ icon:'🧊', text: `${gameState.names[id]} bị Cóng (không đánh được lá nào cả ván) → phạt đồng nhất ${congValue} nước (như mọi người bị Cóng khác, không phân biệt hạng nhì hay bét), ${gameState.names[winnerId]} được thưởng bù.` });
+        gameState.roundLog.push({ icon:'🧊', text: `${gameState.names[id]} bị Cóng (không đánh được lá nào cả ván) → phạt gấp đôi, ${gameState.names[winnerId]} được thưởng bù.` });
+        baseWater = baseWater * 2;
       }
+
+      baseWaterMap[id] = baseWater;
     });
 
     gameState.order.forEach((id) => {
@@ -2124,16 +2085,15 @@ function endGame(){
       let extraChop = gameState.liveScores[id] || 0;
       let foulScore = 0;
       let foulText = "";
-      let congText = congIds.has(id) ? ` | 🧊 Bị Cóng (không ra được lá nào): ${congValue} nước` : "";
+      let congText = congIds.has(id) ? ` | 🧊 Bị Cóng (không ra được lá nào): x2` : "";
       let congBonusText = "";
 
-      if (foulCreditMap[id]) {
-        foulScore += foulCreditMap[id];
-        foulText += ` | Được đền thối bài: +${foulCreditMap[id]}`;
-      }
-      if (foulDetailsMap[id]) {
-        foulScore -= foulDetailsMap[id].totalPenalty;
-        foulText += ` | Thối bài: -${foulDetailsMap[id].totalPenalty} (${foulDetailsMap[id].details.join(', ')})`;
+      if (id === winnerId && foulPenaltiesTotal > 0) {
+        foulScore = foulPenaltiesTotal;
+        foulText = ` | Được đền thối bài: +${foulPenaltiesTotal}`;
+      } else if (foulDetailsMap[id]) {
+        foulScore = -foulDetailsMap[id].totalPenalty;
+        foulText = ` | Thối bài: -${foulDetailsMap[id].totalPenalty} (${foulDetailsMap[id].details.join(', ')})`;
       }
 
       // Phần phạt Cóng tăng thêm được cộng dồn cho người thắng để tổng bàn luôn = 0
@@ -2467,11 +2427,7 @@ function renderCenter(){
 
   const pc = $('playedCombo'); pc.innerHTML = '';
   if(st.currentCombo && st.currentCombo.cards){
-    // SẢNH/ĐÔI THÔNG DÀI: thu nhỏ bài lại (compact) để luôn hiện đủ trong khung màn hình điện thoại,
-    // không bị tràn ra ngoài hoặc phải cuộn ngang mới thấy hết.
-    const comboCards = safeArray(st.currentCombo.cards);
-    const isLong = comboCards.length > 6;
-    comboCards.forEach(c => pc.appendChild(createCardEl(c, false, false, true, isLong)));
+    safeArray(st.currentCombo.cards).forEach(c => pc.appendChild(createCardEl(c, false, false, true)));
   } else {
     pc.innerHTML = '<span style="color:rgba(250,246,238,.4);font-size:11px;">Bàn trống (Tự do đánh)</span>';
   }
@@ -2531,12 +2487,11 @@ function renderHand(){
   }
 }
 
-function createCardEl(c, selectable, small, tableCard, compact){
+function createCardEl(c, selectable, small, tableCard){
   const el = document.createElement('div');
   let cls = 'card';
   if(small) cls += ' small';
   if(tableCard) cls += ' table-card';
-  if(compact) cls += ' compact';
   if(SUIT_COLOR[SUITS[c.s]]==='red') cls += ' red';
   el.className = cls;
   el.innerHTML = `<span class="rank">${RANKS[c.r]}</span><span class="suit">${SUITS[c.s]}</span>`;
