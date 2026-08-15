@@ -241,12 +241,14 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 }
 
 .hand-cards{
-  display:flex;justify-content:center;align-items:flex-end;
+  display:flex;justify-content:flex-start;align-items:flex-end;
   min-height:130px;margin-bottom:4px;width:100%;max-width:100%;
   padding:0 6px;box-sizing:border-box;
-  overflow-x:auto;-webkit-overflow-scrolling:touch; /* JS (layoutHandCards) luôn tính kích thước lá bài
-    vừa khít khung trước khi render, nên overflow-x chỉ còn là lưới an toàn dự phòng, không phải cơ chế
-    chính để xem hết bài nữa. Dùng justify-content:center để bài dàn đều, cân giữa khung tay bài. */
+  overflow-x:auto;-webkit-overflow-scrolling:touch; /* QUAN TRỌNG: giữ flex-start, KHÔNG dùng
+    justify-content:center ở đây — center kết hợp overflow-x:auto khiến hầu hết trình duyệt
+    (đặc biệt Safari/iOS) không cuộn được tới phần đầu bị tràn sang trái, dễ gây lệch/mất lá.
+    Việc canh giữa dải bài được JS (layoutHandCards) đảm nhiệm bằng cách tính padding trái/phải
+    động, luôn giữ đúng bố cục flex-start bên trong. */
 }
 .hand-cards::-webkit-scrollbar{height:4px;}
 .hand-cards::-webkit-scrollbar-thumb{background:rgba(250,246,238,.25);border-radius:4px;}
@@ -2588,13 +2590,16 @@ function renderHand(){
 // đúng bề rộng khung nhìn thực tế (kể cả các màn hình điện thoại hẹp/lệch tỉ lệ khác nhau),
 // tránh trường hợp lá bài ngoài cùng bên trái bị tràn ra ngoài / bị cắt mất do kích thước
 // bài cố định (trước đây fix cứng 76px hoặc 64px không co giãn theo màn hình thực tế).
+// Đồng thời tự tính padding trái/phải để dải bài nằm ĐÚNG GIỮA khung — cố tình KHÔNG dùng
+// justify-content:center (xem giải thích trong CSS .hand-cards) vì sẽ gây lệch khi có tràn.
 function layoutHandCards(container, n){
   if(n <= 0) return;
   const maxW = 76;          // kích thước lá bài tối đa (giống lá bài trên bàn ở desktop)
   const minW = 30;          // kích thước lá bài nhỏ nhất chấp nhận được (vẫn đọc được)
   const minSliver = 12;     // phần hở tối thiểu của mỗi lá bị chồng, để còn bấm/nhìn được rõ
-  const safePad = 10;       // chừa lề an toàn hai bên tránh lá cuối dính sát mép/scrollbar
-  const avail = Math.max(container.clientWidth - safePad, minW);
+  const basePad = 8;        // lề tối thiểu hai bên (4px mỗi bên) tránh lá dính sát mép/scrollbar
+  const fullW = container.clientWidth;
+  const avail = Math.max(fullW - basePad, minW);
 
   let cardW = maxW;
   let overlap = 0;
@@ -2609,6 +2614,15 @@ function layoutHandCards(container, n){
     cardW = Math.min(maxW, avail);
   }
 
+  // Tổng bề rộng thực tế của cả dải bài (từ mép trái lá đầu tới mép phải lá cuối)
+  const totalWidth = (n <= 1) ? cardW : (cardW + (n - 1) * (cardW - overlap));
+  // Phần trống còn lại chia đều hai bên để dải bài nằm chính giữa khung, dùng padding
+  // (không dùng justify-content:center) để tránh lỗi cuộn ngang lệch tâm nêu trên.
+  const extra = Math.max(fullW - totalWidth - basePad, 0);
+  const sidePad = (basePad / 2) + (extra / 2);
+
+  container.style.paddingLeft = sidePad + 'px';
+  container.style.paddingRight = sidePad + 'px';
   container.style.setProperty('--hand-card-w', cardW + 'px');
   container.style.setProperty('--hand-overlap', overlap + 'px');
 }
