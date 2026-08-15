@@ -2687,9 +2687,15 @@ function layoutPlayedCombo(outer, inner, n, retries){
     return;
   }
   const safeW = fullW > 0 ? fullW : 280;
+  const isMobile = window.innerWidth <= 600;
 
-  const maxW = 76;
-  const minW = 26;
+  // FIX: khi ngửa combo dài (sảnh/đôi thông >6 lá, hay 13 lá Tới Trắng), giới hạn kích thước
+  // TỐI ĐA nhỏ hơn ngay từ đầu (giống 2 mốc cố định cũ 52px desktop / 44px mobile) thay vì để
+  // thuật toán giữ cardW=76 rồi ép chồng lá gần hết (chỉ hở ~19px/lá) -> lá bài quá CAO, tràn
+  // đè lên ghế đối thủ / nhãn phía trên trong .table-center. Giới hạn thấp hơn giữ chiều cao lá
+  // bài vừa phải, không che các thành phần khác, mà vẫn đủ hở để đọc được rank/suit.
+  const maxW = n > 6 ? (isMobile ? 44 : 52) : 76;
+  const minW = 22;
   const minSliver = 10;
   const defaultOverlapRatio = 0.368;
   const basePad = 8;
