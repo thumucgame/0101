@@ -2599,6 +2599,16 @@ function renderHand(){
 
   const iAmColdFolded = safeArray(currentState.coldFolded).includes(myId); // LUẬT CÓNG: chưa đánh lá nào khi có người về Nhất
 
+  // FIX MOBILE (BUG THẬT): #handCards là khung cuộn ngang (overflow-x:auto) NHƯNG bản thân khung
+  // này không bị huỷ/tạo lại giữa các lần renderHand() — chỉ có innerHTML BÊN TRONG nó bị thay mới.
+  // Do đó vị trí cuộn ngang (scrollLeft) của lần render TRƯỚC ĐÓ vẫn còn nguyên khi bài mới được vẽ
+  // ra (vd ván trước bài dài phải cuộn, hoặc vừa cuộn tay để xem lá cuối). Khi bài mới chỉ vừa đủ
+  // khít khung (không cần cuộn), khung vẫn đang giữ scrollLeft > 0 từ trước -> mấy lá ĐẦU TIÊN (nhỏ
+  // nhất, ví dụ 3♠ luôn đứng đầu sau khi sort) bị trôi ra ngoài bên trái, KHÔNG hiển thị dù vẫn còn
+  // đủ trong DOM -> đúng hiện tượng "thiếu lá" người dùng gặp. Luôn đưa khung về đầu (trái) mỗi khi
+  // vẽ lại bộ bài mới để đảm bảo không có lá nào bị cuộn khuất ngoài tầm nhìn.
+  hc.scrollLeft = 0;
+
   if(isSpectator){
     hc.innerHTML = '<div style="color:var(--gold);font-size:12px;padding:8px;text-align:center;">Bạn đang xem trận đấu. Sẽ tham gia ván sau!</div>';
   } else if(iAmColdFolded){
@@ -2616,7 +2626,10 @@ function renderHand(){
     // trông như "mất lá". Đo lại 2 lần rAF sau đảm bảo luôn khớp đúng kích thước thật cuối cùng.
     requestAnimationFrame(() => requestAnimationFrame(() => {
       const hc2 = $('handCards'), inner2 = $('handCardsInner');
-      if(hc2 && inner2 && myHand.length) layoutHandCards(hc2, inner2, myHand.length);
+      if(hc2 && inner2 && myHand.length){
+        layoutHandCards(hc2, inner2, myHand.length);
+        hc2.scrollLeft = 0; // giữ đúng vị trí đầu bài, phòng trình duyệt tự "neo cuộn" (scroll anchoring) lệch đi
+      }
     }));
   }
 
