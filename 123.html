@@ -147,7 +147,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 }
 
 .played-combo{display:flex;gap:4px;min-height:85px;align-items:center;justify-content:center;margin-top:auto;margin-bottom:auto;width:100%;max-width:100%;min-width:0;overflow-x:auto;box-sizing:border-box;}
-.action-log{font-size:11px;color:rgba(250,246,238,.85);margin-top:4px;margin-bottom:2px;font-weight:600;text-align:center;padding:2px 8px;background:rgba(0,0,0,0.4);border-radius:6px;max-width:100%;box-sizing:border-box;white-space:normal;word-break:break-word;overflow-wrap:anywhere;}
+.action-log{font-size:11px;color:rgba(250,246,238,.85);margin:8px auto 8px;font-weight:600;text-align:center;padding:3px 10px;background:rgba(0,0,0,0.4);border-radius:6px;max-width:92%;box-sizing:border-box;white-space:normal;word-break:break-word;overflow-wrap:anywhere;line-height:1.25;position:relative;z-index:8;}
 
 /* BONG BÓNG THÔNG BÁO NGAY TẠI VỊ TRÍ NGƯỜI VỪA HÀNH ĐỘNG (đánh/bỏ lượt/chặt/phạt...) */
 .seat-bubble{
@@ -189,7 +189,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 
 /* DÒNG THÔNG BÁO VÀ ĐỒNG HỒ DỜI XUỐNG DƯỚI GẦN BÀI NGƯỜI CHƠI */
 .turn-timer-box{
-  position:relative;margin-top:4px;margin-bottom:8px;background:rgba(0,0,0,.85);border:1px solid var(--gold-dim);
+  position:relative;margin-top:0;margin-bottom:28px;background:rgba(0,0,0,.85);border:1px solid var(--gold-dim);
   padding:4px 14px;border-radius:12px;display:flex;align-items:center;gap:8px;font-size:12px;z-index:15;
   transition: all 0.3s ease;max-width:calc(100% - 12px);box-sizing:border-box;
 }
@@ -208,6 +208,20 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 @keyframes pulseTimer {
   0% { transform: scale(1); }
   100% { transform: scale(1.02); }
+}
+
+/* MOBILE: tách rõ dòng thông báo hành động và đồng hồ lượt, tránh chữ chạm/chồng nhau. */
+@media (max-width:600px){
+  .table-center .action-log{
+    margin-top:10px;
+    margin-bottom:10px;
+    max-width:88%;
+  }
+  .table-center .turn-timer-box{
+    margin-top:0;
+    margin-bottom:28px;
+    max-width:88%;
+  }
 }
 
 .timer-sec{font-family:monospace;font-weight:700;color:var(--gold);font-size:13px;}
