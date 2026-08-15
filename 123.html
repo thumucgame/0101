@@ -234,36 +234,53 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 }
 
 .turn-banner {
-  position: absolute;
-  top: -24px;
+  position: relative;
+  display: block;
+  width: max-content;
+  max-width: 92%;
+  margin: 0 auto 4px;
   background: linear-gradient(90deg, #ff9800, #ffeb3b, #ff9800);
   color: #000;
   font-weight: 900;
   font-size: 11px;
-  padding: 2px 12px;
+  padding: 3px 12px;
   border-radius: 10px;
   letter-spacing: 1px;
   text-transform: uppercase;
+  text-align: center;
   box-shadow: 0 2px 8px rgba(0,0,0,0.5);
   animation: bounceBanner 0.6s infinite alternate;
   z-index: 10;
 }
+/* FIX MOBILE (v2): trước đó .turn-banner dùng position:absolute; top:-24px. Sau khi vá lỗi thiếu
+   position:relative ở .hand-area, banner bám đúng vào khu bài nhưng lại rơi trúng ngay vùng
+   .turn-timer-box (khung "👉 LƯỢT BẠN 23") vì cả hai cùng tranh chỗ ngay phía trên khu bài -> chữ
+   "ĐẾN LƯỢT BẠN ĐÁNH!" bị che khuất sau khung đếm giờ. Chuyển banner về layout bình thường (không
+   absolute) để nó tự đẩy khu bài xuống một chút khi hiện ra, không bao giờ đè lên phần tử khác dù
+   turn-timer-box cao thấp thế nào, mà không cần sửa HTML/JS hay bất kỳ cấu trúc nào khác. */
 @keyframes bounceBanner {
   0% { transform: translateY(0); }
   100% { transform: translateY(-4px); }
 }
 
 .hand-cards{
-  min-height:130px;margin-bottom:4px;width:100%;max-width:100%;min-width:0;
-  padding:0 6px;box-sizing:border-box;
+  min-height:148px;margin-bottom:4px;width:100%;max-width:100%;min-width:0;
+  padding:24px 6px 0;box-sizing:border-box;
+  display:flex;align-items:flex-end;
   overflow-x:auto;-webkit-overflow-scrolling:touch; /* khung cuộn ngoài — chỉ là "cửa sổ nhìn",
     KHÔNG tự canh giữa nội dung (tránh lỗi center+overflow trên Safari/iOS). Việc canh giữa
     thật sự do .hand-cards-inner đảm nhiệm bằng margin:0 auto với width cố định do JS tính,
     đây là cách canh giữa ổn định nhất, không phụ thuộc trình duyệt hay lỗi đo kích thước 0px
     lúc khung còn ẩn (layoutHandCards tự chờ retry tới khi đo được kích thước thật). */
 }
+/* FIX MOBILE (v3): .hand-cards trước đây là khối thường (không display:flex) nên .hand-cards-inner
+   luôn dồn lên sát mép TRÊN, khoảng trống 130px-110px≈20px thừa ra lại nằm ở mép DƯỚI (vô dụng).
+   Khi 1 lá được chọn, nó translateY lên trên (tới ~-20px) đúng vào vùng NẰM NGOÀI khung phía trên,
+   mà overflow-x:auto lại tự kéo theo overflow-y clip (auto) -> mất phần đầu lá bài. Nay chuyển
+   .hand-cards thành flex + align-items:flex-end để dồn bài xuống ĐÁY, đồng thời thêm padding-top
+   24px làm khoảng đệm phía trên đủ chỗ cho lá bài được nhấc lên mà không bị cắt. */
 .hand-cards-inner{
-  display:flex;align-items:flex-end;margin:0 auto;
+  display:flex;align-items:flex-end;margin:0 auto;flex-shrink:0;
 }
 .hand-cards::-webkit-scrollbar{height:4px;}
 .hand-cards::-webkit-scrollbar-thumb{background:rgba(250,246,238,.25);border-radius:4px;}
@@ -328,7 +345,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   .played-combo.compact .card.table-card .suit{font-size:12px;}
   /* #handCards .card KHÔNG đặt width/margin cố định ở đây nữa — JS (layoutHandCards) luôn
      tính lại --hand-card-w / --hand-overlap vừa khít màn hình mỗi lần render bài. */
-  .hand-cards{min-height:110px;margin-bottom:4px;}
+  .hand-cards{min-height:128px;padding-top:22px;margin-bottom:4px;}
   .p-slot{padding:3px 6px;min-width:64px;}
   .p-slot .avatar{width:22px;height:22px;font-size:11px;}
   .table-center{margin:2px 34px;max-width:calc(100% - 68px);}
