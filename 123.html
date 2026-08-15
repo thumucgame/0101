@@ -932,9 +932,46 @@ function preloadAllSounds(){
 // Bắt đầu preload ngay (một số trình duyệt cần tương tác người dùng đầu tiên
 // mới cho phép audio autoplay, nhưng việc load/buffer file vẫn diễn ra được).
 preloadAllSounds();
-// Nạp lại một lần nữa sau khi có tương tác đầu tiên của người dùng, để chắc chắn
-// mọi thứ đã sẵn sàng trong bộ nhớ đệm của trình duyệt trước khi ván chơi bắt đầu.
-window.addEventListener('pointerdown', preloadAllSounds, { once: true });
+
+// --- MỞ KHÓA ÂM THANH TRÊN MOBILE (iOS Safari / Chrome Android) ---
+// Các trình duyệt di động CHẶN mọi tiếng phát ra bằng JS nếu nó không nằm
+// trực tiếp trong 1 cử chỉ chạm thật của người dùng. Vì phần lớn âm trong game
+// (PLAY_CARD của người khác, CHOP, soundEvent nhận qua mạng, MY_TURN...) được
+// kích hoạt gián tiếp (từ tin nhắn broadcast, không phải cú chạm trực tiếp),
+// nên nếu không "mở khóa" trước thì trên điện thoại sẽ hoàn toàn im lặng dù
+// trên máy tính vẫn nghe bình thường.
+// Cách mở khóa: ngay lần chạm đầu tiên của người dùng, phát thử (tắt tiếng)
+// từng audio đã cache rồi dừng ngay lập tức. Sau bước này, trình duyệt sẽ cho
+// phép các lần play() tiếp theo trong suốt phiên, kể cả khi được gọi từ code
+// không phải cử chỉ trực tiếp (đây là cơ chế chuẩn mà các thư viện âm thanh
+// web như Howler.js dùng để chạy được trên iOS/Android).
+let _audioUnlocked = false;
+function unlockAudioForMobile(){
+  if(_audioUnlocked) return;
+  _audioUnlocked = true;
+  Object.values(SOUND_CACHE).forEach(a => {
+    try{
+      const wasMuted = a.muted;
+      a.muted = true;
+      const p = a.play();
+      if(p && typeof p.then === 'function'){
+        p.then(()=>{ a.pause(); a.currentTime = 0; a.muted = wasMuted; })
+         .catch(()=>{ a.muted = wasMuted; });
+      } else {
+        a.pause(); a.currentTime = 0; a.muted = wasMuted;
+      }
+    }catch(err){}
+  });
+}
+// Nạp lại + mở khóa ngay khi có tương tác đầu tiên của người dùng (chạm/click),
+// gắn nhiều loại sự kiện để chắc chắn bắt được cử chỉ đầu tiên trên mọi trình duyệt di động.
+function _firstUserGestureHandler(){
+  preloadAllSounds();
+  unlockAudioForMobile();
+}
+['pointerdown','touchend','click'].forEach(evt=>{
+  window.addEventListener(evt, _firstUserGestureHandler, { once: true });
+});
 
 let _lastChopSoundAt = 0;
 let _seenChopSoundIds = new Set();
@@ -3535,37 +3572,40 @@ function sendAction(act){
   selected.clear();
 }
 
-function openThrowPopover(pId, targetEl){
-  activeTargetId = pId;
-  const pop = $('throwPopover');
-  const rect = targetEl.getBoundingClientRect();
-  
-  let leftPos = rect.left + (rect.width / 2) - 95;
-  if (leftPos < 10) leftPos = 10;
-  if (leftPos + 190 > window.innerWidth - 10) leftPos = window.innerWidth - 200;
+// Định vị popover (ném đồ / reaction) sao cho luôn nằm gọn trong màn hình.
+// QUAN TRỌNG: đo kích thước THẬT của popover (bằng getBoundingClientRect sau khi hiện tạm ẩn),
+// thay vì dùng số cố định như trước — vì số lượng icon có thể thay đổi (thêm icon mới) làm
+// popover cao/rộng hơn, nếu vẫn dùng số cũ thì các icon thêm sau sẽ bị đẩy ra ngoài màn hình
+// (đặc biệt trên điện thoại, màn hình nhỏ) và không bấm/nghe được dù code hoạt động đúng.
+function positionPopover(pop, rect){
+  pop.style.visibility = 'hidden';
+  pop.classList.remove('hidden');
+  const popRect = pop.getBoundingClientRect();
+  const w = popRect.width || 190;
+  const h = popRect.height || 100;
 
-  let topPos = rect.bottom + 8;
-  if (topPos + 100 > window.innerHeight) topPos = rect.top - 100;
+  let leftPos = rect.left + (rect.width / 2) - (w / 2);
+  if (leftPos < 10) leftPos = 10;
+  if (leftPos + w > window.innerWidth - 10) leftPos = window.innerWidth - w - 10;
+  if (leftPos < 10) leftPos = 10;
+
+  let topPos = rect.top - h - 8;
+  if (topPos < 10) topPos = rect.bottom + 8;
+  if (topPos + h > window.innerHeight - 10) topPos = window.innerHeight - h - 10;
+  if (topPos < 10) topPos = 10;
 
   pop.style.top = topPos + 'px';
   pop.style.left = leftPos + 'px';
-  pop.classList.remove('hidden');
+  pop.style.visibility = 'visible';
+}
+
+function openThrowPopover(pId, targetEl){
+  activeTargetId = pId;
+  positionPopover($('throwPopover'), targetEl.getBoundingClientRect());
 }
 
 function openReactionPopover(targetEl){
-  const pop = $('reactionPopover');
-  const rect = targetEl.getBoundingClientRect();
-
-  let leftPos = rect.left + (rect.width / 2) - 95;
-  if (leftPos < 10) leftPos = 10;
-  if (leftPos + 190 > window.innerWidth - 10) leftPos = window.innerWidth - 200;
-
-  let topPos = rect.top - 100;
-  if (topPos < 10) topPos = rect.bottom + 8;
-
-  pop.style.top = topPos + 'px';
-  pop.style.left = leftPos + 'px';
-  pop.classList.remove('hidden');
+  positionPopover($('reactionPopover'), targetEl.getBoundingClientRect());
 }
 
 document.addEventListener('click', (e)=>{
@@ -3579,7 +3619,11 @@ document.addEventListener('click', (e)=>{
 
 window.triggerReaction = function(key){
   $('reactionPopover').classList.add('hidden');
-  if(!gameState) return;
+  // FIX: người chơi không phải chủ phòng dùng biến currentState (nhận qua broadcast),
+  // không phải gameState (biến này chỉ có giá trị ở phía chủ phòng). Trước đây check
+  // "if(!gameState) return" khiến người chơi thường luôn bị chặn ở đây, không bao giờ
+  // gửi được reaction lên chủ phòng -> icon cảm xúc chỉ bấm được khi làm chủ phòng.
+  if(!gameState && !currentState) return;
   if(isBotMode){
     playGlobalSound(key, 0.9);
     bumpActor(myId, REACTION_LABELS[key] || '');
