@@ -1688,12 +1688,15 @@ function onHostMessage(fromId, msg, token){
   if(msg.t==='action'){
     handleAction(fromId, msg.action);
   } else if(msg.t==='chat'){
-    broadcastChat(knownPlayer.name, msg.text);
+    broadcastChat(knownPlayer.name, msg.text, fromId);
   } else if(msg.t==='throwItem'){
     broadcastThrowItem(fromId, msg.toId, msg.item);
   } else if(msg.t==='reaction'){
     if(!gameState) return;
-    broadcastSoundEvent(msg.key, 0.9);
+    // TỐI ƯU ÂM THANH: truyền kèm fromId (originId) để chính người đã bấm reaction này
+    // không bị phát lại âm thanh lần 2 khi tiếng dội ngược từ chủ phòng gửi về máy họ
+    // (máy họ đã tự phát ngay lúc bấm rồi — xem nhánh "else" trong triggerReaction()).
+    broadcastSoundEvent(msg.key, 0.9, fromId);
     bumpActor(fromId, REACTION_LABELS[msg.key] || '');
     broadcastState();
   } else if(msg.t==='reportFoul'){
@@ -1727,14 +1730,25 @@ function onClientMessage(msg){
     } else if(msg.t==='state'){
       applyState(msg.state);
     } else if(msg.t==='chat'){
+      // FIX: nếu chính mình là người gửi (fromId===myId), máy mình đã tự hiện tin nhắn này
+      // ngay lúc gửi rồi (xem sendChat()) -> bỏ qua, tránh hiện đúp 2 lần khi tin nhắn dội
+      // ngược về từ chủ phòng.
+      if(msg.fromId && msg.fromId === myId) return;
       addChatLine(msg.name, msg.text);
     } else if(msg.t==='result'){
       showResultOverlay(msg.results, msg.settlements);
     } else if(msg.t==='throwItem'){
+      // TỐI ƯU ÂM THANH: nếu chính mình là người vừa ném (fromId===myId), máy mình đã tự
+      // phát âm thanh + hiệu ứng ngay lúc bấm (optimistic, xem triggerThrow()) nên bỏ qua,
+      // tránh phát đúp 2 lần khi tin nhắn dội ngược về từ chủ phòng.
+      if(msg.fromId === myId) return;
       animateItemThrow(msg.fromId, msg.toId, msg.item); playGlobalSound(msg.item, 0.9);
     } else if(msg.t==='stakeTransfer'){
       animateStakeTransfer(msg.fromId, msg.toId, msg.amount, msg.stakeUnit);
     } else if(msg.t==='soundEvent'){
+      // TỐI ƯU ÂM THANH: nếu originId trùng chính mình -> máy mình đã tự phát âm thanh này
+      // ngay lúc bấm (optimistic, xem triggerReaction()) -> bỏ qua, không phát đúp lần 2.
+      if(msg.originId && msg.originId === myId) return;
       if(CHOP_SOUND_KEYS.includes(msg.soundKey) && msg.soundEventId){
         if(_seenChopSoundIds.has(msg.soundEventId)) return;
         _seenChopSoundIds.add(msg.soundEventId);
@@ -1753,8 +1767,8 @@ function broadcastLobby(){
   renderLobby();
 }
 
-function broadcastChat(name, text){
-  sendToAll({t:'chat', name, text});
+function broadcastChat(name, text, fromId = null){
+  sendToAll({t:'chat', name, text, fromId});
   addChatLine(name, text);
 }
 
@@ -1819,8 +1833,11 @@ function broadcastThrowItem(fromId, toId, item){
   animateItemThrow(fromId, toId, item); playGlobalSound(item, 0.9);
 }
 
-function broadcastSoundEvent(soundKey, volume = 0.9){
-  sendToAll({t:'soundEvent', soundKey, volume});
+// originId (tuỳ chọn): id của người THỰC SỰ tạo ra âm này (vd người bấm reaction).
+// Khi client nhận lại message soundEvent mà originId trùng chính mình, họ sẽ KHÔNG phát
+// lại lần 2, vì máy họ đã tự phát ngay lúc bấm (optimistic) rồi — xem triggerReaction().
+function broadcastSoundEvent(soundKey, volume = 0.9, originId = null){
+  sendToAll({t:'soundEvent', soundKey, volume, originId});
   playGlobalSound(soundKey, volume);
 }
 
@@ -3097,9 +3114,22 @@ function broadcastState(){
     applyState(getViewStateForPlayer(myId)); 
     return; 
   }
-  
+  if(!gameState) return;
+
+  // FIX: trước đây chỉ gửi state cho những ai đang có trong gameState.order của VÁN HIỆN TẠI.
+  // Người vừa bị đuổi do mất mạng rồi kết nối lại (đang ở chế độ xem, không nằm trong order)
+  // vì vậy chỉ nhận được ĐÚNG 1 LẦN state duy nhất lúc họ vừa join (gửi thủ công trong nhánh
+  // 'join' của onHostMessage) — sau đó KHÔNG còn nhận thêm bất kỳ cập nhật nào nữa cho tới khi
+  // có sự kiện MỚI random trùng lúc họ join. Hệ quả: màn hình xem của họ bị đứng hình/lỗi thời,
+  // và khi ván mới thật sự bắt đầu, việc họ có được đưa vào chơi hay không phụ thuộc hoàn toàn
+  // vào đúng 1 gói tin gửi đi có tới nơi hay không (mạng Firebase có thể trễ/rớt).
+  // Giờ gửi state cho TẤT CẢ những ai đang có mặt trong phòng (players) — không chỉ order của
+  // ván hiện tại — để người đang xem luôn thấy bàn cập nhật theo thời gian thực, và chắc chắn
+  // được đưa vào chơi ngay khi ván mới bắt đầu (dealNewGame() cũng gọi lại đúng hàm này).
   const orderArr = safeArray(gameState.order);
-  orderArr.forEach(id => {
+  const allIds = new Set(orderArr);
+  players.forEach(p => allIds.add(p.id));
+  allIds.forEach(id => {
     try{
       const stateView = getViewStateForPlayer(id);
       if(id === myId) {
@@ -3670,6 +3700,14 @@ window.triggerReaction = function(key){
     bumpActor(myId, REACTION_LABELS[key] || '');
     broadcastState();
   } else {
+    // TỐI ƯU ÂM THANH: phát NGAY tại máy người bấm (optimistic) thay vì chờ đi 2 vòng mạng
+    // qua Firebase (máy -> chủ phòng -> chủ phòng gửi lại cho cả bàn) rồi mới nghe được.
+    // Đường đi vòng đó chính là lý do người bấm reaction thấy âm thanh trễ/giật, và nếu gói
+    // tin bị chậm/rớt (mạng yếu, nhiều người bấm cùng lúc) thì người bấm coi như không nghe
+    // thấy gì. originId=myId đã được gửi kèm trong 'reaction' để chủ phòng echo lại đúng
+    // originId, giúp máy mình biết mà KHÔNG phát đúp lần 2 khi tiếng dội ngược về (xem
+    // nhánh 'soundEvent' trong onClientMessage).
+    playGlobalSound(key, 0.9);
     sendToHost({t:'reaction', fromId:myId, key});
   }
 };
@@ -3681,7 +3719,12 @@ window.triggerThrow = function(item){
     animateItemThrow(myId, activeTargetId, item); playGlobalSound(item, 0.9); return;
   }
   if(isHost) broadcastThrowItem(myId, activeTargetId, item);
-  else sendToHost({t:'throwItem', fromId:myId, toId:activeTargetId, item});
+  else {
+    // TỐI ƯU ÂM THANH: tương tự reaction — tự phát hiệu ứng + âm thanh ngay tại máy người
+    // ném, không chờ đi vòng qua chủ phòng mới thấy/nghe được.
+    animateItemThrow(myId, activeTargetId, item); playGlobalSound(item, 0.9);
+    sendToHost({t:'throwItem', fromId:myId, toId:activeTargetId, item});
+  }
 };
 
 function animateItemThrow(fromId, toId, item){
@@ -3729,8 +3772,16 @@ function sendChat(){
     setTimeout(() => addChatLine('🤖 Cao Thủ Bot', 'Chơi cẩn thận nha bạn ơi! 😎'), 1000);
     return;
   }
-  if(isHost) broadcastChat(myName, txt);
-  else sendToHost({t:'chat', name:myName, text:txt});
+  if(isHost){
+    broadcastChat(myName, txt);
+  } else {
+    // FIX: trước đây người không phải chủ phòng gửi chat xong KHÔNG thấy tin nhắn của
+    // chính mình hiện ra ngay — phải chờ tin nhắn đi vòng qua chủ phòng rồi chủ phòng gửi
+    // lại mới thấy (2 vòng mạng qua Firebase), nên nếu mạng chậm/rớt gói thì y như chat
+    // "không hoạt động". Giờ hiện tin nhắn ngay tại máy mình trước, rồi mới gửi đi.
+    addChatLine(myName, txt);
+    sendToHost({t:'chat', name:myName, text:txt});
+  }
 }
 
 function addChatLine(name, text){
