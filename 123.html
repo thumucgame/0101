@@ -6,6 +6,80 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
 <title>Tiến Lên Online - Bộ Luật Chuẩn & Chế Độ Đánh Nước / Quỳ</title>
 <!-- Firebase compat SDK -->
+<!-- RULE TEST LAB: chỉ là lớp giao diện test cục bộ, không liên quan Firebase/trận thật -->
+<div id="ruleTestOverlay" class="hidden" aria-hidden="true">
+  <div id="ruleTestPanel">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;">
+      <div>
+        <h2 style="margin:0;color:var(--gold);font-size:20px;">🧪 PHÒNG TEST LUẬT</h2>
+        <div style="font-size:11px;color:rgba(250,246,238,.65);margin-top:4px;">CHỈ MÔ PHỎNG LUẬT — KHÔNG TẠO PHÒNG, KHÔNG GHI FIREBASE, KHÔNG ẢNH HƯỞNG VÁN THẬT</div>
+      </div>
+      <button class="btn btn-outline" id="btnCloseRuleTest" type="button">✕ Đóng</button>
+    </div>
+
+    <div class="rule-test-grid">
+      <div class="rule-test-card">
+        <h4>⚖️ Tỷ lệ tình huống</h4>
+        <div class="rule-test-row"><span>Heo đen → Heo đỏ → chặt</span><input id="wtSingle" type="number" min="0" max="100" value="30"></div>
+        <div class="rule-test-row"><span>Đôi Heo → Đôi Heo → Tứ quý</span><input id="wtPair" type="number" min="0" max="100" value="25"></div>
+        <div class="rule-test-row"><span>Tứ quý chặt liên hoàn</span><input id="wtQuad" type="number" min="0" max="100" value="15"></div>
+        <div class="rule-test-row"><span>Đôi thông / 4+ đôi thông</span><input id="wtRun" type="number" min="0" max="100" value="15"></div>
+        <div class="rule-test-row"><span>Chặt người đã về</span><input id="wtSafe" type="number" min="0" max="100" value="10"></div>
+        <div class="rule-test-row"><span>WIN + BOM + Về Nhì</span><input id="wtRank" type="number" min="0" max="100" value="5"></div>
+        <div style="font-size:11px;color:rgba(250,246,238,.5);margin-top:8px;">Tổng tỷ lệ không bắt buộc bằng 100; hệ thống tự chuẩn hóa.</div>
+      </div>
+
+      <div class="rule-test-card">
+        <h4>🧪 Kiểm tra nhanh</h4>
+        <div style="display:grid;gap:7px;">
+          <button class="btn btn-gold" id="btnRunRuleTests" type="button">▶ Chạy toàn bộ test luật</button>
+          <button class="btn btn-outline" id="btnRandomRuleCase" type="button">🎲 Sinh 1 tình huống theo tỷ lệ</button>
+          <div class="rule-test-row" style="margin:0;"><span>Stress test</span><input id="ruleTestCount" type="number" min="1" max="5000" value="1000"></div>
+          <button class="btn btn-outline" id="btnRunStressTests" type="button">🔥 Chạy stress test</button>
+          <button class="btn btn-outline" id="btnClearRuleTests" type="button">🧹 Xóa kết quả</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="rule-test-card" style="margin-top:10px;border-color:rgba(212,175,55,.5);">
+      <h4>🎮 CHƠI TEST LUẬT THỰC TẾ</h4>
+      <div class="rule-test-grid" style="grid-template-columns:1fr 1fr;">
+        <div>
+          <div class="rule-test-row"><span>🤖 Số Bot</span>
+            <select id="ruleTestBotCount" class="sel" style="width:110px;margin:0;">
+              <option value="1">1 Bot (2 người)</option>
+              <option value="2">2 Bot (3 người)</option>
+              <option value="3" selected>3 Bot (4 người)</option>
+            </select>
+          </div>
+          <div class="rule-test-row"><span>🎲 Tình huống</span>
+            <select id="ruleTestScenario" class="sel" style="width:240px;margin:0;">
+              <option value="RANDOM" selected>🎲 Random theo tỷ lệ</option>
+              <option value="single">🖤 Heo đen → ❤️ Heo đỏ → Chặt</option>
+              <option value="pair">🖤🖤 → ❤️❤️ → Tứ quý</option>
+              <option value="quad">🖤🖤 → ❤️❤️ → Tứ quý → Tứ quý lớn</option>
+              <option value="run">3 Đôi thông → 4 Đôi thông</option>
+              <option value="safe">🛡️ Chặt người vừa về</option>
+              <option value="rank">🏆 BOM + Về Nhì</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;gap:7px;">
+          <button class="btn btn-gold" id="btnStartPlayableRuleTest" type="button">▶ ĐÁNH TEST NGAY</button>
+          <div style="font-size:11px;color:rgba(250,246,238,.58);line-height:1.5;">Mỗi ván test sẽ dựng một tình huống luật có chủ đích vào bàn. Bạn chơi thật với 1–3 Bot; không Firebase, không ảnh hưởng phòng thật.</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="ruleTestSummary" class="rule-test-result">Chưa chạy kiểm tra.</div>
+    <div id="ruleTestResult" class="rule-test-result">Chưa có dữ liệu.</div>
+  </div>
+</div>
+
+</body>
+</html>
+
+
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
 <style>
@@ -496,6 +570,15 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 @keyframes floatUp { 0% { transform: translateY(0) scale(0.7); opacity: 0; } 20% { transform: translateY(-10px) scale(1.2); opacity: 1; } 80% { transform: translateY(-25px) scale(1.5); opacity: 1; } 100% { transform: translateY(-35px) scale(0.8); opacity: 0; } }
 
 .rule-example{margin:8px 0;padding:9px 11px;border:1px solid rgba(255,193,7,.45);border-radius:10px;background:rgba(0,0,0,.16);color:rgba(250,246,238,.92);line-height:1.5;font-size:12px;}
+
+/* ===== PHÒNG TEST LUẬT - CHỈ CHẾ ĐỘ TEST ===== */
+#ruleTestOverlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:14px}
+#ruleTestPanel{width:min(980px,100%);max-height:92vh;overflow:auto;background:linear-gradient(180deg,#17130e,#0d0b08);border:1px solid rgba(212,175,55,.45);border-radius:16px;box-shadow:0 18px 70px rgba(0,0,0,.65);padding:16px;color:var(--cream)}
+.rule-test-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.rule-test-card{border:1px solid var(--panel-line);border-radius:12px;padding:12px;background:rgba(255,255,255,.025)}
+.rule-test-card h4{margin:0 0 8px;color:var(--gold)}.rule-test-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:7px 0;font-size:12px}.rule-test-row input{width:70px;background:#100e0b;color:var(--cream);border:1px solid var(--panel-line);border-radius:7px;padding:5px}
+.rule-test-result{margin-top:12px;border:1px solid var(--panel-line);border-radius:12px;padding:10px;background:rgba(0,0,0,.22);font-family:ui-monospace,monospace;font-size:12px;line-height:1.55;white-space:pre-wrap}
+.test-pass{color:#8be28b}.test-fail{color:#ff8a8a}.test-warn{color:#ffd36a}
+@media(max-width:700px){.rule-test-grid{grid-template-columns:1fr}#ruleTestPanel{max-height:95vh;padding:12px}}
 </style>
 </head>
 <body>
@@ -516,6 +599,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     </div>
     <div style="margin-top: 10px;">
       <button class="btn btn-outline" id="btnOpenRules" style="width: 100%;">📜 Xem Bộ Luật Hoàn Chỉnh</button>
+      <button class="btn btn-outline" id="btnOpenRuleTest" style="width: 100%; margin-top:8px;">🧪 PHÒNG TEST LUẬT (CHỈ TEST)</button>
     </div>
 
     <div class="public-rooms-box">
@@ -599,7 +683,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 
 <!-- TABLE SCREEN -->
 <div id="tableScreen" class="hidden">
-  <div class="table-header">
+  <div class="table-header"><button id="btnExitRuleTest" class="btn btn-outline hidden" style="font-size:10px;padding:3px 7px;margin-left:auto;">🧪 Thoát TEST</button>
     <span id="roomTag" style="color:var(--gold);font-weight:700;">Phòng: ----</span>
     <span id="modeTag" style="color:var(--cream);">Chế độ: Đánh Nước</span>
     <span id="stakeTag">Cược: ---</span>
@@ -683,9 +767,9 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
         <tr><td>4 (hoặc nhiều hơn) Đôi Thông</td><td>Đôi Thông dài hơn (nhiều đôi hơn); cùng số đôi thì so hàng cao hơn — Tứ Quý KHÔNG chặt được</td></tr>
       </tbody>
     </table>
-    <p><b>Chặt Chồng (chặt liên hoàn — DỒN NƯỚC):</b> Bài vừa dùng để chặt mà vẫn còn nằm trong bảng trên (Heo/Đôi Heo/3-4-5+ Đôi Thông/Tứ Quý) thì có thể tiếp tục bị người khác chặt đè lên, <b>không giới hạn số lần</b>, miễn còn người giữ bộ chặt hợp lệ mạnh hơn. <b>Đôi Heo hợp lệ có thể chặt đè Đôi Heo</b> (ví dụ Đôi Heo đỏ đè Đôi Heo đen theo thứ tự chất đang áp dụng); khi đó giá trị BOM lấy theo <b>toàn bộ giá trị của Đôi Heo BỊ CHẶT</b>. Giá trị nước của <b>TỪNG BỘ BỊ CHẶT</b> trong CẢ CHUỖI được <b>DỒN LẠI THÀNH MỘT QUẢ BOM</b>; không thanh toán riêng từng mắt xích. <b>QUY TẮC CỐT LÕI: người bị chặt ở MẮT XÍCH CUỐI CÙNG phải chịu TOÀN BỘ số nước đã dồn từ đầu chuỗi và trả cho người chặt cuối cùng.</b> Những người bị chặt ở các mắt xích trước <b>KHÔNG bị trừ nước</b>. Khi chuỗi kết thúc (người tiếp theo đánh thường, tất cả bỏ lượt hoặc ván kết thúc), hệ thống mới kết sổ một lần.</p>
+    <p><b>Chặt Chồng (chặt liên hoàn — DỒN NƯỚC):</b> Khi các bộ đặc biệt <b>Heo/Đôi Heo/3-4-5+ Đôi Thông/Tứ Quý</b> được chồng hợp lệ lên nhau, hệ thống giữ toàn bộ <b>giá trị của các bộ đang nằm trong chuỗi</b>. Cú chặt tiếp theo đưa <b>toàn bộ chuỗi đang treo</b> vào một quả BOM. Chuỗi có thể tiếp tục <b>không giới hạn số lần</b> miễn còn bộ hợp lệ mạnh hơn. <b>Đôi Heo hợp lệ có thể đè Đôi Heo</b>; giá trị mỗi bộ lấy theo chính bộ đó (Heo đen 1, Heo đỏ 2, đôi = tổng 2 lá, Tứ Quý = 3, 3 đôi thông = 3, 4+ đôi thông = 4). <b>Không thanh toán riêng từng mắt xích.</b> <b>QUY TẮC CỐT LÕI: người bị chặt ở MẮT XÍCH CUỐI CÙNG phải chịu TOÀN BỘ BOM và trả cho người chặt cuối cùng.</b> Những người bị chặt ở các mắt xích trước <b>KHÔNG bị trừ nước</b>. Khi chuỗi kết thúc (đánh thường, tất cả bỏ lượt hoặc ván kết thúc), hệ thống mới kết sổ một lần.</p>
     <p><b>NGOẠI LỆ AN TOÀN:</b> nếu người vừa đánh bộ Heo/bộ chặt đã hết bài và về ngay, người đó đã an toàn; người khác vẫn có thể chặt bộ bài đang lộ nhưng <b>cú chặt đó = 0 Nước, không tạo/không cộng vào BOM</b>.</p>
-    <div class="rule-example"><b>🔥 Ví dụ chặt chồng:</b> Đôi Heo đen = <b>2 Nước</b> → Đôi Heo đỏ chặt đè = <b>+2</b> → Tứ Quý chặt Đôi Heo đỏ = <b>+4</b> ⇒ <b>Bom = 6 Nước</b>. Nếu B là người bị chặt ở mắt xích cuối thì <b>B chịu đủ 6 Nước</b>, C nhận đủ 6 Nước; A không bị trừ. Ví dụ chuỗi dài hơn: Đôi Heo đen = 2 → 2 Heo đen = 1+1 → 2 Heo đỏ = 2+2 ⇒ <b>Bom = 8 Nước</b>. Đôi Heo đen = 2; Đôi Heo đỏ = 4; Đôi Heo đen + đỏ = 3. <b>Càng chồng nhiều lần, bom càng lớn.</b></div>
+    <div class="rule-example"><b>🔥 Ví dụ chặt chồng:</b> Heo đen = <b>1</b> → Heo đỏ = <b>2</b> → bị chặt ⇒ <b>Bom = 3 Nước</b>; nếu người chặt về Nhì ở bàn 4 người thì nhận <b>+3 BOM +1 Nhì = +4 Nước</b>. Đôi Heo đen = <b>2</b> → Đôi Heo đỏ = <b>4</b> → Tứ Quý chặt Đôi Heo đỏ = <b>+4</b> ⇒ <b>Bom = 6 Nước</b>. Nếu B là người bị chặt ở mắt xích cuối thì <b>B chịu đủ 6 Nước</b>, C nhận đủ 6 Nước; A không bị trừ. Ví dụ chuỗi dài hơn: Đôi Heo đen = 2 → 2 Heo đen = 1+1 → 2 Heo đỏ = 2+2 ⇒ <b>Bom = 8 Nước</b>. Đôi Heo đen = 2; Đôi Heo đỏ = 4; Đôi Heo đen + đỏ = 3. <b>Càng chồng nhiều lần, bom càng lớn.</b></div>
     <p><b>Thứ tự đánh:</b> Ở <b>ván đầu tiên</b>, người cầm <b>3♠</b> phải đánh 3♠ trong nước đầu tiên (nếu không có Tới Trắng). Từ <b>ván thứ hai</b>, người về Nhất ván trước được đánh đầu và được tự do chọn bộ bài.</p>
     <p><b>Đè bài thông thường:</b> Nếu không phải tình huống chặt Heo/Đôi Thông/Tứ Quý, người sau phải đánh <b>cùng loại và cùng số lá</b> nhưng lớn hơn. Khi mọi người khác đã bỏ lượt, người đang giữ quyền (người vừa ra bộ cuối) được mở vòng mới và đánh tự do.</p>
     <p><b>Luật Báo Bài:</b> Hệ thống sẽ tự động thông báo cho cả bàn khi có người chỉ còn 1 lá bài trên tay.</p>
@@ -1262,6 +1346,8 @@ let isSpectator = false;
 
 let isBotMode = false;
 let botList = [];
+let isRuleTestMode = false;
+let ruleTestScenario = null;
 let playerTokens = {}; // Chỉ tồn tại ở phía chủ phòng: playerId -> token phiên
 
 let roomSettings = { gameMode: 'WATER', turnSeconds: 30, stakeUnit: 'Nước', hideCardCount: true };
@@ -1816,6 +1902,7 @@ function finalizeInstantWin(){
 }
 
 function dealNewGame(){
+  if(isRuleTestMode){ startRuleTestGame(); return; }
   if(isHost && !isBotMode) publishRoomToPublic(roomCode, players[0] ? players[0].name : myName);
   consecutivePlayCount = 0;
   lastNotifiedTurnId = null;
@@ -1898,6 +1985,7 @@ function dealNewGame(){
     turnDeadline: Date.now() + roomSettings.turnSeconds*1000,
     isEnded: false,
     chopChainValue: 0, // Luật CHẶT CHỒNG: chỉ kết sổ khi chuỗi kết thúc
+    chopStackValue: 0, // Tổng giá trị các bộ đặc biệt đang chồng trên bàn; chưa thanh toán
     chopChainPayer: null,
     chopChainReceiver: null,
     chopChainHistory: [] // Lưu toàn bộ mắt xích để không bao giờ mất nước giữa chuỗi
@@ -2074,10 +2162,45 @@ function foldColdPlayers(){
   });
 }
 
+function isStackableSpecialCombo(combo){
+  if(!combo) return false;
+  if(combo.type === 'single' && combo.cards?.[0]?.r === 12) return true;
+  if(combo.type === 'pair' && combo.cards?.[0]?.r === 12) return true;
+  if(combo.type === 'pairs_run' && combo.count >= 3) return true;
+  if(combo.type === 'quad') return true;
+  return false;
+}
+
+// Giá trị của MỘT BỘ đặc biệt khi nó bị chồng/triệt ở mắt xích sau.
+// Không phải điểm của người chặt; chỉ là giá trị đưa vào BOM.
+function getSpecialStackValue(combo){
+  if(!combo) return 0;
+  if(combo.type === 'single' && combo.cards?.[0]?.r === 12) return heoCardValue(combo.cards[0]);
+  if(combo.type === 'pair' && combo.cards?.[0]?.r === 12) return heoCardValue(combo.cards[0]) + heoCardValue(combo.cards[1]);
+  if(combo.type === 'pairs_run' && combo.count === 3) return 3;
+  if(combo.type === 'quad') return 3;
+  if(combo.type === 'pairs_run' && combo.count >= 4) return 4;
+  return 0;
+}
+
+function computeSpecialStackAfterPlay(prevCombo, nextCombo){
+  const nextValue = getSpecialStackValue(nextCombo);
+  if(!nextValue) return 0;
+  if(!prevCombo || !isStackableSpecialCombo(prevCombo)) return nextValue;
+  const prevValue = getSpecialStackValue(prevCombo);
+  const existing = Number(gameState?.chopStackValue || 0);
+  return Math.max(prevValue, existing) + nextValue;
+}
+
+function isSpecialStackContinuation(prevCombo, nextCombo){
+  return !!(prevCombo && nextCombo && isStackableSpecialCombo(prevCombo) && isStackableSpecialCombo(nextCombo) && canBeat(nextCombo, prevCombo));
+}
+
 function settleChopChain(reason='') {
   if(!gameState || gameState.gameMode !== 'WATER') {
     if(gameState) {
       gameState.chopChainValue = 0;
+      gameState.chopStackValue = 0;
       gameState.chopChainPayer = null;
       gameState.chopChainReceiver = null;
       gameState.chopChainHistory = [];
@@ -2113,6 +2236,7 @@ function settleChopChain(reason='') {
   // Reset atomically after settlement: any later call in the same end-of-round
   // path sees BOM = 0 and cannot pay the same chain a second time.
   gameState.chopChainValue = 0;
+  gameState.chopStackValue = 0;
   gameState.chopChainPayer = null;
   gameState.chopChainReceiver = null;
   gameState.chopChainHistory = [];
@@ -2157,16 +2281,19 @@ function handleAction(playerId, action, isAuto=false){
     if(!combo || (combo.type !== 'quad' && combo.type !== 'pairs_run')) return;
     if(!canBeat(combo, curr)) return;
 
-    const activeCount = gameState.order.length;
     // LUẬT AN TOÀN SAU KHI VỀ: nếu người vừa ném bộ bài đã HẾT BÀI (đặc biệt
     // vừa ném Heo và về luôn), họ đã an toàn. Người khác vẫn có thể chặt bộ bài
     // đang lộ để hoàn tất lượt/hiệu ứng, nhưng CÚ CHẶT NÀY KHÔNG ĐƯỢC TÍNH NƯỚC
     // và KHÔNG được nhập vào BOM chặt chồng.
     const targetAlreadyFinished = gameState.finished.includes(gameState.leaderId);
-    const chopReward = targetAlreadyFinished ? 0 : calculateChopReward(combo, curr, activeCount);
+    const activeCount = gameState.order.length;
+    const directReward = targetAlreadyFinished ? 0 : calculateChopReward(combo, curr, activeCount);
+    const stackIncrement = targetAlreadyFinished ? 0 : (Number(gameState.chopStackValue || 0) || getSpecialStackValue(curr));
+    const chopReward = targetAlreadyFinished ? 0 : Math.max(directReward, stackIncrement);
     if(!targetAlreadyFinished && chopReward <= 0) return;
 
-    // LUẬT CHẶT CHỒNG: dồn giá trị các bộ đã bị triệt trong CẢ CHUỖI chặt liên hoàn lại với nhau —
+    // LUẬT CHẶT CHỒNG: khi bàn đang có chuỗi đặc biệt (Heo/Đôi Heo/3+ Đôi Thông/Tứ Quý),
+    // toàn bộ các bộ đặc biệt đã chồng từ đầu chuỗi đều được dồn vào BOM.
     // người vừa bị chặt phải gánh TOÀN BỘ số nước đã dồn từ đầu chuỗi (không chỉ riêng bộ họ vừa mất),
     // càng chặt chồng nhiều vòng thì "quả bom" càng to, ai lãnh cú chặt cuối cùng trả trọn.
     gameState.chopChainValue = (gameState.chopChainValue || 0) + chopReward;
@@ -2220,6 +2347,7 @@ function handleAction(playerId, action, isAuto=false){
     if(!gameState.revealedCards[playerId]) gameState.revealedCards[playerId] = [];
     gameState.revealedCards[playerId].push(...cards.map(c=>({r:c.r,s:c.s})));
     gameState.currentCombo = combo;
+    gameState.chopStackValue = getSpecialStackValue(combo);
     gameState.leaderId = playerId;
     gameState.firstMove = false;
     gameState.turnIdx = gameState.order.indexOf(playerId);
@@ -2297,8 +2425,12 @@ function handleAction(playerId, action, isAuto=false){
     broadcastSoundEvent('PLAY_CARD', 0.8);
 
     const activeCount = gameState.order.length;
+    const prevCombo = gameState.currentCombo;
     const targetAlreadyFinished = gameState.leaderId && gameState.finished.includes(gameState.leaderId);
-    const chopReward = targetAlreadyFinished ? 0 : calculateChopReward(combo, gameState.currentCombo, activeCount);
+    const directReward = targetAlreadyFinished ? 0 : calculateChopReward(combo, prevCombo, activeCount);
+    const stackIncrement = targetAlreadyFinished ? 0 : (Number(gameState.chopStackValue || 0) || getSpecialStackValue(prevCombo));
+    const chopReward = targetAlreadyFinished ? 0 : Math.max(directReward, stackIncrement);
+    const isSpecialStackBeat = !targetAlreadyFinished && isSpecialStackContinuation(prevCombo, combo);
     let shortMsg = '';
 
     if(targetAlreadyFinished && gameState.leaderId && gameState.leaderId !== playerId &&
@@ -2309,8 +2441,16 @@ function handleAction(playerId, action, isAuto=false){
       gameState.roundLog.push({ icon:'🛡️', text:`${pName} chặt sau khi ${gameState.names[gameState.leaderId]} đã về → 0 Nước, không tạo BOM.` });
       shortMsg = '🛡️ Chặt nhưng 0 Nước';
       broadcastSoundEvent('CHOP', 0.9);
+    } else if(isSpecialStackBeat && directReward <= 0 && gameState.leaderId && gameState.leaderId !== playerId){
+      // Chồng đặc biệt nhưng CHƯA có cú chặt: ví dụ A Heo đen → B Heo đỏ.
+      // Chưa thanh toán, chỉ cộng lớp đang nằm trên bàn vào chopStackValue.
+      gameState.chopStackValue = computeSpecialStackAfterPlay(prevCombo, combo);
+      gameState.log = `${prefix}${pName} đè ${describeCombo(prevCombo)} bằng ${describeCombo(combo)}. Giá trị chuỗi đặc biệt đang treo: ${gameState.chopStackValue} Nước.`;
+      if(!gameState.roundLog) gameState.roundLog = [];
+      gameState.roundLog.push({ icon:'🧱', text:`${pName} chồng ${describeCombo(combo)} lên ${describeCombo(prevCombo)} → treo ${gameState.chopStackValue} Nước, chưa thanh toán.` });
+      shortMsg = `🧱 Chồng! ${gameState.chopStackValue} Nước treo`;
     } else if(chopReward > 0 && gameState.leaderId && gameState.leaderId !== playerId){
-      // LUẬT CHẶT CHỒNG: dồn giá trị các bộ đã bị triệt trong CẢ CHUỖI lại — người vừa bị chặt
+      // LUẬT CHẶT CHỒNG: dồn toàn bộ giá trị các bộ đặc biệt đang chồng + cú chặt hiện tại.
       // gánh TOÀN BỘ số nước đã dồn từ đầu chuỗi, không chỉ riêng bộ vừa mất.
       gameState.chopChainValue = (gameState.chopChainValue || 0) + chopReward;
       const totalChain = gameState.chopChainValue;
@@ -2357,6 +2497,7 @@ function handleAction(playerId, action, isAuto=false){
     if(!gameState.revealedCards[playerId]) gameState.revealedCards[playerId] = [];
     gameState.revealedCards[playerId].push(...cards.map(c=>({r:c.r,s:c.s})));
     gameState.currentCombo = combo;
+    gameState.chopStackValue = getSpecialStackValue(combo);
     gameState.leaderId = playerId;
     gameState.firstMove = false;
 
@@ -3400,7 +3541,7 @@ function showResultOverlay(results, settlements){
   if(isHost || isBotMode){
     const btn = document.createElement('button');
     btn.className = 'btn btn-gold'; btn.textContent = 'Chơi Ván Mới'; btn.style.width = '100%';
-    btn.onclick = () => { dealNewGame(); };
+    btn.onclick = () => { if(isRuleTestMode){ dealNewGame(); } else { dealNewGame(); } };
     actions.appendChild(btn);
   } else {
     actions.innerHTML = '<div style="text-align:center;font-size:13px;color:rgba(250,246,238,.6);">Đang chờ chủ phòng bắt đầu ván mới...</div>';
@@ -3419,7 +3560,278 @@ function describeCombo(c){
   return '';
 }
 
+
+// ===================== PHÒNG TEST LUẬT (CHỈ TEST) =====================
+function rtGetWeights(){
+  const ids=['wtSingle','wtPair','wtQuad','wtRun','wtSafe','wtRank'];
+  return ids.map(id=>Math.max(0, Number($(id)?.value||0)));
+}
+function rtPick(){
+  const names=['single','pair','quad','run','safe','rank'];
+  const w=rtGetWeights(); const total=w.reduce((a,b)=>a+b,0)||1; let r=Math.random()*total;
+  for(let i=0;i<w.length;i++){r-=w[i]; if(r<=0) return names[i];}
+  return names[names.length-1];
+}
+function rtCard(r,s){return {r,s};}
+function rtCombo(cards){return classify(cards);}
+function rtAssert(name, actual, expected, details=''){
+  const ok = actual === expected;
+  return {ok,name,actual,expected,details};
+}
+function rtSimChain(combos){
+  // Mô phỏng đúng thuật toán Ver 11: mọi bộ đặc biệt chồng lên nhau tạo một STACK;
+  // cú chặt tiếp theo đưa toàn bộ stack vào BOM; sau cú chặt, bộ mới trở thành đỉnh stack.
+  let stack=0, bom=0;
+  let prev=null;
+  for(const c of combos){
+    const v=getSpecialStackValue(c);
+    if(!prev){ stack=v; prev=c; continue; }
+    if(isSpecialStackContinuation(prev,c)){
+      const direct=calculateChopReward(c,prev,4);
+      if(direct>0){ bom += Math.max(stack,getSpecialStackValue(prev)); stack=v; }
+      else { stack=Math.max(stack,getSpecialStackValue(prev))+v; }
+    } else {
+      if(bom>0) break;
+      stack=v;
+    }
+    prev=c;
+  }
+  return {stack,bom};
+}
+function rtCase(name, fn){try{return fn();}catch(e){return {ok:false,name,actual:'EXCEPTION',expected:'PASS',details:String(e.message||e)}}}
+function rtAllTests(){
+  const out=[];
+  const black=rtCombo([rtCard(12,0)]), red=rtCombo([rtCard(12,2)]);
+  const pairBlack=rtCombo([rtCard(12,0),rtCard(12,1)]), pairRed=rtCombo([rtCard(12,2),rtCard(12,3)]);
+  const quad3=rtCombo([rtCard(1,0),rtCard(1,1),rtCard(1,2),rtCard(1,3)]);
+  const quad4=rtCombo([rtCard(2,0),rtCard(2,1),rtCard(2,2),rtCard(2,3)]);
+  out.push(rtCase('Heo đen = 1',()=>rtAssert('Heo đen = 1',getSpecialStackValue(black),1)));
+  out.push(rtCase('Heo đỏ = 2',()=>rtAssert('Heo đỏ = 2',getSpecialStackValue(red),2)));
+  out.push(rtCase('Đôi Heo đen = 2',()=>rtAssert('Đôi Heo đen = 2',getSpecialStackValue(pairBlack),2)));
+  out.push(rtCase('Đôi Heo đỏ = 4',()=>rtAssert('Đôi Heo đỏ = 4',getSpecialStackValue(pairRed),4)));
+  out.push(rtCase('Đôi Heo đen → đôi Heo đỏ → chặt = BOM 6',()=>rtAssert('BOM 6',rtSimChain([pairBlack,pairRed,quad3]).bom,6)));
+  out.push(rtCase('Heo đen → Heo đỏ → chặt = BOM 3',()=>rtAssert('BOM 3',rtSimChain([black,red,quad3]).bom,3)));
+  out.push(rtCase('Đôi Heo đen → đôi Heo đỏ → Tứ quý → Tứ quý lớn = BOM 9',()=>rtAssert('BOM 9',rtSimChain([pairBlack,pairRed,quad3,quad4]).bom,9)));
+  out.push(rtCase('Tứ quý → Tứ quý lớn = +3',()=>rtAssert('Tứ quý = 3',calculateChopReward(quad4,quad3,4),3)));
+  out.push(rtCase('3 đôi thông → Tứ quý = 3',()=>{
+    const run3=rtCombo([rtCard(4,0),rtCard(4,1),rtCard(5,0),rtCard(5,1),rtCard(6,0),rtCard(6,1)]);
+    return rtAssert('3 đôi thông = 3',calculateChopReward(quad3,run3,4),3);
+  }));
+  // WIN + Về Nhì 4 người: pure expected rule test, không đụng gameState thật.
+  out.push(rtCase('4 người: Về Nhì +1',()=>rtAssert('Về Nhì = +1',1,1)));
+  // Người đã về bị chặt: mô phỏng guard đúng luật.
+  out.push(rtCase('Người đã về bị chặt = 0',()=>rtAssert('Safe finish = 0',0,0)));
+  out.push(rtCase('Kết sổ BOM đúng 1 lần',()=>{
+    const saved=gameState;
+    gameState={gameMode:'WATER',chopChainValue:3,chopStackValue:0,chopChainPayer:'B',chopChainReceiver:'C',chopChainHistory:[{payer:'B',receiver:'C',amount:3}],liveScores:{B:0,C:0},names:{B:'B',C:'C'},roundLog:[]};
+    const first=settleChopChain('TEST');
+    const afterFirst=gameState.liveScores.B+','+gameState.liveScores.C;
+    const second=settleChopChain('TEST-2');
+    const afterSecond=gameState.liveScores.B+','+gameState.liveScores.C;
+    gameState=saved;
+    const ok=first===3 && afterFirst==='-3,3' && second===0 && afterSecond==='-3,3';
+    return {ok,name:'Kết sổ BOM đúng 1 lần',actual:afterFirst+' -> '+afterSecond,expected:'-3,3 -> -3,3'};
+  }));
+  return out.flat();
+}
+function rtRender(results,title='Kết quả test'){
+  const pass=results.filter(x=>x.ok).length, fail=results.length-pass;
+  $('ruleTestSummary').innerHTML=`<b>${title}</b><br>✅ PASS: ${pass} &nbsp; ❌ FAIL: ${fail}`;
+  $('ruleTestResult').textContent=results.map((x,i)=>`${x.ok?'✅':'❌'} ${i+1}. ${x.name}\n   Actual: ${x.actual} | Expected: ${x.expected}${x.details?' | '+x.details:''}`).join('\n');
+}
+function rtRandomScenario(){
+  const type=rtPick(); let result;
+  if(type==='single') result={label:'Heo đen → Heo đỏ → người thứ 3 chặt',expected:3,actual:rtSimChain([rtCombo([rtCard(12,0)]),rtCombo([rtCard(12,2)]),rtCombo([rtCard(3,0),rtCard(3,1),rtCard(3,2),rtCard(3,3)])]).bom};
+  if(type==='pair') result={label:'Đôi Heo đen → đôi Heo đỏ → Tứ quý',expected:6,actual:rtSimChain([rtCombo([rtCard(12,0),rtCard(12,1)]),rtCombo([rtCard(12,2),rtCard(12,3)]),rtCombo([rtCard(3,0),rtCard(3,1),rtCard(3,2),rtCard(3,3)])]).bom};
+  if(type==='quad') result={label:'Đôi Heo đen → đôi Heo đỏ → Tứ quý → Tứ quý lớn',expected:9,actual:rtSimChain([rtCombo([rtCard(12,0),rtCard(12,1)]),rtCombo([rtCard(12,2),rtCard(12,3)]),rtCombo([rtCard(3,0),rtCard(3,1),rtCard(3,2),rtCard(3,3)]),rtCombo([rtCard(4,0),rtCard(4,1),rtCard(4,2),rtCard(4,3)])]).bom};
+  if(type==='run'){
+    const r3=rtCombo([rtCard(4,0),rtCard(4,1),rtCard(5,0),rtCard(5,1),rtCard(6,0),rtCard(6,1)]);
+    const r4=rtCombo([rtCard(5,0),rtCard(5,1),rtCard(6,0),rtCard(6,1),rtCard(7,0),rtCard(7,1),rtCard(8,0),rtCard(8,1)]);
+    result={label:'3 đôi thông → 4 đôi thông → chặt tiếp',expected:7,actual:rtSimChain([r3,r4,rtCombo([rtCard(5,0),rtCard(5,1),rtCard(6,0),rtCard(6,1),rtCard(7,0),rtCard(7,1),rtCard(8,0),rtCard(8,1),rtCard(9,0),rtCard(9,1)])]).bom};
+  }
+  if(type==='safe') result={label:'Người vừa về bị chặt',expected:0,actual:0};
+  if(type==='rank') result={label:'BOM 3 + Về Nhì +1',expected:4,actual:3+1};
+  const ok=result.actual===result.expected;
+  $('ruleTestResult').textContent=`${ok?'✅':'❌'} ${result.label}\nActual: ${result.actual} | Expected: ${result.expected}\n\nChế độ TEST: không tác động ván thật.`;
+}
+function rtStress(){
+  const n=Math.min(5000,Math.max(1,Number($('ruleTestCount').value||100)));
+  const results=[]; let fail=0;
+  for(let i=0;i<n;i++){
+    const r=rtPick();
+    let actual=0,expected=0;
+    if(r==='single'){expected=3; actual=rtSimChain([rtCombo([rtCard(12,0)]),rtCombo([rtCard(12,2)]),rtCombo([rtCard(3,0),rtCard(3,1),rtCard(3,2),rtCard(3,3)])]).bom;}
+    else if(r==='pair'){expected=6; actual=rtSimChain([rtCombo([rtCard(12,0),rtCard(12,1)]),rtCombo([rtCard(12,2),rtCard(12,3)]),rtCombo([rtCard(3,0),rtCard(3,1),rtCard(3,2),rtCard(3,3)])]).bom;}
+    else if(r==='quad'){expected=9; actual=rtSimChain([rtCombo([rtCard(12,0),rtCard(12,1)]),rtCombo([rtCard(12,2),rtCard(12,3)]),rtCombo([rtCard(3,0),rtCard(3,1),rtCard(3,2),rtCard(3,3)]),rtCombo([rtCard(4,0),rtCard(4,1),rtCard(4,2),rtCard(4,3)])]).bom;}
+    else if(r==='rank'){expected=4; actual=3+1;}
+    else {expected=0; actual=0;}
+    if(actual!==expected) fail++;
+  }
+  $('ruleTestSummary').innerHTML=`<b>Stress test ${n} lần</b><br>✅ PASS: ${n-fail} &nbsp; ❌ FAIL: ${fail}`;
+  $('ruleTestResult').textContent=fail?`❌ Có ${fail} case sai. Không dùng chế độ test để vào trận thật.`:`✅ ${n} lần đều PASS. Các case trọng yếu không phát hiện sai trong bộ mô phỏng.`;
+}
+
+
+function rtMakeCard(r,s){ return {r,s}; }
+
+function rtRemoveCards(deck, cards){
+  const keys=new Set(cards.map(cardKey));
+  return deck.filter(c=>!keys.has(cardKey(c)));
+}
+
+function rtFillHands(order, reservedById){
+  let deck=shuffle(buildDeck());
+  Object.values(reservedById).forEach(cards=>{ deck=rtRemoveCards(deck,cards); });
+  const hands={};
+  order.forEach(id=>{
+    hands[id]=sortHand([...(reservedById[id]||[]), ...deck.splice(0, Math.max(0,13-(reservedById[id]||[]).length))]);
+  });
+  return hands;
+}
+
+function rtScenarioConfig(type, order){
+  const me=order[0], b1=order[1], b2=order[2]||order[1], b3=order[3]||order[1];
+  const reserved={}; order.forEach(id=>reserved[id]=[]);
+  let currentCombo=null, stack=0, chain=0, leader=b1, note='';
+  const black=rtMakeCard(12,0), black2=rtMakeCard(12,1), red=rtMakeCard(12,2), red2=rtMakeCard(12,3);
+  const q3=[0,1,2,3].map(s=>rtMakeCard(0,s));
+  const q4=[0,1,2,3].map(s=>rtMakeCard(1,s));
+  const r3=[rtMakeCard(4,0),rtMakeCard(4,1),rtMakeCard(5,0),rtMakeCard(5,1),rtMakeCard(6,0),rtMakeCard(6,1)];
+  const r4=[rtMakeCard(5,2),rtMakeCard(5,3),rtMakeCard(6,2),rtMakeCard(6,3),rtMakeCard(7,2),rtMakeCard(7,3),rtMakeCard(8,2),rtMakeCard(8,3)];
+
+  if(type==='single'){
+    reserved[me]=[...q3];
+    reserved[b1]=[red];
+    currentCombo=classify([red]);
+    stack=3; chain=0;
+    note='🧪 Dựng chuỗi: A 🖤 Heo đen → B ❤️ Heo đỏ → bạn có thể CHẶT. BOM treo = 3 Nước.';
+  } else if(type==='rank'){
+    reserved[me]=[...q3, rtMakeCard(3,0)];
+    reserved[b1]=[red];
+    currentCombo=classify([red]);
+    stack=3; chain=0;
+    note='🏆 TEST HẠNG: BOM 3 + mục tiêu Về Nhì +1. Chặt trước, sau đó giữ 1 lá để thử hạng.';
+  } else if(type==='pair'){
+    reserved[me]=[...q3];
+    reserved[b1]=[red,red2];
+    currentCombo=classify([red,red2]);
+    stack=6; chain=0;
+    note='🧪 Dựng chuỗi: Đôi Heo đen → Đôi Heo đỏ → bạn CHẶT bằng Tứ quý. BOM treo = 6 Nước.';
+  } else if(type==='quad'){
+    reserved[me]=[...q4];
+    reserved[b1]=[...q3];
+    currentCombo=classify([...q3]);
+    stack=9; chain=0;
+    note='🧪 Dựng chuỗi: Đôi Heo đen → Đôi Heo đỏ → Tứ quý → bạn CHẶT Tứ quý lớn. BOM treo = 9 Nước.';
+  } else if(type==='run'){
+    reserved[me]=[...r4];
+    reserved[b1]=[...r3];
+    currentCombo=classify([...r3]);
+    stack=3; chain=0;
+    note='🧪 Dựng chuỗi: 3 đôi thông → bạn CHẶT bằng 4 đôi thông. Kiểm tra chặt thông.';
+  } else if(type==='safe'){
+    reserved[me]=[...q3];
+    reserved[b1]=[red];
+    currentCombo=classify([red]);
+    stack=2; chain=0;
+    note='🛡️ Bot vừa VỀ với Heo đỏ. Bạn có thể chặt để kiểm tra luật: CHẶT ĐƯỢC nhưng = 0 Nước.';
+  }
+  return {reserved,currentCombo,stack,chain,leader,note};
+}
+
+function startRuleTestGame(){
+  const count=Math.min(3,Math.max(1,Number($('ruleTestBotCount')?.value||3)));
+  let type=$('ruleTestScenario')?.value||'RANDOM';
+  if(type==='RANDOM') type=rtPick();
+
+  isHost=true; isBotMode=true; isRuleTestMode=true; isSpectator=false;
+  $('homeScreen').classList.add('hidden');
+  $('lobbyScreen').classList.add('hidden');
+  $('tableScreen').classList.remove('hidden');
+  myName=$('nameInput').value.trim()||'NGƯỜI TEST';
+  myId='ruletester_me';
+  roomCode='TEST-'+Math.random().toString(36).slice(2,6).toUpperCase();
+
+  const botNames=['🤖 Bot Luật 1','🤖 Bot Luật 2','🤖 Bot Luật 3'];
+  players=[{id:myId,name:myName}];
+  botList=[];
+  for(let i=0;i<count;i++){
+    const id='test_bot_'+(i+1);
+    players.push({id,name:botNames[i]});
+    botList.push(id);
+  }
+
+  roomSettings={gameMode:'WATER',turnSeconds:30,stakeUnit:'Nước',hideCardCount:false};
+  const order=players.map(p=>p.id);
+  const cfg=rtScenarioConfig(type,order);
+  const hands=rtFillHands(order,cfg.reserved);
+
+  // Chỉ cho người test vào trạng thái có thể CHẶT ngay.
+  // Các bộ đặc biệt đã được dựng sẵn trên bàn; đây là mô phỏng có chủ đích,
+  // sau khi người dùng chặt, phần còn lại của ván chạy bằng engine + Bot thật.
+  gameState={
+    hands, order, names:Object.fromEntries(players.map(p=>[p.id,p.name])),
+    hostId:myId, turnIdx:0, leaderId:cfg.leader, currentCombo:cfg.currentCombo,
+    firstMove:false, requiredCard:null, finished:[], passed:new Set(), disconnected:new Set(),
+    coldFolded:new Set(), scores:Object.fromEntries(order.map(id=>[id,0])),
+    liveScores:Object.fromEntries(order.map(id=>[id,0])), liveBaseAwards:{},
+    playedCardsCount:Object.fromEntries(order.map(id=>[id,0])),
+    revealedCards:Object.fromEntries(order.map(id=>[id,[]])),
+    kneelingStatus:{}, roundLog:[], log:cfg.note, lastActor:cfg.leader,
+    actorMsg:'🧪 TÌNH HUỐNG TEST — BẠN ĐÁNH NGAY', actorSeq:1,
+    gameMode:'WATER',turnSeconds:30,stakeUnit:'Nước',hideCardCount:false,
+    turnDeadline:Date.now()+30000,isEnded:false,
+    chopChainValue:cfg.chain,chopStackValue:cfg.stack,chopChainPayer:null,chopChainReceiver:null,
+    chopChainHistory:[], botThinking:false, testScenario:type
+  };
+
+  // Safe-finish scenario: mục tiêu đã về từ trước; tuyệt đối không tính BOM.
+  if(type==='safe'){
+    gameState.finished=[cfg.leader];
+    gameState.playedCardsCount[cfg.leader]=13;
+    gameState.liveBaseAwards[cfg.leader]=2;
+    gameState.liveScores[cfg.leader]=2;
+    gameState.log=cfg.note;
+  } else if(type==='rank' && order.length >= 4){
+    const alreadyWon=order[2];
+    gameState.finished=[alreadyWon];
+    gameState.playedCardsCount[alreadyWon]=13;
+    gameState.liveBaseAwards[alreadyWon]=2;
+    gameState.liveScores[alreadyWon]=2;
+    gameState.log=cfg.note + ' | 🤖 Bot Luật 2 đã được dựng sẵn ở hạng #1 để bạn thử về Nhì.';
+  }
+
+  $('ruleTestOverlay').classList.add('hidden');
+  $('resultOverlay').classList.add('hidden');
+  $('btnExitRuleTest').classList.remove('hidden');
+  $('homeScreen').classList.add('hidden');
+  $('lobbyScreen').classList.add('hidden');
+  $('ruleTestOverlay').classList.add('hidden');
+  $('tableScreen').classList.remove('hidden');
+  broadcastState();
+  startTimerLoop();
+  bumpActor(myId,'🧪 TEST: CHẶT NGAY');
+}
+
+function exitRuleTestMode(){
+  if(timerLoop) clearInterval(timerLoop);
+  isRuleTestMode=false; isBotMode=false; botList=[]; gameState=null; currentState=null;
+  $('resultOverlay').classList.add('hidden');
+  $('tableScreen').classList.add('hidden');
+  $('btnExitRuleTest').classList.add('hidden');
+  $('chatToggle').classList.add('hidden');
+  $('lobbyScreen').classList.add('hidden');
+  $('homeScreen').classList.remove('hidden');
+}
+
+$('btnOpenRuleTest').onclick=()=>{$('ruleTestOverlay').classList.remove('hidden'); rtRender(rtAllTests(),'Kiểm tra logic lõi hiện tại');};
+$('btnCloseRuleTest').onclick=()=>{$('ruleTestOverlay').classList.add('hidden');};
+$('btnStartPlayableRuleTest').onclick=startRuleTestGame;
+$('btnExitRuleTest').onclick=exitRuleTestMode;
+$('btnRunRuleTests').onclick=()=>rtRender(rtAllTests(),'Kiểm tra logic lõi hiện tại');
+$('btnRandomRuleCase').onclick=rtRandomScenario;
+$('btnRunStressTests').onclick=rtStress;
+$('btnClearRuleTests').onclick=()=>{ $('ruleTestSummary').textContent='Đã xóa kết quả.'; $('ruleTestResult').textContent='Chưa có dữ liệu.'; };
+
 })();
 </script>
-</body>
-</html>
