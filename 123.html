@@ -917,16 +917,40 @@ const REACTION_LABELS = {
 
 // --- PRELOAD ÂM THANH: nạp sẵn tất cả file mp3 ngay khi trang tải xong,
 // để khi cần phát (đặc biệt PLAY_CARD) không bị trễ do phải tải mạng lúc đó. ---
-const SOUND_CACHE = {};
+// FIX ÂM THANH "LÚC CÓ LÚC KHÔNG" + "VANG VỌNG/CHỒNG ÂM":
+// Trước đây mỗi lần phát dùng cached.cloneNode(true) để tạo 1 <audio> MỚI hoàn toàn.
+// Vấn đề: bước "mở khoá" (unlockAudioForMobile) chỉ mở khoá đúng phần tử <audio> gốc
+// trong SOUND_CACHE (play() câm trong lúc có cử chỉ chạm thật) — còn phần tử clone ra
+// SAU đó là 1 element hoàn toàn mới, CHƯA từng được mở khoá. Trên iOS Safari (và một số
+// Android) chỉ những phần tử ĐÃ được play() trong 1 cử chỉ chạm thật mới chắc chắn phát
+// được sau này; do đó âm thanh phát bằng click trực tiếp (tự mình bấm) luôn nghe được
+// (vì clone đó tình cờ nằm trong stack gọi từ sự kiện click), còn âm thanh dội về từ
+// người chơi khác qua mạng (Firebase child_added, không phải cử chỉ chạm) thì clone mới
+// tạo ra lúc đó không được mở khoá -> im lặng ngẫu nhiên, đúng kiểu "lúc có lúc không".
+// Ngoài ra cloneNode cho phép chồng SỐ LƯỢNG KHÔNG GIỚI HẠN bản phát cùng lúc, nên khi
+// nhiều sự kiện âm thanh dồn về gần nhau, tiếng bị đè chồng nghe như vọng/chói.
+// -> Giải pháp: tạo sẵn 1 "hồ chứa" (pool) NHIỀU bản <audio> cho MỖI âm ngay từ đầu,
+// mở khoá TỪNG bản trong pool đó lúc có cử chỉ chạm, rồi khi phát chỉ xoay vòng
+// (round-robin) dùng lại đúng những bản ĐÃ mở khoá này — không tạo clone mới nữa.
+// Nhờ vậy: (1) bản nào cũng chắc chắn đã qua bước mở khoá -> phát ổn định trên mọi máy;
+// (2) số bản chồng nhau cùng lúc bị giới hạn theo kích thước pool -> hết cảnh vọng/chói
+// do chồng vô hạn.
+const SOUND_POOL_SIZE = 3;
+const SOUND_CACHE = {}; // key -> mảng các <audio> đã preload (pool)
 function preloadAllSounds(){
   Object.keys(SOUND_URLS).forEach(key => {
-    try {
-      const a = new Audio();
-      a.preload = 'auto';
-      a.src = SOUND_URLS[key];
-      a.load();
-      SOUND_CACHE[key] = a;
-    } catch(err){}
+    if(SOUND_CACHE[key] && SOUND_CACHE[key].length) return; // đã tạo pool rồi, tránh tạo trùng nếu hàm bị gọi lại
+    const pool = [];
+    for(let i = 0; i < SOUND_POOL_SIZE; i++){
+      try {
+        const a = new Audio();
+        a.preload = 'auto';
+        a.src = SOUND_URLS[key];
+        a.load();
+        pool.push(a);
+      } catch(err){}
+    }
+    SOUND_CACHE[key] = pool;
   });
 }
 // Bắt đầu preload ngay (một số trình duyệt cần tương tác người dùng đầu tiên
@@ -949,18 +973,22 @@ let _audioUnlocked = false;
 function unlockAudioForMobile(){
   if(_audioUnlocked) return;
   _audioUnlocked = true;
-  Object.values(SOUND_CACHE).forEach(a => {
-    try{
-      const wasMuted = a.muted;
-      a.muted = true;
-      const p = a.play();
-      if(p && typeof p.then === 'function'){
-        p.then(()=>{ a.pause(); a.currentTime = 0; a.muted = wasMuted; })
-         .catch(()=>{ a.muted = wasMuted; });
-      } else {
-        a.pause(); a.currentTime = 0; a.muted = wasMuted;
-      }
-    }catch(err){}
+  // Mở khoá TỪNG bản <audio> trong từng pool (không chỉ 1 bản/âm như trước), để mọi
+  // bản dùng để phát chồng sau này (xem playGlobalSound) đều đã qua cử chỉ chạm thật.
+  Object.values(SOUND_CACHE).forEach(pool => {
+    (pool || []).forEach(a => {
+      try{
+        const wasMuted = a.muted;
+        a.muted = true;
+        const p = a.play();
+        if(p && typeof p.then === 'function'){
+          p.then(()=>{ a.pause(); a.currentTime = 0; a.muted = wasMuted; })
+           .catch(()=>{ a.muted = wasMuted; });
+        } else {
+          a.pause(); a.currentTime = 0; a.muted = wasMuted;
+        }
+      }catch(err){}
+    });
   });
 }
 // Nạp lại + mở khóa ngay khi có tương tác đầu tiên của người dùng (chạm/click),
@@ -997,16 +1025,23 @@ function broadcastChopSound(){
   playChopControlled(soundKey);
 }
 
+const _soundPoolIndex = {}; // key -> vị trí kế tiếp sẽ dùng trong pool (round-robin)
 function playGlobalSound(item, customVolume = 0.9){
   const url = SOUND_URLS[item];
   if(!url) return;
   const vol = Math.min(Math.max(customVolume, 0.1), 1.0);
   try {
-    const cached = SOUND_CACHE[item];
-    if(cached){
-      // Dùng cloneNode để phát tức thì từ bộ nhớ đệm, cho phép chồng nhiều lần phát
-      // (ví dụ nhiều lá bài đánh liên tiếp) mà không phải chờ tải lại từ mạng.
-      const instance = cached.cloneNode(true);
+    const pool = SOUND_CACHE[item];
+    if(pool && pool.length){
+      // Xoay vòng dùng lại đúng những bản ĐÃ được mở khoá lúc unlockAudioForMobile
+      // (không tạo clone mới), nên phát ổn định kể cả khi lệnh play() này không nằm
+      // trong 1 cử chỉ chạm trực tiếp (âm dội về từ người chơi khác qua mạng).
+      // Đồng thời số bản chồng nhau tối đa = kích thước pool, tránh vọng/chói do
+      // chồng vô hạn khi nhiều sự kiện âm dồn về gần nhau.
+      const idx = (_soundPoolIndex[item] || 0) % pool.length;
+      _soundPoolIndex[item] = idx + 1;
+      const instance = pool[idx];
+      try{ instance.pause(); instance.currentTime = 0; }catch(e){}
       instance.volume = vol;
       instance.play().catch(e => console.log(e));
       return;
