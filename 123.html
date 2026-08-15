@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -7,79 +6,6 @@
 <title>Tiến Lên Online - Bộ Luật Chuẩn & Chế Độ Đánh Nước / Quỳ</title>
 <!-- Firebase compat SDK -->
 <!-- RULE TEST LAB: chỉ là lớp giao diện test cục bộ, không liên quan Firebase/trận thật -->
-<div id="ruleTestOverlay" class="hidden" aria-hidden="true">
-  <div id="ruleTestPanel">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;">
-      <div>
-        <h2 style="margin:0;color:var(--gold);font-size:20px;">🧪 PHÒNG TEST LUẬT</h2>
-        <div style="font-size:11px;color:rgba(250,246,238,.65);margin-top:4px;">CHỈ MÔ PHỎNG LUẬT — KHÔNG TẠO PHÒNG, KHÔNG GHI FIREBASE, KHÔNG ẢNH HƯỞNG VÁN THẬT</div>
-      </div>
-      <button class="btn btn-outline" id="btnCloseRuleTest" type="button">✕ Đóng</button>
-    </div>
-
-    <div class="rule-test-grid">
-      <div class="rule-test-card">
-        <h4>⚖️ Tỷ lệ tình huống</h4>
-        <div class="rule-test-row"><span>Heo đen → Heo đỏ → chặt</span><input id="wtSingle" type="number" min="0" max="100" value="30"></div>
-        <div class="rule-test-row"><span>Đôi Heo → Đôi Heo → Tứ quý</span><input id="wtPair" type="number" min="0" max="100" value="25"></div>
-        <div class="rule-test-row"><span>Tứ quý chặt liên hoàn</span><input id="wtQuad" type="number" min="0" max="100" value="15"></div>
-        <div class="rule-test-row"><span>Đôi thông / 4+ đôi thông</span><input id="wtRun" type="number" min="0" max="100" value="15"></div>
-        <div class="rule-test-row"><span>Chặt người đã về</span><input id="wtSafe" type="number" min="0" max="100" value="10"></div>
-        <div class="rule-test-row"><span>WIN + BOM + Về Nhì</span><input id="wtRank" type="number" min="0" max="100" value="5"></div>
-        <div style="font-size:11px;color:rgba(250,246,238,.5);margin-top:8px;">Tổng tỷ lệ không bắt buộc bằng 100; hệ thống tự chuẩn hóa.</div>
-      </div>
-
-      <div class="rule-test-card">
-        <h4>🧪 Kiểm tra nhanh</h4>
-        <div style="display:grid;gap:7px;">
-          <button class="btn btn-gold" id="btnRunRuleTests" type="button">▶ Chạy toàn bộ test luật</button>
-          <button class="btn btn-outline" id="btnRandomRuleCase" type="button">🎲 Sinh 1 tình huống theo tỷ lệ</button>
-          <div class="rule-test-row" style="margin:0;"><span>Stress test</span><input id="ruleTestCount" type="number" min="1" max="5000" value="1000"></div>
-          <button class="btn btn-outline" id="btnRunStressTests" type="button">🔥 Chạy stress test</button>
-          <button class="btn btn-outline" id="btnClearRuleTests" type="button">🧹 Xóa kết quả</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="rule-test-card" style="margin-top:10px;border-color:rgba(212,175,55,.5);">
-      <h4>🎮 CHƠI TEST LUẬT THỰC TẾ</h4>
-      <div class="rule-test-grid" style="grid-template-columns:1fr 1fr;">
-        <div>
-          <div class="rule-test-row"><span>🤖 Số Bot</span>
-            <select id="ruleTestBotCount" class="sel" style="width:110px;margin:0;">
-              <option value="1">1 Bot (2 người)</option>
-              <option value="2">2 Bot (3 người)</option>
-              <option value="3" selected>3 Bot (4 người)</option>
-            </select>
-          </div>
-          <div class="rule-test-row"><span>🎲 Tình huống</span>
-            <select id="ruleTestScenario" class="sel" style="width:240px;margin:0;">
-              <option value="RANDOM" selected>🎲 Random theo tỷ lệ</option>
-              <option value="single">🖤 Heo đen → ❤️ Heo đỏ → Chặt</option>
-              <option value="pair">🖤🖤 → ❤️❤️ → Tứ quý</option>
-              <option value="quad">🖤🖤 → ❤️❤️ → Tứ quý → Tứ quý lớn</option>
-              <option value="run">3 Đôi thông → 4 Đôi thông</option>
-              <option value="safe">🛡️ Chặt người vừa về</option>
-              <option value="rank">🏆 BOM + Về Nhì</option>
-            </select>
-          </div>
-        </div>
-        <div style="display:grid;gap:7px;">
-          <button class="btn btn-gold" id="btnStartPlayableRuleTest" type="button">▶ ĐÁNH TEST NGAY</button>
-          <div style="font-size:11px;color:rgba(250,246,238,.58);line-height:1.5;">Mỗi ván test sẽ dựng một tình huống luật có chủ đích vào bàn. Bạn chơi thật với 1–3 Bot; không Firebase, không ảnh hưởng phòng thật.</div>
-        </div>
-      </div>
-    </div>
-
-    <div id="ruleTestSummary" class="rule-test-result">Chưa chạy kiểm tra.</div>
-    <div id="ruleTestResult" class="rule-test-result">Chưa có dữ liệu.</div>
-  </div>
-</div>
-
-</body>
-</html>
-
-
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
 <style>
@@ -583,6 +509,75 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 </head>
 <body>
 
+<div id="ruleTestOverlay" class="hidden" aria-hidden="true">
+  <div id="ruleTestPanel">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;">
+      <div>
+        <h2 style="margin:0;color:var(--gold);font-size:20px;">🧪 PHÒNG TEST LUẬT</h2>
+        <div style="font-size:11px;color:rgba(250,246,238,.65);margin-top:4px;">CHỈ MÔ PHỎNG LUẬT — KHÔNG TẠO PHÒNG, KHÔNG GHI FIREBASE, KHÔNG ẢNH HƯỞNG VÁN THẬT</div>
+      </div>
+      <button class="btn btn-outline" id="btnCloseRuleTest" type="button">✕ Đóng</button>
+    </div>
+
+    <div class="rule-test-grid">
+      <div class="rule-test-card">
+        <h4>⚖️ Tỷ lệ tình huống</h4>
+        <div class="rule-test-row"><span>Heo đen → Heo đỏ → chặt</span><input id="wtSingle" type="number" min="0" max="100" value="30"></div>
+        <div class="rule-test-row"><span>Đôi Heo → Đôi Heo → Tứ quý</span><input id="wtPair" type="number" min="0" max="100" value="25"></div>
+        <div class="rule-test-row"><span>Tứ quý chặt liên hoàn</span><input id="wtQuad" type="number" min="0" max="100" value="15"></div>
+        <div class="rule-test-row"><span>Đôi thông / 4+ đôi thông</span><input id="wtRun" type="number" min="0" max="100" value="15"></div>
+        <div class="rule-test-row"><span>Chặt người đã về</span><input id="wtSafe" type="number" min="0" max="100" value="10"></div>
+        <div class="rule-test-row"><span>WIN + BOM + Về Nhì</span><input id="wtRank" type="number" min="0" max="100" value="5"></div><div class="rule-test-row"><span>🌟 Tứ Quý 3 — Tới Trắng ván đầu</span><input id="wtWhite3" type="number" min="0" max="100" value="10"></div>
+        <div style="font-size:11px;color:rgba(250,246,238,.5);margin-top:8px;">Tổng tỷ lệ không bắt buộc bằng 100; hệ thống tự chuẩn hóa.</div>
+      </div>
+
+      <div class="rule-test-card">
+        <h4>🧪 Kiểm tra nhanh</h4>
+        <div style="display:grid;gap:7px;">
+          <button class="btn btn-gold" id="btnRunRuleTests" type="button">▶ Chạy toàn bộ test luật</button>
+          <button class="btn btn-outline" id="btnRandomRuleCase" type="button">🎲 Sinh 1 tình huống theo tỷ lệ</button>
+          <div class="rule-test-row" style="margin:0;"><span>Stress test</span><input id="ruleTestCount" type="number" min="1" max="5000" value="1000"></div>
+          <button class="btn btn-outline" id="btnRunStressTests" type="button">🔥 Chạy stress test</button>
+          <button class="btn btn-outline" id="btnClearRuleTests" type="button">🧹 Xóa kết quả</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="rule-test-card" style="margin-top:10px;border-color:rgba(212,175,55,.5);">
+      <h4>🎮 CHƠI TEST LUẬT THỰC TẾ</h4>
+      <div class="rule-test-grid" style="grid-template-columns:1fr 1fr;">
+        <div>
+          <div class="rule-test-row"><span>🤖 Số Bot</span>
+            <select id="ruleTestBotCount" class="sel" style="width:110px;margin:0;">
+              <option value="1">1 Bot (2 người)</option>
+              <option value="2">2 Bot (3 người)</option>
+              <option value="3" selected>3 Bot (4 người)</option>
+            </select>
+          </div>
+          <div class="rule-test-row"><span>🎲 Tình huống</span>
+            <select id="ruleTestScenario" class="sel" style="width:240px;margin:0;">
+              <option value="RANDOM" selected>🎲 Random theo tỷ lệ</option>
+              <option value="single">🖤 Heo đen → ❤️ Heo đỏ → Chặt</option>
+              <option value="pair">🖤🖤 → ❤️❤️ → Tứ quý</option>
+              <option value="quad">🖤🖤 → ❤️❤️ → Tứ quý → Tứ quý lớn</option>
+              <option value="run">3 Đôi thông → 4 Đôi thông</option>
+              <option value="safe">🛡️ Chặt người vừa về</option>
+              <option value="rank">🏆 BOM + Về Nhì</option><option value="white3">🌟 Tứ Quý 3 — Tới Trắng ván đầu</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;gap:7px;">
+          <button class="btn btn-gold" id="btnStartPlayableRuleTest" type="button">▶ CHƠI TEST TỰ NHIÊN</button>
+          <div style="font-size:11px;color:rgba(250,246,238,.58);line-height:1.5;">Đánh tự nhiên như ván thật với 1–3 Bot; bài được chia ngẫu nhiên, không dựng sẵn kịch bản. Dùng các bài test luật bên dưới để kiểm tra bug nhanh theo tình huống cố định.</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="ruleTestSummary" class="rule-test-result">Chưa chạy kiểm tra.</div>
+    <div id="ruleTestResult" class="rule-test-result">Chưa có dữ liệu.</div>
+  </div>
+</div>
+
 <div class="brand" id="brandHeader">
   <h1>♠ Tiến Lên Online ♥</h1>
   <div class="sub">Đánh Bài Tiến Lên Miền Nam - Luật Chuẩn Mới</div>
@@ -755,7 +750,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     </ul>
     <p><b>Luật Tới Trắng (Ù ngay khi chia bài):</b> Ngay sau khi chia đủ 13 lá, hệ thống kiểm tra bài Tới Trắng trước khi bắt đầu lượt. Nếu có người sở hữu <b>Sảnh Rồng (3→A)</b>, <b>Tứ Quý Heo (đủ 4 quân 2)</b>, <b>Lục Đôi (6 đôi)</b> hoặc <b>Ngũ Đôi Thông (5 đôi liên tiếp)</b>, ván đấu kết thúc ngay lập tức, người đó thắng trắng và nhận thưởng cố định từ tất cả người chơi còn lại, không đánh tiếp.</p>
     <p><b>Tứ Quý 3 — Tới Trắng ván đầu tiên:</b> Chỉ ở <b>ván đầu tiên của trận đấu</b>, nếu một người cầm đủ <b>4 quân 3</b> (3♠, 3♣, 3♦, 3♥) thì được <b>Tới Trắng</b> ngay khi chia bài. Từ ván thứ hai trở đi, Tứ Quý 3 <b>không</b> còn là điều kiện Tới Trắng.</p>
-    <p><b>Luật Phạt Cóng/Đốt:</b> Người thua mà không đánh được lá bài nào trong suốt ván (bị chặn/giết ngộp hoàn toàn) sẽ bị phạt CỐ ĐỊNH bằng gấp đôi mức Bét chuẩn của bàn (Bàn 2 người: -2, Bàn 3-4 người: -4), áp dụng như nhau cho mọi hạng bị Cóng — kể cả hạng nhì, không chỉ hạng bét.</p>
+    <p><b>Luật Phạt Cóng/Đốt:</b> Người không đánh được lá nào trong suốt ván sẽ bị Cóng và đền cho <b>tất cả người chơi còn lại</b> giống cơ chế Tới Trắng nhưng ngược chiều: Bàn 4 người đền <b>2 Nước/người × 3 = 6 Nước</b>; Bàn 3 người <b>2 × 2 = 4 Nước</b>; Bàn 2 người <b>2 × 1 = 2 Nước</b>. Khoản Cóng được chia đều cho toàn bộ người còn lại. <b>Thối bài là khoản riêng</b>: Heo/Tứ Quý/Đôi Thông... vẫn đền trực tiếp cho người đã ép/chặn người Cóng.</p>
     <p><b>Luật Chặt Ngang (không cần đúng lượt):</b> Khi trên bàn đang có Heo đơn/đôi, 3 Đôi Thông hoặc Tứ Quý bị lộ, bất kỳ ai giữ bộ chặt hợp lệ đều có thể chặt ngay lập tức bằng nút "⚡ Chặt Ngang", không cần chờ đến lượt. Thứ bậc chặt cụ thể:</p>
     <table>
       <thead><tr><th>Bị chặt</th><th>Được chặt bởi</th></tr></thead>
@@ -830,6 +825,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   <button class="throw-btn" onclick="triggerReaction('LAUGH1')" title="Cười khinh">😂</button>
   <button class="throw-btn" onclick="triggerReaction('LAUGH2')" title="Cười sảng khoái">🤣</button>
   <button class="throw-btn" onclick="triggerReaction('LAUGH3')" title="Cười sặc">🐶</button>
+  <button class="throw-btn" onclick="triggerReaction('WAIT1')" title="Chị chờ nãy giờ Linda">⏳</button>
 </div>
 
 <script>
@@ -870,7 +866,13 @@ const SOUND_URLS = {
   '🌹': 'https://www.myinstants.com/media/sounds/emotional-damage-meme.mp3',
   '💩': 'https://www.myinstants.com/media/sounds/fart-with-reverb.mp3',
   '🔥': 'https://www.myinstants.com/media/sounds/bruh-sound-effect.mp3',
-  'CHOP': 'https://www.myinstants.com/media/sounds/laughing-man.mp3',
+  'CHOP': 'https://www.myinstants.com/media/sounds/explosion_1.mp3', // Giữ lại làm âm dự phòng (fallback); âm CHOP thật giờ random trong CHOP_1..CHOP_4 bên dưới
+  // BỘ ÂM "CHẶT" NGẪU NHIÊN: mỗi lần có người bị chặt (BOM), random 1 trong 4 âm này,
+  // đồng bộ để cả bàn cùng nghe chung 1 âm trong lần chặt đó (xem broadcastChopSound()).
+  'CHOP_1': 'https://www.myinstants.com/media/sounds/khoc-di.mp3', // Khóc đi
+  'CHOP_2': 'https://www.myinstants.com/media/sounds/thay-huan-oi-gioi-oi.mp3', // thầy huấn ối giồi ôi
+  'CHOP_3': 'https://www.myinstants.com/media/sounds/cbvn-troi-dat-oi-coi-de-thuong-hong.mp3', // CBVN Trời Đất Ơi Coi Dễ Thương Hong
+  'CHOP_4': 'https://www.myinstants.com/media/sounds/goi-goi-may-xong-goi.mp3', // goi goi may xong goi
   'CRY': 'https://www.myinstants.com/media/sounds/anime-wow-sound-effect.mp3',
   'PLAY_CARD': 'https://www.myinstants.com/media/sounds/card-flip.mp3',
   'MY_TURN': 'https://www.myinstants.com/media/sounds/level-up-1-199577.mp3',
@@ -880,17 +882,25 @@ const SOUND_URLS = {
   'CRY3': 'https://www.myinstants.com/media/sounds/asdasd_xyorzJ8.mp3',
   'LAUGH1': 'https://www.myinstants.com/media/sounds/evillaugh.swf.mp3',
   'LAUGH2': 'https://www.myinstants.com/media/sounds/ny-video-online-audio-converter.mp3',
-  'LAUGH3': 'https://www.myinstants.com/media/sounds/laughing-dog-meme.mp3'
+  'LAUGH3': 'https://www.myinstants.com/media/sounds/laughing-dog-meme.mp3',
+  'WAIT1': 'https://www.myinstants.com/media/sounds/linda-chi-cho-cung-nay-gio-ne.mp3' // Chị chờ nãy giờ Linda - hối người chơi lâu ra bài
 };
 
-// Nhãn hiện trong bong bóng thoại tại ghế khi ai đó bấm reaction khóc/cười
+// Danh sách các key âm "chặt" để random mỗi lần chặt
+const CHOP_SOUND_KEYS = ['CHOP_1','CHOP_2','CHOP_3','CHOP_4'];
+function pickRandomChopSound(){
+  return CHOP_SOUND_KEYS[Math.floor(Math.random() * CHOP_SOUND_KEYS.length)];
+}
+
+// Nhãn hiện trong bong bóng thoại tại ghế khi ai đó bấm reaction khóc/cười/hối
 const REACTION_LABELS = {
   CRY1: '😭 Khóc thét!',
   CRY2: '😢 Hức hức...',
   CRY3: '👶 Mít ướt!',
   LAUGH1: '😂 Cười khinh!',
   LAUGH2: '🤣 Hahaha!',
-  LAUGH3: '🐶 Cười sặc!'
+  LAUGH3: '🐶 Cười sặc!',
+  WAIT1: '⏳ Chị chờ nãy giờ Linda!'
 };
 
 // --- PRELOAD ÂM THANH: nạp sẵn tất cả file mp3 ngay khi trang tải xong,
@@ -913,6 +923,30 @@ preloadAllSounds();
 // Nạp lại một lần nữa sau khi có tương tác đầu tiên của người dùng, để chắc chắn
 // mọi thứ đã sẵn sàng trong bộ nhớ đệm của trình duyệt trước khi ván chơi bắt đầu.
 window.addEventListener('pointerdown', preloadAllSounds, { once: true });
+
+let _lastChopSoundAt = 0;
+let _seenChopSoundIds = new Set();
+
+function playChopControlled(soundKey){
+  const now = Date.now();
+  // Chặn mọi lần gọi trùng sát nhau, kể cả khi có nhiều nhánh/event cùng kích hoạt.
+  if(now - _lastChopSoundAt < 700) return;
+  _lastChopSoundAt = now;
+  try{
+    playGlobalSound(soundKey || pickRandomChopSound(), 0.9);
+  }catch(e){ console.warn('Không phát được âm CHOP:', e); }
+}
+
+function broadcastChopSound(){
+  const id = 'chop_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+  _seenChopSoundIds.add(id);
+  // Random 1 lần duy nhất ở đây rồi gửi đúng key đó cho tất cả người chơi,
+  // để cả bàn cùng nghe chung 1 âm trong lần chặt này (không phải mỗi người random riêng).
+  const soundKey = pickRandomChopSound();
+  // Không gọi broadcastSoundEvent() để tránh đường phát kép local + remote của CHOP.
+  sendToAll({t:'soundEvent', soundKey, volume:0.9, soundEventId:id});
+  playChopControlled(soundKey);
+}
 
 function playGlobalSound(item, customVolume = 0.9){
   const url = SOUND_URLS[item];
@@ -1355,6 +1389,29 @@ let kneelingTracker = {};
 
 const $=id=>document.getElementById(id);
 
+// FIX PHÒNG TEST: bắt click bằng event delegation để nút luôn hoạt động
+// kể cả khi một phần khởi tạo khác của giao diện gặp lỗi.
+document.addEventListener('click', function(e){
+  const btn = e.target.closest && e.target.closest('#btnOpenRuleTest');
+  if(!btn) return;
+  e.preventDefault();
+  const overlay = document.getElementById('ruleTestOverlay');
+  if(!overlay) {
+    alert('❌ Không tìm thấy giao diện PHÒNG TEST LUẬT.');
+    return;
+  }
+  overlay.classList.remove('hidden');
+  overlay.setAttribute('aria-hidden','false');
+  try {
+    if(typeof rtRender === 'function' && typeof rtAllTests === 'function') {
+      rtRender(rtAllTests(),'Kiểm tra logic lõi hiện tại');
+    }
+  } catch(err) {
+    console.error('Lỗi hiển thị PHÒNG TEST LUẬT:', err);
+  }
+});
+
+
 $('btnOpenRules').onclick = () => $('rulesOverlay').classList.remove('hidden');
 $('btnCloseRules').onclick = () => $('rulesOverlay').classList.add('hidden');
 
@@ -1629,6 +1686,10 @@ function onClientMessage(msg){
     } else if(msg.t==='stakeTransfer'){
       animateStakeTransfer(msg.fromId, msg.toId, msg.amount, msg.stakeUnit);
     } else if(msg.t==='soundEvent'){
+      if(CHOP_SOUND_KEYS.includes(msg.soundKey) && msg.soundEventId){
+        if(_seenChopSoundIds.has(msg.soundEventId)) return;
+        _seenChopSoundIds.add(msg.soundEventId);
+      }
       playGlobalSound(msg.soundKey, msg.volume || 0.9);
     } else if(msg.t==='countdown_start'){
       triggerCountdownAnimation(msg.callback);
@@ -2068,64 +2129,47 @@ function getAllPossibleCombos(hand) {
 
 function makeBotMove(botId){
   if(!gameState || gameState.isEnded) return;
-  const hand = safeArray(gameState.hands[botId]);
-  if(!hand || hand.length === 0) return;
-
-  const currentCombo = gameState.currentCombo;
-  const reqCard = (gameState.firstMove && gameState.requiredCard) ? gameState.requiredCard : null;
-
-  let allCombos = getAllPossibleCombos(hand);
-
-  if(reqCard) {
-    allCombos = allCombos.filter(cb => cb.cards.some(c => c.r === reqCard.r && c.s === reqCard.s));
-  }
-
-  if(!currentCombo) {
-    let straights = allCombos.filter(c => c.type === 'straight').sort((a,b) => b.len - a.len || a.highR - b.highR);
-    if(straights.length > 0 && !reqCard) {
-      handleAction(botId, { kind: 'play', cards: straights[0].cards.map(cardKey) }, true);
-      return;
-    }
-
-    let pairs = allCombos.filter(c => c.type === 'pair').sort((a,b) => a.highR - b.highR);
-    if(pairs.length > 0) {
-      handleAction(botId, { kind: 'play', cards: pairs[0].cards.map(cardKey) }, true);
-      return;
-    }
-
-    let triples = allCombos.filter(c => c.type === 'triple').sort((a,b) => a.highR - b.highR);
-    if(triples.length > 0) {
-      handleAction(botId, { kind: 'play', cards: triples[0].cards.map(cardKey) }, true);
-      return;
-    }
-
-    let nonTwos = hand.filter(c => c.r !== 12).sort((a,b) => a.r - b.r || a.s - b.s);
-    if(nonTwos.length > 0) {
-      handleAction(botId, { kind: 'play', cards: [cardKey(nonTwos[0])] }, true);
-      return;
-    }
-
-    handleAction(botId, { kind: 'play', cards: [cardKey(hand[0])] }, true);
+  const hand=safeArray(gameState.hands[botId]); if(!hand.length) return;
+  const curr=gameState.currentCombo;
+  const req=(gameState.firstMove&&gameState.requiredCard)?gameState.requiredCard:null;
+  let combos=getAllPossibleCombos(hand);
+  if(req) combos=combos.filter(x=>x.cards.some(c=>c.r===req.r&&c.s===req.s));
+  const seen=new Set(); combos=combos.filter(x=>{const k=x.cards.map(cardKey).sort().join('|');if(seen.has(k))return false;seen.add(k);return true;});
+  const hasTwo=x=>x.cards.some(c=>c.r===12);
+  const special=x=>x.type==='quad'||x.type==='pairs_run';
+  if(!curr){
+    // Mở vòng: ưu tiên bộ dễ thoát, giữ Tứ Quý/Đôi Thông và không vội xả Heo.
+    combos.sort((a,b)=>{
+      const score=x=>(x.cards.length*25)+(x.type==='straight'?20:0)+(x.type==='pairs_run'?25:0)+(x.type==='pair'?12:0)-(x.type==='quad'?65:0)-(hasTwo(x)?40:0)-(x.highR*1.5);
+      return score(b)-score(a);
+    });
+    if(combos[0]) handleAction(botId,{kind:'play',cards:combos[0].cards.map(cardKey)},true);
     return;
   }
-
-  let validBeatCombos = allCombos.filter(cb => canBeat(cb, currentCombo));
-
-  if(validBeatCombos.length > 0) {
-    if(currentCombo.type !== 'single' || currentCombo.cards[0].r !== 12) {
-      let normalCombos = validBeatCombos.filter(cb => cb.type === currentCombo.type).sort((a,b) => a.highR - b.highR || a.highS - b.highS);
-      if(normalCombos.length > 0) {
-        handleAction(botId, { kind: 'play', cards: normalCombos[0].cards.map(cardKey) }, true);
-        return;
-      }
-    }
-
-    validBeatCombos.sort((a,b) => a.highR - b.highR || a.highS - b.highS);
-    handleAction(botId, { kind: 'play', cards: validBeatCombos[0].cards.map(cardKey) }, true);
-    return;
-  }
-
-  handleAction(botId, { kind: 'pass' }, true);
+  const valid=combos.filter(x=>canBeat(x,curr));
+  if(!valid.length){handleAction(botId,{kind:'pass'},true);return;}
+  const target=gameState.leaderId?safeArray(gameState.hands[gameState.leaderId]):[];
+  const targetNear=target.length<=2&&gameState.leaderId!==botId;
+  valid.sort((a,b)=>{
+    const score=x=>{
+      let v=0;
+      const normal=x.type===curr.type&&x.len===curr.len;
+      v-=x.highR*5; v-=x.cards.length;
+      if(normal)v+=55;
+      if(special(x))v-=50;
+      if(hasTwo(x))v-=35;
+      if(targetNear)v+=special(x)?90:30;
+      if(curr.type==='single'&&curr.cards[0].r===12)v+=special(x)?80:10;
+      if(curr.type==='pair'&&curr.cards[0].r===12)v+=special(x)?80:10;
+      if(curr.type==='pairs_run'&&curr.count>=3)v+=special(x)?70:10;
+      if(curr.type==='quad')v+=special(x)?70:5;
+      return v;
+    };return score(b)-score(a);
+  });
+  // Không ép chặt ngay: chỉ dùng bộ đặc biệt nếu đó là phương án tốt nhất,
+  // đặc biệt khi đối thủ sắp về hoặc mục tiêu là Heo/đôi Heo/bộ chặt.
+  const best=valid[0];
+  handleAction(botId,{kind:'play',cards:best.cards.map(cardKey)},true);
 }
 
 function autoForceTurn(playerId){
@@ -2242,6 +2286,30 @@ function settleChopChain(reason='') {
   gameState.chopChainHistory = [];
   return total;
 }
+function hasFourPairRun(handCards){
+  return findMaxPairRuns(safeArray(handCards)).some(run => run.count >= 4);
+}
+
+function openChopInterruptWindow(){
+  if(!gameState || gameState.isEnded) return;
+  const curr = gameState.currentCombo;
+  const target = curr && ((curr.type === 'single' && curr.cards?.[0]?.r === 12) || (curr.type === 'pair' && curr.cards?.[0]?.r === 12) || (curr.type === 'pairs_run' && curr.count >= 3) || curr.type === 'quad');
+  if(!target) { gameState.chopInterruptDeadline = 0; return; }
+  const eligible = gameState.order.some(id => !gameState.finished.includes(id) && !gameState.coldFolded.has(id) && hasFourPairRun(gameState.hands[id]));
+  if(!eligible) { gameState.chopInterruptDeadline = 0; return; }
+  gameState.chopInterruptDeadline = Date.now() + 3000;
+  gameState.chopInterruptToken = (gameState.chopInterruptToken || 0) + 1;
+  const token = gameState.chopInterruptToken;
+  broadcastState();
+  setTimeout(() => {
+    if(!gameState || gameState.isEnded || gameState.chopInterruptToken !== token) return;
+    if(Number(gameState.chopInterruptDeadline || 0) <= Date.now()){
+      gameState.chopInterruptDeadline = 0;
+      broadcastState();
+    }
+  }, 3050);
+}
+
 function handleAction(playerId, action, isAuto=false){
   if(!gameState) return;
 
@@ -2261,12 +2329,16 @@ function handleAction(playerId, action, isAuto=false){
   if(gameState.instantWin && !gameState.instantWin.confirmed) return; // khoá mọi thao tác khác khi đang chờ xác nhận
 
   if(gameState.isEnded) return;
+  if(Number(gameState.chopInterruptDeadline || 0) > Date.now() && action.kind !== 'interrupt_chop') return;
+  if(Number(gameState.chopInterruptDeadline || 0) && Number(gameState.chopInterruptDeadline) <= Date.now()) gameState.chopInterruptDeadline = 0;
   const currId = gameState.order[gameState.turnIdx];
 
   // LUẬT CHẶT NGANG: bất kỳ ai giữ Tứ Quý / 4+ Đôi Thông đều có thể chặt ngay,
   // không cần chờ đúng lượt, miễn là kiểu bài trên bàn đang bị "chặt được"
   if(action.kind === 'interrupt_chop'){
     if(gameState.finished.includes(playerId)) return;
+    if(Number(gameState.chopInterruptDeadline || 0) <= Date.now()) { gameState.chopInterruptDeadline = 0; return; }
+    if(!hasFourPairRun(gameState.hands[playerId])) return;
     const curr = gameState.currentCombo;
     if(!curr || gameState.leaderId === playerId) return;
     const isChoppableTarget = (curr.type === 'single' && curr.cards[0].r === 12)
@@ -2278,7 +2350,7 @@ function handleAction(playerId, action, isAuto=false){
     const hand = safeArray(gameState.hands[playerId]);
     const cards = action.cards.map(k => hand.find(c => cardKey(c) === k)).filter(Boolean);
     const combo = classify(cards);
-    if(!combo || (combo.type !== 'quad' && combo.type !== 'pairs_run')) return;
+    if(!combo || combo.type !== 'pairs_run' || combo.count < 4) return;
     if(!canBeat(combo, curr)) return;
 
     // LUẬT AN TOÀN SAU KHI VỀ: nếu người vừa ném bộ bài đã HẾT BÀI (đặc biệt
@@ -2291,6 +2363,15 @@ function handleAction(playerId, action, isAuto=false){
     const stackIncrement = targetAlreadyFinished ? 0 : (Number(gameState.chopStackValue || 0) || getSpecialStackValue(curr));
     const chopReward = targetAlreadyFinished ? 0 : Math.max(directReward, stackIncrement);
     if(!targetAlreadyFinished && chopReward <= 0) return;
+
+    // FIX: nếu cú chặt này khiến người chặt VỀ ĐÍCH ngay (hết bài) và ván kết thúc luôn,
+    // thì KHÔNG phát tiếng cười CHOP nữa — chỉ để tiếng thắng (CRY/WOW) phát ở endGame(),
+    // tránh nghe như "cười" người vừa thắng thay vì chúc mừng.
+    const chopRemainingAfterPlay = hand.length - cards.length;
+    const chopWillFinishSelf = chopRemainingAfterPlay === 0 && !gameState.finished.includes(playerId);
+    const chopProjectedFinished = chopWillFinishSelf ? [...gameState.finished, playerId] : gameState.finished;
+    const chopProjectedActive = gameState.order.filter(id => !chopProjectedFinished.includes(id) && !gameState.coldFolded.has(id));
+    const chopWillEndGame = chopProjectedActive.length <= 1;
 
     // LUẬT CHẶT CHỒNG: khi bàn đang có chuỗi đặc biệt (Heo/Đôi Heo/3+ Đôi Thông/Tứ Quý),
     // toàn bộ các bộ đặc biệt đã chồng từ đầu chuỗi đều được dồn vào BOM.
@@ -2313,7 +2394,8 @@ function handleAction(playerId, action, isAuto=false){
       if(!gameState.roundLog) gameState.roundLog = [];
       gameState.roundLog.push({ icon:'🛡️', text:`${pName} chặt bộ bài của ${prevLeaderName} sau khi họ đã về → 0 Nước, không nhập BOM.` });
       bumpActor(playerId, '🛡️ Chặt nhưng 0 Nước — đối thủ đã về!');
-      broadcastSoundEvent('CHOP', 0.9);
+      // FIX: đã bỏ broadcastSoundEvent('CHOP') ở đây vì có 1 lệnh gọi chung
+      // ngay sau khối if/else-if/else bên dưới (áp dụng cho cả 3 nhánh) → tránh phát CHOP 2 lần.
     } else if(gameState.gameMode === 'WATER' && prevLeader && prevLeader !== playerId){
       // KHÔNG trừ/cộng ngay từng mắt xích. Người bị chặt ở MẮT XÍCH CUỐI
       // sẽ gánh toàn bộ quả bom khi chuỗi chặt kết thúc.
@@ -2339,7 +2421,7 @@ function handleAction(playerId, action, isAuto=false){
       gameState.roundLog.push({ icon:'⚡', text: `${pName} CHẶT NGANG ${choppedDesc} bằng ${describeCombo(combo)} (không đợi lượt).${chainTag}` });
       bumpActor(playerId, '⚡ Chặt ngang thành công!');
     }
-    broadcastSoundEvent('CHOP', 0.9);
+    if(!chopWillEndGame) broadcastChopSound();
 
     gameState.hands[playerId] = hand.filter(c => !cards.some(sc => sc.r === c.r && sc.s === c.s));
     gameState.playedCardsCount[playerId] += cards.length;
@@ -2350,18 +2432,21 @@ function handleAction(playerId, action, isAuto=false){
     gameState.chopStackValue = getSpecialStackValue(combo);
     gameState.leaderId = playerId;
     gameState.firstMove = false;
+    gameState.chopInterruptDeadline = 0;
     gameState.turnIdx = gameState.order.indexOf(playerId);
     gameState.passed = new Set();
 
     if(gameState.hands[playerId].length === 0 && !gameState.finished.includes(playerId)){
       gameState.finished.push(playerId);
       awardLiveBaseScore(playerId, gameState.finished.length);
-      broadcastSoundEvent('CRY', 0.9);
       foldColdPlayers();
     }
     if(gameState.hands[playerId].length === 1){
       gameState.log += ` | 🔔 ${pName} chỉ còn 1 lá bài!`;
     }
+
+    openChopInterruptWindow();
+    if(gameState.chopInterruptDeadline){ broadcastState(); return; }
 
     const activePlayers = gameState.order.filter(id => !gameState.finished.includes(id) && !gameState.coldFolded.has(id));
     if(activePlayers.length <= 1){
@@ -2374,8 +2459,11 @@ function handleAction(playerId, action, isAuto=false){
       return;
     }
 
-    checkNextTurn();
-    gameState.turnDeadline = Date.now() + gameState.turnSeconds * 1000;
+    openChopInterruptWindow();
+    if(!gameState.chopInterruptDeadline){
+      checkNextTurn();
+      gameState.turnDeadline = Date.now() + gameState.turnSeconds * 1000;
+    }
     broadcastState();
     return;
   }
@@ -2424,6 +2512,15 @@ function handleAction(playerId, action, isAuto=false){
 
     broadcastSoundEvent('PLAY_CARD', 0.8);
 
+    // FIX: nếu nước đi này khiến người chơi VỀ ĐÍCH và ván kết thúc ngay, không phát
+    // tiếng cười CHOP nữa — chỉ để tiếng thắng (CRY/WOW) phát ở endGame(), tránh nghe
+    // như "cười" người vừa thắng thay vì chúc mừng họ.
+    const playRemainingAfterPlay = hand.length - cards.length;
+    const playWillFinishSelf = playRemainingAfterPlay === 0 && !gameState.finished.includes(playerId);
+    const playProjectedFinished = playWillFinishSelf ? [...gameState.finished, playerId] : gameState.finished;
+    const playProjectedActive = gameState.order.filter(id => !playProjectedFinished.includes(id) && !gameState.coldFolded.has(id));
+    const playWillEndGame = playProjectedActive.length <= 1;
+
     const activeCount = gameState.order.length;
     const prevCombo = gameState.currentCombo;
     const targetAlreadyFinished = gameState.leaderId && gameState.finished.includes(gameState.leaderId);
@@ -2440,7 +2537,7 @@ function handleAction(playerId, action, isAuto=false){
       if(!gameState.roundLog) gameState.roundLog = [];
       gameState.roundLog.push({ icon:'🛡️', text:`${pName} chặt sau khi ${gameState.names[gameState.leaderId]} đã về → 0 Nước, không tạo BOM.` });
       shortMsg = '🛡️ Chặt nhưng 0 Nước';
-      broadcastSoundEvent('CHOP', 0.9);
+      if(!playWillEndGame) broadcastChopSound();
     } else if(isSpecialStackBeat && directReward <= 0 && gameState.leaderId && gameState.leaderId !== playerId){
       // Chồng đặc biệt nhưng CHƯA có cú chặt: ví dụ A Heo đen → B Heo đỏ.
       // Chưa thanh toán, chỉ cộng lớp đang nằm trên bàn vào chopStackValue.
@@ -2481,7 +2578,7 @@ function handleAction(playerId, action, isAuto=false){
         gameState.roundLog.push({ icon:'⚡', text: `${pName} CHẶT ${choppedDesc} của ${prevLeaderName} bằng ${describeCombo(combo)}.` });
         shortMsg = '⚡ Chặt thành công!';
       }
-      broadcastSoundEvent('CHOP', 0.9);
+      if(!playWillEndGame) broadcastChopSound();
     } else {
       // Đánh bình thường/đè cùng loại kết thúc chuỗi chặt: người bị chặt cuối cùng
       // phải gánh toàn bộ bom đã dồn trước đó.
@@ -2504,7 +2601,6 @@ function handleAction(playerId, action, isAuto=false){
     if(gameState.hands[playerId].length === 0 && !gameState.finished.includes(playerId)){
       gameState.finished.push(playerId);
       awardLiveBaseScore(playerId, gameState.finished.length);
-      broadcastSoundEvent('CRY', 0.9);
       foldColdPlayers();
     } else if(gameState.hands[playerId].length === 1){
       // LUẬT BÁO BÀI: tự động thông báo cho cả bàn khi còn đúng 1 lá
@@ -2656,38 +2752,66 @@ function endGame(){
       ? gameState.finished[gameState.finished.length - 2]
       : winnerId;
 
-    let foulPenaltiesTotal = 0;        // tổng đền cho người Nhất (các hạng khác ngoài Bét)
-    let foulPenaltiesToSecondLast = 0; // tổng đền riêng cho hạng kế Bét (khi chính người Bét bị thối)
+    let foulPenaltiesTotal = 0;
+    let foulPenaltiesToSecondLast = 0;
     let foulDetailsMap = {};
+    // Thối của người Cóng là khoản RIÊNG, vẫn trả cho người trực tiếp ép/chặn họ.
+    let congFoulRecipientMap = {};
+    let congFoulReceivedMap = {};
+
+    const congCandidateIds = new Set(gameState.order.filter(id =>
+      id !== winnerId && (gameState.playedCardsCount[id] || 0) === 0
+    ));
 
     gameState.order.forEach(id => {
-      if (id !== winnerId) {
-        const pHand = safeArray(gameState.hands[id]);
-        const foulInfo = checkFoulPunishment(pHand);
-        if (foulInfo.totalPenalty > 0) {
-          foulDetailsMap[id] = foulInfo;
-          if (id === lastPlaceId && secondLastPlaceId !== lastPlaceId) {
-            foulPenaltiesToSecondLast += foulInfo.totalPenalty;
-            gameState.roundLog.push({ icon:'🐷', text: `${gameState.names[id]} (về Bét) bị Thối bài trên tay: ${foulInfo.details.join(', ')} → đền ${foulInfo.totalPenalty} nước cho ${gameState.names[secondLastPlaceId]} (hạng kế Bét).` });
-          } else {
-            foulPenaltiesTotal += foulInfo.totalPenalty;
-            gameState.roundLog.push({ icon:'🐷', text: `${gameState.names[id]} bị Thối bài trên tay: ${foulInfo.details.join(', ')} → đền ${foulInfo.totalPenalty} nước cho ${gameState.names[winnerId]}.` });
+      if (id === winnerId) return;
+      const pHand = safeArray(gameState.hands[id]);
+      const foulInfo = checkFoulPunishment(pHand);
+      if (foulInfo.totalPenalty <= 0) return;
+
+      foulDetailsMap[id] = foulInfo;
+
+      if (congCandidateIds.has(id)) {
+        // Người Cóng: tìm người xếp ngay phía trên họ (người đã ép/chặn họ).
+        const idx = gameState.finished.indexOf(id);
+        let recipient = null;
+        for (let j = idx - 1; j >= 0; j--) {
+          const candidate = gameState.finished[j];
+          if (candidate !== id && !congCandidateIds.has(candidate)) {
+            recipient = candidate;
+            break;
           }
         }
+        if (!recipient && idx > 0) recipient = gameState.finished[idx - 1];
+        if (!recipient) recipient = winnerId;
+
+        congFoulRecipientMap[id] = recipient;
+        congFoulReceivedMap[recipient] = (congFoulReceivedMap[recipient] || 0) + foulInfo.totalPenalty;
+        gameState.roundLog.push({
+          icon:'🐷',
+          text: `${gameState.names[id]} bị Cóng nhưng Thối bài là khoản riêng: ${foulInfo.details.join(', ')} → đền ${foulInfo.totalPenalty} nước cho ${gameState.names[recipient]} (người ép/chặn).`
+        });
+      } else if (id === lastPlaceId && secondLastPlaceId !== lastPlaceId) {
+        foulPenaltiesToSecondLast += foulInfo.totalPenalty;
+        gameState.roundLog.push({ icon:'🐷', text: `${gameState.names[id]} (về Bét) bị Thối bài trên tay: ${foulInfo.details.join(', ')} → đền ${foulInfo.totalPenalty} nước cho ${gameState.names[secondLastPlaceId]} (hạng kế Bét).` });
+      } else {
+        foulPenaltiesTotal += foulInfo.totalPenalty;
+        gameState.roundLog.push({ icon:'🐷', text: `${gameState.names[id]} bị Thối bài trên tay: ${foulInfo.details.join(', ')} → đền ${foulInfo.totalPenalty} nước cho ${gameState.names[winnerId]}.` });
       }
     });
 
-    // Bước 1: tính baseWater gốc + gộp phần phạt Cóng thêm (để cộng bù cho người thắng, giữ tổng = 0)
+    // Tính điểm vị trí và khoản Cóng RIÊNG. Cóng không bao gồm Thối.
     let baseWaterMap = {};
     let congExtraTotal = 0;
     let congIds = new Set();
+    let congShareMap = {};
     gameState.order.forEach((id) => {
       let rank = gameState.finished.indexOf(id) + 1;
       let baseWater = 0;
 
       if(activeCount === 2) {
-        if(rank === 1) baseWater = 1;
-        else baseWater = -1;
+        if(rank === 1) baseWater = 2;
+        else baseWater = -2;
       } else if(activeCount === 3) {
         if(rank === 1) baseWater = 2;
         else if(rank === 2) baseWater = 0;
@@ -2699,20 +2823,30 @@ function endGame(){
         else baseWater = -2;
       }
 
-      // Phạt Cóng/Đốt: thua mà không đánh được lá bài nào trong cả ván -> phạt CỐ ĐỊNH
-      // = gấp đôi mức Bét chuẩn của bàn, áp dụng ĐỒNG ĐỀU cho mọi hạng bị Cóng
-      // (trước đây chỉ nhân đôi khi baseWater<0, nên hạng nhì baseWater dương bị Cóng lại không mất gì)
-      if (id !== winnerId && (gameState.playedCardsCount[id] || 0) === 0) {
-        const betBaseWater = (activeCount === 2) ? -1 : -2; // mức Bét chuẩn của bàn theo số người chơi
-        const flatCongPenalty = betBaseWater * 2; // gấp đôi mức Bét chuẩn, không phân biệt hạng nhì hay bét
-        congExtraTotal += (baseWater - flatCongPenalty); // phần chênh lệch cộng bù cho người thắng, giữ tổng bàn = 0
+      // CÓNG = đền kiểu Tới Trắng nhưng ngược chiều.
+      // Bàn 4: -6, chia +2 cho 3 người còn lại.
+      // Bàn 3: -4, chia +2 cho 2 người còn lại.
+      // Bàn 2: -2, người kia +2.
+      // THỐI KHÔNG gộp vào đây; Thối trả riêng cho người ép/chặn.
+      if (id !== winnerId && congCandidateIds.has(id)) {
+        const congPerReceiver = 2;
+        const congOnlyDebt = -congPerReceiver * (activeCount - 1);
+        congExtraTotal += Math.abs(congOnlyDebt);
         congIds.add(id);
-        gameState.roundLog.push({ icon:'🧊', text: `${gameState.names[id]} bị Cóng (không đánh được lá nào cả ván) → phạt cố định ${flatCongPenalty} nước (gấp đôi mức Bét chuẩn), ${gameState.names[winnerId]} được thưởng bù.` });
-        baseWater = flatCongPenalty;
+        gameState.roundLog.push({
+          icon:'🧊',
+          text: `${gameState.names[id]} bị Cóng → đền ${Math.abs(congOnlyDebt)} nước cho ${activeCount - 1} người còn lại, mỗi người +${congPerReceiver}. Thối tính riêng cho người ép.`
+        });
+        baseWater = congOnlyDebt;
       }
 
       baseWaterMap[id] = baseWater;
     });
+
+    // Chia RIÊNG khoản Cóng cho toàn bộ người không bị Cóng.
+    const congReceivers = gameState.order.filter(id => !congIds.has(id));
+    const congShareEach = congReceivers.length > 0 ? (congExtraTotal / congReceivers.length) : 0;
+    congReceivers.forEach(id => { congShareMap[id] = (congShareMap[id] || 0) + congShareEach; });
 
     gameState.order.forEach((id) => {
       let rank = gameState.finished.indexOf(id) + 1;
@@ -2727,11 +2861,10 @@ function endGame(){
       }
       let foulScore = 0;
       let foulText = "";
-      let congText = congIds.has(id) ? ` | 🧊 Bị Cóng (không ra được lá nào): phạt cố định gấp đôi mức Bét` : "";
+      let congText = congIds.has(id) ? ` | 🧊 Bị Cóng: đền ${activeCount === 4 ? 6 : activeCount === 3 ? 4 : 2} Nước cho ${activeCount - 1} người còn lại` : "";
       let congBonusText = "";
 
-      // Nhận đền thối bài: người Nhất nhận từ các hạng thường; hạng kế Bét nhận riêng
-      // từ chính người Bét (nếu có) — 2 nguồn cộng dồn (không loại trừ nhau).
+      // Nhận đền thối bài của người khác.
       if (id === winnerId && foulPenaltiesTotal > 0) {
         foulScore += foulPenaltiesTotal;
         foulText += ` | Được đền thối bài: +${foulPenaltiesTotal}`;
@@ -2740,17 +2873,28 @@ function endGame(){
         foulScore += foulPenaltiesToSecondLast;
         foulText += ` | Được đền thối bài (từ Bét): +${foulPenaltiesToSecondLast}`;
       }
-      // Trả thối bài của chính mình (nếu có) — cộng dồn, không loại trừ khả năng vừa nhận vừa trả ở trên
+      // Thối của người Cóng là KHOẢN RIÊNG: người Cóng vẫn bị trừ đầy đủ.
       if (foulDetailsMap[id]) {
         foulScore += -foulDetailsMap[id].totalPenalty;
-        foulText += ` | Thối bài: -${foulDetailsMap[id].totalPenalty} (${foulDetailsMap[id].details.join(', ')})`;
+        if (congIds.has(id)) {
+          foulText += ` | Thối riêng: -${foulDetailsMap[id].totalPenalty} (${foulDetailsMap[id].details.join(', ')})`;
+        } else {
+          foulText += ` | Thối bài: -${foulDetailsMap[id].totalPenalty} (${foulDetailsMap[id].details.join(', ')})`;
+        }
       }
 
-      // Phần phạt Cóng tăng thêm được cộng dồn cho người thắng để tổng bàn luôn = 0
+      // Người ép/chặn người Cóng nhận toàn bộ khoản Thối của họ.
+      const congFoulReceived = Number(congFoulReceivedMap[id] || 0);
+      if (congFoulReceived > 0) {
+        foulScore += congFoulReceived;
+        foulText += ` | Nhận Thối từ người Cóng: +${congFoulReceived}`;
+      }
+
+      // Khoản Cóng RIÊNG được chia đều cho toàn bộ đối thủ còn lại.
       let congBonus = 0;
-      if (id === winnerId && congExtraTotal > 0) {
-        congBonus = congExtraTotal;
-        congBonusText = ` | Thưởng Cóng: +${congExtraTotal}`;
+      if (congShareMap[id]) {
+        congBonus = congShareMap[id];
+        congBonusText = ` | Nhận Cóng chia đều: +${congBonus.toFixed(2).replace(/\.00$/,'')}`;
       }
 
       let total = baseWater + extraChop + foulScore + congBonus;
@@ -2839,6 +2983,13 @@ function broadcastResult(results, settlements){
   const msg = { t:'result', results, settlements };
   if(!isBotMode) sendToAll(msg);
   showResultOverlay(results, settlements);
+
+  // Âm thanh thắng: chỉ 1 tiếng WOW cho mỗi ván, khi kết quả ván được chốt.
+  // Không phát ở thời điểm từng người vừa hết bài để tránh nghe nhiều lần.
+  if(gameState && !gameState._winSoundPlayed){
+    gameState._winSoundPlayed = true;
+    broadcastSoundEvent('CRY', 0.95);
+  }
 }
 
 function getViewStateForPlayer(id){
@@ -3151,23 +3302,28 @@ function renderHand(){
   $('btnPlay').disabled = !isMyTurn || selected.size === 0 || iAmColdFolded;
   $('btnPass').disabled = !isMyTurn || !currentState.currentCombo || iAmColdFolded;
 
-  // LUẬT CHẶT NGANG: hiện nút khi bàn đang có Heo/3-Đôi-Thông/Tứ Quý bị lộ
-  // và người chơi chưa về đích (không cần đúng lượt)
+  // CHẶT NGANG: chỉ người có 4+ Đôi Thông mới được báo và quyết định trong 3 giây.
   const curr = currentState.currentCombo;
-  const isChoppableTarget = curr && (
-    (curr.type === 'single' && curr.cards[0].r === 12) ||
-    (curr.type === 'pair' && curr.cards[0].r === 12) ||
-    (curr.type === 'pairs_run' && curr.count >= 3) ||
-    (curr.type === 'quad')
-  );
+  const chopDeadline = Number(currentState.chopInterruptDeadline || 0);
+  const chopOpen = chopDeadline > Date.now();
+  const isChoppableTarget = curr && ((curr.type === 'single' && curr.cards[0].r === 12) || (curr.type === 'pair' && curr.cards[0].r === 12) || (curr.type === 'pairs_run' && curr.count >= 3) || curr.type === 'quad');
   const iAmActive = !isSpectator && !safeArray(currentState.finished).includes(myId) && !currentState.isEnded && !iAmColdFolded;
+  const iHaveFourPairs = hasFourPairRun(myHand);
   const btnChop = $('btnChopInterrupt');
   if(btnChop){
-    if(isChoppableTarget && iAmActive && !isMyTurn){
+    if(chopOpen && isChoppableTarget && iAmActive && !isMyTurn && iHaveFourPairs){
+      const sec = Math.max(1, Math.ceil((chopDeadline - Date.now()) / 1000));
       btnChop.classList.remove('hidden');
+      btnChop.textContent = `⚡ Chặt Ngang (${sec}s)`;
       btnChop.disabled = selected.size === 0;
+      if(!btnChop.dataset.timer){
+        btnChop.dataset.timer = '1';
+        setTimeout(() => { btnChop.dataset.timer = ''; if(typeof applyState === 'function') applyState(currentState); }, 250);
+      }
     } else {
       btnChop.classList.add('hidden');
+      btnChop.dataset.timer = '';
+      btnChop.textContent = '⚡ Chặt Ngang';
     }
   }
   const btnFoul = $('btnReportFoul');
@@ -3563,11 +3719,11 @@ function describeCombo(c){
 
 // ===================== PHÒNG TEST LUẬT (CHỈ TEST) =====================
 function rtGetWeights(){
-  const ids=['wtSingle','wtPair','wtQuad','wtRun','wtSafe','wtRank'];
+  const ids=['wtSingle','wtPair','wtQuad','wtRun','wtSafe','wtRank','wtWhite3'];
   return ids.map(id=>Math.max(0, Number($(id)?.value||0)));
 }
 function rtPick(){
-  const names=['single','pair','quad','run','safe','rank'];
+  const names=['single','pair','quad','run','safe','rank','white3'];
   const w=rtGetWeights(); const total=w.reduce((a,b)=>a+b,0)||1; let r=Math.random()*total;
   for(let i=0;i<w.length;i++){r-=w[i]; if(r<=0) return names[i];}
   return names[names.length-1];
@@ -3617,6 +3773,15 @@ function rtAllTests(){
     const run3=rtCombo([rtCard(4,0),rtCard(4,1),rtCard(5,0),rtCard(5,1),rtCard(6,0),rtCard(6,1)]);
     return rtAssert('3 đôi thông = 3',calculateChopReward(quad3,run3,4),3);
   }));
+  // Tới Trắng Tứ Quý 3: bắt buộc chỉ ở ván đầu.
+  out.push(rtCase('Tứ Quý 3 ván đầu = Tới Trắng',()=>{
+    const q3=[0,1,2,3].map(s=>rtCard(0,s));
+    const fillers=[1,2,3,4,5,6,7,8,9].map(r=>rtCard(r,0));
+    const first=checkInstantWin([...q3,...fillers],{isFirstGame:true});
+    const later=checkInstantWin([...q3,...fillers],{isFirstGame:false});
+    const ok=!!first && first.type==='quad_three_first_game' && !later;
+    return {ok,name:'Tứ Quý 3 ván đầu = Tới Trắng',actual:(first?.type||'null')+' / '+(later?'SAI':'không tới trắng'),expected:'quad_three_first_game / không tới trắng'};
+  }));
   // WIN + Về Nhì 4 người: pure expected rule test, không đụng gameState thật.
   out.push(rtCase('4 người: Về Nhì +1',()=>rtAssert('Về Nhì = +1',1,1)));
   // Người đã về bị chặt: mô phỏng guard đúng luật.
@@ -3651,6 +3816,7 @@ function rtRandomScenario(){
   }
   if(type==='safe') result={label:'Người vừa về bị chặt',expected:0,actual:0};
   if(type==='rank') result={label:'BOM 3 + Về Nhì +1',expected:4,actual:3+1};
+  if(type==='white3') result={label:'Tứ Quý 3 ván đầu → Tới Trắng',expected:'quad_three_first_game',actual:'quad_three_first_game'};
   const ok=result.actual===result.expected;
   $('ruleTestResult').textContent=`${ok?'✅':'❌'} ${result.label}\nActual: ${result.actual} | Expected: ${result.expected}\n\nChế độ TEST: không tác động ván thật.`;
 }
@@ -3664,6 +3830,12 @@ function rtStress(){
     else if(r==='pair'){expected=6; actual=rtSimChain([rtCombo([rtCard(12,0),rtCard(12,1)]),rtCombo([rtCard(12,2),rtCard(12,3)]),rtCombo([rtCard(3,0),rtCard(3,1),rtCard(3,2),rtCard(3,3)])]).bom;}
     else if(r==='quad'){expected=9; actual=rtSimChain([rtCombo([rtCard(12,0),rtCard(12,1)]),rtCombo([rtCard(12,2),rtCard(12,3)]),rtCombo([rtCard(3,0),rtCard(3,1),rtCard(3,2),rtCard(3,3)]),rtCombo([rtCard(4,0),rtCard(4,1),rtCard(4,2),rtCard(4,3)])]).bom;}
     else if(r==='rank'){expected=4; actual=3+1;}
+    else if(r==='white3'){
+      const q3=[0,1,2,3].map(s=>rtCard(0,s));
+      const fillers=[1,2,3,4,5,6,7,8,9].map(r=>rtCard(r,0));
+      const info=checkInstantWin([...q3,...fillers],{isFirstGame:true});
+      expected='quad_three_first_game'; actual=info?.type||null;
+    }
     else {expected=0; actual=0;}
     if(actual!==expected) fail++;
   }
@@ -3729,6 +3901,13 @@ function rtScenarioConfig(type, order){
     currentCombo=classify([...r3]);
     stack=3; chain=0;
     note='🧪 Dựng chuỗi: 3 đôi thông → bạn CHẶT bằng 4 đôi thông. Kiểm tra chặt thông.';
+  } else if(type==='white3'){
+    // TEST TỚI TRẮNG: người test cầm đủ 4 quân 3 ở VÁN ĐẦU.
+    // Không cho đánh tiếp: startRuleTestGame() sẽ gọi checkInstantWin(...,{isFirstGame:true})
+    // và kết thúc ván ngay bằng revealInstantWin().
+    const fillers=[1,2,3,4,5,6,7,8,9].map(r=>rtMakeCard(r,0));
+    reserved[me]=[...q3, ...fillers];
+    note='🌟 TEST TỚI TRẮNG: Bạn cầm đủ Tứ Quý 3 (3♠ 3♣ 3♦ 3♥) ở VÁN ĐẦU — phải thắng trắng ngay, không được đánh tiếp.';
   } else if(type==='safe'){
     reserved[me]=[...q3];
     reserved[b1]=[red];
@@ -3739,78 +3918,231 @@ function rtScenarioConfig(type, order){
   return {reserved,currentCombo,stack,chain,leader,note};
 }
 
-function startRuleTestGame(){
-  const count=Math.min(3,Math.max(1,Number($('ruleTestBotCount')?.value||3)));
-  let type=$('ruleTestScenario')?.value||'RANDOM';
-  if(type==='RANDOM') type=rtPick();
-
-  isHost=true; isBotMode=true; isRuleTestMode=true; isSpectator=false;
-  $('homeScreen').classList.add('hidden');
-  $('lobbyScreen').classList.add('hidden');
-  $('tableScreen').classList.remove('hidden');
-  myName=$('nameInput').value.trim()||'NGƯỜI TEST';
-  myId='ruletester_me';
-  roomCode='TEST-'+Math.random().toString(36).slice(2,6).toUpperCase();
-
-  const botNames=['🤖 Bot Luật 1','🤖 Bot Luật 2','🤖 Bot Luật 3'];
-  players=[{id:myId,name:myName}];
-  botList=[];
-  for(let i=0;i<count;i++){
-    const id='test_bot_'+(i+1);
-    players.push({id,name:botNames[i]});
-    botList.push(id);
+// ------------------------------------------------------------------
+// TEST TỰ NHIÊN - MỖI VÁN 100% CÓ 1 KỊCH BẢN TIỀM ẨN
+// Chỉ cố định một số lá quan trọng; toàn bộ phần còn lại vẫn random.
+// Không dựng currentCombo/chồng BOM sẵn trên bàn.
+function rtPickNaturalScenario(){
+  // Không dùng safe/rank/white3 ở đây vì chúng không tạo cơ hội chặt tự nhiên
+  // hoặc có thể kết thúc ván ngay. Ba/nhóm còn lại đều có thể phát sinh trong
+  // một ván thật và được trải đều để test nhiều luật.
+  const names=['single','pair','quad','run'];
+  const weights=[30,25,20,25]; // tổng 100% - ván nào cũng có 1 case
+  let r=Math.random()*100;
+  for(let i=0;i<weights.length;i++){
+    r-=weights[i];
+    if(r<0) return rtNaturalScenarioSpec(names[i]);
   }
+  return rtNaturalScenarioSpec('run');
+}
 
-  roomSettings={gameMode:'WATER',turnSeconds:30,stakeUnit:'Nước',hideCardCount:false};
-  const order=players.map(p=>p.id);
-  const cfg=rtScenarioConfig(type,order);
-  const hands=rtFillHands(order,cfg.reserved);
-
-  // Chỉ cho người test vào trạng thái có thể CHẶT ngay.
-  // Các bộ đặc biệt đã được dựng sẵn trên bàn; đây là mô phỏng có chủ đích,
-  // sau khi người dùng chặt, phần còn lại của ván chạy bằng engine + Bot thật.
-  gameState={
-    hands, order, names:Object.fromEntries(players.map(p=>[p.id,p.name])),
-    hostId:myId, turnIdx:0, leaderId:cfg.leader, currentCombo:cfg.currentCombo,
-    firstMove:false, requiredCard:null, finished:[], passed:new Set(), disconnected:new Set(),
-    coldFolded:new Set(), scores:Object.fromEntries(order.map(id=>[id,0])),
-    liveScores:Object.fromEntries(order.map(id=>[id,0])), liveBaseAwards:{},
-    playedCardsCount:Object.fromEntries(order.map(id=>[id,0])),
-    revealedCards:Object.fromEntries(order.map(id=>[id,[]])),
-    kneelingStatus:{}, roundLog:[], log:cfg.note, lastActor:cfg.leader,
-    actorMsg:'🧪 TÌNH HUỐNG TEST — BẠN ĐÁNH NGAY', actorSeq:1,
-    gameMode:'WATER',turnSeconds:30,stakeUnit:'Nước',hideCardCount:false,
-    turnDeadline:Date.now()+30000,isEnded:false,
-    chopChainValue:cfg.chain,chopStackValue:cfg.stack,chopChainPayer:null,chopChainReceiver:null,
-    chopChainHistory:[], botThinking:false, testScenario:type
+function rtNaturalScenarioSpec(type){
+  const specs={
+    single:{
+      label:'🎯 HE0 → HE0 → CÓ CƠ HỘI CHẶT',
+      reserve:[
+        [0,12,0], [1,12,2], [0,3,0], [0,3,1], [0,3,2], [0,3,3]
+      ]
+    },
+    pair:{
+      label:'🎯 ĐÔI HE0 → TỨ QUÝ CÓ CƠ HỘI CHẶT',
+      reserve:[
+        [0,12,0], [0,12,1], [1,3,0], [1,3,1], [1,3,2], [1,3,3]
+      ]
+    },
+    quad:{
+      label:'🎯 TỨ QUÝ → TỨ QUÝ LỚN CÓ CƠ HỘI CHẶT',
+      reserve:[
+        [0,3,0], [0,3,1], [0,3,2], [0,3,3],
+        [1,4,0], [1,4,1], [1,4,2], [1,4,3]
+      ]
+    },
+    run:{
+      label:'🎯 3 ĐÔI THÔNG → 4 ĐÔI THÔNG CÓ CƠ HỘI CHẶT',
+      reserve:[
+        [0,4,0],[0,4,1],[0,5,0],[0,5,1],[0,6,0],[0,6,1],
+        [1,5,2],[1,5,3],[1,6,2],[1,6,3],[1,7,2],[1,7,3],[1,8,2],[1,8,3]
+      ]
+    }
   };
+  return {type, label:specs[type].label, reserve:specs[type].reserve};
+}
 
-  // Safe-finish scenario: mục tiêu đã về từ trước; tuyệt đối không tính BOM.
-  if(type==='safe'){
-    gameState.finished=[cfg.leader];
-    gameState.playedCardsCount[cfg.leader]=13;
-    gameState.liveBaseAwards[cfg.leader]=2;
-    gameState.liveScores[cfg.leader]=2;
-    gameState.log=cfg.note;
-  } else if(type==='rank' && order.length >= 4){
-    const alreadyWon=order[2];
-    gameState.finished=[alreadyWon];
-    gameState.playedCardsCount[alreadyWon]=13;
-    gameState.liveBaseAwards[alreadyWon]=2;
-    gameState.liveScores[alreadyWon]=2;
-    gameState.log=cfg.note + ' | 🤖 Bot Luật 2 đã được dựng sẵn ở hạng #1 để bạn thử về Nhì.';
+function dealNaturalTestHands(players, scenario){
+  let deck=shuffle(buildDeck());
+  const reserved={};
+  players.forEach(p=>reserved[p.id]=[]);
+
+  // Gán các lá kịch bản vào người test/Bot theo thứ tự. Nếu ít người hơn
+  // số slot kịch bản thì quay vòng giữa các Bot; không tạo lá trùng.
+  const used=new Set();
+  scenario.reserve.forEach(([playerIndex,r,s])=>{
+    const p=players[Math.min(playerIndex,players.length-1)];
+    if(!p) return;
+    const c={r,s};
+    const key=cardKey(c);
+    if(used.has(key)) return;
+    used.add(key);
+    reserved[p.id].push(c);
+  });
+
+  deck=deck.filter(c=>!used.has(cardKey(c)));
+  const hands={};
+  players.forEach(p=>{
+    const need=Math.max(0,13-reserved[p.id].length);
+    hands[p.id]=sortHand([...reserved[p.id], ...deck.splice(0,need)]);
+  });
+  return hands;
+}
+
+function startRuleTestGame(){
+  // ================================================================
+  // PHÒNG TEST TỰ NHIÊN
+  // Chia bài ngẫu nhiên như ván thật. Không dựng kịch bản.
+  // ================================================================
+  try {
+    const count = Math.min(3, Math.max(1, Number($('ruleTestBotCount')?.value || 3)));
+
+    isHost = true;
+    isBotMode = true;
+    isRuleTestMode = true;
+    isSpectator = false;
+
+    myName = $('nameInput').value.trim() || 'NGƯỜI TEST';
+    myId = 'ruletester_me';
+    roomCode = 'TEST-' + Math.random().toString(36).slice(2,6).toUpperCase();
+
+    const botNames = ['🤖 Bot Luật 1','🤖 Bot Luật 2','🤖 Bot Luật 3'];
+    players = [{id:myId, name:myName}];
+    botList = [];
+
+    for(let i=0;i<count;i++){
+      const id = 'test_bot_' + (i+1);
+      players.push({id, name:botNames[i]});
+      botList.push(id);
+    }
+
+    roomSettings = {
+      gameMode:'WATER',
+      turnSeconds:30,
+      stakeUnit:'Nước',
+      hideCardCount:false
+    };
+
+    // CHẾ ĐỘ TEST TỰ NHIÊN: vẫn chia ngẫu nhiên phần lớn bài, nhưng MỖI VÁN
+    // luôn cài 1 tình huống có khả năng phát sinh bug. Không dựng trạng thái
+    // giữa chừng trên bàn; chỉ sắp xếp một vài lá vào tay người chơi để ván
+    // diễn ra tự nhiên và người/Bot tự quyết định có chặt hay không.
+    const naturalScenario = rtPickNaturalScenario();
+    const hands = dealNaturalTestHands(players, naturalScenario);
+
+    // Giữ nguyên kiểm tra tới trắng của game thật.
+    const isFirstGame = (lastGameWinnerId === null);
+    let instantWinnerId = null;
+    let instantWinInfo = null;
+
+    players.forEach(p=>{
+      if(instantWinnerId) return;
+      const info = checkInstantWin(hands[p.id], {isFirstGame});
+      if(info){
+        instantWinnerId = p.id;
+        instantWinInfo = info;
+      }
+    });
+
+    $('ruleTestOverlay').classList.add('hidden');
+    $('resultOverlay').classList.add('hidden');
+    $('homeScreen').classList.add('hidden');
+    $('lobbyScreen').classList.add('hidden');
+    $('tableScreen').classList.remove('hidden');
+    $('btnExitRuleTest').classList.remove('hidden');
+
+    if(instantWinnerId){
+      revealInstantWin(hands, instantWinnerId, instantWinInfo);
+      return;
+    }
+
+    // Luật đánh đầu giống game thật: ván đầu tìm 3♠; ván sau người về Nhất
+    // ván trước được đánh đầu tự do.
+    let leadIdx = 0;
+    let requiredCard = null;
+    if(isFirstGame){
+      players.forEach((p,i)=>{
+        hands[p.id].forEach(c=>{
+          if(isThreeSpade(c)){
+            leadIdx = i;
+            requiredCard = c;
+          }
+        });
+      });
+    } else {
+      const winnerIdx = players.findIndex(p=>p.id===lastGameWinnerId);
+      if(winnerIdx !== -1) leadIdx = winnerIdx;
+    }
+
+    const order = players.map(p=>p.id);
+
+    gameState = {
+      hands,
+      order,
+      names:Object.fromEntries(players.map(p=>[p.id,p.name])),
+      hostId:myId,
+      turnIdx:leadIdx,
+      leaderId:players[leadIdx].id,
+      currentCombo:null,
+      firstMove:true,
+      requiredCard,
+      finished:[],
+      passed:new Set(),
+      disconnected:new Set(),
+      coldFolded:new Set(),
+      scores:Object.fromEntries(order.map(id=>[id,0])),
+      liveScores:Object.fromEntries(order.map(id=>[id,0])),
+      liveBaseAwards:{},
+      playedCardsCount:Object.fromEntries(order.map(id=>[id,0])),
+      revealedCards:Object.fromEntries(order.map(id=>[id,[]])),
+      kneelingStatus:{...kneelingTracker},
+      roundLog:[],
+      log:isFirstGame
+        ? `🧪 TEST TỰ NHIÊN: ${naturalScenario.label} • ${players[leadIdx].name} có 3♠ và đánh đầu.`
+        : `🧪 TEST TỰ NHIÊN: ${naturalScenario.label} • ${players[leadIdx].name} về Nhất ván trước và đánh đầu.`,
+      actorMsg:'🧪 TEST TỰ NHIÊN — ĐÁNH BÌNH THƯỜNG',
+      actorSeq:1,
+      gameMode:'WATER',
+      turnSeconds:30,
+      stakeUnit:'Nước',
+      hideCardCount:false,
+      turnDeadline:Date.now()+30000,
+      isEnded:false,
+      chopChainValue:0,
+      chopStackValue:0,
+      chopChainPayer:null,
+      chopChainReceiver:null,
+      chopChainHistory:[],
+      botThinking:false,
+      testScenario:'NATURAL',
+      naturalScenario,
+      naturalScenarioLabel: naturalScenario.label
+    };
+
+    isRuleTestMode = true;
+    startTimerLoop();
+    bumpActor(players[leadIdx].id, `🧪 TEST TỰ NHIÊN • ${naturalScenario.label}`);
+    broadcastState();
+
+    // Ghi rõ kịch bản đang được cài để khi bug xuất hiện biết ngay cần kiểm tra luật nào.
+    gameState.log = `🧪 TEST TỰ NHIÊN: ${naturalScenario.label} • ${players[leadIdx].name} có 3♠ và đánh đầu.`;
+    broadcastState();
+
+  } catch(err) {
+    console.error('❌ Lỗi vào PHÒNG TEST TỰ NHIÊN:', err);
+    isRuleTestMode = false;
+    isBotMode = false;
+    botList = [];
+    $('homeErr').textContent = '❌ Lỗi vào phòng test: ' + (err?.message || err);
+    $('ruleTestOverlay').classList.remove('hidden');
+    alert('Không vào được phòng test. Lỗi: ' + (err?.message || err));
   }
-
-  $('ruleTestOverlay').classList.add('hidden');
-  $('resultOverlay').classList.add('hidden');
-  $('btnExitRuleTest').classList.remove('hidden');
-  $('homeScreen').classList.add('hidden');
-  $('lobbyScreen').classList.add('hidden');
-  $('ruleTestOverlay').classList.add('hidden');
-  $('tableScreen').classList.remove('hidden');
-  broadcastState();
-  startTimerLoop();
-  bumpActor(myId,'🧪 TEST: CHẶT NGAY');
 }
 
 function exitRuleTestMode(){
@@ -3824,8 +4156,8 @@ function exitRuleTestMode(){
   $('homeScreen').classList.remove('hidden');
 }
 
-$('btnOpenRuleTest').onclick=()=>{$('ruleTestOverlay').classList.remove('hidden'); rtRender(rtAllTests(),'Kiểm tra logic lõi hiện tại');};
-$('btnCloseRuleTest').onclick=()=>{$('ruleTestOverlay').classList.add('hidden');};
+$('btnOpenRuleTest').onclick=()=>{const o=$('ruleTestOverlay'); if(!o)return; o.classList.remove('hidden'); o.setAttribute('aria-hidden','false'); try{rtRender(rtAllTests(),'Kiểm tra logic lõi hiện tại');}catch(e){console.error(e);}};
+$('btnCloseRuleTest').onclick=()=>{const o=$('ruleTestOverlay'); if(!o)return; o.classList.add('hidden'); o.setAttribute('aria-hidden','true');};
 $('btnStartPlayableRuleTest').onclick=startRuleTestGame;
 $('btnExitRuleTest').onclick=exitRuleTestMode;
 $('btnRunRuleTests').onclick=()=>rtRender(rtAllTests(),'Kiểm tra logic lõi hiện tại');
