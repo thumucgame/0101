@@ -266,6 +266,23 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .card.table-card .rank{font-size:22px;}
 .card.table-card .suit{font-size:22px;}
 
+/* FIX: sảnh/đôi thông dài (>6 lá) trên bàn tự thu nhỏ (compact) để luôn hiện đủ trong khung màn hình,
+   không bị tràn/cắt cụt. Toggle bằng JS trong renderCenter() khi currentCombo.cards.length > 6. */
+.played-combo.compact .card.table-card{
+  width:52px;height:76px;margin-left:-20px;border-width:1px;
+}
+.played-combo.compact .card.table-card .rank{font-size:15px;}
+.played-combo.compact .card.table-card .suit{font-size:15px;}
+
+/* FIX: bài trên tay của người đánh (chính mình) tăng kích thước lớn hơn nữa để dễ nhìn,
+   tách riêng khỏi kích thước .card mặc định (dùng chung cho các nơi khác). */
+#handCards .card{
+  width:64px;height:94px;margin-left:-26px;
+}
+#handCards .card .rank{font-size:17px;}
+#handCards .card .suit{font-size:17px;}
+#handCards .card.selected{transform:translateY(-18px);}
+
 .controls{display:flex;gap:6px;width:100%;max-width:320px;justify-content:center;padding:0 6px;}
 .controls .btn{flex:1;padding:7px 8px;font-size:12px;}
 
@@ -278,6 +295,12 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   .card.table-card{width:64px;height:93px;margin-left:-22px;}
   .card.table-card .rank{font-size:18px;}
   .card.table-card .suit{font-size:18px;}
+  .played-combo.compact .card.table-card{width:44px;height:64px;margin-left:-17px;}
+  .played-combo.compact .card.table-card .rank{font-size:12px;}
+  .played-combo.compact .card.table-card .suit{font-size:12px;}
+  #handCards .card{width:54px;height:80px;margin-left:-24px;}
+  #handCards .card .rank{font-size:15px;}
+  #handCards .card .suit{font-size:15px;}
   .hand-cards{min-height:78px;margin-bottom:4px;}
   .p-slot{padding:3px 6px;min-width:64px;}
   .p-slot .avatar{width:22px;height:22px;font-size:11px;}
@@ -958,13 +981,20 @@ function canBeat(next, curr){
   return next.highS > curr.highS;
 }
 
+// Giá trị "nước" của 1 lá Heo (quân 2) theo màu: Đỏ (♦♥) = 2, Đen (♠♣) = 1
+function heoCardValue(card){
+  return (card.s === 2 || card.s === 3) ? 2 : 1;
+}
+
 function calculateChopReward(next, curr, activePlayersCount = 4){
   if(!curr) return 0;
   if(curr.type === 'single' && curr.cards[0].r === 12){
-    if(next.type === 'quad' || (next.type === 'pairs_run' && next.count >= 3)) return 2;
+    // Chặt Heo đơn: giá trị = đúng giá trị của lá Heo bị chặt (Đen=1, Đỏ=2)
+    if(next.type === 'quad' || (next.type === 'pairs_run' && next.count >= 3)) return heoCardValue(curr.cards[0]);
   }
   if(curr.type === 'pair' && curr.cards[0].r === 12){
-    if(next.type === 'quad' || (next.type === 'pairs_run' && next.count >= 4)) return 4;
+    // Chặt đôi Heo: giá trị = TỔNG giá trị 2 lá trong đôi (Đen+Đen=2, Đen+Đỏ=3, Đỏ+Đỏ=4) — "dồn" 2 con Heo
+    if(next.type === 'quad' || (next.type === 'pairs_run' && next.count >= 4)) return heoCardValue(curr.cards[0]) + heoCardValue(curr.cards[1]);
   }
   if(curr.type === 'pairs_run' && curr.count === 3 && (next.type === 'quad' || (next.type === 'pairs_run' && next.count >= 4))) return 3;
   if(curr.type === 'quad' && next.type === 'quad') return 3;
@@ -1492,6 +1522,14 @@ function finalizeInstantWin(){
   const activeCount = gameState.order.length;
   const mode = gameState.gameMode;
   const winnerName = gameState.names[winnerId];
+
+  // FIX: giống hệt endGame() — phải đóng ván (isEnded=true) và dừng timerLoop cũ,
+  // nếu không bộ đếm giờ hết hạn từ trước vẫn chạy ngầm, liên tục kích hoạt auto-hành-động
+  // và tự ẩn bảng kết quả Tới Trắng → bàn đứng hình (treo).
+  gameState.isEnded = true;
+  if(timerLoop) clearInterval(timerLoop);
+  consecutivePlayCount = 0;
+  lastNotifiedTurnId = null;
 
   lastGameWinnerId = winnerId;
   gameState.finished = [winnerId, ...gameState.order.filter(id => id !== winnerId)];
@@ -2043,8 +2081,18 @@ function endGame(){
   gameState.order.forEach(id => { finalHandsSnapshot[id] = safeArray(gameState.hands[id]); });
 
   if(mode === 'WATER'){
-    // Xử lý đền phạt Thối Heo/Thối Hàng cho người thắng (người về Nhất)
-    let foulPenaltiesTotal = 0;
+    // Xử lý đền phạt Thối Heo/Thối Hàng khi kết ván.
+    // FIX: gộp luật — thối bài của người về BÉT (hạng chót) giờ đền cho hạng KẾ BÉT
+    // (người vừa đấu 1-chọi-1 với họ ở pha cuối cùng, "có công" giữ họ lại tới cuối),
+    // KHÔNG mặc định đền cho người về Nhất (đã thắng và rời cuộc từ trước, không liên quan).
+    // Thối bài của các hạng khác (không phải Bét) vẫn đền cho Nhất như cũ.
+    const lastPlaceId = gameState.finished[gameState.finished.length - 1];
+    const secondLastPlaceId = gameState.finished.length >= 2
+      ? gameState.finished[gameState.finished.length - 2]
+      : winnerId;
+
+    let foulPenaltiesTotal = 0;        // tổng đền cho người Nhất (các hạng khác ngoài Bét)
+    let foulPenaltiesToSecondLast = 0; // tổng đền riêng cho hạng kế Bét (khi chính người Bét bị thối)
     let foulDetailsMap = {};
 
     gameState.order.forEach(id => {
@@ -2052,9 +2100,14 @@ function endGame(){
         const pHand = safeArray(gameState.hands[id]);
         const foulInfo = checkFoulPunishment(pHand);
         if (foulInfo.totalPenalty > 0) {
-          foulPenaltiesTotal += foulInfo.totalPenalty;
           foulDetailsMap[id] = foulInfo;
-          gameState.roundLog.push({ icon:'🐷', text: `${gameState.names[id]} bị Thối bài trên tay: ${foulInfo.details.join(', ')} → đền ${foulInfo.totalPenalty} nước cho ${gameState.names[winnerId]}.` });
+          if (id === lastPlaceId && secondLastPlaceId !== lastPlaceId) {
+            foulPenaltiesToSecondLast += foulInfo.totalPenalty;
+            gameState.roundLog.push({ icon:'🐷', text: `${gameState.names[id]} (về Bét) bị Thối bài trên tay: ${foulInfo.details.join(', ')} → đền ${foulInfo.totalPenalty} nước cho ${gameState.names[secondLastPlaceId]} (hạng kế Bét).` });
+          } else {
+            foulPenaltiesTotal += foulInfo.totalPenalty;
+            gameState.roundLog.push({ icon:'🐷', text: `${gameState.names[id]} bị Thối bài trên tay: ${foulInfo.details.join(', ')} → đền ${foulInfo.totalPenalty} nước cho ${gameState.names[winnerId]}.` });
+          }
         }
       }
     });
@@ -2081,12 +2134,16 @@ function endGame(){
         else baseWater = -2;
       }
 
-      // Phạt Cóng/Đốt: thua mà không đánh được lá bài nào trong cả ván -> gấp đôi phần âm
-      if (id !== winnerId && (gameState.playedCardsCount[id] || 0) === 0 && baseWater < 0) {
-        congExtraTotal += (-baseWater); // phần thêm do nhân đôi
+      // Phạt Cóng/Đốt: thua mà không đánh được lá bài nào trong cả ván -> phạt CỐ ĐỊNH
+      // = gấp đôi mức Bét chuẩn của bàn, áp dụng ĐỒNG ĐỀU cho mọi hạng bị Cóng
+      // (trước đây chỉ nhân đôi khi baseWater<0, nên hạng nhì baseWater dương bị Cóng lại không mất gì)
+      if (id !== winnerId && (gameState.playedCardsCount[id] || 0) === 0) {
+        const betBaseWater = (activeCount === 2) ? -1 : -2; // mức Bét chuẩn của bàn theo số người chơi
+        const flatCongPenalty = betBaseWater * 2; // gấp đôi mức Bét chuẩn, không phân biệt hạng nhì hay bét
+        congExtraTotal += (baseWater - flatCongPenalty); // phần chênh lệch cộng bù cho người thắng, giữ tổng bàn = 0
         congIds.add(id);
-        gameState.roundLog.push({ icon:'🧊', text: `${gameState.names[id]} bị Cóng (không đánh được lá nào cả ván) → phạt gấp đôi, ${gameState.names[winnerId]} được thưởng bù.` });
-        baseWater = baseWater * 2;
+        gameState.roundLog.push({ icon:'🧊', text: `${gameState.names[id]} bị Cóng (không đánh được lá nào cả ván) → phạt cố định ${flatCongPenalty} nước (gấp đôi mức Bét chuẩn), ${gameState.names[winnerId]} được thưởng bù.` });
+        baseWater = flatCongPenalty;
       }
 
       baseWaterMap[id] = baseWater;
@@ -2098,15 +2155,23 @@ function endGame(){
       let extraChop = gameState.liveScores[id] || 0;
       let foulScore = 0;
       let foulText = "";
-      let congText = congIds.has(id) ? ` | 🧊 Bị Cóng (không ra được lá nào): x2` : "";
+      let congText = congIds.has(id) ? ` | 🧊 Bị Cóng (không ra được lá nào): phạt cố định gấp đôi mức Bét` : "";
       let congBonusText = "";
 
+      // Nhận đền thối bài: người Nhất nhận từ các hạng thường; hạng kế Bét nhận riêng
+      // từ chính người Bét (nếu có) — 2 nguồn cộng dồn (không loại trừ nhau).
       if (id === winnerId && foulPenaltiesTotal > 0) {
-        foulScore = foulPenaltiesTotal;
-        foulText = ` | Được đền thối bài: +${foulPenaltiesTotal}`;
-      } else if (foulDetailsMap[id]) {
-        foulScore = -foulDetailsMap[id].totalPenalty;
-        foulText = ` | Thối bài: -${foulDetailsMap[id].totalPenalty} (${foulDetailsMap[id].details.join(', ')})`;
+        foulScore += foulPenaltiesTotal;
+        foulText += ` | Được đền thối bài: +${foulPenaltiesTotal}`;
+      }
+      if (id === secondLastPlaceId && foulPenaltiesToSecondLast > 0) {
+        foulScore += foulPenaltiesToSecondLast;
+        foulText += ` | Được đền thối bài (từ Bét): +${foulPenaltiesToSecondLast}`;
+      }
+      // Trả thối bài của chính mình (nếu có) — cộng dồn, không loại trừ khả năng vừa nhận vừa trả ở trên
+      if (foulDetailsMap[id]) {
+        foulScore += -foulDetailsMap[id].totalPenalty;
+        foulText += ` | Thối bài: -${foulDetailsMap[id].totalPenalty} (${foulDetailsMap[id].details.join(', ')})`;
       }
 
       // Phần phạt Cóng tăng thêm được cộng dồn cho người thắng để tổng bàn luôn = 0
@@ -2440,8 +2505,12 @@ function renderCenter(){
 
   const pc = $('playedCombo'); pc.innerHTML = '';
   if(st.currentCombo && st.currentCombo.cards){
-    safeArray(st.currentCombo.cards).forEach(c => pc.appendChild(createCardEl(c, false, false, true)));
+    const comboCards = safeArray(st.currentCombo.cards);
+    // FIX: sảnh/đôi thông dài (>6 lá) tự thu nhỏ (compact) để luôn hiện đủ, không bị tràn/cắt cụt
+    pc.classList.toggle('compact', comboCards.length > 6);
+    comboCards.forEach(c => pc.appendChild(createCardEl(c, false, false, true)));
   } else {
+    pc.classList.remove('compact');
     pc.innerHTML = '<span style="color:rgba(250,246,238,.4);font-size:11px;">Bàn trống (Tự do đánh)</span>';
   }
   $('actionLog').textContent = st.log || '';
