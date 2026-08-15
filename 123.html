@@ -479,7 +479,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .flying-stake{
   position:fixed;z-index:320;pointer-events:none;font-size:28px;
   filter:drop-shadow(0 2px 4px rgba(0,0,0,.6));
-  transition:transform .65s cubic-bezier(.18,.8,.22,1),opacity .55s ease;
+  transition:transform 1.45s cubic-bezier(.22,.72,.18,1),opacity 1.25s ease;
   will-change:transform,opacity;
 }
 .splat-effect {
@@ -494,6 +494,8 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   white-space: nowrap; animation: floatUp 1.2s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
 }
 @keyframes floatUp { 0% { transform: translateY(0) scale(0.7); opacity: 0; } 20% { transform: translateY(-10px) scale(1.2); opacity: 1; } 80% { transform: translateY(-25px) scale(1.5); opacity: 1; } 100% { transform: translateY(-35px) scale(0.8); opacity: 0; } }
+
+.rule-example{margin:8px 0;padding:9px 11px;border:1px solid rgba(255,193,7,.45);border-radius:10px;background:rgba(0,0,0,.16);color:rgba(250,246,238,.92);line-height:1.5;font-size:12px;}
 </style>
 </head>
 <body>
@@ -681,13 +683,14 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
         <tr><td>4 (hoặc nhiều hơn) Đôi Thông</td><td>Đôi Thông dài hơn (nhiều đôi hơn); cùng số đôi thì so hàng cao hơn — Tứ Quý KHÔNG chặt được</td></tr>
       </tbody>
     </table>
-    <p><b>Chặt Chồng (chặt liên hoàn — DỒN NƯỚC):</b> Bài vừa dùng để chặt mà vẫn còn nằm trong bảng trên (Heo/3-4-5+ Đôi Thông/Tứ Quý) thì có thể tiếp tục bị người khác chặt đè lên, không giới hạn số lần, miễn còn người giữ bộ chặt hợp lệ mạnh hơn. Giá trị nước của từng bộ bị triệt trong CẢ CHUỖI được <b>DỒN LẠI VỚI NHAU</b> (không tính riêng lẻ từng lượt). <b>Người bị chặt ở mắt xích cuối cùng của chuỗi phải gánh toàn bộ số nước đã dồn từ đầu chuỗi cho người chặt cuối cùng.</b> Khi chuỗi kết thúc (người tiếp theo đánh thường, tất cả bỏ lượt hoặc ván kết thúc), hệ thống mới kết sổ quả bom. Càng nhiều người chặt chồng lên nhau, "quả bom" càng lớn!</p>
+    <p><b>Chặt Chồng (chặt liên hoàn — DỒN NƯỚC):</b> Bài vừa dùng để chặt mà vẫn còn nằm trong bảng trên (Heo/Đôi Heo/3-4-5+ Đôi Thông/Tứ Quý) thì có thể tiếp tục bị người khác chặt đè lên, <b>không giới hạn số lần</b>, miễn còn người giữ bộ chặt hợp lệ mạnh hơn. <b>Đôi Heo hợp lệ có thể chặt đè Đôi Heo</b> (ví dụ Đôi Heo đỏ đè Đôi Heo đen theo thứ tự chất đang áp dụng); khi đó giá trị BOM lấy theo <b>toàn bộ giá trị của Đôi Heo BỊ CHẶT</b>. Giá trị nước của <b>TỪNG BỘ BỊ CHẶT</b> trong CẢ CHUỖI được <b>DỒN LẠI THÀNH MỘT QUẢ BOM</b>; không thanh toán riêng từng mắt xích. <b>QUY TẮC CỐT LÕI: người bị chặt ở MẮT XÍCH CUỐI CÙNG phải chịu TOÀN BỘ số nước đã dồn từ đầu chuỗi và trả cho người chặt cuối cùng.</b> Những người bị chặt ở các mắt xích trước <b>KHÔNG bị trừ nước</b>. Khi chuỗi kết thúc (người tiếp theo đánh thường, tất cả bỏ lượt hoặc ván kết thúc), hệ thống mới kết sổ một lần.</p>
+    <div class="rule-example"><b>🔥 Ví dụ chặt chồng:</b> Đôi Heo đen = <b>2 Nước</b> → Đôi Heo đỏ chặt đè = <b>+2</b> → Tứ Quý chặt Đôi Heo đỏ = <b>+4</b> ⇒ <b>Bom = 6 Nước</b>. Nếu B là người bị chặt ở mắt xích cuối thì <b>B chịu đủ 6 Nước</b>, C nhận đủ 6 Nước; A không bị trừ. Ví dụ chuỗi dài hơn: Đôi Heo đen = 2 → 2 Heo đen = 1+1 → 2 Heo đỏ = 2+2 ⇒ <b>Bom = 8 Nước</b>. Đôi Heo đen = 2; Đôi Heo đỏ = 4; Đôi Heo đen + đỏ = 3. <b>Càng chồng nhiều lần, bom càng lớn.</b></div>
     <p><b>Thứ tự đánh:</b> Ở <b>ván đầu tiên</b>, người cầm <b>3♠</b> phải đánh 3♠ trong nước đầu tiên (nếu không có Tới Trắng). Từ <b>ván thứ hai</b>, người về Nhất ván trước được đánh đầu và được tự do chọn bộ bài.</p>
     <p><b>Đè bài thông thường:</b> Nếu không phải tình huống chặt Heo/Đôi Thông/Tứ Quý, người sau phải đánh <b>cùng loại và cùng số lá</b> nhưng lớn hơn. Khi mọi người khác đã bỏ lượt, người đang giữ quyền (người vừa ra bộ cuối) được mở vòng mới và đánh tự do.</p>
     <p><b>Luật Báo Bài:</b> Hệ thống sẽ tự động thông báo cho cả bàn khi có người chỉ còn 1 lá bài trên tay.</p>
     <p><b>Sự kiện phát sinh & Phạt Thối Bài:</b></p>
     <ul>
-      <li><b>Ăn Chặt / Chặt Bài:</b> Người bị chặt trả trực tiếp điểm/nước phạt cho người chặt.</li>
+      <li><b>Ăn Chặt / Chặt Bài:</b> Mỗi lần chặt chỉ ghi nhận vào <b>quả bom chặt chồng</b>, không trừ riêng từng mắt xích. Khi chuỗi kết thúc, <b>người bị chặt ở mắt xích cuối cùng chịu toàn bộ bom</b> và trả toàn bộ cho người chặt cuối.</li>
       <li><b>Thối Heo / Thối Hàng:</b> Cuối ván người thối trả nước/điểm thưởng trực tiếp cho **Người về Nhất** (Heo đen: 1 nước, Heo đỏ: 2 nước, 3 đôi thông: 3 nước, Tứ quý/4 đôi thông: 4 nước). Riêng người về <b>Bét</b> bị thối thì đền cho <b>hạng kế Bét</b> (người vừa đấu 1-chọi-1 với họ ở pha cuối), không đền cho Nhất.</li>
       <li><b>Đền Bài / Đền Làng:</b> Người vi phạm luật đền chịu toàn bộ số nước phạt của cả bàn cho người thắng. Bất kỳ người chơi nào cũng có thể bấm "🚩 Báo Vi Phạm", chủ phòng xác nhận và nhập số nước phạt để cộng/trừ trực tiếp.</li>
     </ul>
@@ -1114,8 +1117,17 @@ function calculateChopReward(next, curr, activePlayersCount = 4){
     if(next.type === 'quad' || (next.type === 'pairs_run' && next.count >= 3)) return heoCardValue(curr.cards[0]);
   }
   if(curr.type === 'pair' && curr.cards[0].r === 12){
-    // Chặt đôi Heo: giá trị = TỔNG giá trị 2 lá trong đôi (Đen+Đen=2, Đen+Đỏ=3, Đỏ+Đỏ=4) — "dồn" 2 con Heo
-    if(next.type === 'quad' || (next.type === 'pairs_run' && next.count >= 4)) return heoCardValue(curr.cards[0]) + heoCardValue(curr.cards[1]);
+    // ĐÔI HEO CHẶT ĐÈ ĐÔI HEO: theo luật Chặt Chồng của game, nếu đôi Heo mới
+    // hợp lệ đè được đôi Heo đang nằm trên bàn (ví dụ đôi Heo đỏ đè đôi Heo đen),
+    // giá trị cộng BOM là toàn bộ giá trị của đôi Heo BỊ CHẶT.
+    if(next.type === 'pair' && next.cards[0].r === 12 && canBeat(next, curr)) {
+      return heoCardValue(curr.cards[0]) + heoCardValue(curr.cards[1]);
+    }
+    // Chặt đôi Heo bằng Tứ Quý / 4+ Đôi Thông: giá trị = TỔNG giá trị 2 lá trong đôi
+    // (Đen+Đen=2, Đen+Đỏ=3, Đỏ+Đỏ=4).
+    if(next.type === 'quad' || (next.type === 'pairs_run' && next.count >= 4)) {
+      return heoCardValue(curr.cards[0]) + heoCardValue(curr.cards[1]);
+    }
   }
   if(curr.type === 'pairs_run' && curr.count === 3 && (next.type === 'quad' || (next.type === 'pairs_run' && next.count >= 4))) return 3;
   if(curr.type === 'quad' && next.type === 'quad') return 3;
@@ -1586,15 +1598,15 @@ function animateStakeTransfer(fromId, toId, amount, stakeUnit){
       requestAnimationFrame(() => {
         const dx = (endRect.left + endRect.width/2) - (startRect.left + startRect.width/2) + arcX;
         const dy = (endRect.top + endRect.height/2) - (startRect.top + startRect.height/2) + arcY;
-        flyEl.style.transform = `translate(${dx}px, ${dy}px) rotate(${180 + i*45}deg) scale(1.05)`;
-        flyEl.style.opacity = '0.15';
+        flyEl.style.transform = `translate(${dx}px, ${dy}px) rotate(${90 + i*22}deg) scale(1.05)`;
+        flyEl.style.opacity = '0.85';
       });
 
       setTimeout(() => {
         flyEl.remove();
         if(i === qty - 1) showSplatEffect(toEl, icon);
-      }, 650);
-    }, i * 85);
+      }, 1500);
+    }, i * 180);
   }
 }
 
@@ -1884,7 +1896,8 @@ function dealNewGame(){
     isEnded: false,
     chopChainValue: 0, // Luật CHẶT CHỒNG: chỉ kết sổ khi chuỗi kết thúc
     chopChainPayer: null,
-    chopChainReceiver: null
+    chopChainReceiver: null,
+    chopChainHistory: [] // Lưu toàn bộ mắt xích để không bao giờ mất nước giữa chuỗi
   };
   bumpActor(players[leadIdx].id, leadShortMsg); // Hiện rõ bong bóng "đánh đầu" ngay tại vị trí người được quyền ra bài trước
 
@@ -2064,13 +2077,19 @@ function settleChopChain(reason='') {
       gameState.chopChainValue = 0;
       gameState.chopChainPayer = null;
       gameState.chopChainReceiver = null;
+      gameState.chopChainHistory = [];
     }
     return 0;
   }
 
   const total = Number(gameState.chopChainValue || 0);
-  const payer = gameState.chopChainPayer;
-  const receiver = gameState.chopChainReceiver;
+  const history = Array.isArray(gameState.chopChainHistory) ? gameState.chopChainHistory : [];
+  // Mắt xích cuối cùng là người cuối cùng bị chặt và người cuối cùng nhận chặt.
+  // Đây là cặp duy nhất được thanh toán; các mắt xích trước KHÔNG bị trừ tiền.
+  const lastLink = history.length ? history[history.length - 1] : null;
+  const payer = lastLink?.payer || gameState.chopChainPayer;
+  const receiver = lastLink?.receiver || gameState.chopChainReceiver;
+
   if(total > 0 && payer && receiver && payer !== receiver &&
      gameState.liveScores[payer] !== undefined && gameState.liveScores[receiver] !== undefined){
     gameState.liveScores[payer] = (gameState.liveScores[payer] || 0) - total;
@@ -2079,15 +2098,20 @@ function settleChopChain(reason='') {
     const payerName = gameState.names[payer] || payer;
     const receiverName = gameState.names[receiver] || receiver;
     const tag = reason ? ` (${reason})` : '';
-    gameState.roundLog.push({ icon:'💥', text:`💥 CHẶT CHỒNG kết sổ: ${payerName} chịu toàn bộ ${total} Nước → ${receiverName}${tag}.` });
+    const chainDetail = history.length > 1 ? ` — ${history.length} mắt xích chặt chồng` : '';
+    gameState.roundLog.push({
+      icon:'💥',
+      text:`💥 CHẶT CHỒNG kết sổ: ${payerName} chịu TOÀN BỘ ${total} Nước → ${receiverName}${chainDetail}${tag}.`
+    });
+    gameState.log = `💥 CHẶT CHỒNG: ${payerName} chịu toàn bộ ${total} Nước → ${receiverName}.`;
   }
 
   gameState.chopChainValue = 0;
   gameState.chopChainPayer = null;
   gameState.chopChainReceiver = null;
+  gameState.chopChainHistory = [];
   return total;
 }
-
 function handleAction(playerId, action, isAuto=false){
   if(!gameState) return;
 
@@ -2148,9 +2172,17 @@ function handleAction(playerId, action, isAuto=false){
       // sẽ gánh toàn bộ quả bom khi chuỗi chặt kết thúc.
       gameState.chopChainPayer = prevLeader;
       gameState.chopChainReceiver = playerId;
-      // Chặt ngang cũng chuyển đúng giá trị cược của cú chặt từ người bị chặt sang người nhận.
+      gameState.chopChainHistory = Array.isArray(gameState.chopChainHistory) ? gameState.chopChainHistory : [];
+      gameState.chopChainHistory.push({
+        payer: prevLeader,
+        receiver: playerId,
+        amount: chopReward,
+        target: choppedDesc,
+        at: Date.now()
+      });
+      // Chỉ tạo hiệu ứng trực quan cho từng mắt xích; KHÔNG thanh toán từng mắt xích.
       broadcastStakeTransfer(prevLeader, playerId, chopReward, gameState.stakeUnit);
-      gameState.log = `⚡ ${pName} CHẶT NGANG thành công! Bom chồng hiện tại: ${totalChain} Nước${chainTag}`;
+      gameState.log = `⚡ ${pName} CHẶT NGANG thành công! Bom chồng hiện tại: ${totalChain} Nước — chưa thanh toán; người bị chặt ở mắt xích cuối sẽ chịu toàn bộ.`;
       if(!gameState.roundLog) gameState.roundLog = [];
       gameState.roundLog.push({ icon:'⚡', text: `${pName} CHẶT NGANG ${choppedDesc} của ${prevLeaderName} bằng ${describeCombo(combo)} → dồn bom ${totalChain} Nước.${chainTag}` });
       bumpActor(playerId, `⚡ Chặt ngang! Bom ${totalChain} Nước${chainTag ? ' 🔥' : ''}`);
@@ -2175,7 +2207,7 @@ function handleAction(playerId, action, isAuto=false){
 
     if(gameState.hands[playerId].length === 0 && !gameState.finished.includes(playerId)){
       gameState.finished.push(playerId);
-      awardLiveBaseScore(playerId);
+      awardLiveBaseScore(playerId, gameState.finished.length);
       broadcastSoundEvent('CRY', 0.9);
       foldColdPlayers();
     }
@@ -2187,7 +2219,7 @@ function handleAction(playerId, action, isAuto=false){
     if(activePlayers.length <= 1){
       if(activePlayers.length === 1){
         gameState.finished.push(activePlayers[0]);
-        awardLiveBaseScore(activePlayers[0]);
+        awardLiveBaseScore(activePlayers[0], gameState.finished.length);
       }
       settleChopChain('ván kết thúc');
       endGame();
@@ -2262,9 +2294,17 @@ function handleAction(playerId, action, isAuto=false){
         // Ghi nhận mắt xích mới; chưa thanh toán. Người bị chặt cuối cùng sẽ gánh toàn bộ bom.
         gameState.chopChainPayer = gameState.leaderId;
         gameState.chopChainReceiver = playerId;
-        // Hiệu ứng chuyển cược: đúng số "nước" của cú chặt bay từ người bị chặt sang người vừa chặt.
+        gameState.chopChainHistory = Array.isArray(gameState.chopChainHistory) ? gameState.chopChainHistory : [];
+        gameState.chopChainHistory.push({
+          payer: gameState.leaderId,
+          receiver: playerId,
+          amount: chopReward,
+          target: choppedDesc,
+          at: Date.now()
+        });
+        // Hiệu ứng chuyển cược chỉ để minh họa mắt xích; tiền/nước chỉ kết sổ MỘT LẦN ở cuối chuỗi.
         broadcastStakeTransfer(gameState.leaderId, playerId, chopReward, gameState.stakeUnit);
-        gameState.log = `${prefix}${pName} chặt thành công! Bom chồng hiện tại: ${totalChain} Nước${chainTag}`;
+        gameState.log = `${prefix}${pName} chặt thành công! Bom chồng hiện tại: ${totalChain} Nước — chưa thanh toán; người bị chặt ở mắt xích cuối sẽ chịu toàn bộ.`;
         gameState.roundLog.push({ icon:'⚡', text: `${pName} CHẶT ${choppedDesc} của ${prevLeaderName} bằng ${describeCombo(combo)} → dồn bom ${totalChain} Nước.${chainTag}` });
         shortMsg = `⚡ Chặt! Bom ${totalChain} Nước${chainTag ? ' 🔥' : ''}`;
       } else {
@@ -2293,7 +2333,7 @@ function handleAction(playerId, action, isAuto=false){
 
     if(gameState.hands[playerId].length === 0 && !gameState.finished.includes(playerId)){
       gameState.finished.push(playerId);
-      awardLiveBaseScore(playerId);
+      awardLiveBaseScore(playerId, gameState.finished.length);
       broadcastSoundEvent('CRY', 0.9);
       foldColdPlayers();
     } else if(gameState.hands[playerId].length === 1){
@@ -2306,7 +2346,7 @@ function handleAction(playerId, action, isAuto=false){
     if(activePlayers.length <= 1){
       if(activePlayers.length === 1){
         gameState.finished.push(activePlayers[0]);
-        awardLiveBaseScore(activePlayers[0]);
+        awardLiveBaseScore(activePlayers[0], gameState.finished.length);
       }
       settleChopChain('ván kết thúc');
       endGame();
@@ -2354,26 +2394,29 @@ function checkNextTurn(){
 // Ghi ngay Nước cơ bản khi người chơi vừa về hạng 1 hoặc hạng 2.
 // Điều này giúp người về Nhất/Nhì nhìn thấy điểm ngay, không phải chờ endGame().
 // Các khoản chặt/đền vẫn cộng dồn riêng và được trừ phần base đã hiển thị khi chốt ván.
-function awardLiveBaseScore(playerId){
+function awardLiveBaseScore(playerId, forcedRank){
   if(!gameState || gameState.gameMode !== 'WATER' || !playerId) return;
-  const rank = gameState.finished.indexOf(playerId) + 1;
+
+  // Ưu tiên thứ hạng đã được chốt ngay lúc người chơi hết bài.
+  // Không phụ thuộc vào việc foldColdPlayers() có thêm người vào finished sau đó.
+  const rank = Number.isInteger(forcedRank) ? forcedRank : (gameState.finished.indexOf(playerId) + 1);
   if(rank < 1 || rank > 2) return;
 
   const activeCount = gameState.order.length;
   let baseWater = 0;
   if(activeCount === 2){
     if(rank === 1) baseWater = 1;
-    else return; // hạng 2 của bàn 2 người là -1, không gọi là thưởng + ngay
+    else return; // Hạng 2 bàn 2 người = -1, không phải thưởng live.
   } else if(activeCount === 3){
     if(rank === 1) baseWater = 2;
-    else baseWater = 0; // hạng 2 bàn 3 người = 0
+    else baseWater = 0; // Hạng 2 bàn 3 người = 0 theo luật.
   } else {
     if(rank === 1) baseWater = 2;
     else if(rank === 2) baseWater = 1;
   }
 
   gameState.liveBaseAwards = gameState.liveBaseAwards || {};
-  if(gameState.liveBaseAwards[playerId] !== undefined) return;
+  if(Object.prototype.hasOwnProperty.call(gameState.liveBaseAwards, playerId)) return;
 
   gameState.liveScores = gameState.liveScores || {};
   gameState.liveScores[playerId] = (gameState.liveScores[playerId] || 0) + baseWater;
@@ -2381,8 +2424,12 @@ function awardLiveBaseScore(playerId){
 
   if(!gameState.roundLog) gameState.roundLog = [];
   const title = rank === 1 ? '🏆 WIN' : '🥈 VỀ NHÌ';
-  gameState.roundLog.push({ icon: rank === 1 ? '🏆' : '🥈', text:`${gameState.names[playerId]} ${rank === 1 ? 'về Nhất' : 'về Nhì'} → ${baseWater > 0 ? '+' : ''}${baseWater} Nước ngay.` });
-  bumpActor(playerId, `${title}! ${baseWater > 0 ? '+' : ''}${baseWater} Nước`);
+  const awardText = baseWater > 0 ? `+${baseWater}` : `${baseWater}`;
+  gameState.roundLog.push({
+    icon: rank === 1 ? '🏆' : '🥈',
+    text: `${gameState.names[playerId]} ${rank === 1 ? 'về Nhất' : 'về Nhì'} → ${awardText} Nước ngay.`
+  });
+  bumpActor(playerId, `${title}! ${awardText} Nước`);
   broadcastState();
 }
 
@@ -2494,9 +2541,11 @@ function endGame(){
       let baseWater = baseWaterMap[id];
       // liveScores đã hiển thị trước phần thưởng cơ bản cho người về Nhất.
       // Khi chốt kết quả, chỉ lấy phần chặt/đền đang treo ngoài baseWater để tránh cộng đôi.
+      // Nước cơ bản đã cộng LIVE khi người chơi vừa về hạng 1/hạng 2.
+      // Khi chốt ván chỉ lấy phần chặt/đền còn treo, tránh cộng trùng cho BẤT KỲ hạng nào.
       let extraChop = gameState.liveScores[id] || 0;
-      if(id === winnerId && gameState.liveWinnerAwarded){
-        extraChop -= baseWaterMap[id] || 0;
+      if(gameState.liveBaseAwards && gameState.liveBaseAwards[id] !== undefined){
+        extraChop -= Number(gameState.liveBaseAwards[id]) || 0;
       }
       let foulScore = 0;
       let foulText = "";
