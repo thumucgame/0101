@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -749,6 +748,20 @@ function sanitizeForFirebase(obj){
   return out;
 }
 
+// --- CHỐNG XSS: mã hoá các ký tự đặc biệt (<,>,&,",') trước khi chèn
+// bất kỳ chuỗi nào có nguồn gốc từ người dùng (tên, chat...) vào innerHTML.
+// Nếu không có bước này, ai đó đặt tên/chat kiểu "<img src=x onerror=...>"
+// sẽ chạy được mã tuỳ ý trong trình duyệt của người chơi khác. ---
+function escapeHtml(str){
+  if(str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function safeArray(data) {
   if (!data) return [];
   if (Array.isArray(data)) return data;
@@ -1098,8 +1111,8 @@ function renderPublicRoomsList(){
     const item = document.createElement('div');
     item.className = 'public-room-item';
     item.innerHTML = `
-      <div><b>Phòng ${r.code}</b><br><small style="color:rgba(250,246,238,0.6)">Chủ phòng: ${r.hostName} (${r.count}/4)</small></div>
-      <button class="btn btn-gold" style="padding:4px 10px;font-size:12px;" onclick="joinExistingRoom('${r.code}')">Vào</button>
+      <div><b>Phòng ${escapeHtml(r.code)}</b><br><small style="color:rgba(250,246,238,0.6)">Chủ phòng: ${escapeHtml(r.hostName)} (${r.count}/4)</small></div>
+      <button class="btn btn-gold" style="padding:4px 10px;font-size:12px;" onclick="joinExistingRoom('${escapeHtml(r.code)}')">Vào</button>
     `;
     listEl.appendChild(item);
   });
@@ -1384,7 +1397,7 @@ function renderLobby(){
       <li>
         <div class="player-info">
           <span class="dot"></span>
-          <span>${p.name}</span>
+          <span>${escapeHtml(p.name)}</span>
           ${i===0?'<span class="crown">♛ Host</span>':''}
         </div>
         ${removeBtn}
@@ -2401,7 +2414,7 @@ function renderOpponents(){
 
     slotDiv.innerHTML = `
       <div class="avatar" id="avatar-${pId}">👤</div>
-      <div class="name">${currentState.names[pId] || 'Người chơi'}</div>
+      <div class="name">${escapeHtml(currentState.names[pId]) || 'Người chơi'}</div>
       <div class="card-cnt">${cardCountDisplay}</div>
       ${waterSticker}
       ${kneelingSticker}
@@ -2689,7 +2702,7 @@ function sendChat(){
 
 function addChatLine(name, text){
   const log = $('chatLog');
-  log.innerHTML += `<div style="margin-bottom:6px;"><b>${name}:</b> ${text}</div>`;
+  log.innerHTML += `<div style="margin-bottom:6px;"><b>${escapeHtml(name)}:</b> ${escapeHtml(text)}</div>`;
   log.scrollTop = log.scrollHeight;
   if(!$('sidePanel').classList.contains('open')){ unreadChat++; updateChatBadge(); }
 }
