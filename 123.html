@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -333,6 +334,10 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   margin-left:calc(var(--hand-overlap) * -1);
   flex-shrink:0;
 }
+/* FIX MOBILE: lá đầu tiên không được áp dụng margin âm.
+   Trước đây #handCards .card có độ ưu tiên cao hơn .card:first-child,
+   khiến lá đầu tiên bị đẩy ra ngoài bên trái và có thể làm mất 1-2 lá đầu. */
+#handCards .card:first-child{margin-left:0;}
 #handCards .card .rank{font-size:calc(var(--hand-card-w) * 0.29);}
 #handCards .card .suit{font-size:calc(var(--hand-card-w) * 0.29);}
 #handCards .card.selected{transform:translateY(calc(var(--hand-card-w) * -0.26));}
@@ -2686,7 +2691,7 @@ function layoutHandCards(outer, inner, n, retries){
 
   const maxW = 76;              // kích thước lá bài tối đa (giống lá bài trên bàn ở desktop)
   const minW = 30;               // kích thước lá bài nhỏ nhất chấp nhận được (vẫn đọc được)
-  const minSliver = 12;          // phần hở tối thiểu của mỗi lá bị chồng, để còn bấm/nhìn được rõ
+  const minSliver = 24;          // mobile: luôn chừa đủ phần lá để nhìn rõ và bấm được từng quân
   const defaultOverlapRatio = 0.368; // độ chồng "tự nhiên" mặc định (~28px ở cardW 76px, giống bố cục gốc)
   const basePad = 8;             // lề tối thiểu hai bên tránh lá cuối dính sát mép/scrollbar
   const avail = Math.max(safeW - basePad, minW);
