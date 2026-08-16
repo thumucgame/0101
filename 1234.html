@@ -3565,10 +3565,14 @@ function endGame(){
     // CÓNG: dùng đúng snapshot đã chốt lúc người đầu tiên về Nhất.
     // Tuyệt đối không tính lại sau khi coldFolded đã được đưa vào finished.
     const cong = getOrCreateCongSettlement() || calculateCongSettlement([]);
+    // congIds được lưu dạng Array trong gameState để truyền qua Firebase;
+    // endGame() phải chuẩn hóa thành Set trước khi dùng .has(), nếu không sẽ crash
+    // ngay lúc kết thúc ván (Array không có .has).
+    const congIdSet = new Set(safeArray(cong.congIds));
 
     // Nếu endGame() đi thẳng vào đây mà foldColdPlayers() chưa kịp chạy,
     // vẫn áp dụng đúng một settlement duy nhất cho live.
-    if(cong.congIds.length && cong.receivers.length){
+    if(congIdSet.size && cong.receivers.length){
       applyCongSettlementLive(cong);
     }
 
@@ -3577,7 +3581,7 @@ function endGame(){
     const foulDetailsMap = {};
 
     gameState.order.forEach(id => {
-      if(cong.congIds.has(id)) return; // Cóng không xét Thối.
+      if(congIdSet.has(id)) return; // Cóng không xét Thối.
       const pHand = safeArray(gameState.hands[id]);
       const foulInfo = checkFoulPunishment(pHand);
       if(foulInfo.totalPenalty <= 0) return;
@@ -3596,7 +3600,7 @@ function endGame(){
     // không cộng lại tiền vị trí của hạng 1/2 đã phát LIVE.
     gameState.order.forEach(id => {
       const rank = gameState.finished.indexOf(id) + 1;
-      const isCong = cong.congIds.has(id);
+      const isCong = congIdSet.has(id);
       const baseAwardLive = Number((gameState.liveBaseAwards || {})[id] || 0);
       const chopAward = isCong ? 0 : Number((gameState.liveChopAwards || {})[id] || 0);
       const congAward = isCong ? -(cong.debtByCong[id] || 0) : Number(cong.receiveByPlayer[id] || 0);
