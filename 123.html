@@ -2510,7 +2510,13 @@ function handleAction(playerId, action, isAuto=false){
     if(!gameState.revealedCards[playerId]) gameState.revealedCards[playerId] = [];
     gameState.revealedCards[playerId].push(...cards.map(c=>({r:c.r,s:c.s})));
     gameState.currentCombo = combo;
-    gameState.chopStackValue = getSpecialStackValue(combo);
+    // QUAN TRỌNG: nếu vừa chồng một bộ đặc biệt lên bộ đặc biệt trước đó,
+    // chopStackValue đã được tính dồn ở nhánh isSpecialStackBeat (ví dụ
+    // Heo đen 1 → Heo đỏ 2 = 3 Nước treo). Không được ghi đè nó bằng
+    // giá trị riêng của combo hiện tại, nếu không cú chặt tiếp theo chỉ ăn 2.
+    gameState.chopStackValue = isSpecialStackBeat
+      ? (Number(gameState.chopStackValue || 0) || getSpecialStackValue(combo))
+      : getSpecialStackValue(combo);
     gameState.leaderId = playerId;
     gameState.firstMove = false;
     gameState.chopInterruptDeadline = 0;
