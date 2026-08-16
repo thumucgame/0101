@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -407,25 +408,48 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   .controls .btn{min-width:64px;font-size:11px;padding:6px 4px;}
 }
 
+.reveal-cards-line .card.small{position:relative;flex:0 0 26px;width:26px;height:37px;box-sizing:border-box;}
+.reveal-cards-line .card.small.already-played{opacity:.42;filter:grayscale(35%) brightness(.9);}
+.reveal-cards-line .card.small.still-holding{opacity:1;filter:none;}
+
 /* OVERLAYS & MODALS */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px;}
+.instant-win-overlay{position:fixed;inset:0;background:radial-gradient(circle at center,rgba(8,65,48,.94),rgba(0,0,0,.92));display:flex;align-items:center;justify-content:center;z-index:250;padding:18px;text-align:center;}
+.instant-win-panel{width:min(560px,94vw);padding:34px 22px 28px;border:2px solid var(--gold);border-radius:22px;background:rgba(7,31,25,.96);box-shadow:0 0 45px rgba(212,175,55,.28),inset 0 0 25px rgba(212,175,55,.06);animation:instantWinPop .35s ease-out;}
+.instant-win-title{font-size:clamp(38px,8vw,72px);font-weight:1000;color:var(--gold);letter-spacing:2px;text-shadow:0 0 18px rgba(212,175,55,.42);margin:0 0 10px;}
+.instant-win-sub{font-size:clamp(16px,3.5vw,24px);color:var(--cream);font-weight:800;margin-bottom:8px;}
+.instant-win-winner{font-size:clamp(18px,4vw,28px);color:#fff;margin-bottom:20px;font-weight:900;}
+.instant-win-count{font-size:13px;color:rgba(250,246,238,.6);margin-bottom:10px;}
+.instant-win-progress{height:7px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden;}
+.instant-win-progress > div{height:100%;width:100%;background:var(--gold);transform-origin:left center;animation:instantWinProgress 3s linear forwards;}
+@keyframes instantWinPop{from{opacity:0;transform:scale(.82)}to{opacity:1;transform:scale(1)}}
+@keyframes instantWinProgress{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+
 .result-panel{background:var(--panel);border:1px solid var(--gold);border-radius:16px;padding:22px;max-width:520px;width:100%;text-align:center;max-height:90vh;overflow-y:auto;}
 .result-table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px;}
 .result-table th, .result-table td{padding:5px 6px;border-bottom:1px solid var(--panel-line);text-align:left;}
 .result-table td.amt{text-align:right;font-weight:700;}
 .amt.plus{color:var(--good);}
 .amt.minus{color:var(--bad);}
-.reveal-hand-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;margin-top:5px;padding-top:3px;gap:0;max-width:100%;overflow:visible;}
+.reveal-hand-row{display:block;width:100%;max-width:100%;margin-top:5px;padding-top:3px;overflow:visible;box-sizing:border-box;}
+.reveal-card-group{display:block;width:100%;max-width:100%;margin:0 0 5px;padding:0;box-sizing:border-box;}
+.reveal-cards-line{display:flex;align-items:center;justify-content:flex-start;flex-wrap:nowrap;width:100%;max-width:100%;min-width:0;gap:0;padding:0;margin:0;overflow-x:auto;overflow-y:visible;scrollbar-width:none;box-sizing:border-box;}
+.reveal-cards-line::-webkit-scrollbar{display:none;}
 /* LUẬT #4: làm rõ phần bài người chơi CÒN GIỮ (chưa đánh hết) lúc ngửa bài kết ván,
    để cả bàn dễ nhìn hơn thay vì thấy 1 dãy bài lẫn lộn không rõ đâu là đã đánh / đâu là còn ôm. */
-.reveal-group-label{flex:0 0 100%;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:rgba(250,246,238,.4);margin:4px 0 2px;}
+.reveal-group-label{display:block;width:100%;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:rgba(250,246,238,.4);margin:4px 0 2px;}
 .reveal-group-label.holding{color:var(--gold);}
-.reveal-hand-row .card.small.already-played{opacity:.4;filter:grayscale(35%);}
-.reveal-hand-row .card.small.still-holding{border-color:var(--gold);box-shadow:0 0 6px rgba(212,175,55,.55);}
+.reveal-hand-row .card.small.already-played{opacity:.42;filter:grayscale(35%) brightness(.9);box-shadow:-1px 1px 2px rgba(0,0,0,.22);}
+.reveal-hand-row .card.small.still-holding{opacity:1;filter:none;z-index:2;border-color:var(--gold);box-shadow:0 0 5px rgba(212,175,55,.55);}
+.reveal-hand-row .card.small{box-sizing:border-box;transform:none;vertical-align:middle;}
+.reveal-cards-line .card.small{margin-left:-13px;}
+.reveal-cards-line .card.small:first-child{margin-left:0;}
+.reveal-cards-line .card.small.already-played + .card.small.already-played{margin-left:-13px;}
+.reveal-cards-line .card.small.still-holding{margin-left:-13px;}
+.reveal-cards-line .card.small.still-holding:first-child{margin-left:0;}
 .result-table td:nth-child(2){min-width:0;}
 .reveal-hand-row .card.small{flex:0 0 auto;}
-.card.small{width:26px;height:37px;margin-left:-13px;padding:2px;border-radius:4px;box-shadow:-1px 1px 3px rgba(0,0,0,.4);}
-.card.small:first-child{margin-left:0;}
+.card.small{width:26px;height:37px;margin-left:-13px;padding:2px;border-radius:4px;box-shadow:-1px 1px 3px rgba(0,0,0,.4);box-sizing:border-box;}
 .card.small .rank{font-size:9.5px;}
 .card.small .suit{font-size:9.5px;}
 
@@ -482,6 +506,8 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   position: fixed; font-size: 32px; z-index: 300; pointer-events: none;
   transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s;
 }
+.cong-penalty-pop{position:fixed;z-index:99999;pointer-events:none;font-weight:900;font-size:16px;color:#ff5b5b;text-shadow:0 2px 5px rgba(0,0,0,.8);animation:congPenaltyPop 1.35s ease-out forwards;white-space:nowrap;}
+@keyframes congPenaltyPop{0%{transform:translate(-50%,0) scale(.8);opacity:0;}15%{transform:translate(-50%,-8px) scale(1.08);opacity:1;}70%{transform:translate(-50%,-42px) scale(1);opacity:1;}100%{transform:translate(-50%,-68px) scale(.95);opacity:0;}}
 .flying-stake{
   position:fixed;z-index:320;pointer-events:none;font-size:28px;
   filter:drop-shadow(0 2px 4px rgba(0,0,0,.6));
@@ -553,6 +579,8 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
         <div class="rule-test-row"><span>Tứ quý chặt liên hoàn</span><input id="wtQuad" type="number" min="0" max="100" value="15"></div>
         <div class="rule-test-row"><span>Đôi thông / 4+ đôi thông</span><input id="wtRun" type="number" min="0" max="100" value="15"></div>
         <div class="rule-test-row"><span>Chặt người đã về</span><input id="wtSafe" type="number" min="0" max="100" value="10"></div>
+        <div class="rule-test-row"><span>🧊 Cóng 1 người</span><input id="wtCong1" type="number" min="0" max="100" value="5"></div>
+        <div class="rule-test-row"><span>🧊🧊🧊 Cóng cả bàn</span><input id="wtCongAll" type="number" min="0" max="100" value="5"></div>
         <div class="rule-test-row"><span>WIN + BOM + Về Nhì</span><input id="wtRank" type="number" min="0" max="100" value="5"></div><div class="rule-test-row"><span>🌟 Tứ Quý 3 — Tới Trắng ván đầu</span><input id="wtWhite3" type="number" min="0" max="100" value="10"></div>
         <div style="font-size:11px;color:rgba(250,246,238,.5);margin-top:8px;">Tổng tỷ lệ không bắt buộc bằng 100; hệ thống tự chuẩn hóa.</div>
       </div>
@@ -580,7 +608,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
               <option value="3" selected>3 Bot (4 người)</option>
             </select>
           </div>
-          <div class="rule-test-row"><span>🎲 Tình huống</span>
+          <div class="rule-test-row"><span>🧪 Chế độ test</span>
             <select id="ruleTestScenario" class="sel" style="width:240px;margin:0;">
               <option value="RANDOM" selected>🎲 Random theo tỷ lệ</option>
               <option value="single">🖤 Heo đen → ❤️ Heo đỏ → Chặt</option>
@@ -588,13 +616,19 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
               <option value="quad">🖤🖤 → ❤️❤️ → Tứ quý → Tứ quý lớn</option>
               <option value="run">3 Đôi thông → 4 Đôi thông</option>
               <option value="safe">🛡️ Chặt người vừa về</option>
-              <option value="rank">🏆 BOM + Về Nhì</option><option value="white3">🌟 Tứ Quý 3 — Tới Trắng ván đầu</option>
+              <option value="cong1">🧊 CÓNG 1 NGƯỜI</option>
+              <option value="cong2">🧊🧊 CÓNG 2 NGƯỜI</option>
+              <option value="cong3">🧊🧊🧊 CÓNG 3 NGƯỜI</option>
+              <option value="congAll">🧊🧊🧊 CÓNG CẢ BÀN — Bạn giết cả bàn</option>
+              <option value="rank">🏆 BOM + Về Nhì</option>
+              <option value="white3">🌟 TỚI TRẮNG — Tứ Quý 3</option>
             </select>
           </div>
         </div>
         <div style="display:grid;gap:7px;">
           <button class="btn btn-gold" id="btnStartPlayableRuleTest" type="button">▶ CHƠI TEST TỰ NHIÊN</button>
-          <div style="font-size:11px;color:rgba(250,246,238,.58);line-height:1.5;">Đánh tự nhiên như ván thật với 1–3 Bot; bài được chia ngẫu nhiên, không dựng sẵn kịch bản. Dùng các bài test luật bên dưới để kiểm tra bug nhanh theo tình huống cố định.</div>
+          <button class="btn btn-outline" id="btnTestInstantWhiteAudio" type="button">🔊 TEST ÂM TỚI TRẮNG</button>
+          <div style="font-size:11px;color:rgba(250,246,238,.58);line-height:1.5;">Chọn đúng tình huống rồi bấm CHƠI TEST. Kịch bản đã chọn sẽ được cài đúng mục tiêu; sau đó bạn đánh bình thường bằng cùng engine ván thật. <b>Cóng cả bàn:</b> Bot sẽ bỏ lượt sau nước mở của bạn để bạn tự giết cả bàn. <b>Tới Trắng:</b> bạn được chia đúng bộ và kết thúc ngay bằng engine thật.</div>
         </div>
       </div>
     </div>
@@ -633,8 +667,8 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
         <div class="cfg-row"><span>🃏 Thối Tứ Quý</span><input id="cfgFoulTuQuy" type="number" min="0" max="99"></div>
         <div class="cfg-row"><span>🔗 Thối 3 Đôi Thông</span><input id="cfgFoulBaDoiThong" type="number" min="0" max="99"></div>
         <div class="cfg-row"><span>🔗 Thối 4+ Đôi Thông</span><input id="cfgFoulBoDoiThong" type="number" min="0" max="99"></div>
-        <div class="cfg-row" style="border-top:1px dashed var(--panel-line);padding-top:9px;margin-top:9px;"><span>🧊 Phạt Cóng — đền mỗi người</span><input id="cfgCongPerReceiver" type="number" min="0" max="99"></div>
-        <div style="font-size:11px;opacity:.6;margin-top:4px;">Người bị Cóng (không đánh được lá nào cả ván) đền số Nước này cho MỖI người còn lại trên bàn. Bàn càng đông, tổng đền càng lớn.</div>
+        <div class="cfg-row" style="border-top:1px dashed var(--panel-line);padding-top:9px;margin-top:9px;"><span>🧊 Phạt Cóng — gấp đôi Bét, đền mỗi người</span><input id="cfgCongPerReceiver" type="number" min="0" max="99" disabled></div>
+        <div style="font-size:11px;opacity:.6;margin-top:4px;">Người bị Cóng (không đánh được lá nào cả ván) bị trừ gấp đôi tiền Bét: hiện Bét = -2 nên Cóng = -4 cho MỖI người còn lại trên bàn. Bàn càng đông, tổng đền càng lớn.</div>
       </div>
 
       <div class="rule-test-card">
@@ -664,6 +698,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
         <div class="cfg-row"><span class="cfg-evt">🏆 Về Nhất (FINISH_1ST)</span><span class="cfg-evt"><input id="cfgEnFinish1st" type="checkbox"><input id="cfgVolFinish1st" type="range" min="0" max="1" step="0.05"></span></div>
         <div class="cfg-row"><span class="cfg-evt">🥈 Về Nhì / Ba (FINISH_23)</span><span class="cfg-evt"><input id="cfgEnFinish23" type="checkbox"><input id="cfgVolFinish23" type="range" min="0" max="1" step="0.05"></span></div>
         <div class="cfg-row"><span class="cfg-evt">🎉 Kết thúc ván (WOW — chốt kết quả)</span><span class="cfg-evt"><input id="cfgEnWinCry" type="checkbox"><input id="cfgVolWinCry" type="range" min="0" max="1" step="0.05"></span></div>
+        <div class="cfg-row"><span class="cfg-evt">🌟 Tới Trắng — “Tất cả quỳ xuống”</span><span class="cfg-evt"><input id="cfgEnInstantWhite" type="checkbox"><input id="cfgVolInstantWhite" type="range" min="0" max="1" step="0.05"></span></div>
         <div class="cfg-row"><span class="cfg-evt">😂 Icon Khóc/Cười/Hối/Cà khịa</span><span class="cfg-evt"><input id="cfgEnReaction" type="checkbox"><input id="cfgVolReaction" type="range" min="0" max="1" step="0.05"></span></div>
         <div class="cfg-row"><span class="cfg-evt">🩴 Ném vật phẩm (dép, trứng, cà chua...)</span><span class="cfg-evt"><input id="cfgEnThrowItem" type="checkbox"><input id="cfgVolThrowItem" type="range" min="0" max="1" step="0.05"></span></div>
       </div>
@@ -895,6 +930,17 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   </div>
 </div>
 
+<!-- OVERLAY TỚI TRẮNG -->
+<div class="instant-win-overlay hidden" id="instantWinOverlay">
+  <div class="instant-win-panel">
+    <div class="instant-win-title">🌟 TỚI TRẮNG 🌟</div>
+    <div class="instant-win-sub" id="instantWinLabel">Ăn trắng cả bàn!</div>
+    <div class="instant-win-winner" id="instantWinWinner"></div>
+    <div class="instant-win-count">Kết quả sẽ hiện sau 3 giây...</div>
+    <div class="instant-win-progress"><div></div></div>
+  </div>
+</div>
+
 <!-- OVERLAY RESULT -->
 <div class="overlay hidden" id="resultOverlay">
   <div class="result-panel">
@@ -1005,7 +1051,10 @@ const SOUND_URLS = {
   'TAUNT2': ['https://www.myinstants.com/media/sounds/thoi-ong-im-me-cai-mom-i-_-tuan-tien-ti_8as8efd6f5k.mp3'], // Thôi ông im mẹ nó mồm đi
   // ÂM "VỀ ĐÍCH": phát khi có người hết bài. Hạng 1 dùng FINISH_1ST, hạng 2-3 dùng FINISH_23.
   'FINISH_1ST': ['https://www.myinstants.com/media/sounds/day-no-phai-the-chu-li-thang-nay-kha-va-gioi.mp3'], // Đấy nó phải thế chứ lị, thằng này khá và giỏi
-  'FINISH_23': ['https://www.myinstants.com/media/sounds/kids-saying-yay-sound-effect_3.mp3'] // YAAAAAAAAY
+  'FINISH_23': ['https://www.myinstants.com/media/sounds/kids-saying-yay-sound-effect_3.mp3'], // YAAAAAAAAY
+  // Âm TỚI TRẮNG. Người dùng nhập link MP3/WAV tại Cài đặt.
+  // Nếu để trống, game fallback sang SpeechSynthesis 'Tất cả quỳ xuống'.
+  'INSTANT_WHITE': ['']
 };
 
 // Trả về 1 link THẬT SỰ để phát, cho 1 key bất kỳ trong SOUND_URLS:
@@ -1109,7 +1158,7 @@ const DEFAULT_GAME_CONFIG = {
     nguDoiThong: 3        // Ngũ Đôi Thông (5 đôi liên tiếp)
   },
   cong: {           // Phạt CÓNG (không đánh được lá nào suốt ván)
-    perReceiver: 2   // Số Nước người bị Cóng đền cho MỖI người còn lại trên bàn
+    perReceiver: 4   // CÓNG = gấp đôi mức Bét (-2): -4 cho MỖI người không Cóng
   }
 };
 let GAME_CONFIG = JSON.parse(JSON.stringify(DEFAULT_GAME_CONFIG));
@@ -1138,6 +1187,8 @@ function saveGameConfig(){
   try{ localStorage.setItem(GAME_CONFIG_STORAGE_KEY, JSON.stringify(GAME_CONFIG)); }catch(e){ console.warn('Không lưu được cấu hình BOM/PHẠT.', e); }
 }
 loadGameConfig();
+// FIX V19: luật CÓNG cố định = gấp đôi Bét. Bét hiện tại là -2 => Cóng 4 Nước cho MỖI người không Cóng.
+GAME_CONFIG.cong.perReceiver = 4;
 
 // Cấu hình ÂM THANH: bật/tắt + âm lượng riêng theo TỪNG NHÓM sự kiện, và chọn
 // những âm nào được phép random trong bộ âm CHẶT (CHOP_1..CHOP_4).
@@ -1151,12 +1202,13 @@ const DEFAULT_SOUND_CONFIG = {
     finish1st:true, // Âm khi có người về Nhất
     finish23:true,  // Âm khi có người về Nhì/Ba
     winCry:true,    // Âm khi kết thúc ván (chốt kết quả)
+    instantWhite:true, // Âm riêng khi TỚI TRẮNG
     reaction:true,  // Âm các icon Khóc/Cười/Hối/Cà khịa người chơi tự bấm
     throwItem:true  // Âm khi ném vật phẩm (dép, trứng, cà chua...) vào người khác
   },
   volumes: {
     chop:0.9, myTurn:1.0, playCard:0.5, finish1st:0.9, finish23:0.9,
-    winCry:0.95, reaction:0.9, throwItem:0.9
+    winCry:0.95, instantWhite:1.0, reaction:0.9, throwItem:0.9
   }
 };
 let SOUND_CONFIG = JSON.parse(JSON.stringify(DEFAULT_SOUND_CONFIG));
@@ -1189,6 +1241,7 @@ function getSoundCategory(item){
   if(item === 'FINISH_1ST') return 'finish1st';
   if(item === 'FINISH_23') return 'finish23';
   if(item === 'CRY') return 'winCry'; // Âm WOW khi kết thúc ván, khác với CRY1..CRY4 (reaction)
+  if(item === 'INSTANT_WHITE') return 'instantWhite'; // Âm riêng TỚI TRẮNG
   if(Object.prototype.hasOwnProperty.call(REACTION_LABELS, item)) return 'reaction';
   return 'throwItem'; // Các icon ném vật phẩm (🩴🥚🍅🍺🌹💩🔥...)
 }
@@ -1285,7 +1338,19 @@ function playChopControlled(soundKey){
   }catch(e){ console.warn('Không phát được âm CHOP:', e); }
 }
 
-function broadcastChopSound(){
+// CỬA DUY NHẤT CHO ÂM CHOP: âm chỉ được phép phát khi nước đánh thực sự là
+// một cú CHẶT hợp lệ (bộ đặc biệt đè bộ đặc biệt và thực sự thắng). Random chỉ
+// chọn biến thể âm, tuyệt đối không quyết định việc có được phát CHOP hay không.
+function isRealChopSoundEvent(prevCombo, nextCombo, targetAlreadyFinished=false){
+  if(!prevCombo || !nextCombo) return false;
+  if(!isStackableSpecialCombo(prevCombo) || !isStackableSpecialCombo(nextCombo)) return false;
+  return canBeat(nextCombo, prevCombo);
+}
+
+function broadcastChopSound(prevCombo, nextCombo, targetAlreadyFinished=false){
+  // Không có cú chặt hợp lệ thì CẤM phát CHOP, kể cả caller có gọi nhầm hàm.
+  if(!isRealChopSoundEvent(prevCombo, nextCombo, targetAlreadyFinished)) return false;
+
   const id = 'chop_' + Date.now() + '_' + Math.random().toString(36).slice(2);
   _seenChopSoundIds.add(id);
   // Random 1 lần duy nhất ở đây rồi gửi đúng key đó cho tất cả người chơi,
@@ -1295,11 +1360,35 @@ function broadcastChopSound(){
   // sentAt: FIX "âm thanh dồn dập khi mất mạng rồi kết nối lại" — xem SOUND_STALE_MS bên dưới.
   sendToAll({t:'soundEvent', soundKey, volume:0.9, soundEventId:id, sentAt: Date.now()});
   playChopControlled(soundKey);
+  return true;
 }
 
 const AUDIO_PLAYERS = {}; // url -> Audio (tái dùng để không tạo mới liên tục)
 const AUDIO_LAST_PLAY = {}; // dedupe theo ITEM (soundKey), không theo url, để chặn đúng cả khi 2 lần phát random ra 2 biến thể khác nhau
 const AUDIO_DEDUPE_MS = 180;
+
+function playInstantWinVoice(){
+  // TỚI TRẮNG dùng sound key riêng: link + bật/tắt + âm lượng đều nằm trong Cài đặt.
+  // Nếu chưa có link audio hợp lệ, fallback sang SpeechSynthesis để vẫn có tiếng.
+  const url = resolveSoundUrl('INSTANT_WHITE');
+  const enabled = SOUND_CONFIG.masterEnabled && SOUND_CONFIG.enabled.instantWhite !== false;
+  if(!enabled) return;
+  if(url){
+    playGlobalSound('INSTANT_WHITE', SOUND_CONFIG.volumes.instantWhite ?? 1.0);
+    return;
+  }
+  try{
+    if(!('speechSynthesis' in window) || !window.SpeechSynthesisUtterance) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance('Ha ha ha! Tất cả quỳ xuống!');
+    u.rate = 1.0;
+    u.pitch = 0.95;
+    const voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
+    const vi = voices.find(v => /^vi(-|_)/i.test(v.lang || ''));
+    if(vi) u.voice = vi;
+    window.speechSynthesis.speak(u);
+  }catch(e){ console.warn('Không phát được âm Tới Trắng:', e); }
+}
 
 function playGlobalSound(item, customVolume = 0.9){
   // Mọi đường phát âm (bấm tại chỗ, nhận qua broadcast, bot...) đều đi qua đây,
@@ -2067,7 +2156,12 @@ function onClientMessage(msg){
       // ngược về từ chủ phòng.
       if(msg.fromId && msg.fromId === myId) return;
       addChatLine(msg.name, msg.text);
+    } else if(msg.t==='instantWinCelebration'){
+      if(msg.eventId && window._lastInstantWinEventId === msg.eventId) return;
+      window._lastInstantWinEventId = msg.eventId || null;
+      showInstantWinCelebration(msg.winnerId, msg.winnerName, msg.label, msg.reward, msg.stakeUnit, false);
     } else if(msg.t==='result'){
+      $('instantWinOverlay')?.classList.add('hidden');
       showResultOverlay(msg.results, msg.settlements);
     } else if(msg.t==='throwItem'){
       // TỐI ƯU ÂM THANH: nếu chính mình là người vừa ném (fromId===myId), máy mình đã tự
@@ -2161,6 +2255,19 @@ function animateStakeTransfer(fromId, toId, amount, stakeUnit){
       }, 1500);
     }, i * 180);
   }
+}
+
+function showCongPenalty(fromId, amount){
+  const el = (fromId === myId) ? $('myAvatar') : $(`avatar-${fromId}`);
+  if(!el) return;
+  const r = el.getBoundingClientRect();
+  const pop = document.createElement('div');
+  pop.className = 'cong-penalty-pop';
+  pop.textContent = `-${Math.max(0, Number(amount)||0)} Nước`;
+  pop.style.left = (r.left + r.width/2) + 'px';
+  pop.style.top = (r.top + 4) + 'px';
+  document.body.appendChild(pop);
+  setTimeout(()=>pop.remove(), 1450);
 }
 
 function broadcastStakeTransfer(fromId, toId, amount, stakeUnit){
@@ -2301,6 +2408,8 @@ function revealInstantWin(hands, winnerId, info){
     scores: Object.fromEntries(players.map(p=>[p.id, 0])),
     liveScores: Object.fromEntries(players.map(p=>[p.id, 0])),
     liveBaseAwards: {},
+    liveCongAwards: {},
+    liveChopAwards: {},
     liveWinnerAwarded: false,
     playedCardsCount: Object.fromEntries(players.map(p=>[p.id, 0])),
     revealedCards: Object.fromEntries(players.map(p=>[p.id, safeArray(hands[p.id]).map(c=>({r:c.r,s:c.s}))])),
@@ -2318,6 +2427,40 @@ function revealInstantWin(hands, winnerId, info){
   isSpectator = false;
   broadcastState();   // đồng bộ trạng thái ván (bài đã chia, tên người thắng...) cho cả bàn
   finalizeInstantWin(); // kết thúc & tính kết quả ngay, không chờ chủ phòng bấm xác nhận nữa
+}
+
+function showInstantWinCelebration(winnerId, winnerName, label, reward, stakeUnit, broadcast=true){
+  const safeReward = Math.max(1, Number(reward) || 1);
+  const overlay = $('instantWinOverlay');
+  const labelEl = $('instantWinLabel');
+  const winnerEl = $('instantWinWinner');
+  if(labelEl) labelEl.textContent = label || 'Ăn trắng cả bàn!';
+  if(winnerEl) winnerEl.textContent = `${winnerName || 'Người thắng'} — tất cả quỳ xuống!`;
+  if(overlay){
+    // Reset progress animation mỗi lần Tới Trắng xảy ra.
+    const bar = overlay.querySelector('.instant-win-progress > div');
+    if(bar){ bar.style.animation='none'; void bar.offsetWidth; bar.style.animation='instantWinProgress 3s linear forwards'; }
+    overlay.classList.remove('hidden');
+  }
+
+  // Tất cả người còn lại chuyển đúng số Nước thưởng/người về cho người Tới Trắng.
+  // Dùng chung animateStakeTransfer() để icon 💧/đơn vị cược bay về đúng ghế thắng.
+  if(broadcast && gameState && gameState.gameMode === 'WATER') {
+    const losers = gameState.order.filter(id => id !== winnerId);
+    losers.forEach(fromId => {
+      broadcastStakeTransfer(fromId, winnerId, safeReward, stakeUnit || gameState.stakeUnit);
+    });
+  }
+
+  // Âm cười + câu “Tất cả quỳ xuống!” chỉ phát một lần cho sự kiện này tại mỗi máy.
+  playInstantWinVoice();
+}
+
+function broadcastInstantWinCelebration(winnerId, winnerName, label, reward, stakeUnit){
+  const eventId = 'instant_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+  window._lastInstantWinEventId = eventId;
+  sendToAll({t:'instantWinCelebration', eventId, winnerId, winnerName, label, reward, stakeUnit, sentAt:Date.now()});
+  showInstantWinCelebration(winnerId, winnerName, label, reward, stakeUnit, true);
 }
 
 function finalizeInstantWin(){
@@ -2357,9 +2500,12 @@ function finalizeInstantWin(){
     let settlements = debtors.map(id => ({ fromName: gameState.names[id], toName: winnerName, amount: -balances[id] }));
     gameState.liveScores = {};
     gameState.liveBaseAwards = {};
+    gameState.liveCongAwards = {};
+    gameState.liveChopAwards = {};
     Object.keys(results).forEach(id => { gameState.liveScores[id] = Number(results[id].score) || 0; });
     broadcastState();
-    broadcastResult(results, settlements);
+    broadcastInstantWinCelebration(winnerId, winnerName, label, reward, gameState.stakeUnit);
+    setTimeout(() => broadcastResult(results, settlements), 3000);
   } else {
     gameState.order.forEach(id => {
       const name = gameState.names[id];
@@ -2370,7 +2516,8 @@ function finalizeInstantWin(){
         results[id] = { rank: 2, score: 'Miễn Quỳ Ván Này', note: `Bị Trắng Bài (${label}) - không tính là thua ván thường`, name, playedCards: [], remainingCards: safeArray(gameState.hands[id]) };
       }
     });
-    broadcastResult(results, []);
+    broadcastInstantWinCelebration(winnerId, winnerName, label, reward, gameState.stakeUnit);
+    setTimeout(() => broadcastResult(results, []), 3000);
   }
 }
 
@@ -2446,6 +2593,8 @@ function dealNewGame(){
     scores: Object.fromEntries(players.map(p=>[p.id, 0])),
     liveScores: Object.fromEntries(players.map(p=>[p.id, 0])),
     liveBaseAwards: {},
+    liveCongAwards: {},
+    liveChopAwards: {},
     playedCardsCount: Object.fromEntries(players.map(p=>[p.id, 0])),
     revealedCards: Object.fromEntries(players.map(p=>[p.id, []])),
     kneelingStatus: { ...kneelingTracker },
@@ -2542,6 +2691,22 @@ function getAllPossibleCombos(hand) {
 function makeBotMove(botId){
   if(!gameState || gameState.isEnded) return;
   const hand=safeArray(gameState.hands[botId]); if(!hand.length) return;
+
+  // TEST CÓNG: Bot chỉ được phép PASS sau khi người test đã mở vòng.
+  // Mục tiêu là tạo đúng tình huống người test có thể tự đánh hết bài;
+  // việc phát hiện Cóng vẫn do foldColdPlayers()/handleAction() của game thật.
+  if(isRuleTestMode && gameState.naturalScenario &&
+     ['cong1','cong2','cong3','congAll'].includes(gameState.naturalScenario.type) &&
+     gameState.firstMove===false && gameState.currentCombo){
+    const coldTargetCount = gameState.naturalScenario.type==='cong1' ? 1 :
+      (gameState.naturalScenario.type==='cong2' ? 2 : botList.length);
+    const targetIndex = botList.indexOf(botId);
+    if(targetIndex >= 0 && targetIndex < coldTargetCount){
+      handleAction(botId,{kind:'pass'},true);
+      return;
+    }
+  }
+
   const curr=gameState.currentCombo;
   const req=(gameState.firstMove&&gameState.requiredCard)?gameState.requiredCard:null;
   let combos=getAllPossibleCombos(hand);
@@ -2605,16 +2770,187 @@ function autoForceTurn(playerId){
 // LUẬT CÓNG: ngay khi có người về NHẤT (finished[0] vừa được xác định), bất kỳ ai
 // từ đầu ván tới giờ CHƯA đánh được lá bài nào (playedCardsCount === 0) coi như "cóng"
 // -> loại luôn khỏi ván (úp bài), không cho chơi tiếp và không auto đánh hộ nữa.
+/**
+ * CHỐT LUẬT CÓNG - MỘT NGUỒN TÍNH DUY NHẤT.
+ * Cóng = gấp đôi tiền Bét (-2 => 4) cho MỖI người không Cóng.
+ * Mỗi người Cóng chịu: congPerReceiver * số người không Cóng.
+ * Tổng tiền Cóng luôn cân bằng 0.
+ */
+function getActualPlayedCount(playerId){
+  // Nguồn sự thật duy nhất cho Cóng: lịch sử lá đã thực sự đánh xuống.
+  // playedCardsCount chỉ là bộ đếm phụ; dùng revealedCards để tránh lệch giữa
+  // bảng ngửa bài và logic Cóng.
+  if(!gameState) return 0;
+  const revealed = safeArray(gameState.revealedCards && gameState.revealedCards[playerId]);
+  return revealed.length;
+}
+
+function getCongCandidates(){
+  if(!gameState) return [];
+  const winnerId = safeArray(gameState.finished)[0] || null;
+  return safeArray(gameState.order).filter(id =>
+    id !== winnerId &&
+    !gameState.finished.includes(id) &&
+    getActualPlayedCount(id) === 0
+  );
+}
+
+function calculateCongSettlement(congIdsInput){
+  const order = gameState ? safeArray(gameState.order) : [];
+  const congIds = new Set(safeArray(congIdsInput).filter(id => order.includes(id)));
+  const receivers = order.filter(id => !congIds.has(id));
+
+  // LUẬT CHỐT: CÓNG = gấp đôi tiền BÉT.
+  // Bét = -2 => mỗi người Cóng bị -4 CHO MỖI NGƯỜI KHÔNG CÓNG.
+  // Ví dụ bàn 4:
+  //   1 Cóng -> -12, ba người còn lại nhận +4/người.
+  //   2 Cóng -> -8/người, hai người còn lại nhận +8/người.
+  //   3 Cóng -> -4/người, người còn lại nhận +12.
+  const congPerReceiver = 4;
+  const debtByCong = {};
+  const receiveByPlayer = {};
+  let totalDebt = 0;
+
+  congIds.forEach(id => {
+    const debt = congPerReceiver * receivers.length;
+    debtByCong[id] = debt;
+    totalDebt += debt;
+  });
+
+  if(receivers.length > 0 && totalDebt > 0){
+    const shareEach = totalDebt / receivers.length;
+    receivers.forEach(id => { receiveByPlayer[id] = shareEach; });
+  }
+
+  return {
+    congIds,
+    receivers,
+    congPerReceiver,
+    debtByCong,
+    receiveByPlayer,
+    totalDebt,
+    // Chỉ có 1 người không Cóng khi có 3 người Cóng trong bàn 4.
+    isAllTableCong: order.length > 1 && receivers.length === 1 && congIds.size === order.length - 1
+  };
+}
+
+// Chốt Cóng ĐÚNG MỘT LẦN cho cả ván.
+// Live, icon và endGame đều dùng cùng snapshot này — tuyệt đối không tính lại theo trạng thái
+// finished đã thay đổi ở cuối ván.
+function getOrCreateCongSettlement(){
+  if(!gameState) return null;
+  if(gameState.congSettlement && gameState.congSettlement.congIds){
+    return gameState.congSettlement;
+  }
+
+  const congIds = new Set();
+  if(gameState.coldFolded) gameState.coldFolded.forEach(id => congIds.add(id));
+
+  // Chỉ xác định thêm người Cóng khi đã có đúng 1 người về Nhất.
+  if(safeArray(gameState.finished).length >= 1){
+    const winnerId = safeArray(gameState.finished)[0];
+    safeArray(gameState.order).forEach(id => {
+      if(id !== winnerId && getActualPlayedCount(id) === 0) congIds.add(id);
+    });
+  }
+
+  const settlement = calculateCongSettlement(Array.from(congIds));
+  gameState.congSettlement = {
+    congIds: Array.from(settlement.congIds),
+    receivers: Array.from(settlement.receivers),
+    congPerReceiver: settlement.congPerReceiver,
+    debtByCong: {...settlement.debtByCong},
+    receiveByPlayer: {...settlement.receiveByPlayer},
+    totalDebt: settlement.totalDebt,
+    isAllTableCong: settlement.isAllTableCong
+  };
+  return gameState.congSettlement;
+}
+
+function applyCongSettlementLive(settlement){
+  if(!gameState || !settlement || !settlement.congIds.length) return;
+
+  gameState.liveScores = gameState.liveScores || {};
+  gameState.liveBaseAwards = gameState.liveBaseAwards || {};
+  gameState.liveCongAwards = gameState.liveCongAwards || {};
+  gameState.liveChopAwards = gameState.liveChopAwards || {};
+
+  const congSet = new Set(settlement.congIds);
+
+  // CÓNG: người Cóng chỉ còn khoản Cóng, không giữ vị trí/chặt đã được cộng trước đó.
+  settlement.congIds.forEach(congId => {
+    const oldBase = Number(gameState.liveBaseAwards[congId] || 0);
+    const oldChop = Number(gameState.liveChopAwards[congId] || 0);
+    const oldCong = Number(gameState.liveCongAwards[congId] || 0);
+    const targetCong = -Number(settlement.debtByCong[congId] || 0);
+
+    gameState.liveScores[congId] = (Number(gameState.liveScores[congId] || 0) - oldBase - oldChop - oldCong) + targetCong;
+    gameState.liveBaseAwards[congId] = 0;
+    gameState.liveChopAwards[congId] = 0;
+    gameState.liveCongAwards[congId] = targetCong;
+  });
+
+  // Người không Cóng nhận đúng tổng tiền từ TẤT CẢ người Cóng.
+  settlement.receivers.forEach(receiverId => {
+    const targetCong = Number(settlement.receiveByPlayer[receiverId] || 0);
+    const oldCong = Number(gameState.liveCongAwards[receiverId] || 0);
+    gameState.liveScores[receiverId] = Number(gameState.liveScores[receiverId] || 0) - oldCong + targetCong;
+    gameState.liveCongAwards[receiverId] = targetCong;
+  });
+
+  // Cóng cả bàn (3 người Cóng / 1 người còn lại): người duy nhất không Cóng chỉ nhận Cóng.
+  if(settlement.isAllTableCong && settlement.receivers.length === 1){
+    const onlyReceiver = settlement.receivers[0];
+    const targetCong = Number(settlement.receiveByPlayer[onlyReceiver] || 0);
+    const oldBase = Number(gameState.liveBaseAwards[onlyReceiver] || 0);
+    const oldChop = Number(gameState.liveChopAwards[onlyReceiver] || 0);
+    const oldCong = Number(gameState.liveCongAwards[onlyReceiver] || 0);
+    gameState.liveScores[onlyReceiver] = (Number(gameState.liveScores[onlyReceiver] || 0) - oldBase - oldChop - oldCong) + targetCong;
+    gameState.liveBaseAwards[onlyReceiver] = 0;
+    gameState.liveChopAwards[onlyReceiver] = 0;
+    gameState.liveCongAwards[onlyReceiver] = targetCong;
+  }
+}
+
 function foldColdPlayers(){
-  if(!gameState || gameState.finished.length !== 1) return; // chỉ kích hoạt đúng lúc vừa có người về Nhất
+  if(!gameState || gameState.finished.length !== 1) return;
+
+  const newlyCongIds = [];
   gameState.order.forEach(pid => {
     if(gameState.finished.includes(pid)) return;
     if(gameState.coldFolded.has(pid)) return;
-    if((gameState.playedCardsCount[pid] || 0) === 0){
+    if(getActualPlayedCount(pid) === 0){
       gameState.coldFolded.add(pid);
+      newlyCongIds.push(pid);
       gameState.log += ` | ❄️ ${gameState.names[pid]} bị loại vì CÓNG (không đánh được lá nào).`;
       bumpActor(pid, '❄️ Cóng - Bị loại (úp bài)!');
     }
+  });
+
+  if(newlyCongIds.length === 0 || gameState.gameMode !== 'WATER') return;
+
+  // Chỉ tạo snapshot một lần. Không tính lại khi endGame().
+  const settlement = getOrCreateCongSettlement();
+  if(!settlement || settlement.congIds.length === 0 || settlement.receivers.length === 0) return;
+  applyCongSettlementLive(settlement);
+
+  if(!gameState.roundLog) gameState.roundLog = [];
+  newlyCongIds.forEach(congId => {
+    const debt = Number(settlement.debtByCong[congId] || 0);
+    gameState.roundLog.push({
+      icon: '🧊',
+      text: `${gameState.names[congId]} bị Cóng → trừ ${debt} Nước, đền ${settlement.congPerReceiver} Nước cho mỗi người không Cóng.`
+    });
+  });
+
+  broadcastState();
+
+  newlyCongIds.forEach(congId => {
+    const debt = Number(settlement.debtByCong[congId] || 0);
+    showCongPenalty(congId, debt);
+    settlement.receivers.forEach(receiverId => {
+      broadcastStakeTransfer(congId, receiverId, settlement.congPerReceiver, gameState.stakeUnit);
+    });
   });
 }
 
@@ -2679,6 +3015,11 @@ function settleChopChain(reason='') {
      gameState.liveScores[payer] !== undefined && gameState.liveScores[receiver] !== undefined){
     gameState.liveScores[payer] = (gameState.liveScores[payer] || 0) - total;
     gameState.liveScores[receiver] = (gameState.liveScores[receiver] || 0) + total;
+    // Tách riêng tiền CHẶT khỏi liveScores để Cóng/Đền Làng không bao giờ
+    // bị nhận nhầm thành "Chặt" ở bảng tổng kết.
+    gameState.liveChopAwards = gameState.liveChopAwards || {};
+    gameState.liveChopAwards[payer] = (gameState.liveChopAwards[payer] || 0) - total;
+    gameState.liveChopAwards[receiver] = (gameState.liveChopAwards[receiver] || 0) + total;
     if(!gameState.roundLog) gameState.roundLog = [];
     const payerName = gameState.names[payer] || payer;
     const receiverName = gameState.names[receiver] || receiver;
@@ -2835,7 +3176,7 @@ function handleAction(playerId, action, isAuto=false){
       gameState.roundLog.push({ icon:'⚡', text: `${pName} CHẶT NGANG ${choppedDesc} bằng ${describeCombo(combo)} (không đợi lượt).${chainTag}` });
       bumpActor(playerId, '⚡ Chặt ngang thành công!');
     }
-    if(!chopWillEndGame) broadcastChopSound();
+    if(!chopWillEndGame) broadcastChopSound(curr, combo, targetWasAlreadyFinished);
 
     gameState.hands[playerId] = hand.filter(c => !cards.some(sc => sc.r === c.r && sc.s === c.s));
     gameState.playedCardsCount[playerId] += cards.length;
@@ -2957,13 +3298,20 @@ function handleAction(playerId, action, isAuto=false){
     let shortMsg = '';
 
     if(targetAlreadyFinished && gameState.leaderId && gameState.leaderId !== playerId &&
-       (gameState.currentCombo?.type === 'single' || gameState.currentCombo?.type === 'pair' || gameState.currentCombo?.type === 'quad' || gameState.currentCombo?.type === 'pairs_run')){
+       isStackableSpecialCombo(gameState.currentCombo)){
       // Chặn race condition: target đã về trước khi action chặt tới host. Không được ăn Nước.
+      // FIX ÂM THANH CHẶT SAI: điều kiện cũ khớp CẢ combo loại 'single'/'pair' THƯỜNG (không
+      // phải Heo) — nghĩa là chỉ cần lượt đánh sau đó đè lên 1 lá bài bình thường của người
+      // đã về đích (chuyện xảy ra liên tục mỗi khi có người về Nhất/Nhì giữa ván) cũng bị
+      // gắn nhãn "chặt" và nổ tiếng CHOP (âm bom), dù đó chỉ là 1 nước đánh bình thường —
+      // đúng như phản ánh "âm chặt vang lên không đúng lúc dù không có chặt". Giờ chỉ coi là
+      // chặt thật khi combo bị đè là bộ ĐẶC BIỆT có thể bị chặt (Heo đơn/đôi, Tứ Quý, 3+ Đôi
+      // Thông — dùng chung isStackableSpecialCombo() với phần tính BOM), khớp đúng luật.
       gameState.log = `${prefix}${pName} chặt bộ bài của ${gameState.names[gameState.leaderId]} sau khi họ đã về — 0 Nước.`;
       if(!gameState.roundLog) gameState.roundLog = [];
       gameState.roundLog.push({ icon:'🛡️', text:`${pName} chặt sau khi ${gameState.names[gameState.leaderId]} đã về → 0 Nước, không tạo BOM.` });
       shortMsg = '🛡️ Chặt nhưng 0 Nước';
-      if(!playWillEndGame) broadcastChopSound();
+      if(!playWillEndGame) broadcastChopSound(gameState.currentCombo, combo, true);
     } else if(isSpecialStackBeat && directReward <= 0 && gameState.leaderId && gameState.leaderId !== playerId){
       // Chồng đặc biệt nhưng CHƯA có cú chặt: ví dụ A Heo đen → B Heo đỏ.
       // Chưa thanh toán, chỉ cộng lớp đang nằm trên bàn vào chopStackValue.
@@ -3004,7 +3352,7 @@ function handleAction(playerId, action, isAuto=false){
         gameState.roundLog.push({ icon:'⚡', text: `${pName} CHẶT ${choppedDesc} của ${prevLeaderName} bằng ${describeCombo(combo)}.` });
         shortMsg = '⚡ Chặt thành công!';
       }
-      if(!playWillEndGame) broadcastChopSound();
+      if(!playWillEndGame) broadcastChopSound(prevCombo, combo, false);
     } else {
       // Đánh bình thường/đè cùng loại kết thúc chuỗi chặt: người bị chặt cuối cùng
       // phải gánh toàn bộ bom đã dồn trước đó.
@@ -3209,175 +3557,120 @@ function endGame(){
   });
 
   if(mode === 'WATER'){
-    // Xử lý đền phạt Thối Heo/Thối Hàng khi kết ván.
-    // FIX: gộp luật — thối bài của người về BÉT (hạng chót) giờ đền cho hạng KẾ BÉT
-    // (người vừa đấu 1-chọi-1 với họ ở pha cuối cùng, "có công" giữ họ lại tới cuối),
-    // KHÔNG mặc định đền cho người về Nhất (đã thắng và rời cuộc từ trước, không liên quan).
-    // Thối bài của các hạng khác (không phải Bét) vẫn đền cho Nhất như cũ.
     const lastPlaceId = gameState.finished[gameState.finished.length - 1];
     const secondLastPlaceId = gameState.finished.length >= 2
       ? gameState.finished[gameState.finished.length - 2]
       : winnerId;
 
+    // CÓNG: dùng đúng snapshot đã chốt lúc người đầu tiên về Nhất.
+    // Tuyệt đối không tính lại sau khi coldFolded đã được đưa vào finished.
+    const cong = getOrCreateCongSettlement() || calculateCongSettlement([]);
+
+    // Nếu endGame() đi thẳng vào đây mà foldColdPlayers() chưa kịp chạy,
+    // vẫn áp dụng đúng một settlement duy nhất cho live.
+    if(cong.congIds.length && cong.receivers.length){
+      applyCongSettlementLive(cong);
+    }
+
     let foulPenaltiesTotal = 0;
     let foulPenaltiesToSecondLast = 0;
-    let foulDetailsMap = {};
-    // Thối của người Cóng là khoản RIÊNG, vẫn trả cho người trực tiếp ép/chặn họ.
-    let congFoulRecipientMap = {};
-    let congFoulReceivedMap = {};
-
-    const congCandidateIds = new Set(gameState.order.filter(id =>
-      id !== winnerId && (gameState.playedCardsCount[id] || 0) === 0
-    ));
+    const foulDetailsMap = {};
 
     gameState.order.forEach(id => {
-      if (id === winnerId) return;
+      if(cong.congIds.has(id)) return; // Cóng không xét Thối.
       const pHand = safeArray(gameState.hands[id]);
       const foulInfo = checkFoulPunishment(pHand);
-      if (foulInfo.totalPenalty <= 0) return;
-
+      if(foulInfo.totalPenalty <= 0) return;
       foulDetailsMap[id] = foulInfo;
 
-      if (congCandidateIds.has(id)) {
-        // Người Cóng: tìm người xếp ngay phía trên họ (người đã ép/chặn họ).
-        const idx = gameState.finished.indexOf(id);
-        let recipient = null;
-        for (let j = idx - 1; j >= 0; j--) {
-          const candidate = gameState.finished[j];
-          if (candidate !== id && !congCandidateIds.has(candidate)) {
-            recipient = candidate;
-            break;
-          }
-        }
-        if (!recipient && idx > 0) recipient = gameState.finished[idx - 1];
-        if (!recipient) recipient = winnerId;
-
-        congFoulRecipientMap[id] = recipient;
-        congFoulReceivedMap[recipient] = (congFoulReceivedMap[recipient] || 0) + foulInfo.totalPenalty;
-        gameState.roundLog.push({
-          icon:'🐷',
-          text: `${gameState.names[id]} bị Cóng nhưng Thối bài là khoản riêng: ${foulInfo.details.join(', ')} → đền ${foulInfo.totalPenalty} nước cho ${gameState.names[recipient]} (người ép/chặn).`
-        });
-      } else if (id === lastPlaceId && secondLastPlaceId !== lastPlaceId) {
+      if(id === lastPlaceId && secondLastPlaceId !== lastPlaceId){
         foulPenaltiesToSecondLast += foulInfo.totalPenalty;
-        gameState.roundLog.push({ icon:'🐷', text: `${gameState.names[id]} (về Bét) bị Thối bài trên tay: ${foulInfo.details.join(', ')} → đền ${foulInfo.totalPenalty} nước cho ${gameState.names[secondLastPlaceId]} (hạng kế Bét).` });
+        gameState.roundLog.push({ icon:'🐷', text:`${gameState.names[id]} (về Bét) bị Thối bài trên tay: ${foulInfo.details.join(', ')} → đền ${foulInfo.totalPenalty} nước cho ${gameState.names[secondLastPlaceId]} (hạng kế Bét).` });
       } else {
         foulPenaltiesTotal += foulInfo.totalPenalty;
-        gameState.roundLog.push({ icon:'🐷', text: `${gameState.names[id]} bị Thối bài trên tay: ${foulInfo.details.join(', ')} → đền ${foulInfo.totalPenalty} nước cho ${gameState.names[winnerId]}.` });
+        gameState.roundLog.push({ icon:'🐷', text:`${gameState.names[id]} bị Thối bài trên tay: ${foulInfo.details.join(', ')} → đền ${foulInfo.totalPenalty} nước cho ${gameState.names[winnerId]}.` });
       }
     });
 
-    // Tính điểm vị trí và khoản Cóng RIÊNG. Cóng không bao gồm Thối.
-    let baseWaterMap = {};
-    let congExtraTotal = 0;
-    let congIds = new Set();
-    let congShareMap = {};
-    gameState.order.forEach((id) => {
-      let rank = gameState.finished.indexOf(id) + 1;
-      let baseWater = 0;
+    // Tính kết quả từ các sổ riêng đã cập nhật LIVE. Không suy ngược Chặt từ liveScores,
+    // không cộng lại tiền vị trí của hạng 1/2 đã phát LIVE.
+    gameState.order.forEach(id => {
+      const rank = gameState.finished.indexOf(id) + 1;
+      const isCong = cong.congIds.has(id);
+      const baseAwardLive = Number((gameState.liveBaseAwards || {})[id] || 0);
+      const chopAward = isCong ? 0 : Number((gameState.liveChopAwards || {})[id] || 0);
+      const congAward = isCong ? -(cong.debtByCong[id] || 0) : Number(cong.receiveByPlayer[id] || 0);
 
-      if(activeCount === 2) {
-        if(rank === 1) baseWater = 2;
-        else baseWater = -2;
-      } else if(activeCount === 3) {
-        if(rank === 1) baseWater = 2;
-        else if(rank === 2) baseWater = 0;
-        else baseWater = -2;
-      } else {
-        if(rank === 1) baseWater = 2;
-        else if(rank === 2) baseWater = 1;
-        else if(rank === 3) baseWater = -1;
-        else baseWater = -2;
+      // Người Cóng chỉ có đúng khoản Cóng. Không giữ +Chặt, +Vị trí hay khoản dương trước đó.
+      if(isCong){
+        const total = congAward;
+        results[id] = {
+          rank, score: total,
+          note:`Vị trí: 0 | Chặt: +0 | 🧊 Bị Cóng: -${Math.abs(total)} Nước (${cong.congPerReceiver}/người không Cóng)`,
+          name:gameState.names[id],
+          playedCards:(finalHandsSnapshot[id] && finalHandsSnapshot[id].played) || [],
+          remainingCards:(finalHandsSnapshot[id] && finalHandsSnapshot[id].remaining) || [],
+          isCong:true
+        };
+        return;
       }
 
-      // CÓNG = đền kiểu Tới Trắng nhưng ngược chiều.
-      // Bàn 4: -6, chia +2 cho 3 người còn lại.
-      // Bàn 3: -4, chia +2 cho 2 người còn lại.
-      // Bàn 2: -2, người kia +2.
-      // THỐI KHÔNG gộp vào đây; Thối trả riêng cho người ép/chặn.
-      if (id !== winnerId && congCandidateIds.has(id)) {
-        const congPerReceiver = GAME_CONFIG.cong.perReceiver;
-        const congOnlyDebt = -congPerReceiver * (activeCount - 1);
-        congExtraTotal += Math.abs(congOnlyDebt);
-        congIds.add(id);
-        gameState.roundLog.push({
-          icon:'🧊',
-          text: `${gameState.names[id]} bị Cóng → đền ${Math.abs(congOnlyDebt)} nước cho ${activeCount - 1} người còn lại, mỗi người +${congPerReceiver}. Thối tính riêng cho người ép.`
-        });
-        baseWater = congOnlyDebt;
+      // Với người không Cóng: lấy đúng base đã phát LIVE nếu có; nếu chưa có thì tính phần
+      // vị trí chưa phát (thường là hạng 3/4). Trường hợp Cóng cả bàn, người duy nhất còn lại
+      // chỉ nhận Cóng, không cộng +2 Về Nhất.
+      let baseDelta = 0;
+      if(cong.isAllTableCong && id === cong.receivers[0]){
+        baseDelta = 0;
+      } else if(Object.prototype.hasOwnProperty.call(gameState.liveBaseAwards || {}, id)){
+        // Khoản vị trí đã được cộng LIVE cho hạng 1/2: phải đưa lại đúng khoản này
+        // vào kết quả cuối, không được bỏ mất nó và cũng không được cộng lần hai.
+        baseDelta = Number((gameState.liveBaseAwards || {})[id] || 0);
+      } else if(rank >= 1){
+        if(activeCount === 2) baseDelta = rank === 1 ? 1 : -1;
+        else if(activeCount === 3) baseDelta = rank === 1 ? 2 : (rank === 2 ? 0 : -2);
+        else baseDelta = rank === 1 ? 2 : (rank === 2 ? 1 : (rank === 3 ? -1 : -2));
       }
 
-      baseWaterMap[id] = baseWater;
-    });
-
-    // Chia RIÊNG khoản Cóng cho toàn bộ người không bị Cóng.
-    const congReceivers = gameState.order.filter(id => !congIds.has(id));
-    const congShareEach = congReceivers.length > 0 ? (congExtraTotal / congReceivers.length) : 0;
-    congReceivers.forEach(id => { congShareMap[id] = (congShareMap[id] || 0) + congShareEach; });
-
-    gameState.order.forEach((id) => {
-      let rank = gameState.finished.indexOf(id) + 1;
-      let baseWater = baseWaterMap[id];
-      // liveScores đã hiển thị trước phần thưởng cơ bản cho người về Nhất.
-      // Khi chốt kết quả, chỉ lấy phần chặt/đền đang treo ngoài baseWater để tránh cộng đôi.
-      // Nước cơ bản đã cộng LIVE khi người chơi vừa về hạng 1/hạng 2.
-      // Khi chốt ván chỉ lấy phần chặt/đền còn treo, tránh cộng trùng cho BẤT KỲ hạng nào.
-      let extraChop = gameState.liveScores[id] || 0;
-      if(gameState.liveBaseAwards && gameState.liveBaseAwards[id] !== undefined){
-        extraChop -= Number(gameState.liveBaseAwards[id]) || 0;
-      }
       let foulScore = 0;
-      let foulText = "";
-      let congText = congIds.has(id) ? ` | 🧊 Bị Cóng: đền ${GAME_CONFIG.cong.perReceiver * (activeCount - 1)} Nước cho ${activeCount - 1} người còn lại` : "";
-      let congBonusText = "";
-
-      // Nhận đền thối bài của người khác.
-      if (id === winnerId && foulPenaltiesTotal > 0) {
+      let foulText = '';
+      if(id === winnerId && foulPenaltiesTotal > 0){
         foulScore += foulPenaltiesTotal;
         foulText += ` | Được đền thối bài: +${foulPenaltiesTotal}`;
       }
-      if (id === secondLastPlaceId && foulPenaltiesToSecondLast > 0) {
+      if(id === secondLastPlaceId && foulPenaltiesToSecondLast > 0){
         foulScore += foulPenaltiesToSecondLast;
         foulText += ` | Được đền thối bài (từ Bét): +${foulPenaltiesToSecondLast}`;
       }
-      // Thối của người Cóng là KHOẢN RIÊNG: người Cóng vẫn bị trừ đầy đủ.
-      if (foulDetailsMap[id]) {
-        foulScore += -foulDetailsMap[id].totalPenalty;
-        if (congIds.has(id)) {
-          foulText += ` | Thối riêng: -${foulDetailsMap[id].totalPenalty} (${foulDetailsMap[id].details.join(', ')})`;
-        } else {
-          foulText += ` | Thối bài: -${foulDetailsMap[id].totalPenalty} (${foulDetailsMap[id].details.join(', ')})`;
-        }
+      if(foulDetailsMap[id]){
+        foulScore -= foulDetailsMap[id].totalPenalty;
+        foulText += ` | Thối bài: -${foulDetailsMap[id].totalPenalty} (${foulDetailsMap[id].details.join(', ')})`;
       }
 
-      // Người ép/chặn người Cóng nhận toàn bộ khoản Thối của họ.
-      const congFoulReceived = Number(congFoulReceivedMap[id] || 0);
-      if (congFoulReceived > 0) {
-        foulScore += congFoulReceived;
-        foulText += ` | Nhận Thối từ người Cóng: +${congFoulReceived}`;
-      }
-
-      // Khoản Cóng RIÊNG được chia đều cho toàn bộ đối thủ còn lại.
-      let congBonus = 0;
-      if (congShareMap[id]) {
-        congBonus = congShareMap[id];
-        congBonusText = ` | Nhận Cóng chia đều: +${congBonus.toFixed(2).replace(/\.00$/,'')}`;
-      }
-
-      let total = baseWater + extraChop + foulScore + congBonus;
+      const congBonus = congAward;
+      const congBonusText = congBonus ? ` | Nhận Cóng: +${congBonus.toFixed(2).replace(/\.00$/,'')}` : '';
+      const baseText = baseDelta >= 0 ? `+${baseDelta}` : `${baseDelta}`;
+      const chopText = chopAward >= 0 ? `+${chopAward}` : `${chopAward}`;
+      const total = baseDelta + chopAward + congBonus + foulScore;
 
       results[id] = {
-        rank,
-        score: total,
-        note: `Vị trí (${activeCount} người): ${baseWater > 0 ? '+'+baseWater : baseWater} nước | Chặt: ${extraChop >= 0 ? '+'+extraChop : extraChop}${congText}${congBonusText}${foulText}`,
-        name: gameState.names[id],
-        // FIX #4: tách riêng playedCards (đã đánh xuống bàn) và remainingCards (còn giữ
-        // trên tay chưa đánh hết) thay vì gộp chung 1 mảng, để showResultOverlay() làm mờ
-        // phần đã đánh + viền vàng nổi bật phần còn ôm, đặc biệt dễ nhìn cho người về Bét.
-        playedCards: (finalHandsSnapshot[id] && finalHandsSnapshot[id].played) || [],
-        remainingCards: (finalHandsSnapshot[id] && finalHandsSnapshot[id].remaining) || []
+        rank, score: total,
+        note:`Vị trí (${activeCount} người): ${baseText} nước | Chặt: ${chopText}${congBonusText}${foulText}`,
+        name:gameState.names[id],
+        playedCards:(finalHandsSnapshot[id] && finalHandsSnapshot[id].played) || [],
+        remainingCards:(finalHandsSnapshot[id] && finalHandsSnapshot[id].remaining) || [],
+        isCong:false
       };
     });
+
+    // Bảo đảm tổng các khoản Cóng luôn cân bằng 0; không tự ý sửa các khoản Chặt/Thối.
+    const congBalance = Object.values(results).reduce((sum, r) => {
+      const m = String(r.note || '').match(/(?:Bị Cóng: -|Nhận Cóng: \+)([0-9.]+)/);
+      if(!m) return sum;
+      return sum + (String(r.note).includes('Bị Cóng: -') ? -Number(m[1]) : Number(m[1]));
+    }, 0);
+    if(Math.abs(congBalance) > 1e-9){
+      console.error('CÓNG BALANCE ERROR', congBalance, cong);
+    }
   } else {
     gameState.order.forEach((id) => {
       let rank = gameState.finished.indexOf(id) + 1;
@@ -3445,6 +3738,8 @@ function endGame(){
   if(mode === 'WATER'){
     gameState.liveScores = {};
     gameState.liveBaseAwards = {};
+    gameState.liveCongAwards = {};
+    gameState.liveChopAwards = {};
     Object.keys(results).forEach(id => { gameState.liveScores[id] = Number(results[id].score) || 0; });
     broadcastState();
   }
@@ -4190,13 +4485,14 @@ function updateChatBadge(){
 }
 
 function showResultOverlay(results, settlements){
+  $('instantWinOverlay')?.classList.add('hidden');
   const tbody = $('resultBody'); tbody.innerHTML = '';
   const isWater = currentState && currentState.gameMode === 'WATER';
 
   $('resultHeaderUnit').textContent = isWater ? 'Số Nước' : 'Hình Phạt Quỳ';
 
   const sortedResults = Object.values(results).sort((a,b)=>a.rank-b.rank);
-  const cardRevealQueue = []; // {revealId, playedCards, remainingCards} - gắn DOM lá bài thật sau khi chèn HTML xong
+  const cardRevealQueue = []; // chỉ ngửa bài người Bét hoặc người Cóng
 
   sortedResults.forEach((r, idx) => {
     let cls = isWater ? (r.score > 0 ? 'plus' : (r.score < 0 ? 'minus' : '')) : '';
@@ -4204,12 +4500,15 @@ function showResultOverlay(results, settlements){
 
     const playedCards = safeArray(r.playedCards);
     const remainingCards = safeArray(r.remainingCards);
-    const hasCards = playedCards.length > 0 || remainingCards.length > 0;
+    // NGỬA BÀI CUỐI VÁN:
+    // - Tất cả thành viên đều được cập nhật phần bài ĐÃ ĐÁNH (nếu có).
+    // - Người đã về trước (Nhất/Nhì/Ba): chỉ có playedCards vì họ đã đánh hết bài.
+    // - Người BÉT: hiện playedCards (mờ) + remainingCards (sáng).
+    // - Người CÓNG: hiện remainingCards (chưa đánh lá nào).
+    // Không giới hạn reveal chỉ cho người Bét/Cóng nữa, để bảng tổng kết phản ánh đầy đủ
+    // bài đã được đánh của tất cả thành viên.
+    const hasCards = (playedCards.length > 0 || remainingCards.length > 0);
     const revealId = `revealCards-${idx}`;
-    // NGỬA TOÀN BỘ 13 LÁ CUỐI VÁN ngay dưới tên từng người để cả bàn xem đầy đủ.
-    // FIX #4: tách rõ 2 phần trong hàng bài — lá ĐÃ ĐÁNH XUỐNG BÀN (mờ đi) và lá
-    // CÒN GIỮ TRÊN TAY CHƯA ĐÁNH HẾT (viền vàng nổi bật) — đặc biệt hữu ích cho người
-    // về Bét/bị Cóng, dễ đối chiếu thay vì thấy 1 dãy bài lẫn lộn không rõ đâu là đâu.
     const revealRow = hasCards
       ? `<div class="reveal-hand-row" id="${revealId}"></div>`
       : '';
@@ -4227,27 +4526,38 @@ function showResultOverlay(results, settlements){
   cardRevealQueue.forEach(({revealId, playedCards, remainingCards}) => {
     const container = document.getElementById(revealId);
     if(!container) return;
-    if(playedCards.length > 0){
+
+    // Tất cả thành viên: bài đã đánh được hiển thị mờ nhẹ; bài còn giữ được hiển thị sáng
+    // và viền vàng. Người đã về trước sẽ chỉ có phần bài đã đánh; Bét/Cóng sẽ có thêm
+    // phần bài còn giữ nếu còn trên tay.
+    const allCards = [...playedCards, ...remainingCards];
+    if(allCards.length > 0){
+      const group = document.createElement('div');
+      group.className = 'reveal-card-group';
       const lbl = document.createElement('div');
       lbl.className = 'reveal-group-label';
-      lbl.textContent = `Đã đánh (${playedCards.length})`;
-      container.appendChild(lbl);
+      lbl.textContent = remainingCards.length > 0
+        ? `⚠️ Còn giữ, chưa đánh hết (${remainingCards.length})`
+        : `Bài đã đánh (${playedCards.length})`;
+      if(remainingCards.length > 0) lbl.classList.add('holding');
+      group.appendChild(lbl);
+
+      const line = document.createElement('div');
+      line.className = 'reveal-cards-line';
+
       sortHand([...playedCards], 'RANK').forEach(c => {
         const el = createCardEl(c, false, true, false);
         el.classList.add('already-played');
-        container.appendChild(el);
+        line.appendChild(el);
       });
-    }
-    if(remainingCards.length > 0){
-      const lbl = document.createElement('div');
-      lbl.className = 'reveal-group-label holding';
-      lbl.textContent = `⚠️ Còn giữ, chưa đánh hết (${remainingCards.length})`;
-      container.appendChild(lbl);
       sortHand([...remainingCards], 'RANK').forEach(c => {
         const el = createCardEl(c, false, true, false);
         el.classList.add('still-holding');
-        container.appendChild(el);
+        line.appendChild(el);
       });
+
+      group.appendChild(line);
+      container.appendChild(group);
     }
   });
 
@@ -4290,11 +4600,11 @@ function describeCombo(c){
 
 // ===================== PHÒNG TEST LUẬT (CHỈ TEST) =====================
 function rtGetWeights(){
-  const ids=['wtSingle','wtPair','wtQuad','wtRun','wtSafe','wtRank','wtWhite3'];
+  const ids=['wtSingle','wtPair','wtQuad','wtRun','wtSafe','wtCong1','wtCongAll','wtRank','wtWhite3'];
   return ids.map(id=>Math.max(0, Number($(id)?.value||0)));
 }
 function rtPick(){
-  const names=['single','pair','quad','run','safe','rank','white3'];
+  const names=['single','pair','quad','run','safe','cong1','congAll','rank','white3'];
   const w=rtGetWeights(); const total=w.reduce((a,b)=>a+b,0)||1; let r=Math.random()*total;
   for(let i=0;i<w.length;i++){r-=w[i]; if(r<=0) return names[i];}
   return names[names.length-1];
@@ -4494,49 +4804,65 @@ function rtScenarioConfig(type, order){
 // Chỉ cố định một số lá quan trọng; toàn bộ phần còn lại vẫn random.
 // Không dựng currentCombo/chồng BOM sẵn trên bàn.
 function rtPickNaturalScenario(){
-  // Không dùng safe/rank/white3 ở đây vì chúng không tạo cơ hội chặt tự nhiên
-  // hoặc có thể kết thúc ván ngay. Ba/nhóm còn lại đều có thể phát sinh trong
-  // một ván thật và được trải đều để test nhiều luật.
-  const names=['single','pair','quad','run'];
-  const weights=[30,25,20,25]; // tổng 100% - ván nào cũng có 1 case
-  let r=Math.random()*100;
-  for(let i=0;i<weights.length;i++){
-    r-=weights[i];
-    if(r<0) return rtNaturalScenarioSpec(names[i]);
+  // RANDOM chỉ chọn trong các kịch bản mà CHƠI TEST TỰ NHIÊN có thể chạy bằng
+  // đúng engine ván thật. Tới Trắng/Cóng cũng được đưa vào random.
+  const names=['single','pair','quad','run','safe','cong1','cong2','cong3','congAll','rank','white3'];
+  const rawW=rtGetWeights();
+  const w=names.map((_,i)=>Number(rawW[i])||1);
+  const total=w.reduce((a,b)=>a+b,0)||1;
+  let r=Math.random()*total;
+  for(let i=0;i<w.length;i++){
+    r-=w[i];
+    if(r<=0) return rtNaturalScenarioSpec(names[i]);
   }
-  return rtNaturalScenarioSpec('run');
+  return rtNaturalScenarioSpec(names[names.length-1]);
 }
 
 function rtNaturalScenarioSpec(type){
   const specs={
     single:{
       label:'🎯 HE0 → HE0 → CÓ CƠ HỘI CHẶT',
-      reserve:[
-        [0,12,0], [1,12,2], [0,3,0], [0,3,1], [0,3,2], [0,3,3]
-      ]
+      reserve:[[0,12,0],[1,12,2],[0,3,0],[0,3,1],[0,3,2],[0,3,3]]
     },
     pair:{
       label:'🎯 ĐÔI HE0 → TỨ QUÝ CÓ CƠ HỘI CHẶT',
-      reserve:[
-        [0,12,0], [0,12,1], [1,3,0], [1,3,1], [1,3,2], [1,3,3]
-      ]
+      reserve:[[0,12,0],[0,12,1],[1,3,0],[1,3,1],[1,3,2],[1,3,3]]
     },
     quad:{
       label:'🎯 TỨ QUÝ → TỨ QUÝ LỚN CÓ CƠ HỘI CHẶT',
-      reserve:[
-        [0,3,0], [0,3,1], [0,3,2], [0,3,3],
-        [1,4,0], [1,4,1], [1,4,2], [1,4,3]
-      ]
+      reserve:[[0,3,0],[0,3,1],[0,3,2],[0,3,3],[1,4,0],[1,4,1],[1,4,2],[1,4,3]]
     },
     run:{
       label:'🎯 3 ĐÔI THÔNG → 4 ĐÔI THÔNG CÓ CƠ HỘI CHẶT',
-      reserve:[
-        [0,4,0],[0,4,1],[0,5,0],[0,5,1],[0,6,0],[0,6,1],
-        [1,5,2],[1,5,3],[1,6,2],[1,6,3],[1,7,2],[1,7,3],[1,8,2],[1,8,3]
-      ]
+      reserve:[[0,4,0],[0,4,1],[0,5,0],[0,5,1],[0,6,0],[0,6,1],[1,5,2],[1,5,3],[1,6,2],[1,6,3],[1,7,2],[1,7,3],[1,8,2],[1,8,3]]
+    },
+    safe:{
+      label:'🎯 CHẶT NGƯỜI VỪA VỀ',
+      reserve:[[0,3,0],[0,3,1],[0,3,2],[0,3,3],[1,12,2]]
+    },
+    cong1:{
+      label:'🧊 CÓNG 1 NGƯỜI — Bot 1 chưa đánh lá nào', reserve:[]
+    },
+    cong2:{
+      label:'🧊🧊 CÓNG 2 NGƯỜI — Bot 1 + Bot 2 chưa đánh lá nào', reserve:[]
+    },
+    cong3:{
+      label:'🧊🧊🧊 CÓNG 3 NGƯỜI — cả 3 Bot chưa đánh lá nào', reserve:[]
+    },
+    congAll:{
+      label:'🧊🧊🧊 CÓNG CẢ BÀN — tất cả Bot chưa đánh lá nào', reserve:[]
+    },
+    rank:{
+      label:'🏆 BOM + VỀ NHÌ',
+      reserve:[[0,3,0],[0,3,1],[0,3,2],[0,3,3],[1,12,2]]
+    },
+    white3:{
+      label:'🌟 TỚI TRẮNG — TỨ QUÝ 3 VÁN ĐẦU',
+      reserve:[[0,0,0],[0,0,1],[0,0,2],[0,0,3],[0,1,0],[0,2,0],[0,3,0],[0,4,0],[0,5,0],[0,6,0],[0,7,0],[0,8,0],[0,9,0]]
     }
   };
-  return {type, label:specs[type].label, reserve:specs[type].reserve};
+  const spec=specs[type]||specs.single;
+  return {type, label:spec.label, reserve:spec.reserve};
 }
 
 function dealNaturalTestHands(players, scenario){
@@ -4600,26 +4926,56 @@ function startRuleTestGame(){
       hideCardCount:false
     };
 
-    // CHẾ ĐỘ TEST TỰ NHIÊN: vẫn chia ngẫu nhiên phần lớn bài, nhưng MỖI VÁN
-    // luôn cài 1 tình huống có khả năng phát sinh bug. Không dựng trạng thái
-    // giữa chừng trên bàn; chỉ sắp xếp một vài lá vào tay người chơi để ván
-    // diễn ra tự nhiên và người/Bot tự quyết định có chặt hay không.
-    const naturalScenario = rtPickNaturalScenario();
+    // CHẾ ĐỘ TEST TỰ NHIÊN: người test được CHỌN tình huống.
+    // RANDOM = tự chọn theo tỷ lệ; các lựa chọn còn lại = cố định đúng nhóm
+    // bài đó nhưng phần còn lại vẫn chia ngẫu nhiên để ván diễn ra tự nhiên.
+    // Không dựng currentCombo/chồng BOM sẵn trên bàn; Bot và người vẫn tự đánh.
+    const selectedScenario = $('ruleTestScenario')?.value || 'RANDOM';
+    const naturalScenario = selectedScenario === 'RANDOM'
+      ? rtPickNaturalScenario()
+      : rtNaturalScenarioSpec(selectedScenario);
+    ruleTestScenario = naturalScenario.type;
     const hands = dealNaturalTestHands(players, naturalScenario);
 
-    // Giữ nguyên kiểm tra tới trắng của game thật.
-    const isFirstGame = (lastGameWinnerId === null);
+    // CÓNG TEST: người test phải là người mở vòng để có thể tự đánh hết bài.
+    // Với Cóng cả bàn, mọi Bot sẽ PASS sau nước mở đầu của người test.
+    // Với Cóng 1 người, Bot đầu tiên là mục tiêu Cóng.
+    if(['cong1','cong2','cong3','congAll'].includes(naturalScenario.type)){
+      const threeSpadeOwner = players.findIndex(p => safeArray(hands[p.id]).some(isThreeSpade));
+      // Nếu 3♠ vô tình rơi vào Bot, chuyển đúng lá đó cho người test và lấy
+      // một lá không phải 3♠ từ tay người test trả lại Bot để vẫn đủ 13 lá.
+      if(threeSpadeOwner > 0){
+        const meHand=hands[myId], botHand=hands[players[threeSpadeOwner].id];
+        const idx=botHand.findIndex(isThreeSpade);
+        const replacement=meHand.find(c=>!isThreeSpade(c));
+        if(idx>=0 && replacement){
+          const sp=botHand.splice(idx,1)[0];
+          botHand.push(replacement);
+          meHand.splice(meHand.indexOf(replacement),1,sp);
+          hands[myId]=sortHand(meHand);
+          hands[players[threeSpadeOwner].id]=sortHand(botHand);
+        }
+      }
+    }
+
+    // TEST TỚI TRẮNG: luôn coi đây là ván đầu để luật Tứ Quý 3 được kiểm tra
+    // đúng điều kiện ván đầu, kể cả trước đó người dùng đã test ván khác.
+    // CÓNG test không được vô tình kết thúc bằng Tới Trắng: đây là kịch bản
+    // để người test tự đánh hết bài và kích hoạt Cóng bằng engine thật.
+    const isCongScenario = ['cong1','cong2','cong3','congAll'].includes(naturalScenario.type);
+    const isFirstGame = (naturalScenario.type === 'white3') || (!isCongScenario && lastGameWinnerId === null);
     let instantWinnerId = null;
     let instantWinInfo = null;
 
-    players.forEach(p=>{
-      if(instantWinnerId) return;
-      const info = checkInstantWin(hands[p.id], {isFirstGame});
+    // Chỉ kịch bản TỚI TRẮNG mới chủ động kiểm tra instant win ở đây.
+    // Các kịch bản tự nhiên khác vẫn để engine thật xử lý khi ván diễn ra.
+    if(naturalScenario.type === 'white3'){
+      const info = checkInstantWin(hands[myId], {isFirstGame:true});
       if(info){
-        instantWinnerId = p.id;
+        instantWinnerId = myId;
         instantWinInfo = info;
       }
-    });
+    }
 
     $('ruleTestOverlay').classList.add('hidden');
     $('resultOverlay').classList.add('hidden');
@@ -4637,7 +4993,10 @@ function startRuleTestGame(){
     // ván trước được đánh đầu tự do.
     let leadIdx = 0;
     let requiredCard = null;
-    if(isFirstGame){
+    if(['cong1','cong2','cong3','congAll'].includes(naturalScenario.type)){
+      leadIdx = 0;
+      requiredCard = safeArray(hands[myId]).find(isThreeSpade) || null;
+    } else if(isFirstGame){
       players.forEach((p,i)=>{
         hands[p.id].forEach(c=>{
           if(isThreeSpade(c)){
@@ -4670,6 +5029,8 @@ function startRuleTestGame(){
       scores:Object.fromEntries(order.map(id=>[id,0])),
       liveScores:Object.fromEntries(order.map(id=>[id,0])),
       liveBaseAwards:{},
+      liveCongAwards:{},
+      liveChopAwards:{},
       playedCardsCount:Object.fromEntries(order.map(id=>[id,0])),
       revealedCards:Object.fromEntries(order.map(id=>[id,[]])),
       kneelingStatus:{...kneelingTracker},
@@ -4691,9 +5052,17 @@ function startRuleTestGame(){
       chopChainReceiver:null,
       chopChainHistory:[],
       botThinking:false,
+      // TEST DÙNG CHUNG ENGINE VÁN THẬT: sau khi chia tay test, mọi nước đánh,
+      // tính chặt/BOM, Cóng/Thối, xếp hạng, âm thanh và endGame đều đi qua cùng
+      // handleAction()/endGame()/revealInstantWin() như ván bình thường.
       testScenario:'NATURAL',
       naturalScenario,
-      naturalScenarioLabel: naturalScenario.label
+      naturalScenarioLabel: naturalScenario.label,
+      testUsesLiveGameEngine: true,
+      testCongTargetIds: naturalScenario.type==='cong1' ? botList.slice(0,1) :
+        (naturalScenario.type==='cong2' ? botList.slice(0,2) :
+        (['cong3','congAll'].includes(naturalScenario.type) ? botList.slice() : [])),
+      testCongRule: 'CÓNG = 4/người không Cóng; một settlement dùng chung cho live + tổng kết; phát hiện từ revealedCards'
     };
 
     isRuleTestMode = true;
@@ -4727,9 +5096,15 @@ function exitRuleTestMode(){
   $('homeScreen').classList.remove('hidden');
 }
 
+function testInstantWhiteAudio(){
+  playInstantWinVoice();
+  const el = $('ruleTestResult');
+  if(el) el.textContent = '🔊 Đã test âm TỚI TRẮNG — Tất cả quỳ xuống!';
+}
 $('btnOpenRuleTest').onclick=()=>{const o=$('ruleTestOverlay'); if(!o)return; o.classList.remove('hidden'); o.setAttribute('aria-hidden','false'); try{rtRender(rtAllTests(),'Kiểm tra logic lõi hiện tại');}catch(e){console.error(e);}};
 $('btnCloseRuleTest').onclick=()=>{const o=$('ruleTestOverlay'); if(!o)return; o.classList.add('hidden'); o.setAttribute('aria-hidden','true');};
 $('btnStartPlayableRuleTest').onclick=startRuleTestGame;
+$('btnTestInstantWhiteAudio').onclick=testInstantWhiteAudio;
 $('btnExitRuleTest').onclick=exitRuleTestMode;
 $('btnRunRuleTests').onclick=()=>rtRender(rtAllTests(),'Kiểm tra logic lõi hiện tại');
 $('btnRandomRuleCase').onclick=rtRandomScenario;
@@ -4762,6 +5137,7 @@ const SOUND_KEY_META = [
   { key:'PLAY_CARD', label:'🃏 Đánh bài xuống bàn' },
   { key:'FINISH_1ST', label:'🏆 Về Nhất' },
   { key:'FINISH_23', label:'🥈 Về Nhì / Ba' },
+  { key:'INSTANT_WHITE', label:'🌟 Tới Trắng — Tất cả quỳ xuống' },
   { key:'CRY', label:'🎉 Kết thúc ván (WOW — chốt kết quả)' },
   { key:'CRY1', label:'😭 Reaction: Khóc thét' },
   { key:'CRY2', label:'😢 Reaction: Khóc hờn' },
@@ -4940,6 +5316,7 @@ function renderConfigForm(){
   $('cfgEnFinish1st').checked = SOUND_CONFIG.enabled.finish1st; $('cfgVolFinish1st').value = SOUND_CONFIG.volumes.finish1st;
   $('cfgEnFinish23').checked = SOUND_CONFIG.enabled.finish23; $('cfgVolFinish23').value = SOUND_CONFIG.volumes.finish23;
   $('cfgEnWinCry').checked = SOUND_CONFIG.enabled.winCry;     $('cfgVolWinCry').value = SOUND_CONFIG.volumes.winCry;
+  $('cfgEnInstantWhite').checked = SOUND_CONFIG.enabled.instantWhite; $('cfgVolInstantWhite').value = SOUND_CONFIG.volumes.instantWhite;
   $('cfgEnReaction').checked = SOUND_CONFIG.enabled.reaction; $('cfgVolReaction').value = SOUND_CONFIG.volumes.reaction;
   $('cfgEnThrowItem').checked = SOUND_CONFIG.enabled.throwItem; $('cfgVolThrowItem').value = SOUND_CONFIG.volumes.throwItem;
   // --- LINK ÂM THANH (từng sound key riêng lẻ) ---
@@ -4959,7 +5336,8 @@ function collectConfigFromForm(){
   GAME_CONFIG.foul.tuQuy = clampCfgInt($('cfgFoulTuQuy').value, df.tuQuy);
   GAME_CONFIG.foul.baDoiThong = clampCfgInt($('cfgFoulBaDoiThong').value, df.baDoiThong);
   GAME_CONFIG.foul.boDoiThongTro = clampCfgInt($('cfgFoulBoDoiThong').value, df.boDoiThongTro);
-  GAME_CONFIG.cong.perReceiver = clampCfgInt($('cfgCongPerReceiver').value, dcg.perReceiver);
+  GAME_CONFIG.cong.perReceiver = 4;
+  if($('cfgCongPerReceiver')) $('cfgCongPerReceiver').value = 4;
 
   GAME_CONFIG.instantWin.sanhRong = clampCfgInt($('cfgWinDragon').value, dw.sanhRong);
   GAME_CONFIG.instantWin.tuQuyHeo = clampCfgInt($('cfgWinQuadHeo').value, dw.tuQuyHeo);
@@ -4980,6 +5358,7 @@ function collectConfigFromForm(){
   SOUND_CONFIG.enabled.finish1st = $('cfgEnFinish1st').checked; SOUND_CONFIG.volumes.finish1st = clampCfgVol($('cfgVolFinish1st').value);
   SOUND_CONFIG.enabled.finish23 = $('cfgEnFinish23').checked; SOUND_CONFIG.volumes.finish23 = clampCfgVol($('cfgVolFinish23').value);
   SOUND_CONFIG.enabled.winCry = $('cfgEnWinCry').checked;     SOUND_CONFIG.volumes.winCry = clampCfgVol($('cfgVolWinCry').value);
+  SOUND_CONFIG.enabled.instantWhite = $('cfgEnInstantWhite').checked; SOUND_CONFIG.volumes.instantWhite = clampCfgVol($('cfgVolInstantWhite').value);
   SOUND_CONFIG.enabled.reaction = $('cfgEnReaction').checked; SOUND_CONFIG.volumes.reaction = clampCfgVol($('cfgVolReaction').value);
   SOUND_CONFIG.enabled.throwItem = $('cfgEnThrowItem').checked; SOUND_CONFIG.volumes.throwItem = clampCfgVol($('cfgVolThrowItem').value);
 
