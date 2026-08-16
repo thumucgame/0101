@@ -416,13 +416,23 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .result-table td.amt{text-align:right;font-weight:700;}
 .amt.plus{color:var(--good);}
 .amt.minus{color:var(--bad);}
-.reveal-hand-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;margin-top:5px;padding-top:3px;gap:0;max-width:100%;overflow:visible;}
+.reveal-section{margin-top:8px;padding:7px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(0,0,0,.20));border:1px solid rgba(255,255,255,.08);}
+.reveal-section.is-bet{border-color:rgba(255,210,50,.45);box-shadow:0 0 14px rgba(255,210,50,.10);}
+.reveal-block{margin:0 0 6px;padding:5px 6px;border-radius:8px;background:rgba(0,0,0,.14);}
+.reveal-block:last-child{margin-bottom:0;}
+.reveal-label{display:block;font-size:9px;font-weight:900;letter-spacing:.7px;color:rgba(250,246,238,.65);margin-bottom:4px;text-transform:uppercase;}
+.reveal-label.remaining{color:#ffd83d;font-size:10px;}
+.remaining-block{background:linear-gradient(180deg,rgba(255,216,61,.13),rgba(255,216,61,.045));border:1px solid rgba(255,216,61,.38);}
+.reveal-hand-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;margin-top:2px;padding-top:2px;gap:0;max-width:100%;overflow:visible;}
 .result-table td:nth-child(2){min-width:0;}
 .reveal-hand-row .card.small{flex:0 0 auto;}
 .card.small{width:26px;height:37px;margin-left:-13px;padding:2px;border-radius:4px;box-shadow:-1px 1px 3px rgba(0,0,0,.4);}
 .card.small:first-child{margin-left:0;}
 .card.small .rank{font-size:9.5px;}
 .card.small .suit{font-size:9.5px;}
+.reveal-remaining-row{border:1px solid rgba(255,230,0,.38);background:rgba(255,230,0,.07);border-radius:7px;padding:4px 5px;}
+.reveal-remaining-row .card.small{border:2px solid #ffe600;box-shadow:0 0 8px rgba(255,230,0,.35),-1px 2px 3px rgba(0,0,0,.45);z-index:2;}
+.reveal-none{font-size:10px;color:rgba(250,246,238,.45);font-style:italic;}
 
 .settlement-box {
   background: rgba(0,0,0,0.25); border: 1px solid var(--gold-dim); border-radius: 8px;
@@ -1053,9 +1063,10 @@ const CHOP_SOUND_KEYS = ['CHOP_1','CHOP_2','CHOP_3','CHOP_4'];
 function pickRandomChopSound(){
   // Chỉ random trong các âm CHẶT đang được BẬT ở trang Cấu Hình.
   // Nếu người dùng lỡ tắt hết, rơi về dùng lại toàn bộ 4 âm mặc định để không bị câm lặng.
-  const active = CHOP_SOUND_KEYS.filter(k => SOUND_CONFIG.chopPool[k] !== false);
-  const pool = active.length ? active : CHOP_SOUND_KEYS;
-  return pool[Math.floor(Math.random() * pool.length)];
+  if(!SOUND_CONFIG.masterEnabled || SOUND_CONFIG.enabled.chop === false) return null;
+  const active = CHOP_SOUND_KEYS.filter(k => SOUND_CONFIG.chopPool[k] === true);
+  if(!active.length) return null;
+  return active[Math.floor(Math.random() * active.length)];
 }
 
 // Nhãn hiện trong bong bóng thoại tại ghế khi ai đó bấm reaction khóc/cười/hối/cà khịa
@@ -1269,6 +1280,7 @@ function _firstUserGestureHandler(){
 let _lastChopSoundAt = 0;
 let _seenChopSoundIds = new Set();
 let _seenSoundEventIds = new Set();
+let _roundEnded = false;
 
 function playChopControlled(soundKey){
   const now = Date.now();
@@ -1285,10 +1297,11 @@ function broadcastChopSound(){
   _seenChopSoundIds.add(id);
   // Random 1 lần duy nhất ở đây rồi gửi đúng key đó cho tất cả người chơi,
   // để cả bàn cùng nghe chung 1 âm trong lần chặt này (không phải mỗi người random riêng).
+  if((gameState && gameState.isEnded) || _roundEnded) return;
   const soundKey = pickRandomChopSound();
-  // Không gọi broadcastSoundEvent() để tránh đường phát kép local + remote của CHOP.
-  // sentAt: FIX "âm thanh dồn dập khi mất mạng rồi kết nối lại" — xem SOUND_STALE_MS bên dưới.
-  sendToAll({t:'soundEvent', soundKey, volume:0.9, soundEventId:id, sentAt: Date.now()});
+  if(!soundKey) return;
+  // Có createdAt để client bỏ qua event CHOP cũ sau reconnect.
+  sendToAll({t:'soundEvent', soundKey, volume:0.9, soundEventId:id, createdAt:Date.now()});
   playChopControlled(soundKey);
 }
 
@@ -1297,17 +1310,36 @@ const AUDIO_LAST_PLAY = {}; // dedupe theo ITEM (soundKey), không theo url, đ�
 const AUDIO_DEDUPE_MS = 180;
 
 function playGlobalSound(item, customVolume = 0.9){
-  // Mọi đường phát âm (bấm tại chỗ, nhận qua broadcast, bot...) đều đi qua đây,
-  // nên chỉ cần chặn/chỉnh âm lượng ở MỘT nơi duy nhất là áp dụng được cho toàn bộ game.
-  const category = getSoundCategory(item);
+  // CỔNG ÂM THANH DUY NHẤT:
+  // mọi âm (local, bot, host, Firebase echo/reconnect) bắt buộc qua đây.
+  // Không được tự phát nếu key không nằm trong cấu hình hiện tại.
+  let soundKey = item;
+
+  // CHOP legacy/fallback tuyệt đối không được tự phát âm dự phòng.
+  // Nếu có lệnh CHOP cũ, chỉ được đổi thành 1 key đang được bật trong chopPool.
+  if(soundKey === 'CHOP'){
+    soundKey = pickRandomChopSound();
+    if(!soundKey) return;
+  }
+
+  const category = getSoundCategory(soundKey);
   if(!SOUND_CONFIG.masterEnabled || SOUND_CONFIG.enabled[category] === false) return;
+
+  // CHOP_1..4 phải đồng thời được bật trong pool.
+  if(category === 'chop' && String(soundKey).indexOf('CHOP_') === 0){
+    if(SOUND_CONFIG.chopPool[soundKey] !== true) return;
+  }
+
+  // Khi ván đã chốt, không cho bất kỳ âm cũ nào lọt vào sau WIN.
+  if(_roundEnded && category !== 'winCry') return;
+
   const now = performance.now();
-  if(AUDIO_LAST_PLAY[item] && now - AUDIO_LAST_PLAY[item] < AUDIO_DEDUPE_MS) return;
+  if(AUDIO_LAST_PLAY[soundKey] && now - AUDIO_LAST_PLAY[soundKey] < AUDIO_DEDUPE_MS) return;
   // Random 1 biến thể NGAY TẠI ĐÂY (nếu key có nhiều link) — mỗi lần gọi playGlobalSound
   // là 1 lần "rút thăm" độc lập, nên phát nhiều lần liên tiếp cùng sự kiện sẽ nghe khác nhau.
-  const url = resolveSoundUrl(item);
+  const url = resolveSoundUrl(soundKey);
   if(!url) return;
-  AUDIO_LAST_PLAY[item] = now;
+  AUDIO_LAST_PLAY[soundKey] = now;
   const configuredVol = SOUND_CONFIG.volumes[category];
   const baseVol = (typeof configuredVol === 'number') ? configuredVol : (Number(customVolume) || 0.9);
   const vol = Math.min(Math.max(baseVol, 0.05), 1.0);
@@ -1324,8 +1356,22 @@ function playGlobalSound(item, customVolume = 0.9){
     const p = audio.play();
     if(p && typeof p.catch === 'function') p.catch(()=>{});
   } catch(err) {
-    console.warn('Audio play error:', item, err);
+    console.warn('Audio play error:', soundKey, err);
   }
+}
+
+// Dừng toàn bộ audio đang chạy khi ván chuyển sang trạng thái kết thúc.
+// Quan trọng: tránh âm CHOP/PLAY/REACTION còn đang chạy chồng lên tiếng WIN.
+function stopAllGameAudio(){
+  try{
+    Object.values(AUDIO_PLAYERS).forEach(audio=>{
+      try{
+        audio.pause();
+        audio.currentTime = 0;
+      }catch(e){}
+    });
+  }catch(e){}
+  Object.keys(AUDIO_LAST_PLAY).forEach(k=>delete AUDIO_LAST_PLAY[k]);
 }
 
 let consecutivePlayCount = 0;
@@ -2029,17 +2075,6 @@ function onHostMessage(fromId, msg, token){
 }
 
 let onFirstLobbyMessage = null;
-// FIX "ÂM THANH VANG LÊN MẤT KIỂM SOÁT": khi 1 người bị rớt mạng/chuyển app một lúc rồi
-// quay lại, Firebase sẽ đẩy dồn TOÀN BỘ tin nhắn còn tồn đọng (child_added bắn hàng loạt
-// gần như cùng lúc). Nếu vẫn phát âm cho từng tin nhắn cũ đó, người chơi sẽ nghe một tràng
-// âm thanh hỗn loạn dồn dập dù thực tế các sự kiện đó đã xảy ra từ vài giây/chục giây trước.
-// Giải pháp: mỗi tin có mang "sentAt" (xem broadcastSoundEvent/broadcastChopSound/broadcastThrowItem);
-// nếu lúc XỬ LÝ đã trễ hơn SOUND_STALE_MS so với lúc GỬI, coi là tin "dồn toa" khi vừa kết nối
-// lại → vẫn cập nhật đúng trạng thái/hiệu ứng, nhưng KHÔNG phát âm cho tin đó nữa.
-const SOUND_STALE_MS = 2500;
-function isStaleQueuedMessage(msg){
-  return !!(msg && msg.sentAt && (Date.now() - Number(msg.sentAt)) > SOUND_STALE_MS);
-}
 function onClientMessage(msg){
   if(!msg || !msg.t){ console.error('⚠️ Message nhận được không hợp lệ:', msg); return; }
   try{
@@ -2063,19 +2098,26 @@ function onClientMessage(msg){
       if(msg.fromId && msg.fromId === myId) return;
       addChatLine(msg.name, msg.text);
     } else if(msg.t==='result'){
+      _roundEnded = true;
+      stopAllGameAudio();
       showResultOverlay(msg.results, msg.settlements);
     } else if(msg.t==='throwItem'){
       // TỐI ƯU ÂM THANH: nếu chính mình là người vừa ném (fromId===myId), máy mình đã tự
       // phát âm thanh + hiệu ứng ngay lúc bấm (optimistic, xem triggerThrow()) nên bỏ qua,
       // tránh phát đúp 2 lần khi tin nhắn dội ngược về từ chủ phòng.
       if(msg.fromId === myId) return;
-      // FIX: tin đã "nguội" (dồn toa sau khi mất mạng) → không phát âm/hiệu ứng bay ném đồ
-      // nữa, tránh cảnh vật thể bay + âm thanh xuất hiện vô cớ vài giây sau khi đã xảy ra.
-      if(isStaleQueuedMessage(msg)) return;
       animateItemThrow(msg.fromId, msg.toId, msg.item); playGlobalSound(msg.item, 0.9);
     } else if(msg.t==='stakeTransfer'){
       animateStakeTransfer(msg.fromId, msg.toId, msg.amount, msg.stakeUnit);
     } else if(msg.t==='soundEvent'){
+      // Sau khi chốt ván: chỉ cho phép âm WIN/CRY đi qua.
+      // Mọi CHOP/PLAY/REACTION/THROW/FINISH đến trễ đều bị loại.
+      if(_roundEnded && msg.soundKey !== 'CRY') return;
+
+      // Event âm thanh cũ không có createdAt là dữ liệu lịch sử của phiên bản trước.
+      // Không được phát lại sau reconnect.
+      if(!msg.createdAt || !Number.isFinite(Number(msg.createdAt))) return;
+
       // Không phát lại âm do chính máy mình tạo ra khi gói tin quay về.
       if(msg.originId && msg.originId === myId) return;
       // Dedupe theo eventId cho tất cả soundEvent, không chỉ CHOP.
@@ -2087,9 +2129,11 @@ function onClientMessage(msg){
           _seenSoundEventIds.delete(first);
         }
       }
-      // FIX: tin đã "nguội" (dồn toa sau khi mất mạng/chuyển app rồi quay lại) → bỏ qua phát âm,
-      // tránh nghe 1 tràng âm thanh hỗn loạn dồn dập cho các sự kiện thực ra đã xảy ra từ trước.
-      if(isStaleQueuedMessage(msg)) return;
+      // Firebase có thể replay toàn bộ child_added sau reconnect. Âm thanh quá cũ
+      // chỉ là lịch sử, tuyệt đối không được phát dồn dập khi người chơi vào lại.
+      const SOUND_EVENT_MAX_AGE = 3000;
+      if(msg.createdAt && (Date.now() - Number(msg.createdAt) > SOUND_EVENT_MAX_AGE)) return;
+      if(msg.createdAt && Number(msg.createdAt) - Date.now() > 5000) return;
       playGlobalSound(msg.soundKey, msg.volume || 0.9);
     } else if(msg.t==='countdown_start'){
       triggerCountdownAnimation(msg.callback);
@@ -2166,7 +2210,7 @@ function broadcastStakeTransfer(fromId, toId, amount, stakeUnit){
 }
 
 function broadcastThrowItem(fromId, toId, item){
-  sendToAll({t:'throwItem', fromId, toId, item, sentAt: Date.now()});
+  sendToAll({t:'throwItem', fromId, toId, item});
   animateItemThrow(fromId, toId, item); playGlobalSound(item, 0.9);
 }
 
@@ -2174,10 +2218,21 @@ function broadcastThrowItem(fromId, toId, item){
 // Khi client nhận lại message soundEvent mà originId trùng chính mình, họ sẽ KHÔNG phát
 // lại lần 2, vì máy họ đã tự phát ngay lúc bấm (optimistic) rồi — xem triggerReaction().
 function broadcastSoundEvent(soundKey, volume = 0.9, originId = null){
+  // Không tạo event mạng cho âm đang bị tắt trong cấu hình hiện tại.
+  let key = soundKey;
+  if(key === 'CHOP') key = pickRandomChopSound();
+  if(!key) return;
+
+  const category = getSoundCategory(key);
+  if(!SOUND_CONFIG.masterEnabled || SOUND_CONFIG.enabled[category] === false) return;
+  if(category === 'chop' && String(key).indexOf('CHOP_') === 0 && SOUND_CONFIG.chopPool[key] !== true) return;
+  if(_roundEnded && key !== 'CRY') return;
+
   const eventId = 'snd_' + Date.now() + '_' + Math.random().toString(36).slice(2);
-  // sentAt: FIX "âm thanh dồn dập khi mất mạng rồi kết nối lại" — xem SOUND_STALE_MS bên dưới.
-  sendToAll({t:'soundEvent', soundKey, volume, originId, soundEventId:eventId, sentAt: Date.now()});
-  playGlobalSound(soundKey, volume);
+  // createdAt là mốc sống của sự kiện âm thanh. Firebase child_added có thể giao lại
+  // tin cũ sau khi tab mất mạng/reconnect; client sẽ bỏ qua âm đã quá hạn.
+  sendToAll({t:'soundEvent', soundKey:key, volume, originId, soundEventId:eventId, createdAt:Date.now()});
+  playGlobalSound(key, volume);
 }
 
 function showLobby(){
@@ -2368,7 +2423,8 @@ function finalizeInstantWin(){
 }
 
 function dealNewGame(){
-  if(isRuleTestMode){ startRuleTestGame(); return; }
+  if(isRuleTestMode){ _roundEnded = false; startRuleTestGame(); return; }
+  _roundEnded = false;
   if(isHost && !isBotMode) publishRoomToPublic(roomCode, players[0] ? players[0].name : myName);
   consecutivePlayCount = 0;
   lastNotifiedTurnId = null;
@@ -2436,6 +2492,7 @@ function dealNewGame(){
     passed: new Set(),
     disconnected: new Set(),
     coldFolded: new Set(), // LUẬT CÓNG: người chưa đánh được lá nào khi đã có người về Nhất -> bị loại (úp bài) ngay
+    congBlockerId: {}, // người thực sự ép/chặn người Cóng ở lần bỏ lượt cuối
     scores: Object.fromEntries(players.map(p=>[p.id, 0])),
     liveScores: Object.fromEntries(players.map(p=>[p.id, 0])),
     liveBaseAwards: {},
@@ -2626,11 +2683,9 @@ function getSpecialStackValue(combo){
   if(!combo) return 0;
   if(combo.type === 'single' && combo.cards?.[0]?.r === 12) return heoCardValue(combo.cards[0]);
   if(combo.type === 'pair' && combo.cards?.[0]?.r === 12) return heoCardValue(combo.cards[0]) + heoCardValue(combo.cards[1]);
-  // FIX: đọc từ GAME_CONFIG.chop thay vì hard-code 3/3/4, để khớp với calculateChopReward()
-  // — nếu không, đổi số ở trang Cấu Hình sẽ không áp dụng đúng cho phần "chồng" trước khi bị chặt.
-  if(combo.type === 'pairs_run' && combo.count === 3) return GAME_CONFIG.chop.baDoiThong;
-  if(combo.type === 'quad') return GAME_CONFIG.chop.tuQuy;
-  if(combo.type === 'pairs_run' && combo.count >= 4) return GAME_CONFIG.chop.boDoiThongTro;
+  if(combo.type === 'pairs_run' && combo.count === 3) return Number(GAME_CONFIG.chop.baDoiThong) || 0;
+  if(combo.type === 'quad') return Number(GAME_CONFIG.chop.tuQuy) || 0;
+  if(combo.type === 'pairs_run' && combo.count >= 4) return Number(GAME_CONFIG.chop.boDoiThongTro) || 0;
   return 0;
 }
 
@@ -2906,6 +2961,12 @@ function handleAction(playerId, action, isAuto=false){
 
   if(action.kind === 'pass'){
     if(!gameState.currentCombo) return;
+    // LUẬT CÓNG: chỉ người thực sự đang giữ bộ bài ép người này bỏ lượt
+    // mới được nhận khoản THỐI riêng của người Cóng. Không suy ra theo thứ hạng.
+    if(gameState.leaderId && gameState.leaderId !== playerId){
+      gameState.congBlockerId = gameState.congBlockerId || {};
+      gameState.congBlockerId[playerId] = gameState.leaderId;
+    }
     gameState.passed.add(playerId);
     gameState.log = `${prefix}${pName} đã bỏ lượt.`;
     bumpActor(playerId, isAuto ? '⏰ Bỏ lượt (tự động)' : '🚫 Bỏ lượt');
@@ -3007,11 +3068,9 @@ function handleAction(playerId, action, isAuto=false){
     if(!gameState.revealedCards[playerId]) gameState.revealedCards[playerId] = [];
     gameState.revealedCards[playerId].push(...cards.map(c=>({r:c.r,s:c.s})));
     gameState.currentCombo = combo;
-    // FIX: cùng lỗi như nhánh CHẶT NGANG từng gặp — nếu vừa CHỒNG đặc biệt lên đặc biệt
-    // trước đó (vd Heo đen 1 → Heo đỏ 2 = 3 Nước treo, isSpecialStackBeat), chopStackValue
-    // ĐÃ được tính dồn đúng ở nhánh phía trên rồi. Không được ghi đè lại bằng giá trị riêng
-    // của combo hiện tại (getSpecialStackValue(combo) một mình) — nếu không, người CHẶT tiếp
-    // theo bộ bài này chỉ ăn giá trị của lớp cuối (vd 2) thay vì toàn bộ đã dồn (vd 3).
+    // Nếu đây là một mắt xích CHỒNG ĐẶC BIỆT (ví dụ Heo đen 1 → Heo đỏ 2),
+    // phải giữ nguyên toàn bộ giá trị stack đã dồn. Chỉ khi chuỗi không tiếp tục
+    // chồng đặc biệt mới reset stack về giá trị riêng của bộ mới.
     gameState.chopStackValue = isSpecialStackBeat
       ? (Number(gameState.chopStackValue || 0) || getSpecialStackValue(combo))
       : getSpecialStackValue(combo);
@@ -3206,20 +3265,22 @@ function endGame(){
       foulDetailsMap[id] = foulInfo;
 
       if (congCandidateIds.has(id)) {
-        // Người Cóng: tìm người xếp ngay phía trên họ (người đã ép/chặn họ).
-        const idx = gameState.finished.indexOf(id);
-        let recipient = null;
-        for (let j = idx - 1; j >= 0; j--) {
-          const candidate = gameState.finished[j];
-          if (candidate !== id && !congCandidateIds.has(candidate)) {
-            recipient = candidate;
-            break;
-          }
+        // Người Cóng: THỐI chỉ trả riêng cho người thực sự ép/chặn họ.
+        // Không dùng thứ hạng nữa vì người đứng kế trên chưa chắc là người ép chết hàng.
+        const recipient = gameState.congBlockerId && gameState.congBlockerId[id];
+        if (recipient && recipient !== id) {
+          congFoulRecipientMap[id] = recipient;
+          congFoulReceivedMap[recipient] = (congFoulReceivedMap[recipient] || 0) + foulInfo.totalPenalty;
+          gameState.roundLog.push({
+            icon:'🐷',
+            text: `${gameState.names[id]} bị Cóng nhưng Thối bài là khoản riêng: ${foulInfo.details.join(', ')} → đền ${foulInfo.totalPenalty} nước cho ${gameState.names[recipient]} (người thực sự ép/chặn).`
+          });
+        } else {
+          gameState.roundLog.push({
+            icon:'🐷',
+            text: `${gameState.names[id]} bị Cóng và còn Thối ${foulInfo.totalPenalty} nước nhưng không xác định được người ép/chặn trực tiếp → không chuyển khoản Thối riêng.`
+          });
         }
-        if (!recipient && idx > 0) recipient = gameState.finished[idx - 1];
-        if (!recipient) recipient = winnerId;
-
-        congFoulRecipientMap[id] = recipient;
         congFoulReceivedMap[recipient] = (congFoulReceivedMap[recipient] || 0) + foulInfo.totalPenalty;
         gameState.roundLog.push({
           icon:'🐷',
@@ -3277,10 +3338,18 @@ function endGame(){
       baseWaterMap[id] = baseWater;
     });
 
-    // Chia RIÊNG khoản Cóng cho toàn bộ người không bị Cóng.
-    const congReceivers = gameState.order.filter(id => !congIds.has(id));
-    const congShareEach = congReceivers.length > 0 ? (congExtraTotal / congReceivers.length) : 0;
-    congReceivers.forEach(id => { congShareMap[id] = (congShareMap[id] || 0) + congShareEach; });
+    // CÓNG = đền cho TỪNG NGƯỜI KHÁC TRÊN BÀN.
+    // Không dồn toàn bộ tiền của nhiều người Cóng rồi chia lại, vì cách đó làm
+    // người không Cóng nhận quá nhiều khi có 2+ người Cóng.
+    // Mỗi người Cóng trả đúng `perReceiver` cho từng người còn lại.
+    gameState.order.forEach(congId => {
+      if(!congIds.has(congId)) return;
+      const perReceiver = Number(GAME_CONFIG.cong.perReceiver) || 0;
+      gameState.order.forEach(receiverId => {
+        if(receiverId === congId) return;
+        congShareMap[receiverId] = (congShareMap[receiverId] || 0) + perReceiver;
+      });
+    });
 
     gameState.order.forEach((id) => {
       let rank = gameState.finished.indexOf(id) + 1;
@@ -3338,7 +3407,9 @@ function endGame(){
         score: total,
         note: `Vị trí (${activeCount} người): ${baseWater > 0 ? '+'+baseWater : baseWater} nước | Chặt: ${extraChop >= 0 ? '+'+extraChop : extraChop}${congText}${congBonusText}${foulText}`,
         name: gameState.names[id],
-        cards: finalHandsSnapshot[id] || [] // bài còn sót lại trên tay lúc kết thúc, để cả bàn ngửa xem xác nhận
+        cards: finalHandsSnapshot[id] || [],
+        playedCards: safeArray(gameState.revealedCards && gameState.revealedCards[id]),
+        remainingCards: safeArray(gameState.hands[id])
       };
     });
   } else {
@@ -3378,7 +3449,9 @@ function endGame(){
         score: statusText,
         note: rank === 1 ? "🎉 Giải Hạn Quỳ / Về Nhất" : `Hạng #${rank}`,
         name: gameState.names[id],
-        cards: finalHandsSnapshot[id] || [] // bài còn sót lại trên tay lúc kết thúc, để cả bàn ngửa xem xác nhận
+        cards: finalHandsSnapshot[id] || [],
+        playedCards: safeArray(gameState.revealedCards && gameState.revealedCards[id]),
+        remainingCards: safeArray(gameState.hands[id])
       };
     });
   }
@@ -3414,6 +3487,8 @@ function endGame(){
 }
 
 function broadcastResult(results, settlements){
+  _roundEnded = true;
+  stopAllGameAudio();
   const msg = { t:'result', results, settlements };
   if(!isBotMode) sendToAll(msg);
   showResultOverlay(results, settlements);
@@ -3551,6 +3626,12 @@ function applyState(st){
   if(!st || typeof st !== 'object') return;
   
   currentState = st;
+  if(st.isEnded){
+    if(!_roundEnded) stopAllGameAudio();
+    _roundEnded = true;
+  } else if(!st.isEnded){
+    _roundEnded = false;
+  }
   currentState.order = safeArray(st.order);
   currentState.finished = safeArray(st.finished);
 
@@ -4158,28 +4239,24 @@ function showResultOverlay(results, settlements){
   $('resultHeaderUnit').textContent = isWater ? 'Số Nước' : 'Hình Phạt Quỳ';
 
   const sortedResults = Object.values(results).sort((a,b)=>a.rank-b.rank);
-  const cardRevealQueue = []; // {containerId, cards} - gắn DOM lá bài thật sau khi chèn HTML xong
+  const cardRevealQueue = [];
 
   sortedResults.forEach((r, idx) => {
     let cls = isWater ? (r.score > 0 ? 'plus' : (r.score < 0 ? 'minus' : '')) : '';
     let scoreTxt = isWater ? (r.score > 0 ? `+${r.score} Nước` : `${r.score} Nước`) : r.score;
-
-    const hasCards = r.cards && r.cards.length > 0;
-    const revealId = `revealCards-${idx}`;
-    // NGỬA TOÀN BỘ 13 LÁ CUỐI VÁN ngay dưới tên từng người để cả bàn
-    // xem đầy đủ bài đã đánh + bài còn trên tay, không chỉ riêng người Bét.
-    const revealRow = hasCards
-      ? `<div class="reveal-hand-row" id="${revealId}"></div>`
-      : '';
+    const cards = safeArray(r.cards);
+    const revealId = `revealHand-${idx}`;
 
     tbody.innerHTML += `
       <tr>
         <td><b>#${r.rank}</b></td>
-        <td>${r.name}<br><small style="color:rgba(250,246,238,.5)">${r.note}</small>${revealRow}</td>
+        <td>${r.name}<br><small style="color:rgba(250,246,238,.5)">${r.note}</small>
+          ${cards.length ? `<div class="reveal-hand-row" id="${revealId}"></div>` : ''}
+        </td>
         <td class="amt ${cls}">${scoreTxt}</td>
       </tr>`;
 
-    if(hasCards) cardRevealQueue.push({ revealId, cards: r.cards });
+    if(cards.length) cardRevealQueue.push({revealId, cards});
   });
 
   cardRevealQueue.forEach(({revealId, cards}) => {
@@ -4605,7 +4682,7 @@ function startRuleTestGame(){
       finished:[],
       passed:new Set(),
       disconnected:new Set(),
-      coldFolded:new Set(),
+      coldFolded:new Set(), congBlockerId:{},
       scores:Object.fromEntries(order.map(id=>[id,0])),
       liveScores:Object.fromEntries(order.map(id=>[id,0])),
       liveBaseAwards:{},
