@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -506,6 +505,26 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .rule-test-result{margin-top:12px;border:1px solid var(--panel-line);border-radius:12px;padding:10px;background:rgba(0,0,0,.22);font-family:ui-monospace,monospace;font-size:12px;line-height:1.55;white-space:pre-wrap}
 .test-pass{color:#8be28b}.test-fail{color:#ff8a8a}.test-warn{color:#ffd36a}
 @media(max-width:700px){.rule-test-grid{grid-template-columns:1fr}#ruleTestPanel{max-height:95vh;padding:12px}}
+
+/* ===== TRANG CẤU HÌNH RIÊNG: BOM CHẶT / PHẠT / ÂM THANH ===== */
+#configOverlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:14px}
+#configPanel{width:min(980px,100%);max-height:92vh;overflow:auto;background:linear-gradient(180deg,#17130e,#0d0b08);border:1px solid rgba(212,175,55,.45);border-radius:16px;box-shadow:0 18px 70px rgba(0,0,0,.65);padding:16px;color:var(--cream)}
+.cfg-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:7px 0;font-size:12px}
+.cfg-row input[type=number]{width:64px;background:#100e0b;color:var(--cream);border:1px solid var(--panel-line);border-radius:7px;padding:5px;text-align:center;}
+.cfg-row input[type=range]{width:110px;accent-color:var(--gold);}
+.cfg-row input[type=checkbox]{width:auto;accent-color:var(--gold);transform:scale(1.15);cursor:pointer;}
+.cfg-sub{font-size:10px;color:rgba(250,246,238,.55);min-width:26px;text-align:right;}
+.cfg-evt{display:flex;align-items:center;gap:8px;}
+.cfg-url-row{flex-wrap:wrap;gap:6px;border-bottom:1px solid rgba(255,255,255,.06);padding-bottom:8px;}
+.cfg-url-row>span{flex:0 0 100%;font-weight:600;color:var(--gold);}
+.cfg-url-input{flex:1;min-width:160px;background:#100e0b;color:var(--cream);border:1px solid var(--panel-line);border-radius:7px;padding:6px 8px;font-size:11px;}
+.cfg-listen-btn{flex:0 0 auto;padding:6px 10px;font-size:11px;white-space:nowrap;}
+.cfg-url-variant-list{display:flex;flex-direction:column;gap:5px;width:100%;}
+.cfg-url-variant-row{display:flex;align-items:center;gap:6px;width:100%;}
+.cfg-url-variant-row .cfg-url-input{flex:1;min-width:120px;}
+.cfg-del-variant-btn{flex:0 0 auto;padding:6px 9px;font-size:11px;color:#e08a8a;border-color:rgba(224,138,138,.4);}
+.cfg-add-variant-btn{flex:0 0 auto;padding:6px 10px;font-size:11px;margin-top:2px;align-self:flex-start;color:var(--gold);border-color:rgba(212,175,55,.4);}
+@media(max-width:700px){#configPanel{max-height:95vh;padding:12px}}
 </style>
 </head>
 <body>
@@ -579,6 +598,86 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   </div>
 </div>
 
+<!-- ===== TRANG CẤU HÌNH RIÊNG: BOM CHẶT / PHẠT THỐI / THƯỞNG TỚI TRẮNG / ÂM THANH ===== -->
+<div id="configOverlay" class="hidden" aria-hidden="true">
+  <div id="configPanel">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;">
+      <div>
+        <h2 style="margin:0;color:var(--gold);font-size:20px;">⚙️ CẤU HÌNH BOM CHẶT · PHẠT · ÂM THANH</h2>
+        <div style="font-size:11px;color:rgba(250,246,238,.65);margin-top:4px;">Lưu riêng trên trình duyệt này. Không ảnh hưởng người chơi khác. Bấm "Khôi phục mặc định" để trả lại đúng luật gốc hiện tại.</div>
+      </div>
+      <button class="btn btn-outline" id="btnCloseConfig" type="button">✕ Đóng</button>
+    </div>
+
+    <div class="rule-test-grid">
+      <div class="rule-test-card">
+        <h4>💣 Giá trị BOM khi bị CHẶT (Nước dồn vào Bom)</h4>
+        <div class="cfg-row"><span>🖤 Heo đen (đơn)</span><input id="cfgChopHeoDen" type="number" min="0" max="99"></div>
+        <div class="cfg-row"><span>❤️ Heo đỏ (đơn)</span><input id="cfgChopHeoDo" type="number" min="0" max="99"></div>
+        <div class="cfg-row"><span>🃏 Tứ Quý bị chặt</span><input id="cfgChopTuQuy" type="number" min="0" max="99"></div>
+        <div class="cfg-row"><span>🔗 3 Đôi Thông bị chặt</span><input id="cfgChopBaDoiThong" type="number" min="0" max="99"></div>
+        <div class="cfg-row"><span>🔗 4+ Đôi Thông bị chặt</span><input id="cfgChopBoDoiThong" type="number" min="0" max="99"></div>
+        <div style="font-size:11px;opacity:.6;margin-top:8px;">Đôi Heo chặt Đôi Heo, hoặc Tứ Quý/4+ Đôi Thông chặt Đôi Heo, tự động cộng đúng theo giá trị Heo đen/đỏ phía trên — không cấu hình riêng để luôn khớp bộ luật.</div>
+      </div>
+
+      <div class="rule-test-card">
+        <h4>🐷 Phạt THỐI khi kết ván (bộ đặc biệt còn sót trên tay)</h4>
+        <div class="cfg-row"><span>🖤 Thối Heo đen</span><input id="cfgFoulHeoDen" type="number" min="0" max="99"></div>
+        <div class="cfg-row"><span>❤️ Thối Heo đỏ</span><input id="cfgFoulHeoDo" type="number" min="0" max="99"></div>
+        <div class="cfg-row"><span>🃏 Thối Tứ Quý</span><input id="cfgFoulTuQuy" type="number" min="0" max="99"></div>
+        <div class="cfg-row"><span>🔗 Thối 3 Đôi Thông</span><input id="cfgFoulBaDoiThong" type="number" min="0" max="99"></div>
+        <div class="cfg-row"><span>🔗 Thối 4+ Đôi Thông</span><input id="cfgFoulBoDoiThong" type="number" min="0" max="99"></div>
+        <div class="cfg-row" style="border-top:1px dashed var(--panel-line);padding-top:9px;margin-top:9px;"><span>🧊 Phạt Cóng — đền mỗi người</span><input id="cfgCongPerReceiver" type="number" min="0" max="99"></div>
+        <div style="font-size:11px;opacity:.6;margin-top:4px;">Người bị Cóng (không đánh được lá nào cả ván) đền số Nước này cho MỖI người còn lại trên bàn. Bàn càng đông, tổng đền càng lớn.</div>
+      </div>
+
+      <div class="rule-test-card">
+        <h4>🌟 Thưởng TỚI TRẮNG (ăn ngay lúc vừa chia bài)</h4>
+        <div class="cfg-row"><span>🐉 Sảnh Rồng (3 → A)</span><input id="cfgWinDragon" type="number" min="0" max="99"></div>
+        <div class="cfg-row"><span>🐷 Tứ Quý Heo (4 quân 2)</span><input id="cfgWinQuadHeo" type="number" min="0" max="99"></div>
+        <div class="cfg-row"><span>🃏 Tứ Quý 3 (ván đầu)</span><input id="cfgWinQuad3" type="number" min="0" max="99"></div>
+        <div class="cfg-row"><span>👥 Lục Đôi (6 đôi)</span><input id="cfgWinSixPairs" type="number" min="0" max="99"></div>
+        <div class="cfg-row"><span>🔗 Ngũ Đôi Thông (5 đôi)</span><input id="cfgWinFivePairsRun" type="number" min="0" max="99"></div>
+      </div>
+
+      <div class="rule-test-card">
+        <h4>🔊 Âm thanh tổng &amp; Bộ âm khi CHẶT</h4>
+        <div class="cfg-row"><span><b>Công tắc tổng — bật/tắt toàn bộ âm thanh</b></span><input id="cfgSoundMaster" type="checkbox"></div>
+        <div class="cfg-row"><span class="cfg-evt">💥 Âm khi CHẶT (BOM)</span><span class="cfg-evt"><input id="cfgEnChop" type="checkbox"><input id="cfgVolChop" type="range" min="0" max="1" step="0.05"></span></div>
+        <div style="font-size:11px;color:rgba(250,246,238,.6);margin:6px 0 4px;">Mỗi lần Chặt sẽ random 1 trong các âm đang bật bên dưới:</div>
+        <div class="cfg-row"><span>😭 CHOP 1 — Khóc đi</span><input id="cfgChopPool_CHOP_1" type="checkbox"></div>
+        <div class="cfg-row"><span>😱 CHOP 2 — Thầy Huấn ối giồi ôi</span><input id="cfgChopPool_CHOP_2" type="checkbox"></div>
+        <div class="cfg-row"><span>🥰 CHOP 3 — Trời đất ơi coi dễ thương hong</span><input id="cfgChopPool_CHOP_3" type="checkbox"></div>
+        <div class="cfg-row"><span>📣 CHOP 4 — Gọi gọi mày xông gọi</span><input id="cfgChopPool_CHOP_4" type="checkbox"></div>
+      </div>
+
+      <div class="rule-test-card">
+        <h4>🔊 Âm các sự kiện khác trong ván</h4>
+        <div class="cfg-row"><span class="cfg-evt">⏰ Tới lượt bạn (MY_TURN)</span><span class="cfg-evt"><input id="cfgEnMyTurn" type="checkbox"><input id="cfgVolMyTurn" type="range" min="0" max="1" step="0.05"></span></div>
+        <div class="cfg-row"><span class="cfg-evt">🃏 Đánh bài xuống bàn (PLAY_CARD)</span><span class="cfg-evt"><input id="cfgEnPlayCard" type="checkbox"><input id="cfgVolPlayCard" type="range" min="0" max="1" step="0.05"></span></div>
+        <div class="cfg-row"><span class="cfg-evt">🏆 Về Nhất (FINISH_1ST)</span><span class="cfg-evt"><input id="cfgEnFinish1st" type="checkbox"><input id="cfgVolFinish1st" type="range" min="0" max="1" step="0.05"></span></div>
+        <div class="cfg-row"><span class="cfg-evt">🥈 Về Nhì / Ba (FINISH_23)</span><span class="cfg-evt"><input id="cfgEnFinish23" type="checkbox"><input id="cfgVolFinish23" type="range" min="0" max="1" step="0.05"></span></div>
+        <div class="cfg-row"><span class="cfg-evt">🎉 Kết thúc ván (WOW — chốt kết quả)</span><span class="cfg-evt"><input id="cfgEnWinCry" type="checkbox"><input id="cfgVolWinCry" type="range" min="0" max="1" step="0.05"></span></div>
+        <div class="cfg-row"><span class="cfg-evt">😂 Icon Khóc/Cười/Hối/Cà khịa</span><span class="cfg-evt"><input id="cfgEnReaction" type="checkbox"><input id="cfgVolReaction" type="range" min="0" max="1" step="0.05"></span></div>
+        <div class="cfg-row"><span class="cfg-evt">🩴 Ném vật phẩm (dép, trứng, cà chua...)</span><span class="cfg-evt"><input id="cfgEnThrowItem" type="checkbox"><input id="cfgVolThrowItem" type="range" min="0" max="1" step="0.05"></span></div>
+      </div>
+
+      <div class="rule-test-card" style="grid-column:1/-1;">
+        <h4>🔗 Sửa Link Âm Thanh &amp; Nghe Thử (từng âm một)</h4>
+        <div style="font-size:11px;color:rgba(250,246,238,.6);margin-bottom:8px;">Dán link .mp3 (hoặc bất kỳ link audio phát trực tiếp được) vào từng ô, bấm <b>🔊 Nghe</b> để thử ngay không cần lưu. Bấm <b>💾 Lưu cấu hình</b> ở cuối trang để áp dụng link mới vào game.</div>
+        <div id="cfgUrlRows"></div>
+        <button class="btn btn-outline" id="btnResetSoundUrls" type="button" style="width:100%;margin-top:8px;">↩️ Khôi phục toàn bộ LINK âm thanh về mặc định</button>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:14px;">
+      <button class="btn btn-gold" id="btnSaveConfig" type="button">💾 Lưu cấu hình</button>
+      <button class="btn btn-danger" id="btnResetConfig" type="button">↩️ Khôi phục mặc định</button>
+    </div>
+    <div id="configSavedMsg" style="font-size:12px;color:var(--good);margin-top:8px;text-align:center;min-height:16px;"></div>
+  </div>
+</div>
+
 <div class="brand" id="brandHeader">
   <h1>♠ Tiến Lên Online ♥</h1>
   <div class="sub">Đánh Bài Tiến Lên Miền Nam - Luật Chuẩn Mới</div>
@@ -596,6 +695,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     <div style="margin-top: 10px;">
       <button class="btn btn-outline" id="btnOpenRules" style="width: 100%;">📜 Xem Bộ Luật Hoàn Chỉnh</button>
       <button class="btn btn-outline" id="btnOpenRuleTest" style="width: 100%; margin-top:8px;">🧪 PHÒNG TEST LUẬT (CHỈ TEST)</button>
+      <button class="btn btn-outline" id="btnOpenConfig" style="width: 100%; margin-top:8px;">⚙️ CẤU HÌNH BOM CHẶT · PHẠT · ÂM THANH</button>
     </div>
 
     <div class="public-rooms-box">
@@ -862,44 +962,99 @@ try {
 const PUBLIC_ROOMS_PATH = 'tienlen_public_rooms';
 const ROOM_TTL_MS = 15 * 60 * 1000;
 
+// GHI CHÚ VỀ NHIỀU BIẾN THỂ (RANDOM NHIỀU ÂM CHO 1 SỰ KIỆN):
+// Từ đây, mỗi key có thể là 1 CHUỖI (1 link duy nhất, kiểu cũ) HOẶC 1 MẢNG nhiều link
+// (nhiều biến thể, mỗi lần phát sẽ random 1 link trong mảng đó — giống hệt cơ chế
+// CHOP_1..CHOP_4 nhưng áp dụng chung cho MỌI sự kiện, không cần tạo key riêng như CHOP).
+// Xem resolveSoundUrl() để biết cách 1 key được "giải mã" ra link thật lúc phát.
 const SOUND_URLS = {
-  '🩴': 'https://www.myinstants.com/media/sounds/vine-boom.mp3',
-  '🥚': 'https://www.myinstants.com/media/sounds/cartoon-boing.mp3',
-  '🍅': 'https://www.myinstants.com/media/sounds/aughh.mp3',
-  '🍺': 'https://www.myinstants.com/media/sounds/cheering.mp3',
-  '🌹': 'https://www.myinstants.com/media/sounds/emotional-damage-meme.mp3',
-  '💩': 'https://www.myinstants.com/media/sounds/fart-with-reverb.mp3',
-  '🔥': 'https://www.myinstants.com/media/sounds/bruh-sound-effect.mp3',
+  '🩴': ['https://www.myinstants.com/media/sounds/vine-boom.mp3'],
+  '🥚': ['https://www.myinstants.com/media/sounds/cartoon-boing.mp3'],
+  '🍅': ['https://www.myinstants.com/media/sounds/aughh.mp3'],
+  '🍺': ['https://www.myinstants.com/media/sounds/cheering.mp3'],
+  '🌹': ['https://www.myinstants.com/media/sounds/emotional-damage-meme.mp3'],
+  '💩': ['https://www.myinstants.com/media/sounds/fart-with-reverb.mp3'],
+  '🔥': ['https://www.myinstants.com/media/sounds/bruh-sound-effect.mp3'],
   'CHOP': 'https://www.myinstants.com/media/sounds/explosion_1.mp3', // Giữ lại làm âm dự phòng (fallback); âm CHOP thật giờ random trong CHOP_1..CHOP_4 bên dưới
   // BỘ ÂM "CHẶT" NGẪU NHIÊN: mỗi lần có người bị chặt (BOM), random 1 trong 4 âm này,
   // đồng bộ để cả bàn cùng nghe chung 1 âm trong lần chặt đó (xem broadcastChopSound()).
+  // (Cơ chế riêng, có checkbox bật/tắt từng âm ở trang Cấu Hình — KHÔNG dùng hệ mảng chung ở trên.)
   'CHOP_1': 'https://www.myinstants.com/media/sounds/khoc-di.mp3', // Khóc đi
   'CHOP_2': 'https://www.myinstants.com/media/sounds/thay-huan-oi-gioi-oi.mp3', // thầy huấn ối giồi ôi
   'CHOP_3': 'https://www.myinstants.com/media/sounds/cbvn-troi-dat-oi-coi-de-thuong-hong.mp3', // CBVN Trời Đất Ơi Coi Dễ Thương Hong
   'CHOP_4': 'https://www.myinstants.com/media/sounds/goi-goi-may-xong-goi.mp3', // goi goi may xong goi
-  'CRY': 'https://www.myinstants.com/media/sounds/anime-wow-sound-effect.mp3',
-  'PLAY_CARD': 'https://www.myinstants.com/media/sounds/card-flip.mp3',
-  'MY_TURN': 'https://www.myinstants.com/media/sounds/level-up-1-199577.mp3',
+  'CRY': ['https://www.myinstants.com/media/sounds/anime-wow-sound-effect.mp3'],
+  'PLAY_CARD': ['https://www.myinstants.com/media/sounds/card-flip.mp3'],
+  'MY_TURN': ['https://www.myinstants.com/media/sounds/level-up-1-199577.mp3'],
   // REACTION KHÓC/CƯỜI: bấm vào chính mình để chọn 1 trong các icon này
-  'CRY1': 'https://www.myinstants.com/media/sounds/best-cry-ever-trimmed.mp3',
-  'CRY2': 'https://www.myinstants.com/media/sounds/why-you-crying-vine.mp3',
-  'CRY3': 'https://www.myinstants.com/media/sounds/asdasd_xyorzJ8.mp3',
-  'LAUGH1': 'https://www.myinstants.com/media/sounds/evillaugh.swf.mp3',
-  'LAUGH2': 'https://www.myinstants.com/media/sounds/ny-video-online-audio-converter.mp3',
-  'LAUGH3': 'https://www.myinstants.com/media/sounds/laughing-dog-meme.mp3',
-  'WAIT1': 'https://www.myinstants.com/media/sounds/linda-chi-cho-cung-nay-gio-ne.mp3', // Chị chờ nãy giờ Linda - hối người chơi lâu ra bài
-  'CRY4': 'https://www.myinstants.com/media/sounds/ban-cay-khong-kho-chiu-khong-khoc-de_xTW4U8q.mp3', // Bạn cay không, khó chịu không, khóc đê
-  'TAUNT1': 'https://www.myinstants.com/media/sounds/khong-lam-ma-oi-co-an-thi-an-cut-mp3cut.mp3', // huấn rose
-  'TAUNT2': 'https://www.myinstants.com/media/sounds/thoi-ong-im-me-cai-mom-i-_-tuan-tien-ti_8as8efd6f5k.mp3', // Thôi ông im mẹ nó mồm đi
+  'CRY1': ['https://www.myinstants.com/media/sounds/best-cry-ever-trimmed.mp3'],
+  'CRY2': ['https://www.myinstants.com/media/sounds/why-you-crying-vine.mp3'],
+  'CRY3': ['https://www.myinstants.com/media/sounds/asdasd_xyorzJ8.mp3'],
+  'LAUGH1': ['https://www.myinstants.com/media/sounds/evillaugh.swf.mp3'],
+  'LAUGH2': ['https://www.myinstants.com/media/sounds/ny-video-online-audio-converter.mp3'],
+  'LAUGH3': ['https://www.myinstants.com/media/sounds/laughing-dog-meme.mp3'],
+  'WAIT1': ['https://www.myinstants.com/media/sounds/linda-chi-cho-cung-nay-gio-ne.mp3'], // Chị chờ nãy giờ Linda - hối người chơi lâu ra bài
+  'CRY4': ['https://www.myinstants.com/media/sounds/ban-cay-khong-kho-chiu-khong-khoc-de_xTW4U8q.mp3'], // Bạn cay không, khó chịu không, khóc đê
+  'TAUNT1': ['https://www.myinstants.com/media/sounds/khong-lam-ma-oi-co-an-thi-an-cut-mp3cut.mp3'], // huấn rose
+  'TAUNT2': ['https://www.myinstants.com/media/sounds/thoi-ong-im-me-cai-mom-i-_-tuan-tien-ti_8as8efd6f5k.mp3'], // Thôi ông im mẹ nó mồm đi
   // ÂM "VỀ ĐÍCH": phát khi có người hết bài. Hạng 1 dùng FINISH_1ST, hạng 2-3 dùng FINISH_23.
-  'FINISH_1ST': 'https://www.myinstants.com/media/sounds/day-no-phai-the-chu-li-thang-nay-kha-va-gioi.mp3', // Đấy nó phải thế chứ lị, thằng này khá và giỏi
-  'FINISH_23': 'https://www.myinstants.com/media/sounds/kids-saying-yay-sound-effect_3.mp3' // YAAAAAAAAY
+  'FINISH_1ST': ['https://www.myinstants.com/media/sounds/day-no-phai-the-chu-li-thang-nay-kha-va-gioi.mp3'], // Đấy nó phải thế chứ lị, thằng này khá và giỏi
+  'FINISH_23': ['https://www.myinstants.com/media/sounds/kids-saying-yay-sound-effect_3.mp3'] // YAAAAAAAAY
 };
+
+// Trả về 1 link THẬT SỰ để phát, cho 1 key bất kỳ trong SOUND_URLS:
+// - Nếu key là mảng nhiều biến thể → random đều 1 link trong mảng (bỏ qua chuỗi rỗng).
+// - Nếu key là 1 chuỗi đơn (kiểu cũ, ví dụ CHOP_1..4) → trả về nguyên chuỗi đó.
+function resolveSoundUrl(item){
+  const raw = SOUND_URLS[item];
+  if(Array.isArray(raw)){
+    const pool = raw.filter(u => typeof u === 'string' && u.trim());
+    if(!pool.length) return '';
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+  return raw || '';
+}
+
+// Bản sao GỐC của toàn bộ link âm thanh, dùng để "Khôi phục mặc định" ở trang Cấu Hình.
+const DEFAULT_SOUND_URLS = JSON.parse(JSON.stringify(SOUND_URLS));
+const SOUND_URLS_STORAGE_KEY = 'tienlen_sound_urls_v2'; // v2: đổi sang định dạng mảng nhiều biến thể
+
+function loadSoundUrls(){
+  try{
+    const raw = localStorage.getItem(SOUND_URLS_STORAGE_KEY);
+    if(!raw) return;
+    const saved = JSON.parse(raw);
+    if(!saved || typeof saved !== 'object') return;
+    Object.keys(DEFAULT_SOUND_URLS).forEach(key=>{
+      const v = saved[key];
+      const isMultiKey = Array.isArray(DEFAULT_SOUND_URLS[key]);
+      const cleanOne = s => (typeof s === 'string' && s.trim() && s.trim().toLowerCase().indexOf('javascript:') !== 0) ? s.trim() : null;
+      if(isMultiKey){
+        // Chấp nhận cả mảng lẫn chuỗi đơn cũ (di trú dữ liệu lưu từ bản trước).
+        const arr = Array.isArray(v) ? v : (typeof v === 'string' ? [v] : []);
+        const clean = arr.map(cleanOne).filter(Boolean);
+        if(clean.length) SOUND_URLS[key] = clean;
+      } else {
+        const c = cleanOne(v);
+        if(c) SOUND_URLS[key] = c;
+      }
+    });
+  }catch(e){ console.warn('Không đọc được link âm thanh tuỳ chỉnh, dùng mặc định.', e); }
+}
+function saveSoundUrls(){
+  try{ localStorage.setItem(SOUND_URLS_STORAGE_KEY, JSON.stringify(SOUND_URLS)); }catch(e){ console.warn('Không lưu được link âm thanh.', e); }
+}
+// Nạp link tuỳ chỉnh (nếu có) NGAY trước khi preload, để lần phát đầu tiên đã dùng đúng link mới.
+loadSoundUrls();
 
 // Danh sách các key âm "chặt" để random mỗi lần chặt
 const CHOP_SOUND_KEYS = ['CHOP_1','CHOP_2','CHOP_3','CHOP_4'];
 function pickRandomChopSound(){
-  return CHOP_SOUND_KEYS[Math.floor(Math.random() * CHOP_SOUND_KEYS.length)];
+  // Chỉ random trong các âm CHẶT đang được BẬT ở trang Cấu Hình.
+  // Nếu người dùng lỡ tắt hết, rơi về dùng lại toàn bộ 4 âm mặc định để không bị câm lặng.
+  const active = CHOP_SOUND_KEYS.filter(k => SOUND_CONFIG.chopPool[k] !== false);
+  const pool = active.length ? active : CHOP_SOUND_KEYS;
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 // Nhãn hiện trong bong bóng thoại tại ghế khi ai đó bấm reaction khóc/cười/hối/cà khịa
@@ -916,23 +1071,159 @@ const REACTION_LABELS = {
   TAUNT2: '🤐 Im mẹ nó mồm đi!'
 };
 
-// --- PRELOAD ÂM THANH: nạp sẵn tất cả file mp3 ngay khi trang tải xong,
-// để khi cần phát (đặc biệt PLAY_CARD) không bị trễ do phải tải mạng lúc đó. ---
-const SOUND_CACHE = {};
+// ================================================================
+// TRANG CẤU HÌNH RIÊNG: BOM CHẶT / PHẠT THỐI / THƯỞNG TỚI TRẮNG / ÂM THANH
+// Toàn bộ số "Nước" của Bom khi Chặt, số Nước phạt Thối khi kết ván, số Nước
+// thưởng Tới Trắng, và việc âm nào phát cho sự kiện nào đều đọc từ 2 object
+// GAME_CONFIG / SOUND_CONFIG bên dưới thay vì số cứng rải rác trong code.
+// DEFAULT_* giữ nguyên giá trị mặc định hiện tại của game để có thể bấm
+// "Khôi phục mặc định" bất cứ lúc nào. Cấu hình được lưu riêng theo từng
+// trình duyệt (localStorage), không ảnh hưởng người chơi khác.
+// ================================================================
+const DEFAULT_GAME_CONFIG = {
+  chop: {           // Giá trị (Nước) CỘNG VÀO BOM khi 1 bộ bị chặt
+    heoDen: 1,        // Heo đen (♠♣) bị chặt
+    heoDo: 2,         // Heo đỏ (♦♥) bị chặt
+    tuQuy: 3,         // Tứ Quý bị chặt (hoặc 3 Đôi Thông bị Tứ Quý/4+ Đôi Thông chặt)
+    baDoiThong: 3,    // 3 Đôi Thông bị chặt
+    boDoiThongTro: 4  // 4+ Đôi Thông (hoặc Tứ Quý bị 4+ Đôi Thông) bị chặt
+  },
+  foul: {           // Phạt THỐI (Nước) khi kết ván còn sót bộ đặc biệt trên tay
+    heoDen: 1,
+    heoDo: 2,
+    tuQuy: 4,
+    baDoiThong: 3,
+    boDoiThongTro: 4
+  },
+  instantWin: {     // Thưởng TỚI TRẮNG (Nước/người) khi ăn ngay lúc chia bài
+    sanhRong: 6,          // Sảnh Rồng (3 → A)
+    tuQuyHeo: 4,          // Tứ Quý Heo (đủ 4 quân 2)
+    tuQuy3DauVan: 4,      // Tứ Quý 3 — chỉ tính ván đầu tiên của trận
+    lucDoi: 4,            // Lục Đôi (6 đôi bất kỳ)
+    nguDoiThong: 3        // Ngũ Đôi Thông (5 đôi liên tiếp)
+  },
+  cong: {           // Phạt CÓNG (không đánh được lá nào suốt ván)
+    perReceiver: 2   // Số Nước người bị Cóng đền cho MỖI người còn lại trên bàn
+  }
+};
+let GAME_CONFIG = JSON.parse(JSON.stringify(DEFAULT_GAME_CONFIG));
+
+function _mergeNumericConfig(defaults, saved){
+  const out = JSON.parse(JSON.stringify(defaults));
+  if(!saved || typeof saved !== 'object') return out;
+  Object.keys(out).forEach(section=>{
+    if(!saved[section] || typeof saved[section] !== 'object') return;
+    Object.keys(out[section]).forEach(key=>{
+      const v = Number(saved[section][key]);
+      if(Number.isFinite(v) && v >= 0) out[section][key] = v;
+    });
+  });
+  return out;
+}
+
+const GAME_CONFIG_STORAGE_KEY = 'tienlen_game_config_v1';
+function loadGameConfig(){
+  try{
+    const raw = localStorage.getItem(GAME_CONFIG_STORAGE_KEY);
+    GAME_CONFIG = _mergeNumericConfig(DEFAULT_GAME_CONFIG, raw ? JSON.parse(raw) : null);
+  }catch(e){ console.warn('Không đọc được cấu hình BOM/PHẠT đã lưu, dùng mặc định.', e); GAME_CONFIG = JSON.parse(JSON.stringify(DEFAULT_GAME_CONFIG)); }
+}
+function saveGameConfig(){
+  try{ localStorage.setItem(GAME_CONFIG_STORAGE_KEY, JSON.stringify(GAME_CONFIG)); }catch(e){ console.warn('Không lưu được cấu hình BOM/PHẠT.', e); }
+}
+loadGameConfig();
+
+// Cấu hình ÂM THANH: bật/tắt + âm lượng riêng theo TỪNG NHÓM sự kiện, và chọn
+// những âm nào được phép random trong bộ âm CHẶT (CHOP_1..CHOP_4).
+const DEFAULT_SOUND_CONFIG = {
+  masterEnabled: true, // Công tắc tổng: tắt là im lặng toàn bộ, bất kể cấu hình bên dưới
+  chopPool: { CHOP_1:true, CHOP_2:true, CHOP_3:true, CHOP_4:true }, // Âm nào được random khi có người CHẶT (BOM)
+  enabled: {
+    chop:true,      // Âm khi CHẶT (BOM nổ)
+    myTurn:true,    // Âm báo tới lượt mình
+    playCard:true,  // Âm đánh bài (mỗi lá đặt xuống bàn)
+    finish1st:true, // Âm khi có người về Nhất
+    finish23:true,  // Âm khi có người về Nhì/Ba
+    winCry:true,    // Âm khi kết thúc ván (chốt kết quả)
+    reaction:true,  // Âm các icon Khóc/Cười/Hối/Cà khịa người chơi tự bấm
+    throwItem:true  // Âm khi ném vật phẩm (dép, trứng, cà chua...) vào người khác
+  },
+  volumes: {
+    chop:0.9, myTurn:1.0, playCard:0.5, finish1st:0.9, finish23:0.9,
+    winCry:0.95, reaction:0.9, throwItem:0.9
+  }
+};
+let SOUND_CONFIG = JSON.parse(JSON.stringify(DEFAULT_SOUND_CONFIG));
+
+const SOUND_CONFIG_STORAGE_KEY = 'tienlen_sound_config_v1';
+function loadSoundConfig(){
+  try{
+    const raw = localStorage.getItem(SOUND_CONFIG_STORAGE_KEY);
+    const saved = raw ? JSON.parse(raw) : null;
+    const out = JSON.parse(JSON.stringify(DEFAULT_SOUND_CONFIG));
+    if(saved && typeof saved === 'object'){
+      if(typeof saved.masterEnabled === 'boolean') out.masterEnabled = saved.masterEnabled;
+      if(saved.chopPool) Object.keys(out.chopPool).forEach(k=>{ if(typeof saved.chopPool[k]==='boolean') out.chopPool[k]=saved.chopPool[k]; });
+      if(saved.enabled) Object.keys(out.enabled).forEach(k=>{ if(typeof saved.enabled[k]==='boolean') out.enabled[k]=saved.enabled[k]; });
+      if(saved.volumes) Object.keys(out.volumes).forEach(k=>{ const v=Number(saved.volumes[k]); if(Number.isFinite(v)) out.volumes[k]=Math.min(1,Math.max(0,v)); });
+    }
+    SOUND_CONFIG = out;
+  }catch(e){ console.warn('Không đọc được cấu hình ÂM THANH đã lưu, dùng mặc định.', e); SOUND_CONFIG = JSON.parse(JSON.stringify(DEFAULT_SOUND_CONFIG)); }
+}
+function saveSoundConfig(){
+  try{ localStorage.setItem(SOUND_CONFIG_STORAGE_KEY, JSON.stringify(SOUND_CONFIG)); }catch(e){ console.warn('Không lưu được cấu hình ÂM THANH.', e); }
+}
+loadSoundConfig();
+
+// Xác định 1 soundKey (vd 'CHOP_2', 'MY_TURN', 'CRY1', '🩴'...) thuộc nhóm cấu hình nào
+function getSoundCategory(item){
+  if(item === 'CHOP' || (typeof item === 'string' && item.indexOf('CHOP_') === 0)) return 'chop';
+  if(item === 'MY_TURN') return 'myTurn';
+  if(item === 'PLAY_CARD') return 'playCard';
+  if(item === 'FINISH_1ST') return 'finish1st';
+  if(item === 'FINISH_23') return 'finish23';
+  if(item === 'CRY') return 'winCry'; // Âm WOW khi kết thúc ván, khác với CRY1..CRY4 (reaction)
+  if(Object.prototype.hasOwnProperty.call(REACTION_LABELS, item)) return 'reaction';
+  return 'throwItem'; // Các icon ném vật phẩm (🩴🥚🍅🍺🌹💩🔥...)
+}
+
+// --- PRELOAD ÂM THANH: nạp sẵn tất cả file mp3 (kể cả MỌI biến thể trong các mảng)
+// ngay khi trang tải xong, để khi cần phát (đặc biệt PLAY_CARD) không bị trễ do phải
+// tải mạng lúc đó. Cache được đánh index theo CHÍNH LINK (url), không theo tên key,
+// vì 1 key giờ có thể trỏ tới nhiều link khác nhau. ---
+const SOUND_CACHE = {}; // url -> Audio
+function _allSoundUrls(){
+  const out = [];
+  Object.values(SOUND_URLS).forEach(v=>{
+    if(Array.isArray(v)) v.forEach(u=>{ if(typeof u==='string' && u.trim()) out.push(u.trim()); });
+    else if(typeof v==='string' && v.trim()) out.push(v.trim());
+  });
+  return out;
+}
 function preloadAllSounds(){
-  Object.keys(SOUND_URLS).forEach(key => {
+  _allSoundUrls().forEach(url => {
+    if(SOUND_CACHE[url]) return; // đã có sẵn, khỏi tải lại
     try {
       const a = new Audio();
       a.preload = 'auto';
-      a.src = SOUND_URLS[key];
+      a.src = url;
       a.load();
-      SOUND_CACHE[key] = a;
+      SOUND_CACHE[url] = a;
     } catch(err){}
   });
 }
 // Bắt đầu preload ngay (một số trình duyệt cần tương tác người dùng đầu tiên
 // mới cho phép audio autoplay, nhưng việc load/buffer file vẫn diễn ra được).
 preloadAllSounds();
+
+// Gọi lại sau khi người dùng SỬA LINK ở trang Cấu Hình: xoá sạch cache Audio cũ rồi
+// nạp lại toàn bộ theo SOUND_URLS mới nhất, để lần phát tiếp theo dùng đúng (các) link
+// vừa lưu mà không cần tải lại trang.
+function refreshSoundCache(){
+  Object.keys(AUDIO_PLAYERS).forEach(k => delete AUDIO_PLAYERS[k]);
+  Object.keys(SOUND_CACHE).forEach(k => delete SOUND_CACHE[k]);
+  preloadAllSounds();
+}
 
 // --- MỞ KHÓA ÂM THANH TRÊN MOBILE (iOS Safari / Chrome Android) ---
 // Các trình duyệt di động CHẶN mọi tiếng phát ra bằng JS nếu nó không nằm
@@ -999,23 +1290,31 @@ function broadcastChopSound(){
   playChopControlled(soundKey);
 }
 
-const AUDIO_PLAYERS = {};
-const AUDIO_LAST_PLAY = {};
+const AUDIO_PLAYERS = {}; // url -> Audio (tái dùng để không tạo mới liên tục)
+const AUDIO_LAST_PLAY = {}; // dedupe theo ITEM (soundKey), không theo url, để chặn đúng cả khi 2 lần phát random ra 2 biến thể khác nhau
 const AUDIO_DEDUPE_MS = 180;
 
 function playGlobalSound(item, customVolume = 0.9){
-  const url = SOUND_URLS[item];
-  if(!url) return;
-  const vol = Math.min(Math.max(Number(customVolume) || 0.9, 0.05), 1.0);
+  // Mọi đường phát âm (bấm tại chỗ, nhận qua broadcast, bot...) đều đi qua đây,
+  // nên chỉ cần chặn/chỉnh âm lượng ở MỘT nơi duy nhất là áp dụng được cho toàn bộ game.
+  const category = getSoundCategory(item);
+  if(!SOUND_CONFIG.masterEnabled || SOUND_CONFIG.enabled[category] === false) return;
   const now = performance.now();
   if(AUDIO_LAST_PLAY[item] && now - AUDIO_LAST_PLAY[item] < AUDIO_DEDUPE_MS) return;
+  // Random 1 biến thể NGAY TẠI ĐÂY (nếu key có nhiều link) — mỗi lần gọi playGlobalSound
+  // là 1 lần "rút thăm" độc lập, nên phát nhiều lần liên tiếp cùng sự kiện sẽ nghe khác nhau.
+  const url = resolveSoundUrl(item);
+  if(!url) return;
   AUDIO_LAST_PLAY[item] = now;
+  const configuredVol = SOUND_CONFIG.volumes[category];
+  const baseVol = (typeof configuredVol === 'number') ? configuredVol : (Number(customVolume) || 0.9);
+  const vol = Math.min(Math.max(baseVol, 0.05), 1.0);
   try {
-    let audio = AUDIO_PLAYERS[item];
+    let audio = AUDIO_PLAYERS[url];
     if(!audio){
-      audio = SOUND_CACHE[item] || new Audio(url);
+      audio = SOUND_CACHE[url] || new Audio(url);
       audio.preload = 'auto';
-      AUDIO_PLAYERS[item] = audio;
+      AUDIO_PLAYERS[url] = audio;
     }
     audio.pause();
     audio.currentTime = 0;
@@ -1283,15 +1582,15 @@ function canBeat(next, curr){
   return next.highS > curr.highS;
 }
 
-// Giá trị "nước" của 1 lá Heo (quân 2) theo màu: Đỏ (♦♥) = 2, Đen (♠♣) = 1
+// Giá trị "nước" của 1 lá Heo (quân 2) theo màu: Đỏ (♦♥) / Đen (♠♣) — lấy từ trang Cấu Hình
 function heoCardValue(card){
-  return (card.s === 2 || card.s === 3) ? 2 : 1;
+  return (card.s === 2 || card.s === 3) ? GAME_CONFIG.chop.heoDo : GAME_CONFIG.chop.heoDen;
 }
 
 function calculateChopReward(next, curr, activePlayersCount = 4){
   if(!curr) return 0;
   if(curr.type === 'single' && curr.cards[0].r === 12){
-    // Chặt Heo đơn: giá trị = đúng giá trị của lá Heo bị chặt (Đen=1, Đỏ=2)
+    // Chặt Heo đơn: giá trị = đúng giá trị của lá Heo bị chặt (Đen/Đỏ theo Cấu Hình)
     if(next.type === 'quad' || (next.type === 'pairs_run' && next.count >= 3)) return heoCardValue(curr.cards[0]);
   }
   if(curr.type === 'pair' && curr.cards[0].r === 12){
@@ -1302,17 +1601,17 @@ function calculateChopReward(next, curr, activePlayersCount = 4){
       return heoCardValue(curr.cards[0]) + heoCardValue(curr.cards[1]);
     }
     // Chặt đôi Heo bằng Tứ Quý / 4+ Đôi Thông: giá trị = TỔNG giá trị 2 lá trong đôi
-    // (Đen+Đen=2, Đen+Đỏ=3, Đỏ+Đỏ=4).
+    // (dựa theo giá trị Heo đen/đỏ đang cấu hình).
     if(next.type === 'quad' || (next.type === 'pairs_run' && next.count >= 4)) {
       return heoCardValue(curr.cards[0]) + heoCardValue(curr.cards[1]);
     }
   }
-  if(curr.type === 'pairs_run' && curr.count === 3 && (next.type === 'quad' || (next.type === 'pairs_run' && next.count >= 4))) return 3;
-  if(curr.type === 'quad' && next.type === 'quad') return 3;
-  if(curr.type === 'quad' && next.type === 'pairs_run' && next.count >= 4) return 4;
-  if(curr.type === 'pairs_run' && curr.count >= 4 && next.type === 'pairs_run' && next.count > curr.count) return 4;
+  if(curr.type === 'pairs_run' && curr.count === 3 && (next.type === 'quad' || (next.type === 'pairs_run' && next.count >= 4))) return GAME_CONFIG.chop.baDoiThong;
+  if(curr.type === 'quad' && next.type === 'quad') return GAME_CONFIG.chop.tuQuy;
+  if(curr.type === 'quad' && next.type === 'pairs_run' && next.count >= 4) return GAME_CONFIG.chop.boDoiThongTro;
+  if(curr.type === 'pairs_run' && curr.count >= 4 && next.type === 'pairs_run' && next.count > curr.count) return GAME_CONFIG.chop.boDoiThongTro;
   if(curr.type === 'pairs_run' && curr.count >= 4 && next.type === 'pairs_run' && next.count === curr.count &&
-     (next.highR > curr.highR || (next.highR === curr.highR && next.highS > curr.highS))) return 4;
+     (next.highR > curr.highR || (next.highR === curr.highR && next.highS > curr.highS))) return GAME_CONFIG.chop.boDoiThongTro;
   return 0;
 }
 
@@ -1322,15 +1621,17 @@ function checkFoulPunishment(handCards) {
   let totalPenalty = 0;
   let details = [];
 
-  // 1. Phạt Thối Heo
+  // 1. Phạt Thối Heo (mức phạt lấy từ trang Cấu Hình)
   handCards.forEach(c => {
     if (c.r === 12) { // Lá 2
       if (c.s === 2 || c.s === 3) { // Heo đỏ (♦, ♥)
-        totalPenalty += 2;
-        details.push(`Thối Heo Đỏ ${RANKS[c.r]}${SUITS[c.s]} (-2)`);
+        const p = GAME_CONFIG.foul.heoDo;
+        totalPenalty += p;
+        details.push(`Thối Heo Đỏ ${RANKS[c.r]}${SUITS[c.s]} (-${p})`);
       } else { // Heo đen (♠, ♣)
-        totalPenalty += 1;
-        details.push(`Thối Heo Đen ${RANKS[c.r]}${SUITS[c.s]} (-1)`);
+        const p = GAME_CONFIG.foul.heoDen;
+        totalPenalty += p;
+        details.push(`Thối Heo Đen ${RANKS[c.r]}${SUITS[c.s]} (-${p})`);
       }
     }
   });
@@ -1341,8 +1642,9 @@ function checkFoulPunishment(handCards) {
   // Kiểm tra Tứ quý
   const quads = combos.filter(cb => cb.type === 'quad');
   quads.forEach(q => {
-    totalPenalty += 4;
-    details.push(`Thối Tứ Quý ${RANKS[q.highR]} (-4)`);
+    const p = GAME_CONFIG.foul.tuQuy;
+    totalPenalty += p;
+    details.push(`Thối Tứ Quý ${RANKS[q.highR]} (-${p})`);
   });
 
   // Kiểm tra Đôi thông (3 hoặc 4+ đôi thông) — dùng dãy đôi liên tiếp DÀI NHẤT, tránh đếm trùng
@@ -1350,11 +1652,13 @@ function checkFoulPunishment(handCards) {
   const maxPairRuns = findMaxPairRuns(handCards);
   maxPairRuns.forEach(run => {
     if (run.count === 3) {
-      totalPenalty += 3;
-      details.push(`Thối 3 Đôi Thông ${RANKS[run.fromR]}→${RANKS[run.toR]} (-3)`);
+      const p = GAME_CONFIG.foul.baDoiThong;
+      totalPenalty += p;
+      details.push(`Thối 3 Đôi Thông ${RANKS[run.fromR]}→${RANKS[run.toR]} (-${p})`);
     } else if (run.count >= 4) {
-      totalPenalty += 4;
-      details.push(`Thối ${run.count} Đôi Thông ${RANKS[run.fromR]}→${RANKS[run.toR]} (-4)`);
+      const p = GAME_CONFIG.foul.boDoiThongTro;
+      totalPenalty += p;
+      details.push(`Thối ${run.count} Đôi Thông ${RANKS[run.fromR]}→${RANKS[run.toR]} (-${p})`);
     }
   });
 
@@ -1391,7 +1695,7 @@ function checkInstantWin(handCards, options = {}) {
   let hasDragon = true;
   for (let r = 0; r <= 11; r++) { if (!ranksPresent.has(r)) { hasDragon = false; break; } }
   if (hasDragon && cs.filter(c => c.r === 12).length === 1) {
-    return { type: 'dragon', label: 'Sảnh Rồng (3 → A)', reward: 6 };
+    return { type: 'dragon', label: 'Sảnh Rồng (3 → A)', reward: GAME_CONFIG.instantWin.sanhRong };
   }
 
   // 2. Tứ Quý Heo: đủ cả 4 quân 2 -> Tới Trắng.
@@ -1399,14 +1703,14 @@ function checkInstantWin(handCards, options = {}) {
   // Giữ mức thưởng 4 nước/người, cùng mức với Lục Đôi hiện tại.
   const hasQuadDeuce = cs.filter(c => c.r === 12).length === 4;
   if (hasQuadDeuce) {
-    return { type: 'quad_deuce', label: 'Tứ Quý Heo (4 quân 2)', reward: 4 };
+    return { type: 'quad_deuce', label: 'Tứ Quý Heo (4 quân 2)', reward: GAME_CONFIG.instantWin.tuQuyHeo };
   }
 
   // 3. Ván đầu tiên của trận đấu: đủ Tứ Quý 3 -> Tới Trắng.
   // Chỉ bật khi dealNewGame truyền options.isFirstGame = true.
   const hasQuadThree = cs.filter(c => c.r === 0).length === 4;
   if (options.isFirstGame && hasQuadThree) {
-    return { type: 'quad_three_first_game', label: 'Tứ Quý 3 — Tới Trắng ván đầu tiên', reward: 4 };
+    return { type: 'quad_three_first_game', label: 'Tứ Quý 3 — Tới Trắng ván đầu tiên', reward: GAME_CONFIG.instantWin.tuQuy3DauVan };
   }
 
   // 4. Lục Đôi: có đúng 6 đôi trong tay (bất kỳ rank nào)
@@ -1415,13 +1719,13 @@ function checkInstantWin(handCards, options = {}) {
   let pairCount = 0;
   Object.values(rankCount).forEach(cnt => { pairCount += Math.floor(cnt/2); });
   if (pairCount >= 6) {
-    return { type: 'six_pairs', label: 'Lục Đôi (6 đôi)', reward: 4 };
+    return { type: 'six_pairs', label: 'Lục Đôi (6 đôi)', reward: GAME_CONFIG.instantWin.lucDoi };
   }
 
   // 5. Ngũ Đôi Thông: 5 đôi liên tiếp (10 lá) nằm trong tay, không chứa đôi 2
   const combos5 = getAllPossibleCombos(cs).filter(cb => cb.type === 'pairs_run' && cb.count >= 5);
   if (combos5.length > 0) {
-    return { type: 'five_pairs_run', label: 'Ngũ Đôi Thông (5 đôi thông)', reward: 3 };
+    return { type: 'five_pairs_run', label: 'Ngũ Đôi Thông (5 đôi thông)', reward: GAME_CONFIG.instantWin.nguDoiThong };
   }
 
   return null;
@@ -2930,7 +3234,7 @@ function endGame(){
       // Bàn 2: -2, người kia +2.
       // THỐI KHÔNG gộp vào đây; Thối trả riêng cho người ép/chặn.
       if (id !== winnerId && congCandidateIds.has(id)) {
-        const congPerReceiver = 2;
+        const congPerReceiver = GAME_CONFIG.cong.perReceiver;
         const congOnlyDebt = -congPerReceiver * (activeCount - 1);
         congExtraTotal += Math.abs(congOnlyDebt);
         congIds.add(id);
@@ -2962,7 +3266,7 @@ function endGame(){
       }
       let foulScore = 0;
       let foulText = "";
-      let congText = congIds.has(id) ? ` | 🧊 Bị Cóng: đền ${activeCount === 4 ? 6 : activeCount === 3 ? 4 : 2} Nước cho ${activeCount - 1} người còn lại` : "";
+      let congText = congIds.has(id) ? ` | 🧊 Bị Cóng: đền ${GAME_CONFIG.cong.perReceiver * (activeCount - 1)} Nước cho ${activeCount - 1} người còn lại` : "";
       let congBonusText = "";
 
       // Nhận đền thối bài của người khác.
@@ -4341,6 +4645,320 @@ $('btnRunRuleTests').onclick=()=>rtRender(rtAllTests(),'Kiểm tra logic lõi hi
 $('btnRandomRuleCase').onclick=rtRandomScenario;
 $('btnRunStressTests').onclick=rtStress;
 $('btnClearRuleTests').onclick=()=>{ $('ruleTestSummary').textContent='Đã xóa kết quả.'; $('ruleTestResult').textContent='Chưa có dữ liệu.'; };
+
+// ================================================================
+// TRANG CẤU HÌNH RIÊNG: BOM CHẶT / PHẠT THỐI / THƯỞNG TỚI TRẮNG / ÂM THANH
+// Chỉ đọc/ghi 2 object GAME_CONFIG và SOUND_CONFIG (định nghĩa ở đầu file,
+// cạnh SOUND_URLS). Không đụng tới trạng thái ván đang chơi.
+// ================================================================
+function clampCfgInt(v, fallback){
+  const n = Number(v);
+  return (Number.isFinite(n) && n >= 0) ? Math.round(n) : fallback;
+}
+function clampCfgVol(v){
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0.9;
+}
+
+// Danh sách TẤT CẢ các key âm thanh có trong SOUND_URLS, kèm nhãn tiếng Việt dễ hiểu,
+// dùng để tự sinh các dòng "sửa link + nghe thử" trong trang Cấu Hình.
+const SOUND_KEY_META = [
+  { key:'CHOP_1', label:'😭 CHOP 1 — Khóc đi' },
+  { key:'CHOP_2', label:'😱 CHOP 2 — Thầy Huấn ối giồi ôi' },
+  { key:'CHOP_3', label:'🥰 CHOP 3 — Trời đất ơi coi dễ thương hong' },
+  { key:'CHOP_4', label:'📣 CHOP 4 — Gọi gọi mày xông gọi' },
+  { key:'CHOP', label:'💥 CHOP dự phòng (ít khi dùng tới)' },
+  { key:'MY_TURN', label:'⏰ Tới lượt bạn' },
+  { key:'PLAY_CARD', label:'🃏 Đánh bài xuống bàn' },
+  { key:'FINISH_1ST', label:'🏆 Về Nhất' },
+  { key:'FINISH_23', label:'🥈 Về Nhì / Ba' },
+  { key:'CRY', label:'🎉 Kết thúc ván (WOW — chốt kết quả)' },
+  { key:'CRY1', label:'😭 Reaction: Khóc thét' },
+  { key:'CRY2', label:'😢 Reaction: Khóc hờn' },
+  { key:'CRY3', label:'👶 Reaction: Khóc như con nít' },
+  { key:'CRY4', label:'😾 Reaction: Cay không, khóc đê' },
+  { key:'LAUGH1', label:'😂 Reaction: Cười khinh' },
+  { key:'LAUGH2', label:'🤣 Reaction: Cười sảng khoái' },
+  { key:'LAUGH3', label:'🐶 Reaction: Cười sặc' },
+  { key:'WAIT1', label:'⏳ Reaction: Chị chờ nãy giờ Linda' },
+  { key:'TAUNT1', label:'🌹 Reaction: Huấn Rose' },
+  { key:'TAUNT2', label:'🤐 Reaction: Im mẹ nó mồm đi' },
+  { key:'🩴', label:'🩴 Ném: Dép thần thánh' },
+  { key:'🥚', label:'🥚 Ném: Trứng vỡ' },
+  { key:'🍅', label:'🍅 Ném: Cà chua' },
+  { key:'🍺', label:'🍺 Ném: Cốc bia' },
+  { key:'🌹', label:'🌹 Ném: Hoa hồng' },
+  { key:'💩', label:'💩 Ném: Cục cứt' },
+  { key:'🔥', label:'🔥 Ném: Lửa đốt' }
+];
+// Emoji không dùng trực tiếp làm id HTML được (id phải là chuỗi an toàn),
+// nên chuyển từng ký tự sang mã charCode để tạo id duy nhất, ổn định.
+function safeIdFor(key){
+  return 'cfgUrl_' + key.split('').map(ch => ch.charCodeAt(0)).join('_');
+}
+// Key nào đang ở dạng MẢNG (cho phép nhiều biến thể, random mỗi lần phát) trong SOUND_URLS gốc.
+// CHOP_1..CHOP_4 và CHOP KHÔNG thuộc nhóm này — chúng dùng cơ chế pool riêng (chopPool) để cả
+// bàn nghe đồng bộ cùng 1 âm mỗi lần Chặt, nên vẫn giữ nguyên dạng 1 link/dòng như cũ.
+function isMultiSoundKey(key){
+  return Array.isArray(DEFAULT_SOUND_URLS[key]);
+}
+const MAX_SOUND_VARIANTS = 6;
+
+function renderSoundUrlRows(){
+  const container = $('cfgUrlRows');
+  if(!container) return;
+  container.innerHTML = '';
+  SOUND_KEY_META.forEach(item=>{
+    if(isMultiSoundKey(item.key)){
+      container.appendChild(renderMultiVariantGroup(item));
+    } else {
+      container.appendChild(renderSingleUrlRow(item));
+    }
+  });
+}
+
+// Dòng đơn (kiểu cũ) — vẫn dùng cho CHOP_1..CHOP_4 và CHOP dự phòng.
+function renderSingleUrlRow(item){
+  const id = safeIdFor(item.key);
+  const row = document.createElement('div');
+  row.className = 'cfg-row cfg-url-row';
+  const labelEl = document.createElement('span');
+  labelEl.textContent = item.label;
+  const inputEl = document.createElement('input');
+  inputEl.type = 'text';
+  inputEl.id = id;
+  inputEl.className = 'cfg-url-input';
+  inputEl.value = SOUND_URLS[item.key] || '';
+  inputEl.placeholder = 'https://...';
+  const btnEl = document.createElement('button');
+  btnEl.type = 'button';
+  btnEl.className = 'btn btn-outline cfg-listen-btn';
+  btnEl.textContent = '🔊 Nghe';
+  btnEl.onclick = () => previewSoundUrl(item.key, inputEl);
+  row.appendChild(labelEl);
+  row.appendChild(inputEl);
+  row.appendChild(btnEl);
+  return row;
+}
+
+// Nhóm nhiều dòng (mảng biến thể) — mỗi dòng là 1 link, có nút Nghe + Xoá riêng,
+// cộng thêm 1 nút "+ Thêm biến thể" ở cuối để random đa dạng hơn cho sự kiện đó.
+function renderMultiVariantGroup(item){
+  const group = document.createElement('div');
+  group.className = 'cfg-row cfg-url-row cfg-url-group';
+  group.dataset.key = item.key;
+  const labelEl = document.createElement('span');
+  const current = Array.isArray(SOUND_URLS[item.key]) ? SOUND_URLS[item.key] : [];
+  labelEl.textContent = item.label + (current.length > 1 ? ` (${current.length} biến thể — random mỗi lần)` : '');
+  group.appendChild(labelEl);
+
+  const list = document.createElement('div');
+  list.className = 'cfg-url-variant-list';
+  group.appendChild(list);
+
+  function addVariantRow(url){
+    if(list.children.length >= MAX_SOUND_VARIANTS){ showConfigMsg('⚠️ Tối đa ' + MAX_SOUND_VARIANTS + ' biến thể mỗi sự kiện.'); return; }
+    const vRow = document.createElement('div');
+    vRow.className = 'cfg-url-variant-row';
+    const inputEl = document.createElement('input');
+    inputEl.type = 'text';
+    inputEl.className = 'cfg-url-input cfg-variant-input';
+    inputEl.value = url || '';
+    inputEl.placeholder = 'https://...';
+    const btnListen = document.createElement('button');
+    btnListen.type = 'button';
+    btnListen.className = 'btn btn-outline cfg-listen-btn';
+    btnListen.textContent = '🔊 Nghe';
+    btnListen.onclick = () => previewSoundUrl(item.key, inputEl);
+    const btnDel = document.createElement('button');
+    btnDel.type = 'button';
+    btnDel.className = 'btn btn-outline cfg-del-variant-btn';
+    btnDel.textContent = '✖';
+    btnDel.title = 'Xoá biến thể này';
+    btnDel.onclick = () => {
+      if(list.children.length <= 1){ showConfigMsg('⚠️ Phải giữ lại ít nhất 1 link.'); return; }
+      vRow.remove();
+    };
+    vRow.appendChild(inputEl);
+    vRow.appendChild(btnListen);
+    vRow.appendChild(btnDel);
+    list.appendChild(vRow);
+  }
+
+  (current.length ? current : ['']).forEach(u => addVariantRow(u));
+
+  const btnAdd = document.createElement('button');
+  btnAdd.type = 'button';
+  btnAdd.className = 'btn btn-outline cfg-add-variant-btn';
+  btnAdd.textContent = '➕ Thêm biến thể ngẫu nhiên';
+  btnAdd.onclick = () => addVariantRow('');
+  group.appendChild(btnAdd);
+
+  return group;
+}
+
+// Phát thử NGAY link đang gõ trong ô (truyền thẳng input element), không cần lưu trước
+// — để nghe xem link còn sống không. Không đi qua playGlobalSound() (không tính bật/tắt/
+// âm lượng theo nhóm) vì đây chỉ là bản nghe thử.
+let _previewAudio = null;
+function previewSoundUrl(key, inputEl){
+  const url = inputEl ? inputEl.value.trim() : '';
+  if(!url){ showConfigMsg('⚠️ Chưa có link để nghe thử.'); return; }
+  if(url.toLowerCase().indexOf('javascript:') === 0){ showConfigMsg('❌ Link không hợp lệ.'); return; }
+  try{
+    if(_previewAudio){ try{ _previewAudio.pause(); }catch(e){} }
+    _previewAudio = new Audio(url);
+    _previewAudio.volume = 0.9;
+    showConfigMsg('▶️ Đang phát thử: ' + (SOUND_KEY_META.find(m=>m.key===key)?.label || key) + '...');
+    _previewAudio.play().catch(err=>{
+      showConfigMsg('❌ Không phát được link này (sai định dạng, link chết, hoặc bị chặn CORS).');
+    });
+  }catch(err){ showConfigMsg('❌ Link không hợp lệ.'); }
+}
+
+function renderConfigForm(){
+  // --- BOM CHẶT ---
+  $('cfgChopHeoDen').value = GAME_CONFIG.chop.heoDen;
+  $('cfgChopHeoDo').value = GAME_CONFIG.chop.heoDo;
+  $('cfgChopTuQuy').value = GAME_CONFIG.chop.tuQuy;
+  $('cfgChopBaDoiThong').value = GAME_CONFIG.chop.baDoiThong;
+  $('cfgChopBoDoiThong').value = GAME_CONFIG.chop.boDoiThongTro;
+  // --- PHẠT THỐI ---
+  $('cfgFoulHeoDen').value = GAME_CONFIG.foul.heoDen;
+  $('cfgFoulHeoDo').value = GAME_CONFIG.foul.heoDo;
+  $('cfgFoulTuQuy').value = GAME_CONFIG.foul.tuQuy;
+  $('cfgFoulBaDoiThong').value = GAME_CONFIG.foul.baDoiThong;
+  $('cfgFoulBoDoiThong').value = GAME_CONFIG.foul.boDoiThongTro;
+  $('cfgCongPerReceiver').value = GAME_CONFIG.cong.perReceiver;
+  // --- TỚI TRẮNG ---
+  $('cfgWinDragon').value = GAME_CONFIG.instantWin.sanhRong;
+  $('cfgWinQuadHeo').value = GAME_CONFIG.instantWin.tuQuyHeo;
+  $('cfgWinQuad3').value = GAME_CONFIG.instantWin.tuQuy3DauVan;
+  $('cfgWinSixPairs').value = GAME_CONFIG.instantWin.lucDoi;
+  $('cfgWinFivePairsRun').value = GAME_CONFIG.instantWin.nguDoiThong;
+  // --- ÂM THANH TỔNG + BỘ ÂM CHẶT ---
+  $('cfgSoundMaster').checked = SOUND_CONFIG.masterEnabled;
+  $('cfgEnChop').checked = SOUND_CONFIG.enabled.chop;
+  $('cfgVolChop').value = SOUND_CONFIG.volumes.chop;
+  CHOP_SOUND_KEYS.forEach(k=>{
+    const el = $('cfgChopPool_'+k);
+    if(el) el.checked = SOUND_CONFIG.chopPool[k] !== false;
+  });
+  // --- ÂM SỰ KIỆN KHÁC ---
+  $('cfgEnMyTurn').checked = SOUND_CONFIG.enabled.myTurn;     $('cfgVolMyTurn').value = SOUND_CONFIG.volumes.myTurn;
+  $('cfgEnPlayCard').checked = SOUND_CONFIG.enabled.playCard; $('cfgVolPlayCard').value = SOUND_CONFIG.volumes.playCard;
+  $('cfgEnFinish1st').checked = SOUND_CONFIG.enabled.finish1st; $('cfgVolFinish1st').value = SOUND_CONFIG.volumes.finish1st;
+  $('cfgEnFinish23').checked = SOUND_CONFIG.enabled.finish23; $('cfgVolFinish23').value = SOUND_CONFIG.volumes.finish23;
+  $('cfgEnWinCry').checked = SOUND_CONFIG.enabled.winCry;     $('cfgVolWinCry').value = SOUND_CONFIG.volumes.winCry;
+  $('cfgEnReaction').checked = SOUND_CONFIG.enabled.reaction; $('cfgVolReaction').value = SOUND_CONFIG.volumes.reaction;
+  $('cfgEnThrowItem').checked = SOUND_CONFIG.enabled.throwItem; $('cfgVolThrowItem').value = SOUND_CONFIG.volumes.throwItem;
+  // --- LINK ÂM THANH (từng sound key riêng lẻ) ---
+  renderSoundUrlRows();
+}
+
+function collectConfigFromForm(){
+  const dc = DEFAULT_GAME_CONFIG.chop, df = DEFAULT_GAME_CONFIG.foul, dw = DEFAULT_GAME_CONFIG.instantWin, dcg = DEFAULT_GAME_CONFIG.cong;
+  GAME_CONFIG.chop.heoDen = clampCfgInt($('cfgChopHeoDen').value, dc.heoDen);
+  GAME_CONFIG.chop.heoDo = clampCfgInt($('cfgChopHeoDo').value, dc.heoDo);
+  GAME_CONFIG.chop.tuQuy = clampCfgInt($('cfgChopTuQuy').value, dc.tuQuy);
+  GAME_CONFIG.chop.baDoiThong = clampCfgInt($('cfgChopBaDoiThong').value, dc.baDoiThong);
+  GAME_CONFIG.chop.boDoiThongTro = clampCfgInt($('cfgChopBoDoiThong').value, dc.boDoiThongTro);
+
+  GAME_CONFIG.foul.heoDen = clampCfgInt($('cfgFoulHeoDen').value, df.heoDen);
+  GAME_CONFIG.foul.heoDo = clampCfgInt($('cfgFoulHeoDo').value, df.heoDo);
+  GAME_CONFIG.foul.tuQuy = clampCfgInt($('cfgFoulTuQuy').value, df.tuQuy);
+  GAME_CONFIG.foul.baDoiThong = clampCfgInt($('cfgFoulBaDoiThong').value, df.baDoiThong);
+  GAME_CONFIG.foul.boDoiThongTro = clampCfgInt($('cfgFoulBoDoiThong').value, df.boDoiThongTro);
+  GAME_CONFIG.cong.perReceiver = clampCfgInt($('cfgCongPerReceiver').value, dcg.perReceiver);
+
+  GAME_CONFIG.instantWin.sanhRong = clampCfgInt($('cfgWinDragon').value, dw.sanhRong);
+  GAME_CONFIG.instantWin.tuQuyHeo = clampCfgInt($('cfgWinQuadHeo').value, dw.tuQuyHeo);
+  GAME_CONFIG.instantWin.tuQuy3DauVan = clampCfgInt($('cfgWinQuad3').value, dw.tuQuy3DauVan);
+  GAME_CONFIG.instantWin.lucDoi = clampCfgInt($('cfgWinSixPairs').value, dw.lucDoi);
+  GAME_CONFIG.instantWin.nguDoiThong = clampCfgInt($('cfgWinFivePairsRun').value, dw.nguDoiThong);
+
+  SOUND_CONFIG.masterEnabled = $('cfgSoundMaster').checked;
+  SOUND_CONFIG.enabled.chop = $('cfgEnChop').checked;
+  SOUND_CONFIG.volumes.chop = clampCfgVol($('cfgVolChop').value);
+  CHOP_SOUND_KEYS.forEach(k=>{
+    const el = $('cfgChopPool_'+k);
+    if(el) SOUND_CONFIG.chopPool[k] = el.checked;
+  });
+
+  SOUND_CONFIG.enabled.myTurn = $('cfgEnMyTurn').checked;     SOUND_CONFIG.volumes.myTurn = clampCfgVol($('cfgVolMyTurn').value);
+  SOUND_CONFIG.enabled.playCard = $('cfgEnPlayCard').checked; SOUND_CONFIG.volumes.playCard = clampCfgVol($('cfgVolPlayCard').value);
+  SOUND_CONFIG.enabled.finish1st = $('cfgEnFinish1st').checked; SOUND_CONFIG.volumes.finish1st = clampCfgVol($('cfgVolFinish1st').value);
+  SOUND_CONFIG.enabled.finish23 = $('cfgEnFinish23').checked; SOUND_CONFIG.volumes.finish23 = clampCfgVol($('cfgVolFinish23').value);
+  SOUND_CONFIG.enabled.winCry = $('cfgEnWinCry').checked;     SOUND_CONFIG.volumes.winCry = clampCfgVol($('cfgVolWinCry').value);
+  SOUND_CONFIG.enabled.reaction = $('cfgEnReaction').checked; SOUND_CONFIG.volumes.reaction = clampCfgVol($('cfgVolReaction').value);
+  SOUND_CONFIG.enabled.throwItem = $('cfgEnThrowItem').checked; SOUND_CONFIG.volumes.throwItem = clampCfgVol($('cfgVolThrowItem').value);
+
+  // --- LINK ÂM THANH: đọc từng ô/nhóm, chỉ áp dụng nếu có nội dung hợp lệ (không rỗng, không phải javascript:) ---
+  const isValidUrl = v => typeof v === 'string' && v.trim() && v.trim().toLowerCase().indexOf('javascript:') !== 0;
+  SOUND_KEY_META.forEach(item=>{
+    if(isMultiSoundKey(item.key)){
+      const group = document.querySelector('.cfg-url-group[data-key="' + item.key.replace(/"/g,'\\"') + '"]');
+      if(!group) return;
+      const vals = Array.from(group.querySelectorAll('.cfg-variant-input')).map(el=>el.value.trim()).filter(isValidUrl);
+      // Nếu người dùng lỡ xoá/để trống hết → giữ nguyên bộ hiện tại, không xoá sạch âm thanh.
+      if(vals.length) SOUND_URLS[item.key] = vals;
+    } else {
+      const el = $(safeIdFor(item.key));
+      if(!el) return;
+      const val = el.value.trim();
+      if(isValidUrl(val)) SOUND_URLS[item.key] = val;
+    }
+  });
+}
+
+function resetSoundUrlsToDefault(){
+  Object.keys(DEFAULT_SOUND_URLS).forEach(key => {
+    const dv = DEFAULT_SOUND_URLS[key];
+    SOUND_URLS[key] = Array.isArray(dv) ? dv.slice() : dv;
+  });
+  try{ localStorage.removeItem(SOUND_URLS_STORAGE_KEY); }catch(e){}
+  refreshSoundCache();
+  renderSoundUrlRows();
+}
+
+function showConfigMsg(text){
+  const el = $('configSavedMsg');
+  if(!el) return;
+  el.textContent = text;
+  clearTimeout(showConfigMsg._t);
+  showConfigMsg._t = setTimeout(()=>{ el.textContent=''; }, 2500);
+}
+
+$('btnOpenConfig').onclick = ()=>{
+  const o = $('configOverlay'); if(!o) return;
+  renderConfigForm();
+  o.classList.remove('hidden'); o.setAttribute('aria-hidden','false');
+};
+$('btnCloseConfig').onclick = ()=>{
+  const o = $('configOverlay'); if(!o) return;
+  o.classList.add('hidden'); o.setAttribute('aria-hidden','true');
+};
+$('btnSaveConfig').onclick = ()=>{
+  try{
+    collectConfigFromForm();
+    saveGameConfig();
+    saveSoundConfig();
+    renderConfigForm();
+    showConfigMsg('✅ Đã lưu cấu hình. Áp dụng ngay cho ván tiếp theo.');
+  }catch(err){
+    console.error('Lỗi lưu cấu hình:', err);
+    showConfigMsg('❌ Lỗi khi lưu cấu hình: ' + (err?.message || err));
+  }
+};
+$('btnResetConfig').onclick = ()=>{
+  if(!confirm('Khôi phục toàn bộ Cấu Hình BOM CHẶT / PHẠT / ÂM THANH về đúng mặc định gốc của game?')) return;
+  GAME_CONFIG = JSON.parse(JSON.stringify(DEFAULT_GAME_CONFIG));
+  SOUND_CONFIG = JSON.parse(JSON.stringify(DEFAULT_SOUND_CONFIG));
+  saveGameConfig();
+  saveSoundConfig();
+  renderConfigForm();
+  showConfigMsg('↩️ Đã khôi phục mặc định.');
+};
 
 })();
 </script>
