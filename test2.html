@@ -188,6 +188,39 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 
 @media (max-width:420px){ .seat-bubble{font-size:10.5px;max-width:104px;padding:4px 8px;-webkit-line-clamp:3;} }
 
+/* BANNER CHẶT NGANG: thông báo LỚN, nổi giữa bàn, cho CẢ NHÓM cùng thấy khi ai đó
+   Chặt Ngang thành công — khác với .seat-bubble (chỉ hiện nhỏ tại đúng 1 ghế). */
+.chop-banner{
+  position:absolute;top:6px;left:50%;transform:translateX(-50%) translateY(-10px) scale(.92);
+  width:max-content;max-width:88%;
+  background:linear-gradient(180deg,#3a2a10,#1c1408);color:#ffe600;
+  border:2px solid #ffb020;border-radius:14px;padding:8px 16px;
+  font-size:14px;font-weight:800;line-height:1.3;text-align:center;
+  white-space:normal;word-break:break-word;overflow-wrap:anywhere;
+  box-shadow:0 6px 20px rgba(0,0,0,.6),0 0 18px rgba(255,176,32,.35);
+  z-index:70;pointer-events:none;opacity:0;visibility:hidden;
+  transition:opacity .22s ease, transform .22s ease;
+}
+.chop-banner.show{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0) scale(1);}
+@media (max-width:420px){ .chop-banner{font-size:12px;padding:7px 12px;max-width:94%;} }
+
+/* DÃY BÀI VỪA DÙNG ĐỂ CHẶT: nổi ngay dưới chop-banner, cho CẢ NHÓM thấy đúng những lá bài
+   vừa hạ chặt — vì currentCombo (nguồn hiện của .played-combo) đã bị set về null ngay sau
+   cú chặt để mở lượt mới cho người chặt. Đặt cố định ngay dưới banner chữ (banner tối đa ~3
+   dòng nhờ word-break/wrap, khoảng trống 54px đủ chừa cho banner 1-2 dòng thường gặp).
+   Xếp CHỒNG KHÍT vào nhau (margin âm), giống hệt kiểu ngửa bài cuối ván (.reveal-cards-line)
+   thay vì dàn hàng ngang cách nhau như trước — nhìn gọn & đẹp hơn. */
+.chop-banner-cards{
+  position:absolute;top:54px;left:50%;transform:translateX(-50%) translateY(-8px) scale(.92);
+  display:flex;align-items:center;justify-content:center;max-width:88%;
+  z-index:69;pointer-events:none;opacity:0;visibility:hidden;
+  transition:opacity .22s ease, transform .22s ease;
+}
+.chop-banner-cards.show{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0) scale(1);}
+.chop-banner-cards .card.small{margin-left:-13px;box-shadow:-1px 1px 3px rgba(0,0,0,.45);}
+.chop-banner-cards .card.small:first-child{margin-left:0;}
+@media (max-width:420px){ .chop-banner-cards{top:64px;} .chop-banner-cards .card.small{transform:scale(.9);} }
+
 /* DÒNG THÔNG BÁO VÀ ĐỒNG HỒ DỜI XUỐNG DƯỚI GẦN BÀI NGƯỜI CHƠI */
 .turn-timer-box{
   position:relative;margin-top:0;margin-bottom:28px;background:rgba(0,0,0,.85);border:1px solid var(--gold-dim);
@@ -229,6 +262,12 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 }
 
 .timer-sec{font-family:monospace;font-weight:700;color:var(--gold);font-size:13px;}
+
+/* NÚT CHẶT NGAY (cửa sổ 3-2-1 cũ): thêm dòng phụ báo ĐANG CHẶT GÌ, CỦA AI —
+   giống nhãn của overlay TEST 4/5 đôi thông, để không cần đoán mò. */
+#btnChopInterrupt{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.15;padding-top:6px;padding-bottom:6px;}
+#btnChopInterrupt .chop-btn-main{font-size:13px;font-weight:800;}
+#btnChopInterrupt .chop-btn-target{font-size:10px;font-weight:700;color:#fff3a0;opacity:.92;white-space:normal;text-align:center;}
 .timer-sec.low{color:var(--bad);}
 
 .live-score-sticker {
@@ -326,6 +365,10 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .card .rank{font-size:14px;line-height:1;}
 .card .suit{font-size:14px;align-self:flex-end;line-height:1;}
 .card.selected{transform:translateY(-16px);box-shadow:0 8px 12px rgba(0,0,0,.55);border-color:var(--gold);}
+.card.selection-shake{animation:cardShake .32s ease;}
+@keyframes cardShake{0%,100%{transform:translateY(-16px) translateX(0);}25%{transform:translateY(-16px) translateX(-4px);}75%{transform:translateY(-16px) translateX(4px);}}
+.hand-select-msg{text-align:center;font-size:12px;color:var(--bad);font-weight:700;margin:2px 0;min-height:16px;transition:opacity .2s;}
+.hand-select-msg.hidden{display:none;}
 .card.table-card{
   width:76px;height:110px;margin-left:-28px;pointer-events:none;box-shadow:-3px 3px 8px rgba(0,0,0,.6);border:1.5px solid rgba(0,0,0,.35);
 }
@@ -347,6 +390,13 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   width:30px;height:44px;margin-left:-9px;border-width:1px;
 }
 .played-combo.ultra-compact .card.table-card:first-child{margin-left:0;}
+.played-combo.instant-chop-target{position:relative;cursor:pointer;filter:drop-shadow(0 0 12px rgba(255,230,0,.32));}
+.played-combo.instant-chop-target .card.table-card{cursor:pointer;transition:filter .15s,transform .15s;}
+.played-combo.instant-chop-target .card.table-card:hover{filter:brightness(1.18);}
+/* TEST 4/5: không chèn chữ lên bộ bài; chỉ dùng một nút trung tâm. */
+.instant-chop-flying{animation:instantChopFly .38s cubic-bezier(.2,.85,.25,1) forwards !important;z-index:100;}
+@keyframes instantChopFly{0%{transform:translateY(0) scale(1)}55%{transform:translateY(-34px) scale(1.04)}100%{transform:translateY(-20px) scale(1)}}
+
 .played-combo.ultra-compact .card.table-card .rank,
 .played-combo.ultra-compact .card.table-card .suit{font-size:10px;}
 
@@ -371,6 +421,22 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 
 .controls{display:flex;flex-wrap:wrap;gap:6px;width:100%;max-width:320px;justify-content:center;padding:0 6px;box-sizing:border-box;}
 .controls .btn{flex:1 1 auto;min-width:74px;padding:7px 8px;font-size:12px;}
+/* TEST 4/5 ĐÔI THÔNG: chỉ 1 nút CHẶT NGAY, nằm độc lập trong .table-center.
+   Tuyệt đối không dùng lại btnChopInterrupt trong khu bài người chơi vì sẽ làm nút
+   "treo" ở dưới tay bài khi state vừa đổi. */
+.test-instant-chop-overlay{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:95;
+  min-width:210px;min-height:58px;padding:10px 22px;border-radius:14px;
+  font-size:18px;font-weight:1000;letter-spacing:.5px;cursor:pointer;
+  border:2px solid #ffe600 !important;color:#ffe600 !important;
+  background:rgba(18,12,0,.96);
+  box-shadow:0 0 24px rgba(255,230,0,.55),0 0 60px rgba(255,180,0,.20);
+  animation:testChopPulse 1s ease-in-out infinite alternate;
+  pointer-events:auto !important;touch-action:manipulation;user-select:none;
+}
+.test-instant-chop-overlay.hidden{display:none !important;}
+@keyframes testChopPulse{from{transform:translate(-50%,-50%) scale(1)}to{transform:translate(-50%,-50%) scale(1.06)}}
+
 
 @media (max-width: 600px) {
   .card{width:42px;height:62px;margin-left:-20px;padding:2px;}
@@ -529,6 +595,42 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 
 .rule-example{margin:8px 0;padding:9px 11px;border:1px solid rgba(255,193,7,.45);border-radius:10px;background:rgba(0,0,0,.16);color:rgba(250,246,238,.92);line-height:1.5;font-size:12px;}
 
+
+/* ===== DEBUG LOG - CHỈ DÙNG DÒ BUG, KHÔNG ẢNH HƯỞNG GAME ===== */
+#debugLogOverlay{
+  position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,.78);
+  display:flex;align-items:center;justify-content:center;padding:10px;
+}
+#debugLogPanel{
+  width:min(1100px,100%);height:min(88vh,760px);display:flex;flex-direction:column;
+  background:#090d0b;border:1px solid rgba(212,175,55,.55);border-radius:14px;
+  box-shadow:0 20px 80px rgba(0,0,0,.75);overflow:hidden;color:var(--cream);
+}
+.debug-log-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-bottom:1px solid var(--panel-line);background:#101814;}
+.debug-log-title{font-weight:900;color:var(--gold);font-size:14px;}
+.debug-log-sub{font-size:10px;color:rgba(250,246,238,.55);margin-top:2px;}
+.debug-log-actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;}
+.debug-log-actions .btn{font-size:10px;padding:6px 9px;}
+#debugLogBody{
+  flex:1;overflow:auto;padding:8px;background:#050806;
+  font:11px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace;
+  white-space:pre-wrap;word-break:break-word;
+}
+.debug-row{border-bottom:1px solid rgba(255,255,255,.055);padding:5px 3px;}
+.debug-row.req{color:#9fd3ff}.debug-row.ok{color:#9bea9b}.debug-row.turn{color:#ffe08a}
+.debug-row.warn{color:#ffb36b}.debug-row.err{color:#ff8d8d}.debug-row.state{color:#cdb8ff}
+.debug-empty{color:rgba(250,246,238,.45);padding:20px;text-align:center;}
+.debug-badge{
+  position:fixed;right:58px;bottom:12px;z-index:81;display:none;
+  padding:3px 7px;border-radius:9px;background:#16100a;border:1px solid var(--gold);
+  color:var(--gold);font:10px ui-monospace,monospace;pointer-events:none;
+}
+@media(max-width:600px){
+  #debugLogPanel{height:94vh;border-radius:10px;}
+  .debug-log-head{align-items:flex-start;}
+  .debug-log-actions .btn{padding:5px 7px;}
+}
+
 /* ===== PHÒNG TEST LUẬT - CHỈ CHẾ ĐỘ TEST ===== */
 #ruleTestOverlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:14px}
 #ruleTestPanel{width:min(980px,100%);max-height:92vh;overflow:auto;background:linear-gradient(180deg,#17130e,#0d0b08);border:1px solid rgba(212,175,55,.45);border-radius:16px;box-shadow:0 18px 70px rgba(0,0,0,.65);padding:16px;color:var(--cream)}
@@ -557,9 +659,34 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .cfg-del-variant-btn{flex:0 0 auto;padding:6px 9px;font-size:11px;color:#e08a8a;border-color:rgba(224,138,138,.4);}
 .cfg-add-variant-btn{flex:0 0 auto;padding:6px 10px;font-size:11px;margin-top:2px;align-self:flex-start;color:var(--gold);border-color:rgba(212,175,55,.4);}
 @media(max-width:700px){#configPanel{max-height:95vh;padding:12px}}
+
+.test-instant-chop-overlay{display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;line-height:1.05;}
+.test-instant-chop-overlay .chop-now-main{font-size:18px;font-weight:1000;}
+.test-instant-chop-overlay .chop-now-target{font-size:13px;font-weight:900;color:#fff3a0;width:100%;}
+.test-instant-chop-overlay .chop-now-countdown{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:#ffe600;color:#17110a;font-size:18px;font-weight:1000;box-shadow:0 0 16px rgba(255,230,0,.7);}
 </style>
 </head>
 <body>
+
+
+<!-- ===== DEBUG LOG OVERLAY ===== -->
+<div id="debugLogOverlay" class="hidden" aria-hidden="true">
+  <div id="debugLogPanel">
+    <div class="debug-log-head">
+      <div>
+        <div class="debug-log-title">🐞 DEBUG LOG — LƯỢT / ĐÁNH / SỰ KIỆN</div>
+        <div class="debug-log-sub">Ghi theo thứ tự thời gian: người gửi action → state trước/sau → lượt → chặt/BOM/Cóng/Về. Tối đa 500 dòng/ván.</div>
+      </div>
+      <div class="debug-log-actions">
+        <button class="btn btn-outline" id="btnDebugCopy" type="button">📋 Copy</button>
+        <button class="btn btn-outline" id="btnDebugClear" type="button">🧹 Xóa</button>
+        <button class="btn btn-outline" id="btnDebugClose" type="button">✕ Đóng</button>
+      </div>
+    </div>
+    <div id="debugLogBody"><div class="debug-empty">Chưa có log.</div></div>
+  </div>
+</div>
+<div id="debugBadge" class="debug-badge">LOG 0</div>
 
 <div id="ruleTestOverlay" class="hidden" aria-hidden="true">
   <div id="ruleTestPanel">
@@ -578,6 +705,8 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
         <div class="rule-test-row"><span>Đôi Heo → Đôi Heo → Tứ quý</span><input id="wtPair" type="number" min="0" max="100" value="25"></div>
         <div class="rule-test-row"><span>Tứ quý chặt liên hoàn</span><input id="wtQuad" type="number" min="0" max="100" value="15"></div>
         <div class="rule-test-row"><span>Đôi thông / 4+ đôi thông</span><input id="wtRun" type="number" min="0" max="100" value="15"></div>
+        <div class="rule-test-row"><span>⚡ TEST CHẶT NGAY — 4 Đôi Thông</span><input id="wtInstantChop4" type="number" min="0" max="100" value="5"></div>
+        <div class="rule-test-row"><span>⚡ TEST CHẶT NGAY — 5 Đôi Thông</span><input id="wtInstantChop5" type="number" min="0" max="100" value="5"></div>
         <div class="rule-test-row"><span>Chặt người đã về</span><input id="wtSafe" type="number" min="0" max="100" value="10"></div>
         <div class="rule-test-row"><span>🧊 Cóng 1 người</span><input id="wtCong1" type="number" min="0" max="100" value="5"></div>
         <div class="rule-test-row"><span>🧊🧊🧊 Cóng cả bàn</span><input id="wtCongAll" type="number" min="0" max="100" value="5"></div>
@@ -615,6 +744,8 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
               <option value="pair">🖤🖤 → ❤️❤️ → Tứ quý</option>
               <option value="quad">🖤🖤 → ❤️❤️ → Tứ quý → Tứ quý lớn</option>
               <option value="run">3 Đôi thông → 4 Đôi thông</option>
+              <option value="instantChop4">⚡ TEST CHẶT NGAY — 4 Đôi Thông</option>
+              <option value="instantChop5">⚡ TEST CHẶT NGAY — 5 Đôi Thông</option>
               <option value="safe">🛡️ Chặt người vừa về</option>
               <option value="cong1">🧊 CÓNG 1 NGƯỜI</option>
               <option value="cong2">🧊🧊 CÓNG 2 NGƯỜI</option>
@@ -823,7 +954,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 
 <!-- TABLE SCREEN -->
 <div id="tableScreen" class="hidden">
-  <div class="table-header"><button id="btnExitRuleTest" class="btn btn-outline hidden" style="font-size:10px;padding:3px 7px;margin-left:auto;">🧪 Thoát TEST</button>
+  <div class="table-header"><button id="btnExitRuleTest" class="btn btn-outline hidden" style="font-size:10px;padding:3px 7px;margin-left:auto;">🧪 Thoát TEST</button><button id="btnOpenDebugLog" class="btn btn-outline" type="button" style="font-size:10px;padding:3px 7px;">🐞 LOG</button>
     <span id="roomTag" style="color:var(--gold);font-weight:700;">Phòng: ----</span>
     <span id="modeTag" style="color:var(--cream);">Chế độ: Đánh Nước</span>
     <span id="stakeTag">Cược: ---</span>
@@ -832,6 +963,16 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   <div class="table-center">
     <div id="oppSlots"></div>
     <div class="played-combo" id="playedCombo"></div>
+    <!-- BANNER CHẶT NGANG: hiện to giữa bàn vài giây cho cả nhóm cùng thấy "ai chặt gì của ai bằng gì" -->
+    <div class="chop-banner" id="chopBanner"></div>
+    <!-- DÃY BÀI VỪA DÙNG ĐỂ CHẶT: currentCombo bị set về null ngay sau cú chặt (để người chặt được
+         đánh tiếp không cần đè ai), nên #playedCombo không kịp hiện được dãy bài này cho cả nhóm thấy.
+         Dùng state riêng (chopBannerCards/Seq, độc lập currentCombo) để mọi người vẫn thấy đúng những
+         lá đã chặt trong vài giây, y hệt cơ chế của chopBanner. -->
+    <div class="chop-banner-cards" id="chopBannerCards"></div>
+    <!-- TEST 4/5 ĐÔI THÔNG: nút duy nhất, chỉ xuất hiện khi THỰC SỰ có thể chặt.
+         Tách khỏi khu bài người chơi để không bị treo/đè lên tay bài. -->
+    <button class="test-instant-chop-overlay hidden" id="testInstantChopOverlay" type="button" aria-label="Chặt ngay">⚡ CHẶT NGAY</button>
     <div class="action-log" id="actionLog"></div>
     
     <!-- DÒNG THÔNG BÁO VÀ ĐỒNG HỒ ĐẾM SỐ LƯỢT ĐƯỢC CHUYỂN DỜI XUỐNG THẤP DƯỚI GẦN BÀI NGƯỜI CHƠI -->
@@ -850,11 +991,12 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
       <div id="myLastCardBadge" class="last-card-badge hidden">⚠️ 1 LÁ!</div>
     </div>
     <div class="hand-cards" id="handCards"><div class="hand-cards-inner" id="handCardsInner"></div></div>
+    <div class="hand-select-msg hidden" id="handSelectMsg"></div>
     <div class="controls">
       <button class="btn btn-outline" id="btnSort">Xếp bài (Giá Trị)</button>
       <button class="btn btn-danger" id="btnPass">Bỏ lượt</button>
       <button class="btn btn-gold" id="btnPlay">Đánh</button>
-      <button class="btn btn-outline hidden" id="btnChopInterrupt" style="border-color:#ffe600;color:#ffe600;">⚡ Chặt Ngang</button>
+      <button class="btn btn-outline hidden" id="btnChopInterrupt" style="border-color:#ffe600;color:#ffe600;">⚡ CHẶT NGAY</button>
       <button class="btn btn-outline hidden" id="btnReportFoul" style="border-color:var(--bad);color:var(--bad);">🚩 Báo Vi Phạm</button>
     </div>
   </div>
@@ -1437,6 +1579,31 @@ function bumpActor(playerId, shortMsg){
   gameState.actorSeq = ++globalActorSeq;
 }
 
+// Đặt/đổi nội dung BANNER CHẶT NGANG (thông báo lớn giữa bàn, cho CẢ NHÓM cùng thấy),
+// khác với bumpActor() vốn chỉ hiện bong bóng nhỏ tại đúng 1 ghế của người vừa hành động.
+// cards: mảng lá bài THẬT SỰ vừa dùng để chặt — lưu riêng vì gameState.currentCombo bị set
+// về null ngay sau cú chặt (để mở lượt mới cho người chặt), nên không thể dựa vào currentCombo
+// để vẽ dãy bài này cho cả nhóm xem.
+function setChopBanner(text, cards){
+  gameState.chopBannerText = text || null;
+  gameState.chopBannerCards = Array.isArray(cards) ? cards.map(c => ({r:c.r,s:c.s})) : null;
+  gameState.chopBannerSeq = (gameState.chopBannerSeq || 0) + 1;
+}
+
+// Mô tả bộ bài đặc biệt kiểu "Heo Đỏ", "Đôi Heo", "Tứ Quý", "4 Đôi Thông"... để dùng
+// trong banner/nhãn đếm ngược — dễ đọc hơn describeCombo() (vốn không phân biệt Heo đen/đỏ).
+function describeChopTargetNice(combo){
+  if(!combo || !Array.isArray(combo.cards)) return '';
+  if(combo.type === 'single' && combo.cards[0]?.r === 12){
+    const red = [2,3].includes(combo.cards[0].s);
+    return red ? 'Heo Đỏ' : 'Heo Đen';
+  }
+  if(combo.type === 'pair' && combo.cards[0]?.r === 12) return 'Đôi Heo';
+  if(combo.type === 'pairs_run' && combo.count >= 3) return `${combo.count} Đôi Thông`;
+  if(combo.type === 'quad') return `Tứ Quý ${RANKS[combo.highR] || ''}`.trim();
+  return describeCombo(combo);
+}
+
 function generatePlayerId(){
   return 'p_' + Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4);
 }
@@ -1836,6 +2003,32 @@ let players=[];
 let gameState=null;
 let myHand=[];
 let selected=new Set();
+// ACTION ACK / RACE GUARD: chỉ clear selection sau khi server xác nhận ACCEPT.
+let pendingActionRequests = new Map();
+let actionRequestSeq = 0;
+let currentRoundToken = null;
+function makeActionRequestId(){
+  actionRequestSeq++;
+  return `${myId || 'local'}-${Date.now().toString(36)}-${actionRequestSeq.toString(36)}`;
+}
+function isTrackedSelectionAction(action){
+  return !!(action && (action.kind === 'play' || action.kind === 'interrupt_chop') && action.requestId);
+}
+function sendActionResult(playerId, status, action, reason='', details={}){
+  if(!action || !action.requestId) return;
+  const payload={t:'actionResult', requestId:action.requestId, action:action.kind, status, reason:reason||'', details:details||{}, at:Date.now()};
+  if(playerId === myId) onClientMessage(payload); else sendToPlayer(playerId, payload);
+}
+function rejectTrackedAction(playerId, action, reason, details={}){
+  if(!isTrackedSelectionAction(action)) return;
+  debugActionEvent('REJECT', playerId, reason, {action:action.kind, requestId:action.requestId, reason, ...details});
+  sendActionResult(playerId, 'REJECT', action, reason, details);
+}
+function acceptTrackedAction(playerId, action, details={}){
+  if(!isTrackedSelectionAction(action)) return;
+  debugActionEvent('ACCEPT', playerId, `${action.kind} accepted`, {action:action.kind, requestId:action.requestId, ...details});
+  sendActionResult(playerId, 'ACCEPT', action, '', details);
+}
 let unreadChat = 0;
 let activeTargetId = null;
 let isSpectator = false;
@@ -2169,6 +2362,19 @@ function onClientMessage(msg){
       players = safeArray(msg.players || players); 
       roomSettings = msg.settings || roomSettings; 
       renderLobby();
+    } else if(msg.t==='actionResult'){
+      const pending = pendingActionRequests.get(msg.requestId);
+      if(!pending) return;
+      clearTimeout(pending.timer);
+      pendingActionRequests.delete(msg.requestId);
+      if(msg.status === 'ACCEPT'){
+        selected.clear();
+        hideHandSelectMsg();
+      } else {
+        showHandSelectMsg(formatActionRejectMessage(msg.reason, msg.details));
+      }
+      updateHandActionButtonsOnly();
+      return;
     } else if(msg.t==='state'){
       applyState(msg.state);
     } else if(msg.t==='chat'){
@@ -2598,6 +2804,7 @@ function dealNewGame(){
   }
 
   gameState = {
+    roundToken: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`,
     hands,
     order: players.map(p=>p.id),
     names: Object.fromEntries(players.map(p=>[p.id, p.name])),
@@ -2649,11 +2856,31 @@ function startTimerLoop(){
     if(botList.includes(currId)){
       if(!gameState.botThinking){
         gameState.botThinking = true;
+        const scheduledTurnToken = turnControlToken;
+        const scheduledBotId = currId;
         setTimeout(() => {
           if(!gameState || gameState.isEnded) return;
-          if(gameState.order[gameState.turnIdx] === currId) makeBotMove(currId);
+          // Nếu trong thời gian Bot đang chờ có CHẶT NGANG/đổi quyền,
+          // callback cũ tuyệt đối không được gọi makeBotMove().
+          if(scheduledTurnToken !== turnControlToken){
+            gameState.botThinking = false;
+            return;
+          }
+          // FIX BUG "CHẶT XONG NÓ TREO LUÔN": trước đây điều kiện này chặn TUYỆT ĐỐI
+          // bất cứ khi nào forcedNextTurnId đang được set — kể cả khi forcedNextTurnId
+          // CHÍNH LÀ scheduledBotId (tức bot vừa tự CHẶT NGAY và đang chờ tới lượt đánh
+          // tiếp của chính nó). Vì forcedNextTurnId chỉ được xóa BÊN TRONG handleAction()
+          // khi nhận đúng nước PLAY/PASS của người đó — mà makeBotMove() (nơi gọi PLAY/PASS)
+          // lại bị chặn ngay tại đây trước khi kịp chạy — nên tạo thành vòng khóa chết: bot
+          // không bao giờ tự gỡ được khóa nó vừa tạo ra cho chính mình. Giờ chỉ chặn khi
+          // forcedNextTurnId thuộc về NGƯỜI KHÁC (không phải scheduledBotId).
+          if(gameState.forcedNextTurnId && String(gameState.forcedNextTurnId) !== String(scheduledBotId)){
+            gameState.botThinking = false;
+            return;
+          }
+          if(gameState.order[gameState.turnIdx] === scheduledBotId) makeBotMove(scheduledBotId);
           gameState.botThinking = false;
-        }, 1000);
+        }, 2000);
       }
       return;
     }
@@ -2709,8 +2936,49 @@ function getAllPossibleCombos(hand) {
   return combos.filter(Boolean);
 }
 
+let botInstantChopToken=0;
+// Token chống callback Bot cũ giành lại lượt sau khi CHẶT NGANG.
+let turnControlToken=0;
+function scheduleBotInstantChop(){
+  if(!isRuleTestMode || !gameState || gameState.isEnded) return;
+  const curr=gameState.currentCombo;
+  if(!isChoppableSpecialTarget(curr)) return;
+  const candidates=[];
+  for(const botId of botList){
+    if(gameState.finished.includes(botId) || gameState.coldFolded.has(botId)) continue;
+    if(botId===gameState.leaderId) continue;
+    // Bot đang có lượt sẽ dùng lượt bình thường; Bot ngoài lượt mới CHẶT NGAY.
+    if(gameState.order[gameState.turnIdx]===botId) continue;
+    const best=findBestInstantChopCardsForHand(gameState.hands[botId],curr);
+    if(best) candidates.push({botId,best});
+  }
+  if(!candidates.length) return;
+  // Ưu tiên 5 đôi thông hơn 4 đôi thông; cùng loại ưu tiên bộ cao hơn.
+  candidates.sort((a,b)=>b.best.combo.count-a.best.combo.count || b.best.combo.highR-a.best.combo.highR);
+  const chosen=candidates[0];
+  const token=++botInstantChopToken;
+  const targetKey=comboTargetKey(curr);
+  setTimeout(()=>{
+    if(!gameState || gameState.isEnded || token!==botInstantChopToken) return;
+    if(gameState.forcedNextTurnId) return;
+    if(comboTargetKey(gameState.currentCombo)!==targetKey) return;
+    if(gameState.order[gameState.turnIdx]===chosen.botId || gameState.leaderId===chosen.botId) return;
+    const fresh=findBestInstantChopCardsForHand(gameState.hands[chosen.botId],gameState.currentCombo);
+    if(!fresh) return;
+    handleAction(chosen.botId,{kind:'interrupt_chop',cards:fresh.cards.map(cardKey)},true);
+  },2000);
+}
+
 function makeBotMove(botId){
   if(!gameState || gameState.isEnded) return;
+  // V5 HARD LOCK: sau CHẶT NGANG, tuyệt đối không cho Bot thực thi dù callback
+  // được gọi trực tiếp hay callback cũ đã lọt qua timer.
+  if(gameState.lastChopWinnerId && String(gameState.lastChopWinnerId) !== String(botId)) return;
+  if(gameState.forcedNextTurnId && String(gameState.forcedNextTurnId) !== String(botId)) return;
+  // TUYỆT ĐỐI không cho Bot đánh bằng callback cũ sau khi người khác vừa CHẶT NGAY.
+  // Sau cú chặt, turnIdx đã được khóa về chính người chặt; mọi callback Bot còn treo
+  // phải tự hủy thay vì cho người bị chặt ra quân.
+  if(gameState.order[gameState.turnIdx] !== botId) return;
   const hand=safeArray(gameState.hands[botId]); if(!hand.length) return;
 
   // TEST CÓNG: Bot chỉ được phép PASS sau khi người test đã mở vòng.
@@ -2761,6 +3029,9 @@ function makeBotMove(botId){
       if(curr.type==='pair'&&curr.cards[0].r===12)v+=special(x)?80:10;
       if(curr.type==='pairs_run'&&curr.count>=3)v+=special(x)?70:10;
       if(curr.type==='quad')v+=special(x)?70:5;
+      // TEST 4/5: khi có mục tiêu đặc biệt, ưu tiên Bot dùng 4/5 đôi thông
+      // nếu thực sự có thể chặt, để tạo các chuỗi chặt tự nhiên thay vì cứ né bộ đặc biệt.
+      if(isRuleTestMode && isChoppableSpecialTarget(curr) && x.type==='pairs_run' && x.count>=4 && canBeat(x,curr)) v+=140;
       return v;
     };return score(b)-score(a);
   });
@@ -2772,6 +3043,15 @@ function makeBotMove(botId){
 
 function autoForceTurn(playerId){
   if(!gameState || gameState.isEnded) return;
+  // V5 HARD LOCK: timeout/callback của Bot cũ cũng không được vượt qua quyền sau chặt.
+  if(gameState.lastChopWinnerId && String(playerId) !== String(gameState.lastChopWinnerId)) return;
+  if(gameState.forcedNextTurnId && String(playerId) !== String(gameState.forcedNextTurnId)) return;
+  // Timeout của lượt cũ không được phép tự PASS/PLAY khi người khác vừa CHẶT NGANG.
+  if(gameState.forcedNextTurnId){
+    if(String(playerId) !== String(gameState.forcedNextTurnId)) return;
+    const idx=gameState.order.findIndex(id=>String(id)===String(gameState.forcedNextTurnId));
+    if(idx>=0) gameState.turnIdx=idx;
+  }
   if(gameState.coldFolded && gameState.coldFolded.has(playerId)){ checkNextTurn(); broadcastState(); return; } // đã bị loại vì cóng, không đánh hộ nữa
   const hand = safeArray(gameState.hands[playerId]);
   if(!hand || hand.length === 0) return;
@@ -3066,13 +3346,45 @@ function hasFourPairRun(handCards){
   return findMaxPairRuns(safeArray(handCards)).some(run => run.count >= 4);
 }
 
+// 3 Đôi Thông vẫn dùng cửa sổ Chặt Ngang cũ.
+// 4–5+ Đôi Thông là LUẬT CHẶT NGAY: không phụ thuộc vòng 3 giây.
+function hasThreePairRunOnly(handCards){
+  return findMaxPairRuns(safeArray(handCards)).some(run => run.count === 3);
+}
+
+function isChoppableSpecialTarget(combo){
+  return !!(combo && (
+    (combo.type === 'single' && combo.cards?.[0]?.r === 12) ||
+    (combo.type === 'pair' && combo.cards?.[0]?.r === 12) ||
+    (combo.type === 'pairs_run' && combo.count >= 3) ||
+    combo.type === 'quad'
+  ));
+}
+
+function comboTargetKey(combo){
+  if(!combo || !Array.isArray(combo.cards)) return '';
+  return `${combo.type}|${combo.count||combo.len||combo.cards.length}|${combo.cards.map(cardKey).sort().join(',')}`;
+}
+function hasPassedInstantTarget(state, playerId, combo){
+  const key=comboTargetKey(combo);
+  const map=state && state.instantChopPassedTarget;
+  return !!(key && map && map[playerId]===key);
+}
+
 function openChopInterruptWindow(){
   if(!gameState || gameState.isEnded) return;
   const curr = gameState.currentCombo;
-  const target = curr && ((curr.type === 'single' && curr.cards?.[0]?.r === 12) || (curr.type === 'pair' && curr.cards?.[0]?.r === 12) || (curr.type === 'pairs_run' && curr.count >= 3) || curr.type === 'quad');
-  if(!target) { gameState.chopInterruptDeadline = 0; return; }
-  const eligible = gameState.order.some(id => !gameState.finished.includes(id) && !gameState.coldFolded.has(id) && hasFourPairRun(gameState.hands[id]));
-  if(!eligible) { gameState.chopInterruptDeadline = 0; return; }
+  if(!isChoppableSpecialTarget(curr)) { gameState.chopInterruptDeadline = 0; return; }
+
+  // 4+ Đôi Thông KHÔNG mở vòng 3 giây nữa — người sở hữu có thể CHẶT NGAY.
+  const eligibleThreeOnly = gameState.order.some(id =>
+    !gameState.finished.includes(id) &&
+    !gameState.coldFolded.has(id) &&
+    !hasFourPairRun(gameState.hands[id]) &&
+    hasThreePairRunOnly(gameState.hands[id])
+  );
+  if(!eligibleThreeOnly) { gameState.chopInterruptDeadline = 0; return; }
+
   gameState.chopInterruptDeadline = Date.now() + 3000;
   gameState.chopInterruptToken = (gameState.chopInterruptToken || 0) + 1;
   const token = gameState.chopInterruptToken;
@@ -3085,9 +3397,325 @@ function openChopInterruptWindow(){
     }
   }, 3050);
 }
+// Dựng nội dung 2 dòng cho nút "Chặt Ngay" (cửa sổ đếm 3-2-1 cũ): dòng chính là nút bấm +
+// số giây còn lại, dòng phụ báo ĐANG CHẶT GÌ, CỦA AI, và ĐANG TREO BAO NHIÊU NƯỚC (bomChain) —
+// cùng kiểu chữ với overlay TEST 4/5 — để người ra quyết định chặt thấy ngay toàn bộ thông tin,
+// không phải đoán mò hay lật lại log mới biết đang chặt hụt/chặt lời bao nhiêu.
+function buildChopButtonLabel(curr, ownerId, sec, isFixedButton){
+  const targetLabel = describeInstantTarget(curr);
+  const ownerName = (currentState && currentState.names) ? (currentState.names[ownerId] || '') : '';
+  const bomNow = Math.max(
+    Number(currentState && currentState.chopChainValue || 0),
+    Number(currentState && currentState.chopStackValue || 0)
+  );
+  const bomTxt = bomNow > 0 ? ` • Đang treo ${bomNow} Nước` : '';
+  const sub = targetLabel
+    ? `<span class="chop-btn-target">${escapeHtml(targetLabel)}${ownerName ? ' • của ' + escapeHtml(ownerName) : ''}${escapeHtml(bomTxt)}</span>`
+    : '';
+  const main = isFixedButton ? '⚡ CHẶT NGAY' : `⚡ Chặt Ngang (${sec}s)`;
+  return `<span class="chop-btn-main">${main}</span>${sub}`;
+}
+function describeInstantTarget(combo){
+  if(!combo) return '';
+  if(combo.type === 'single' && combo.cards?.[0]?.r === 12){
+    const red = [2,3].includes(combo.cards[0].s);
+    return red ? 'HEO ĐỎ' : 'HEO ĐEN';
+  }
+  if(combo.type === 'pair' && combo.cards?.[0]?.r === 12){
+    const redCount = combo.cards.filter(c=>[2,3].includes(c.s)).length;
+    return redCount >= 1 ? 'ĐÔI HEO' : 'ĐÔI HEO';
+  }
+  if(combo.type === 'pairs_run' && combo.count >= 3) return `${combo.count} ĐÔI THÔNG`;
+  if(combo.type === 'quad') return 'TỨ QUÝ';
+  return describeCombo(combo);
+}
+
+function findBestInstantChopCardsForHand(hand, curr){
+  if(!curr || !isChoppableSpecialTarget(curr)) return null;
+  const runs = findMaxPairRuns(safeArray(hand)).filter(r=>r.count >= 4);
+  const out=[];
+  for(const run of runs){
+    const cards=[];
+    for(let r=run.fromR; r<=run.toR; r++){
+      const pair=safeArray(hand).filter(c=>c.r===r).slice(0,2);
+      if(pair.length<2){ cards.length=0; break; }
+      cards.push(...pair);
+    }
+    if(cards.length !== run.count*2) continue;
+    const combo=classify(cards);
+    if(combo && combo.type==='pairs_run' && combo.count>=4 && canBeat(combo,curr)) out.push({cards,combo});
+  }
+  out.sort((a,b)=>a.combo.count-b.combo.count || a.combo.highR-b.combo.highR);
+  return out[0] || null;
+}
+
+
+// ================================================================
+// DEBUG ENGINE — ghi nhận từng action, người chơi, lượt và state.
+// Không tham gia tính luật; chỉ đọc snapshot và append log.
+// ================================================================
+const DEBUG_LOG_LIMIT = 500;
+let localDebugTrace = [];
+let lastDebugStateKey = '';
+let debugActionSeq = 0;
+
+function debugName(id, st=gameState){
+  return (st && st.names && st.names[id]) || id || '?';
+}
+function debugCardText(cards){
+  return safeArray(cards).map(c => {
+    try { return `${RANKS[c.r]||c.r}${SUITS[c.s]||c.s}`; } catch(e){ return `${c?.r},${c?.s}`; }
+  }).join(' ');
+}
+function debugComboText(combo){
+  if(!combo) return '—';
+  try { return describeCombo(combo); } catch(e){ return `${combo.type||'?'}:${combo.count||combo.cards?.length||0}`; }
+}
+function debugSnapshot(st=gameState){
+  if(!st) return null;
+  const order=safeArray(st.order);
+  const turnIdx=Number(st.turnIdx);
+  const turnId=order[turnIdx] || null;
+  const counts={};
+  order.forEach(id => counts[id]=safeArray(st.hands && st.hands[id]).length);
+  return {
+    turnIdx, turnId, turnName:debugName(turnId,st),
+    leaderId:st.leaderId||null, leaderName:debugName(st.leaderId,st),
+    currentCombo:debugComboText(st.currentCombo),
+    comboKey:comboTargetKey(st.currentCombo),
+    passed:st.passed instanceof Set ? [...st.passed] : safeArray(st.passed),
+    finished:safeArray(st.finished),
+    coldFolded:st.coldFolded instanceof Set ? [...st.coldFolded] : safeArray(st.coldFolded),
+    handCounts:counts,
+    chopStackValue:Number(st.chopStackValue||0),
+    chopChainValue:Number(st.chopChainValue||0),
+    chopDeadline:Number(st.chopInterruptDeadline||0),
+    isEnded:!!st.isEnded,
+    scenario:st.naturalScenarioLabel || st.testScenario || null,
+    // 3 nguồn khóa lượt liên quan trực tiếp tới bug "mất lượt khi CHẶT NGANG":
+    // luôn ghi kèm vào MỌI snapshot để không phải đoán lại từ context khi đọc log.
+    forcedNextTurnId:st.forcedNextTurnId||null, forcedNextTurnName:debugName(st.forcedNextTurnId,st),
+    chopTurnLockId:st.chopTurnLockId||null, chopTurnLockName:debugName(st.chopTurnLockId,st),
+    lastChopWinnerId:st.lastChopWinnerId||null, lastChopWinnerName:debugName(st.lastChopWinnerId,st)
+  };
+}
+// Rút gọn 1 snapshot (before/after) thành 1 cụm ngắn, CHỈ giữ phần liên quan tới LƯỢT + KHÓA CHẶT.
+// Dùng chung cho cả hiển thị trên màn hình lẫn bản COPY, để không phải dò JSON dài dòng.
+function debugSnapTag(s){
+  if(!s) return '—';
+  const lockBits=[];
+  if(s.forcedNextTurnId) lockBits.push(`forced=${s.forcedNextTurnName}`);
+  if(s.chopTurnLockId) lockBits.push(`lock=${s.chopTurnLockName}`);
+  if(s.lastChopWinnerId) lockBits.push(`chopWin=${s.lastChopWinnerName}`);
+  const lockTxt=lockBits.length?` 🔒${lockBits.join(',')}`:'';
+  return `lượt=${s.turnName||'?'} leader=${s.leaderName||'—'} bàn=${s.currentCombo||'—'} BOM=${s.chopChainValue||0}/${s.chopStackValue||0}${lockTxt}`;
+}
+// 1 dòng NGẮN GỌN duy nhất cho mỗi bản ghi log — dùng chung cho khung hiển thị VÀ nút Copy,
+// để bản copy dán ra ngoài (Zalo/Notepad...) không bị vỡ trang vì object JSON quá dài.
+// Định dạng: #seq giờ:phút:giây | LOẠI | actor | action/cards | before→after (chỉ phần lượt/khóa) | ghi chú
+function debugLineText(r){
+  const tm=(r.at||'').split('T')[1]?.replace('Z','').split('.')[0] || (r.at||'');
+  const actor=r.actor ? `👤${r.actor}` : '';
+  const act=r.action ? `${r.action}${r.cards?`[${r.cards}]`:''}` : '';
+  const tag=r.phase==='REQUEST' ? 'REQ' : (r.type||'EVT');
+  const msg=r.message||r.result||'';
+  const target=r.target && r.target!=='—' ? ` vs ${r.target}` : '';
+  let turnTxt='';
+  if(r.phase==='REQUEST' && r.before) turnTxt=`⏱ ${debugSnapTag(r.before)}`;
+  else if(r.after) turnTxt=`⏱ ${debugSnapTag(r.after)}`;
+  return [`#${r.seq}`, tm, tag, actor, act+target, msg, turnTxt].filter(Boolean).join(' | ');
+}
+function debugWrite(entry, broadcast=false){
+  const t=new Date();
+  const row={
+    seq:++debugActionSeq,
+    at:t.toISOString(),
+    ms:Date.now(),
+    ...entry
+  };
+  localDebugTrace.push(row);
+  if(localDebugTrace.length>DEBUG_LOG_LIMIT) localDebugTrace.splice(0,localDebugTrace.length-DEBUG_LOG_LIMIT);
+  if(gameState){
+    gameState.debugLog=Array.isArray(gameState.debugLog)?gameState.debugLog:[];
+    gameState.debugLog.push(row);
+    if(gameState.debugLog.length>DEBUG_LOG_LIMIT) gameState.debugLog.splice(0,gameState.debugLog.length-DEBUG_LOG_LIMIT);
+  }
+  renderDebugLog();
+  if(broadcast && gameState && !isBotMode){
+    try{ roomRef("game/debugLog").set(gameState.debugLog); }catch(e){}
+  }
+  return row;
+}
+function debugActionRequest(playerId, action, isAuto){
+  const st=gameState;
+  const a=action||{};
+  debugWrite({
+    type:'ACTION',
+    phase:'REQUEST',
+    actorId:playerId,
+    actor:debugName(playerId,st),
+    auto:!!isAuto,
+    action:a.kind||'?',
+    requestId:a.requestId||null,
+    cards:debugCardText((a.cards||[]).map(k=>{
+      const h=safeArray(st?.hands?.[playerId]); return h.find(c=>cardKey(c)===k)||k;
+    })),
+    before:debugSnapshot(st)
+  }, false);
+}
+function debugActionEvent(type, playerId, message, extra={}){
+  debugWrite({
+    type,
+    phase:'EVENT',
+    actorId:playerId||null,
+    actor:playerId?debugName(playerId,gameState):null,
+    message,
+    ...extra,
+    after:debugSnapshot(gameState)
+  }, false);
+}
+function renderDebugLog(){
+  const body=$('debugLogBody'), badge=$('debugBadge');
+  if(!body) return;
+  const rows=Array.isArray(gameState?.debugLog) ? gameState.debugLog : localDebugTrace;
+  if(badge){ badge.textContent=`LOG ${rows.length}`; badge.style.display=rows.length?'block':'none'; }
+  if(!rows.length){ body.innerHTML='<div class="debug-empty">Chưa có log.</div>'; return; }
+  body.innerHTML=rows.map(r=>{
+    const cls=r.type==='ERROR'||r.type==='BLOCK'?'err':(r.type==='TURN'?'turn':(r.type==='CHOP'?'warn':(r.phase==='REQUEST'?'req':(r.type==='STATE'?'state':'ok'))));
+    return `<div class="debug-row ${cls}">${escapeHtml(debugLineText(r))}</div>`;
+  }).join('');
+  body.scrollTop=body.scrollHeight;
+}
+function debugOpen(){
+  const o=$('debugLogOverlay'); if(!o)return;
+  renderDebugLog(); o.classList.remove('hidden'); o.setAttribute('aria-hidden','false');
+}
+function debugClose(){
+  const o=$('debugLogOverlay'); if(!o)return;
+  o.classList.add('hidden'); o.setAttribute('aria-hidden','true');
+}
+function debugClear(){
+  localDebugTrace=[]; debugActionSeq=0; lastDebugStateKey='';
+  if(gameState) gameState.debugLog=[];
+  renderDebugLog();
+}
+function debugCopy(){
+  // FIX "COPY LOG QUÁ DÀI": bản cũ copy nguyên JSON.stringify(r) cho từng dòng — mỗi dòng
+  // kèm cả snapshot before/after đầy đủ (handCounts, passed, finished, coldFolded...) nên
+  // 100-200 dòng log đã dài tới hàng chục nghìn ký tự, rất khó dán ra ngoài để lướt tìm đúng
+  // chỗ MẤT LƯỢT khi CHẶT NGANG. Giờ copy đúng 1 DÒNG NGẮN/bản ghi (dùng chung debugLineText()
+  // với khung hiển thị), chỉ giữ phần cốt lõi: ai hành động, lượt đang thuộc về ai, quả BOM bao
+  // nhiêu, và 3 khóa lượt liên quan trực tiếp tới bug này (forcedNextTurnId / chopTurnLockId /
+  // lastChopWinnerId) — đủ để dò ra đúng thời điểm lượt bị khóa nhầm hoặc không được mở khóa.
+  const rows=Array.isArray(gameState?.debugLog) ? gameState.debugLog : localDebugTrace;
+  const text=rows.map(debugLineText).join('\n');
+  if(navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(()=>alert(`✅ Đã copy DEBUG LOG (${rows.length} dòng, dạng rút gọn).`));
+  else prompt('Copy DEBUG LOG:',text);
+}
+function debugObserveState(st){
+  if(!st) return;
+  const snap=debugSnapshot(st);
+  if(!snap) return;
+  const key=JSON.stringify({
+    t:snap.turnId,c:snap.currentCombo,l:snap.leaderId,p:snap.passed,
+    f:snap.finished,cf:snap.coldFolded,b:snap.chopChainValue,s:snap.chopStackValue
+  });
+  if(key===lastDebugStateKey) return;
+  lastDebugStateKey=key;
+  const last=localDebugTrace[localDebugTrace.length-1];
+  if(last && last.type==='ACTION' && last.phase==='REQUEST') return;
+  debugWrite({type:'STATE',phase:'CHANGE',message:`State đổi: lượt ${snap.turnName||'?'} • bộ ${snap.currentCombo||'—'}`},false);
+}
+
+function resolveActionCards(hand, keys){
+  const source=safeArray(hand); if(!Array.isArray(keys)||!keys.length) return {ok:false,reason:'INVALID_COMBO',cards:[]};
+  const seen=new Set(),cards=[];
+  for(const k of keys){
+    if(seen.has(k)) return {ok:false,reason:'DUPLICATE_CARD',cards:[]};
+    seen.add(k); const c=source.find(card=>cardKey(card)===k);
+    if(!c) return {ok:false,reason:'CARD_NOT_IN_HAND',cards:[]}; cards.push(c);
+  }
+  return {ok:true,cards};
+}
 
 function handleAction(playerId, action, isAuto=false){
   if(!gameState) return;
+
+  // V5 ABSOLUTE CHOP LOCK: nguồn khóa độc lập, không phụ thuộc turnIdx/currentCombo.
+  if(gameState.chopTurnLockId && String(playerId) !== String(gameState.chopTurnLockId)){
+    debugActionRequest(playerId, action, isAuto);
+    debugActionEvent('BLOCK', playerId, `V5 BLOCK: quyền sau CHẶT NGANG thuộc ${gameState.names[gameState.chopTurnLockId] || gameState.chopTurnLockId}`, {
+      chopTurnLockId: String(gameState.chopTurnLockId), attemptedAction: action && action.kind, auto: !!isAuto
+    });
+    rejectTrackedAction(playerId, action, 'ACTION_BLOCKED');
+    return;
+  }
+
+  // HARD LOCK SAU CHẶT NGANG V4:
+  // lastChopWinnerId là nguồn sự thật thứ 2, độc lập với turnIdx/forcedNextTurnId.
+  // Bất kỳ action nào của người khác sau cú chặt đều bị CHẶN NGAY tại cửa vào.
+  if(gameState.lastChopWinnerId){
+    const chopWinner = String(gameState.lastChopWinnerId);
+    if(String(playerId) !== chopWinner){
+      debugActionRequest(playerId, action, isAuto);
+      debugActionEvent('BLOCK', playerId, `BLOCK SAU CHẶT NGANG V4: quyền đang thuộc ${gameState.names[chopWinner] || chopWinner}`, {
+        lastChopWinnerId: chopWinner, attemptedAction: action && action.kind, auto: !!isAuto,
+        turnId: gameState.order[gameState.turnIdx], turnIdx: gameState.turnIdx
+      });
+      rejectTrackedAction(playerId, action, 'ACTION_BLOCKED');
+      return;
+    }
+    const winnerIdx = gameState.order.findIndex(id => String(id) === chopWinner);
+    if(winnerIdx < 0) return;
+    gameState.turnIdx = winnerIdx;
+    // Chỉ nước PLAY/PASS đầu tiên của chính người vừa chặt mới mở khóa.
+    if(action && (action.kind === 'play' || action.kind === 'pass')){
+      gameState.chopTurnLockId = null;
+      gameState.lastChopWinnerId = null;
+      gameState.forcedNextTurnId = null;
+      gameState.forcedNextTurnAt = 0;
+    } else if(action && action.kind === 'interrupt_chop'){
+      return;
+    }
+  }
+
+  // HARD LOCK SAU CHẶT NGANG:
+  // Người vừa chặt là người duy nhất được phép thực hiện nước kế tiếp.
+  // Guard này phải nằm NGAY ĐẦU handleAction, trước mọi nhánh PASS/PLAY
+  // và trước mọi callback Bot cũ. Vì vậy callback được tạo trước cú chặt
+  // dù chạy trễ cũng không thể cướp lượt.
+  if(gameState.forcedNextTurnId){
+    const forcedId = String(gameState.forcedNextTurnId);
+    if(String(playerId) !== forcedId) {
+      debugActionRequest(playerId, action, isAuto);
+      debugActionEvent('BLOCK', playerId,
+        `BLOCK action sau CHẶT NGANG: quyền đang khóa cho ${gameState.names[forcedId] || forcedId}`, {
+          forcedNextTurnId: forcedId,
+          attemptedAction: action && action.kind,
+          auto: !!isAuto
+        });
+      rejectTrackedAction(playerId, action, 'ACTION_BLOCKED');
+      return;
+    }
+
+    // Ép state về đúng người vừa chặt trước khi nhận nước tiếp theo.
+    const forcedIdx = gameState.order.findIndex(id => String(id) === forcedId);
+    if(forcedIdx < 0) return;
+    gameState.turnIdx = forcedIdx;
+    gameState.turnDeadline = Date.now() + gameState.turnSeconds * 1000;
+
+    // Chỉ PLAY/PASS mới kết thúc quyền ưu tiên sau chặt.
+    // interrupt_chop không được chen vào ngay chính lượt của người chặt.
+    if(!action || (action.kind !== 'play' && action.kind !== 'pass')){
+      debugActionRequest(playerId, action, isAuto);
+      return;
+    }
+
+    gameState.forcedNextTurnId = null;
+    gameState.forcedNextTurnAt = 0;
+  }
+
+  debugActionRequest(playerId, action, isAuto);
 
   // XÁC NHẬN / HỦY TỚI TRẮNG: chỉ chủ phòng được quyết định, sau khi cả bàn đã xem bài ngửa
   if(action.kind === 'confirmInstantWin'){
@@ -3102,32 +3730,45 @@ function handleAction(playerId, action, isAuto=false){
     dealNewGame();
     return;
   }
-  if(gameState.instantWin && !gameState.instantWin.confirmed) return; // khoá mọi thao tác khác khi đang chờ xác nhận
+  if(gameState.instantWin && !gameState.instantWin.confirmed){ rejectTrackedAction(playerId, action, 'ACTION_BLOCKED'); return; } // khoá mọi thao tác khác khi đang chờ xác nhận
 
-  if(gameState.isEnded) return;
-  if(Number(gameState.chopInterruptDeadline || 0) > Date.now() && action.kind !== 'interrupt_chop') return;
+  if(gameState.isEnded){ rejectTrackedAction(playerId, action, 'ACTION_BLOCKED'); return; }
+  if(Number(gameState.chopInterruptDeadline || 0) > Date.now() && action.kind !== 'interrupt_chop'){
+    rejectTrackedAction(playerId, action, 'ACTION_BLOCKED'); return;
+  }
   if(Number(gameState.chopInterruptDeadline || 0) && Number(gameState.chopInterruptDeadline) <= Date.now()) gameState.chopInterruptDeadline = 0;
   const currId = gameState.order[gameState.turnIdx];
 
-  // LUẬT CHẶT NGANG: bất kỳ ai giữ Tứ Quý / 4+ Đôi Thông đều có thể chặt ngay,
-  // không cần chờ đúng lượt, miễn là kiểu bài trên bàn đang bị "chặt được"
+  // LUẬT CHẶT NGAY: người có 4+ Đôi Thông được chặt bất kỳ lúc nào
+  // khi một bộ đặc biệt hợp lệ đang nằm trên bàn — KHÔNG cần đúng lượt,
+  // KHÔNG cần cửa sổ 3 giây và KHÔNG phụ thuộc vòng hiện tại.
   if(action.kind === 'interrupt_chop'){
-    if(gameState.finished.includes(playerId)) return;
-    if(Number(gameState.chopInterruptDeadline || 0) <= Date.now()) { gameState.chopInterruptDeadline = 0; return; }
-    if(!hasFourPairRun(gameState.hands[playerId])) return;
-    const curr = gameState.currentCombo;
-    if(!curr || gameState.leaderId === playerId) return;
-    const isChoppableTarget = (curr.type === 'single' && curr.cards[0].r === 12)
-      || (curr.type === 'pair' && curr.cards[0].r === 12)
-      || (curr.type === 'pairs_run' && curr.count >= 3)
-      || (curr.type === 'quad');
-    if(!isChoppableTarget) return;
-
-    const hand = safeArray(gameState.hands[playerId]);
-    const cards = action.cards.map(k => hand.find(c => cardKey(c) === k)).filter(Boolean);
-    const combo = classify(cards);
-    if(!combo || combo.type !== 'pairs_run' || combo.count < 4) return;
-    if(!canBeat(combo, curr)) return;
+    // CHẶT NGAY chỉ dành cho người KHÔNG có lượt. Nếu đang tới lượt thì phải
+    // Đánh/Bỏ lượt bình thường, tuyệt đối không được chen CHẶT NGAY vào.
+    // Nếu người chơi đã BỎ LƯỢT trong vòng hiện tại thì cũng không được quay lại
+    // chặt chính bộ đang nằm trên bàn; chỉ khi mở vòng mới (passed được clear) mới xét lại.
+    if(gameState.finished.includes(playerId)){rejectTrackedAction(playerId,action,'ACTION_BLOCKED');return;}
+    if(gameState.order[gameState.turnIdx]===playerId){rejectTrackedAction(playerId,action,'NOT_YOUR_TURN');return;}
+    const curr=gameState.currentCombo;
+    if(hasPassedInstantTarget(gameState,playerId,curr)){rejectTrackedAction(playerId,action,'ACTION_BLOCKED');return;}
+    if(!curr||gameState.leaderId===playerId){rejectTrackedAction(playerId,action,'INVALID_CHOP');return;}
+    if(!isChoppableSpecialTarget(curr)){rejectTrackedAction(playerId,action,'INVALID_CHOP');return;}
+    const hand=safeArray(gameState.hands[playerId]);
+    const hasFour=hasFourPairRun(hand), hasThreeOnly=!hasFour&&hasThreePairRunOnly(hand);
+    const chopWindowOpen=Number(gameState.chopInterruptDeadline||0)>Date.now();
+    if(!hasFour&&!hasThreeOnly){rejectTrackedAction(playerId,action,'INVALID_CHOP');return;}
+    if(hasThreeOnly&&!chopWindowOpen){rejectTrackedAction(playerId,action,'CHOP_WINDOW_CLOSED');return;}
+    const resolved=resolveActionCards(hand,action.cards);
+    if(!resolved.ok){rejectTrackedAction(playerId,action,resolved.reason);return;}
+    let cards=resolved.cards, combo=classify(cards);
+    if(!combo||combo.type!=='pairs_run'||!canBeat(combo,curr)){
+      if(hasThreeOnly){rejectTrackedAction(playerId,action,!combo?'INVALID_CHOP':'CANNOT_BEAT',{duplicateRanks:duplicateRanks(cards)});return;}
+      const autoBest=findBestInstantChopCardsForHand(hand,curr);
+      if(!autoBest){rejectTrackedAction(playerId,action,!combo?'INVALID_CHOP':'CANNOT_BEAT');return;}
+      cards=autoBest.cards; combo=autoBest.combo;
+    }
+    if(hasThreeOnly&&combo.count!==3){rejectTrackedAction(playerId,action,'INVALID_CHOP');return;}
+    if(hasFour&&combo.count<4){rejectTrackedAction(playerId,action,'INVALID_CHOP');return;}
 
     // LUẬT AN TOÀN SAU KHI VỀ: nếu người vừa ném bộ bài đã HẾT BÀI (đặc biệt
     // vừa ném Heo và về luôn), họ đã an toàn. Người khác vẫn có thể chặt bộ bài
@@ -3137,7 +3778,13 @@ function handleAction(playerId, action, isAuto=false){
     const activeCount = gameState.order.length;
     const directReward = targetAlreadyFinished ? 0 : calculateChopReward(combo, curr, activeCount);
     const stackIncrement = targetAlreadyFinished ? 0 : (Number(gameState.chopStackValue || 0) || getSpecialStackValue(curr));
-    const chopReward = targetAlreadyFinished ? 0 : Math.max(directReward, stackIncrement);
+    // TEST 4/5 ĐÔI THÔNG: nếu UI đã xác nhận combo hợp lệ + canBeat() thì
+    // tuyệt đối không được làm mất action chỉ vì bộ cấu hình thưởng hiện tại trả 0.
+    // Chặt phải vẫn xảy ra; dùng mức tối thiểu 1 Nước làm fallback cho riêng TEST.
+    const calculatedChopReward = targetAlreadyFinished ? 0 : Math.max(directReward, stackIncrement);
+    const chopReward = (!targetAlreadyFinished && isRuleTestMode && combo.type === 'pairs_run' && combo.count >= 4)
+      ? Math.max(1, calculatedChopReward)
+      : calculatedChopReward;
     if(!targetAlreadyFinished && chopReward <= 0) return;
 
     // FIX: nếu cú chặt này khiến người chặt VỀ ĐÍCH ngay (hết bài) và ván kết thúc luôn,
@@ -3170,6 +3817,7 @@ function handleAction(playerId, action, isAuto=false){
       if(!gameState.roundLog) gameState.roundLog = [];
       gameState.roundLog.push({ icon:'🛡️', text:`${pName} chặt bộ bài của ${prevLeaderName} sau khi họ đã về → 0 Nước, không nhập BOM.` });
       bumpActor(playerId, '🛡️ Chặt nhưng 0 Nước — đối thủ đã về!');
+      setChopBanner(`🛡️ ${pName} chặt ${describeChopTargetNice(curr)} của ${prevLeaderName} bằng ${describeChopTargetNice(combo)} — không tính Nước (đã về)`, cards);
       // FIX: đã bỏ broadcastSoundEvent('CHOP') ở đây vì có 1 lệnh gọi chung
       // ngay sau khối if/else-if/else bên dưới (áp dụng cho cả 3 nhánh) → tránh phát CHOP 2 lần.
     } else if(gameState.gameMode === 'WATER' && prevLeader && prevLeader !== playerId){
@@ -3191,11 +3839,13 @@ function handleAction(playerId, action, isAuto=false){
       if(!gameState.roundLog) gameState.roundLog = [];
       gameState.roundLog.push({ icon:'⚡', text: `${pName} CHẶT NGANG ${choppedDesc} của ${prevLeaderName} bằng ${describeCombo(combo)} → dồn bom ${totalChain} Nước.${chainTag}` });
       bumpActor(playerId, `⚡ Chặt ngang! Bom ${totalChain} Nước${chainTag ? ' 🔥' : ''}`);
+      setChopBanner(`⚡ ${pName} chặt ${describeChopTargetNice(curr)} của ${prevLeaderName} bằng ${describeChopTargetNice(combo)} — Bom ${totalChain} Nước${chainTag ? ' 🔥' : ''}`, cards);
     } else {
       gameState.log = `⚡ ${pName} CHẶT NGANG thành công!${chainTag}`;
       if(!gameState.roundLog) gameState.roundLog = [];
       gameState.roundLog.push({ icon:'⚡', text: `${pName} CHẶT NGANG ${choppedDesc} bằng ${describeCombo(combo)} (không đợi lượt).${chainTag}` });
       bumpActor(playerId, '⚡ Chặt ngang thành công!');
+      setChopBanner(`⚡ ${pName} chặt ${describeChopTargetNice(curr)}${prevLeaderName ? ' của ' + prevLeaderName : ''} bằng ${describeChopTargetNice(combo)}${chainTag}`, cards);
     }
     if(!chopWillEndGame) broadcastChopSound(curr, combo, targetWasAlreadyFinished);
 
@@ -3209,7 +3859,17 @@ function handleAction(playerId, action, isAuto=false){
     // chopStackValue đã được tính dồn ở nhánh isSpecialStackBeat (ví dụ
     // Heo đen 1 → Heo đỏ 2 = 3 Nước treo). Không được ghi đè nó bằng
     // giá trị riêng của combo hiện tại, nếu không cú chặt tiếp theo chỉ ăn 2.
-    gameState.chopStackValue = isSpecialStackBeat
+    // FIX BUG "MẤT LƯỢT KHI CHẶT NGANG": biến isSpecialStackBeat trước đây được
+    // dùng ở đây nhưng KHÔNG hề tồn tại trong nhánh interrupt_chop này — nó chỉ
+    // được khai báo bên nhánh 'play' hoàn toàn khác (else if(action.kind==='play')).
+    // Khi chạy tới đây, JS ném ReferenceError và handleAction() dừng đột ngột NGAY
+    // TẠI DÒNG NÀY: currentCombo/chopChainValue đã kịp cập nhật (nên bàn/BOM đổi
+    // đúng) nhưng leaderId/turnIdx/forcedNextTurnId/lastChopWinnerId phía dưới
+    // KHÔNG BAO GIỜ được gán — người vừa chặt mất quyền đánh tiếp, lượt vẫn treo
+    // ở người cũ. Đây chính là nguồn gốc lỗi "mất lượt khi chặt ngang".
+    // Tự tính lại đúng biến này ngay tại chỗ, dùng lại đúng công thức của nhánh 'play'.
+    const isSpecialStackBeatInterrupt = !targetWasAlreadyFinished && isSpecialStackContinuation(curr, combo);
+    gameState.chopStackValue = isSpecialStackBeatInterrupt
       ? (Number(gameState.chopStackValue || 0) || getSpecialStackValue(combo))
       : getSpecialStackValue(combo);
     gameState.leaderId = playerId;
@@ -3229,29 +3889,78 @@ function handleAction(playerId, action, isAuto=false){
       gameState.log += ` | 🔔 ${pName} chỉ còn 1 lá bài!`;
     }
 
-    openChopInterruptWindow();
-    if(gameState.chopInterruptDeadline){ broadcastState(); return; }
-
     const activePlayers = gameState.order.filter(id => !gameState.finished.includes(id) && !gameState.coldFolded.has(id));
     if(activePlayers.length <= 1){
       if(activePlayers.length === 1){
         gameState.finished.push(activePlayers[0]);
-        // Người bét cuối cùng được ghép hạng tự động NGAY TRƯỚC endGame() → luôn bỏ qua
-        // FINISH_x cho trường hợp này, vì CRY sắp phát ngay sau đó rồi.
+        // Người bét cuối cùng được ghép hạng tự động NGAY TRƯỚC endGame().
         awardLiveBaseScore(activePlayers[0], gameState.finished.length, true);
       }
       settleChopChain('ván kết thúc');
+      acceptTrackedAction(playerId,action,{combo:debugComboText(combo),cards:debugCardText(cards),final:true});
       endGame();
       return;
     }
 
-    openChopInterruptWindow();
-    if(!gameState.chopInterruptDeadline){
-      checkNextTurn();
-      gameState.turnDeadline = Date.now() + gameState.turnSeconds * 1000;
-    }
+    // CHẶT XONG: người chặt được ĐÁNH TIẾP ngay.
+    // Mở nước mới, KHÔNG gọi checkNextTurn() vì hàm đó sẽ nhảy sang người kế bên.
+    // Tính index trước khi đổi state; nếu không tìm thấy playerId thì hủy toàn bộ thao tác
+    // thay vì để state dở dang (đây là một nguyên nhân khiến client nhìn như chặt xong
+    // nhưng lượt không quay về người chặt).
+    const chopNextIdx = gameState.order.findIndex(id => String(id) === String(playerId));
+    if(chopNextIdx < 0) return;
+
+    // Hủy NGAY mọi callback Bot đã được đặt từ lượt cũ.
+    // Đây là điểm quan trọng: Bot có thể đã được setTimeout() từ trước khi người chơi CHẶT NGANG.
+    // Chỉ tăng token ở cuối cú chặt là quá muộn, callback cũ vẫn có thể chạy và gọi PASS/PLAY.
+    botInstantChopToken++;
+    turnControlToken++;
+    // SAU CHẶT NGANG: người vừa chặt được quyền ra quân ngay.
+    // Không để bất kỳ callback/lượt cũ nào ghi đè turnIdx sang người khác.
+    gameState.currentCombo = null;
+    gameState.leaderId = playerId;
+    gameState.turnIdx = chopNextIdx;
+    gameState.passed = new Set();
+    gameState.chopInterruptDeadline = 0;
+    gameState.forcedNextTurnId = playerId;
+    gameState.forcedNextTurnAt = Date.now();
+    gameState.chopInterruptToken = (gameState.chopInterruptToken || 0) + 1;
+    // KHÓA LƯỢT SAU CHẶT NGAY: người vừa chặt là người duy nhất được phép ra quân.
+    // Hủy trạng thái Bot đang nghĩ/đang chờ của nước cũ để callback cũ không thể chen vào.
+    gameState.botThinking = false;
+    gameState.turnDeadline = Date.now() + gameState.turnSeconds * 1000;
+    gameState.forcedNextTurnId = playerId;
+    gameState.forcedNextTurnAt = Date.now();
+    gameState.log = `${pName} đã chặt thành công — ${pName} được đánh tiếp.`;
+    gameState.lastChopWinnerId = playerId;
+    gameState.chopTurnLockId = playerId;
+    debugActionEvent('CHOP', playerId, `${pName} CHẶT NGAY ${debugComboText(combo)} → đánh tiếp`, {
+      cards:debugCardText(cards), target:debugComboText(curr), instant:true
+    });
+    debugActionEvent('TURN', playerId, `Sau CHẶT NGAY, khóa lượt cho ${pName}`, {turnId:playerId,turnIdx:chopNextIdx});
+    bumpActor(playerId, '⚡ Chặt xong — ĐÁNH TIẾP!');
+    acceptTrackedAction(playerId,action,{combo:debugComboText(combo),cards:debugCardText(cards)});
     broadcastState();
+    // Không gọi checkNextTurn() và không tự kích Bot. Người vừa chặt phải là người ra quân.
     return;
+  }
+
+  // KHÓA CỨNG QUYỀN ĐÁNH SAU CHẶT NGANG.
+  // Không dựa vào turnIdx ở đây vì callback cũ có thể đã ghi đè turnIdx.
+  // Khi còn forcedNextTurnId:
+  //   - Chỉ người vừa chặt được phép PLAY/PASS.
+  //   - Mọi Bot/người khác đều bị bỏ qua.
+  //   - Ép turnIdx trở lại đúng người vừa chặt trước khi xử lý action.
+  if(gameState.forcedNextTurnId){
+    const forcedId = gameState.forcedNextTurnId;
+    if(playerId !== forcedId) return;
+    const forcedIdx = gameState.order.findIndex(id => String(id) === String(forcedId));
+    if(forcedIdx < 0) return;
+    gameState.turnIdx = forcedIdx;
+    if(action.kind !== 'play' && action.kind !== 'pass' && action.kind !== 'interrupt_chop') return;
+    // Chỉ xóa khóa khi CHÍNH NGƯỜI VỪA CHẶT thực hiện nước kế tiếp.
+    gameState.forcedNextTurnId = null;
+    gameState.forcedNextTurnAt = 0;
   }
 
   // LUẬT ĐỀN LÀNG: chủ phòng áp dụng phạt/thưởng thủ công cho vi phạm luật — BẮT BUỘC có lý do
@@ -3272,29 +3981,38 @@ function handleAction(playerId, action, isAuto=false){
     return;
   }
 
-  if(playerId !== currId) return;
+  // currId được tính trước khóa; sau khi ép turnIdx về người vừa chặt phải đọc lại.
+  const activeTurnId = gameState.order[gameState.turnIdx];
+  if(playerId !== activeTurnId){ rejectTrackedAction(playerId, action, 'NOT_YOUR_TURN'); return; }
 
   const pName = gameState.names[playerId];
   const prefix = isAuto ? '⏰ (Tự động/Bot) ' : '';
 
   if(action.kind === 'pass'){
     if(!gameState.currentCombo) return;
+    if(isRuleTestMode){
+      gameState.instantChopPassedTarget = gameState.instantChopPassedTarget || {};
+      gameState.instantChopPassedTarget[playerId] = comboTargetKey(gameState.currentCombo);
+    }
     gameState.passed.add(playerId);
     gameState.log = `${prefix}${pName} đã bỏ lượt.`;
+    debugActionEvent('PASS', playerId, `${pName} bỏ lượt${isAuto?' (auto/bot)':''}`, {auto:!!isAuto});
     bumpActor(playerId, isAuto ? '⏰ Bỏ lượt (tự động)' : '🚫 Bỏ lượt');
     consecutivePlayCount = 0;
     checkNextTurn();
   } 
   else if(action.kind === 'play'){
-    const hand = safeArray(gameState.hands[playerId]);
-    const cards = action.cards.map(k => hand.find(c => cardKey(c) === k)).filter(Boolean);
-    const combo = classify(cards);
-
-    if(!combo) return;
-    if(gameState.firstMove && gameState.requiredCard){
-      if(!cards.some(c => c.r === gameState.requiredCard.r && c.s === gameState.requiredCard.s)) return;
+    const hand=safeArray(gameState.hands[playerId]);
+    const resolved=resolveActionCards(hand,action.cards);
+    if(!resolved.ok){rejectTrackedAction(playerId,action,resolved.reason);return;}
+    const cards=resolved.cards, combo=classify(cards);
+    if(!combo){rejectTrackedAction(playerId,action,'INVALID_COMBO',{duplicateRanks:duplicateRanks(cards)});return;}
+    if(gameState.firstMove&&gameState.requiredCard&&!cards.some(c=>c.r===gameState.requiredCard.r&&c.s===gameState.requiredCard.s)){
+      rejectTrackedAction(playerId,action,'FIRST_MOVE_REQUIRED_CARD');return;
     }
-    if(!canBeat(combo, gameState.currentCombo)) return;
+    if(!canBeat(combo,gameState.currentCombo)){
+      rejectTrackedAction(playerId,action,'CANNOT_BEAT',{currentCombo:debugComboText(gameState.currentCombo)});return;
+    }
 
     // FIX "ÂM THANH LOẠN KHI KẾT THÚC": nếu nước đi này khiến người chơi VỀ ĐÍCH và ván
     // kết thúc ngay, không phát PLAY_CARD (và CHOP bên dưới) nữa — chỉ để đúng 1 tiếng
@@ -3332,6 +4050,11 @@ function handleAction(playerId, action, isAuto=false){
       if(!gameState.roundLog) gameState.roundLog = [];
       gameState.roundLog.push({ icon:'🛡️', text:`${pName} chặt sau khi ${gameState.names[gameState.leaderId]} đã về → 0 Nước, không tạo BOM.` });
       shortMsg = '🛡️ Chặt nhưng 0 Nước';
+      // FIX: nhánh CHẶT khi đánh bình thường (trong lượt) trước đây chỉ có bumpActor()
+      // (bong bóng nhỏ tại đúng 1 ghế) mà KHÔNG có setChopBanner() (banner to giữa bàn cho
+      // CẢ NHÓM cùng thấy) — khác với nhánh interrupt_chop đã có đủ. Người chơi phản ánh
+      // "chặt xong không báo hàng gì/của ai cho cả nhóm" chính là do thiếu dòng này.
+      setChopBanner(`🛡️ ${pName} chặt ${describeChopTargetNice(gameState.currentCombo)} của ${gameState.names[gameState.leaderId]} bằng ${describeChopTargetNice(combo)} — không tính Nước (đã về)`, cards);
       if(!playWillEndGame) broadcastChopSound(gameState.currentCombo, combo, true);
     } else if(isSpecialStackBeat && directReward <= 0 && gameState.leaderId && gameState.leaderId !== playerId){
       // Chồng đặc biệt nhưng CHƯA có cú chặt: ví dụ A Heo đen → B Heo đỏ.
@@ -3368,10 +4091,15 @@ function handleAction(playerId, action, isAuto=false){
         gameState.log = `${prefix}${pName} chặt thành công! Bom chồng hiện tại: ${totalChain} Nước — chưa thanh toán; người bị chặt ở mắt xích cuối sẽ chịu toàn bộ.`;
         gameState.roundLog.push({ icon:'⚡', text: `${pName} CHẶT ${choppedDesc} của ${prevLeaderName} bằng ${describeCombo(combo)} → dồn bom ${totalChain} Nước.${chainTag}` });
         shortMsg = `⚡ Chặt! Bom ${totalChain} Nước${chainTag ? ' 🔥' : ''}`;
+        // FIX: thiếu banner cho cả nhóm khi CHẶT xảy ra ngay trong lượt đánh bình thường
+        // (không qua nút CHẶT NGANG/interrupt_chop) — trước đây chỉ mỗi người chặt (qua
+        // bumpActor) thấy bong bóng nhỏ tại ghế mình, người khác không biết vừa chặt gì của ai.
+        setChopBanner(`⚡ ${pName} chặt ${describeChopTargetNice(prevCombo)} của ${prevLeaderName} bằng ${describeChopTargetNice(combo)} — Bom ${totalChain} Nước${chainTag ? ' 🔥' : ''}`, cards);
       } else {
         gameState.log = `${prefix}${pName} chặt bài thành công! Người bị chặt chuẩn bị quỳ!`;
         gameState.roundLog.push({ icon:'⚡', text: `${pName} CHẶT ${choppedDesc} của ${prevLeaderName} bằng ${describeCombo(combo)}.` });
         shortMsg = '⚡ Chặt thành công!';
+        setChopBanner(`⚡ ${pName} chặt ${describeChopTargetNice(prevCombo)} của ${prevLeaderName} bằng ${describeChopTargetNice(combo)}`, cards);
       }
       if(!playWillEndGame) broadcastChopSound(prevCombo, combo, false);
     } else {
@@ -3381,6 +4109,12 @@ function handleAction(playerId, action, isAuto=false){
       gameState.log = `${prefix}${pName} đánh ${describeCombo(combo)}.`;
       shortMsg = `🃏 ${describeCombo(combo)}`;
     }
+    debugActionEvent(
+      shortMsg.includes('Chặt') || shortMsg.includes('CHẶT') ? 'CHOP' : 'PLAY',
+      playerId,
+      `${pName}: ${debugComboText(combo)}${isAuto?' (auto/bot)':''}`,
+      {auto:!!isAuto, cards:debugCardText(cards), target:debugComboText(prevCombo), result:shortMsg}
+    );
     bumpActor(playerId, (isAuto ? '⏰ ' : '') + shortMsg);
 
     gameState.hands[playerId] = hand.filter(c => !cards.some(sc => sc.r === c.r && sc.s === c.s));
@@ -3389,6 +4123,7 @@ function handleAction(playerId, action, isAuto=false){
     if(!gameState.revealedCards[playerId]) gameState.revealedCards[playerId] = [];
     gameState.revealedCards[playerId].push(...cards.map(c=>({r:c.r,s:c.s})));
     gameState.currentCombo = combo;
+    if(gameState.instantChopPassedTarget) delete gameState.instantChopPassedTarget[playerId];
     // FIX: cùng lỗi như nhánh CHẶT NGANG từng gặp — nếu vừa CHỒNG đặc biệt lên đặc biệt
     // trước đó (vd Heo đen 1 → Heo đỏ 2 = 3 Nước treo, isSpecialStackBeat), chopStackValue
     // ĐÃ được tính dồn đúng ở nhánh phía trên rồi. Không được ghi đè lại bằng giá trị riêng
@@ -3421,6 +4156,7 @@ function handleAction(playerId, action, isAuto=false){
         awardLiveBaseScore(activePlayers[0], gameState.finished.length, true);
       }
       settleChopChain('ván kết thúc');
+      acceptTrackedAction(playerId,action,{combo:debugComboText(combo),final:true});
       endGame();
       return;
     }
@@ -3428,11 +4164,32 @@ function handleAction(playerId, action, isAuto=false){
     checkNextTurn();
   }
 
+  acceptTrackedAction(playerId,action,{combo:debugComboText(gameState.currentCombo)});
   gameState.turnDeadline = Date.now() + gameState.turnSeconds * 1000;
+  debugActionEvent('TURN', null, `Chuyển lượt → ${debugName(gameState.order[gameState.turnIdx],gameState)}`, {
+    turnId:gameState.order[gameState.turnIdx]||null,
+    turnIdx:gameState.turnIdx
+  });
   broadcastState();
+  // TEST 4/5: sau mỗi nước mới, các Bot ngoài lượt được phép tự nhận diện
+  // 4/5 đôi thông và chặt ngang tự nhiên. Điều này tạo các chuỗi Bot chặt nhau
+  // để người test có thể ngồi quan sát và chỉ can thiệp khi thấy bộ ngon.
+  scheduleBotInstantChop();
 }
 
 function checkNextTurn(){
+  // Tuyệt đối không chuyển lượt trong lúc quyền sau CHẶT NGANG đang bị khóa.
+  // checkNextTurn có thể bị gọi bởi timeout/callback cũ; nếu không chặn ở đây,
+  // nó sẽ ghi đè turnIdx dù handleAction đã khóa người chặt.
+  if(gameState && gameState.forcedNextTurnId){
+    const forcedId = String(gameState.forcedNextTurnId);
+    const forcedIdx = gameState.order.findIndex(id => String(id) === forcedId);
+    if(forcedIdx >= 0){
+      gameState.turnIdx = forcedIdx;
+      return;
+    }
+  }
+
   const isOut = (id) => gameState.finished.includes(id) || gameState.coldFolded.has(id); // đã về đích HOẶC bị loại vì cóng
   let nextIdx = (gameState.turnIdx + 1) % gameState.order.length;
   let count = 0;
@@ -3443,7 +4200,7 @@ function checkNextTurn(){
 
     if(allPassed){
       settleChopChain('tất cả người chơi bỏ lượt');
-      gameState.currentCombo = null; gameState.passed.clear(); consecutivePlayCount = 0;
+      gameState.currentCombo = null; gameState.passed.clear(); gameState.instantChopPassedTarget = {}; consecutivePlayCount = 0;
       if(isOut(gameState.leaderId)){
         let nextLeader = gameState.order[(gameState.order.indexOf(gameState.leaderId) + 1) % gameState.order.length];
         while(isOut(nextLeader)){
@@ -3791,15 +4548,25 @@ function getViewStateForPlayer(id){
   const pendingInstantWin = gameState.instantWin && !gameState.instantWin.confirmed;
 
   return {
+    roundToken: gameState.roundToken || null,
     myHand: isPlayerInGame ? playerHand : [],
     counts: Object.fromEntries(orderArr.map(p => [p, gameState.hands && gameState.hands[p] ? safeArray(gameState.hands[p]).length : 0])),
     order: orderArr,
     names: gameState.names || {},
     hostId: gameState.hostId || null,
+    // Đồng bộ đầy đủ người đang có quyền đánh. turnIdx được gửi kèm để UI không phải
+    // suy luận lại lượt từ state cũ khi vừa CHẶT NGAY xong.
+    turnIdx: Number.isInteger(gameState.turnIdx) ? gameState.turnIdx : 0,
     turnId: orderArr[gameState.turnIdx] || null,
     leaderId: gameState.leaderId || null,
     currentCombo: gameState.currentCombo || null,
     finished: safeArray(gameState.finished),
+    // Người đã BỎ LƯỢT trong vòng hiện tại không được quay lại CHẶT NGAY cùng bộ đang nằm trên bàn.
+    // Khi vòng mới mở, handleAction/checkNextTurn sẽ clear passed.
+    passed: gameState.passed ? Array.from(gameState.passed) : [],
+    // Phải gửi map này xuống client; trước đây server đã ghi nhận PASS nhưng UI không nhận được
+    // nên sau khi bỏ lượt, nút CHẶT NGAY có thể hiện lại với chính bộ cũ.
+    instantChopPassedTarget: gameState.instantChopPassedTarget || {},
     coldFolded: gameState.coldFolded ? Array.from(gameState.coldFolded) : [], // LUẬT CÓNG: danh sách người bị loại vì chưa đánh được lá nào
     liveScores: gameState.liveScores || {},
     kneelingStatus: gameState.kneelingStatus || {},
@@ -3807,7 +4574,17 @@ function getViewStateForPlayer(id){
     lastActor: gameState.lastActor || null,
     actorMsg: gameState.actorMsg || null,
     actorSeq: gameState.actorSeq || 0,
+    chopBannerText: gameState.chopBannerText || null,
+    chopBannerCards: gameState.chopBannerCards || null,
+    chopBannerSeq: gameState.chopBannerSeq || 0,
+    // FIX: người đang cân nhắc CHẶT NGAY trước đây không thấy được đang có bao nhiêu Nước
+    // treo trong chuỗi (chopStackValue = lớp đặc biệt đang chồng chưa thanh toán, chopChainValue
+    // = tổng BOM đã dồn qua các lượt chặt liên tiếp) — phải đoán mò, xử lý chậm/nhầm. Gửi kèm
+    // 2 giá trị này để nút "CHẶT NGAY"/"Chặt Ngang" hiện luôn "Bom hiện tại: X Nước" cho dễ quyết.
+    chopStackValue: Number(gameState.chopStackValue || 0),
+    chopChainValue: Number(gameState.chopChainValue || 0),
     roundLog: safeArray(gameState.roundLog),
+    debugLog: safeArray(gameState.debugLog).slice(-DEBUG_LOG_LIMIT),
     gameMode: gameState.gameMode,
     turnDeadline: gameState.turnDeadline || 0,
     turnSeconds: gameState.turnSeconds,
@@ -3857,6 +4634,46 @@ function broadcastState(){
 
 let currentState = null;
 let lastSeenActorSeq = -1;
+let lastSeenChopBannerSeq = -1;
+let chopBannerHideTimer = null;
+
+// Hiện BANNER LỚN, NỔI GIỮA BÀN cho CẢ NHÓM cùng thấy khi có người Chặt Ngang thành công
+// (khác với showSeatBubble(): bong bóng đó nhỏ, chỉ hiện tại đúng 1 ghế của người vừa hành động).
+function showChopBanner(st){
+  if(!st.chopBannerText || !st.chopBannerSeq || st.chopBannerSeq === lastSeenChopBannerSeq) return;
+  lastSeenChopBannerSeq = st.chopBannerSeq;
+
+  const el = $('chopBanner');
+  if(!el) return;
+  el.textContent = st.chopBannerText;
+  el.classList.remove('show');
+  // Ép reflow để animation chạy lại từ đầu mỗi lần có banner mới, kể cả khi banner trước
+  // chưa kịp ẩn hết (chặt chồng liên tiếp).
+  void el.offsetWidth;
+  el.classList.add('show');
+
+  // DÃY BÀI VỪA DÙNG ĐỂ CHẶT: gameState.currentCombo đã bị host set về null ngay sau cú
+  // chặt (để mở lượt mới), nên #playedCombo không kịp vẽ được. Dùng chopBannerCards (state
+  // riêng, đi kèm cùng seq) để vẽ đúng những lá bài đó cho CẢ NHÓM thấy trong cùng khoảng
+  // thời gian banner hiển thị.
+  const cardsEl = $('chopBannerCards');
+  if(cardsEl){
+    cardsEl.innerHTML = '';
+    const cards = Array.isArray(st.chopBannerCards) ? st.chopBannerCards : [];
+    cardsEl.classList.remove('show');
+    if(cards.length){
+      cards.forEach(c => cardsEl.appendChild(createCardEl(c, false, true, false)));
+      void cardsEl.offsetWidth;
+      cardsEl.classList.add('show');
+    }
+  }
+
+  if(chopBannerHideTimer) clearTimeout(chopBannerHideTimer);
+  chopBannerHideTimer = setTimeout(() => {
+    el.classList.remove('show');
+    if(cardsEl) cardsEl.classList.remove('show');
+  }, 3200);
+}
 
 // Hiện bong bóng thông báo NGAY tại vị trí (ghế) của người vừa hành động, thay cho dòng chữ nhỏ khó nhìn giữa bàn
 function showSeatBubble(st){
@@ -3906,14 +4723,25 @@ function showSeatBubble(st){
 }
 
 function applyState(st){
+  if(st && Array.isArray(st.debugLog)){ localDebugTrace=st.debugLog.slice(-DEBUG_LOG_LIMIT); renderDebugLog(); }
   if(!st || typeof st !== 'object') return;
   
+  const prevRoundToken = currentRoundToken;
   currentState = st;
   currentState.order = safeArray(st.order);
   currentState.finished = safeArray(st.finished);
+  const nextRoundToken = st.roundToken || null;
+  currentRoundToken = nextRoundToken;
 
   myHand = sortHand(st.myHand, currentSortMode);
-  selected.clear();
+  // Cùng ván: state update không được làm mất selection đang thao tác.
+  // Ván mới: reset hoàn toàn để không giữ cardKey trùng từ ván trước.
+  if(prevRoundToken !== null && prevRoundToken !== nextRoundToken){
+    selected.clear();
+  } else {
+    const liveKeys = new Set(myHand.map(cardKey));
+    selected = new Set([...selected].filter(k => liveKeys.has(k)));
+  }
   isSpectator = st.isSpectator !== undefined ? st.isSpectator : !currentState.order.includes(myId);
 
   if(!st.isEnded) $('resultOverlay').classList.add('hidden');
@@ -3968,7 +4796,9 @@ function applyState(st){
   try{ renderOpponents(); } catch(err){ console.error('❌ Lỗi renderOpponents:', err); }
   try{ renderCenter(); } catch(err){ console.error('❌ Lỗi renderCenter:', err); }
   try{ renderHand(); } catch(err){ console.error('❌ Lỗi renderHand:', err); }
+  try{ if(isRuleTestMode) syncTestInstantChopUI(); } catch(err){ console.error('❌ Lỗi sync CHẶT NGAY:', err); }
   try{ showSeatBubble(st); } catch(err){ console.error('❌ Lỗi showSeatBubble:', err); }
+  try{ showChopBanner(st); } catch(err){ console.error('❌ Lỗi showChopBanner:', err); }
 }
 
 function renderOpponents(){
@@ -3976,7 +4806,9 @@ function renderOpponents(){
   const order = safeArray(currentState.order);
   let myIdx = order.indexOf(myId);
   if(myIdx === -1) myIdx = 0;
-  const positions = ['slot-left', 'slot-top', 'slot-right'];
+  // CHIỀU ĐÁNH TEST/HIỂN THỊ: Người chơi 1 → 2 → 3 → 4 theo chiều PHẢI → TRÁI.
+  // Từ ghế người test: đối thủ kế tiếp nằm bên phải, sau đó phía trên, rồi bên trái.
+  const positions = ['slot-right', 'slot-top', 'slot-left'];
   let posIdx = 0;
 
   for(let i=1; i<order.length; i++){
@@ -4027,6 +4859,187 @@ function renderOpponents(){
   }
 }
 
+function getTestInstantChopCards(){
+  // TEST 4/5 ĐÔI THÔNG: CHỈ hiện khi trên bàn đang có đúng bộ đặc biệt có thể chặt.
+  // Không dùng hasFourPairRun() đơn thuần vì như vậy nút có thể treo khi bàn trống.
+  if(!isRuleTestMode || !currentState) return null;
+
+  const hand = safeArray(currentState.myHand);
+  const curr = currentState.currentCombo;
+  const active = !isSpectator && !currentState.isEnded &&
+    !safeArray(currentState.finished).includes(myId) &&
+    !safeArray(currentState.coldFolded).includes(myId);
+
+  if(!active || !curr || !safeArray(curr.cards).length) return null;
+  if(currentState.leaderId === myId) return null;
+  if(!isChoppableSpecialTarget(curr)) return null;
+
+  const runs = findMaxPairRuns(hand).filter(r => r.count >= 4);
+  const out = [];
+
+  for(const run of runs){
+    // QUAN TRỌNG: mỗi rank chỉ lấy ĐÚNG 2 lá.
+    // Trước đây dùng hand.filter() nên nếu trong tay có 3/4 lá cùng một rank,
+    // classify() biến thành bộ khác và làm nút CHẶT NGAY mất dù thực tế vẫn có 4/5 đôi thông.
+    const cards = [];
+    for(let r=run.fromR; r<=run.toR; r++){
+      const pair = hand.filter(c => c.r === r).slice(0,2);
+      if(pair.length < 2){ cards.length=0; break; }
+      cards.push(...pair);
+    }
+    if(cards.length !== run.count * 2) continue;
+
+    const combo = classify(cards);
+    if(combo && combo.type === 'pairs_run' && combo.count >= 4 && canBeat(combo,curr)){
+      out.push({cards,combo});
+    }
+  }
+
+  // Ưu tiên bộ ngắn nhất đủ chặt; nếu có cả 4 và 5 đôi thông thì dùng 4 trước.
+  out.sort((a,b)=>a.combo.count-b.combo.count || a.combo.highR-b.combo.highR);
+  return out[0] || null;
+}
+
+function autoPrepareInstantChop(){
+  if(!currentState || isSpectator || currentState.isEnded) return false;
+  const isMyTurnNow = currentState.turnId === myId ||
+    (Array.isArray(currentState.order) && currentState.order[currentState.turnIdx] === myId);
+  if(isMyTurnNow) return false;
+  if(Number(currentState.chopInterruptDeadline || 0) > Date.now()) return false;
+  const best=getTestInstantChopCards();
+  if(!best) return false;
+  selected.clear();
+  best.cards.forEach(c=>selected.add(cardKey(c)));
+  renderHand();
+  requestAnimationFrame(()=>{
+    const handEls=[...document.querySelectorAll('#handCards .card')];
+    handEls.forEach(el=>{
+      const key=el.dataset.cardKey;
+      if(key && selected.has(key)){
+        el.classList.add('instant-chop-flying');
+        setTimeout(()=>el.classList.remove('instant-chop-flying'),450);
+      }
+    });
+  });
+  return true;
+}
+
+function triggerInstantChopFromTarget(){
+  if(!isRuleTestMode || !currentState) return;
+  const isMyTurnNow = currentState.turnId === myId ||
+    (Array.isArray(currentState.order) && currentState.order[currentState.turnIdx] === myId);
+  if(isMyTurnNow) { syncTestInstantChopUI(); return; }
+  // Khi đang có VÒNG CHẶT NGANG 3 giây, chỉ dùng cơ chế của VÒNG.
+  // Không cho TEST 4/5 đôi thông chen thêm nút/auto-select vào cùng lúc.
+  const chopDeadline = Number(currentState.chopInterruptDeadline || 0);
+  if(chopDeadline > Date.now()) return;
+  // Bấm vào bộ bài trên bàn: tự chọn đúng 4/5 đôi thông và cho quân bay lên.
+  // Không tự chặt; người chơi vẫn quyết định bằng nút trung tâm.
+  autoPrepareInstantChop();
+}
+
+let instantChopCountdownTimer = null;
+let instantChopCountdownKey = '';
+let instantChopCountdownEnds = 0;
+let instantChopCountdownExpiredKey = '';
+function stopInstantChopCountdown(){
+  if(instantChopCountdownTimer){ clearInterval(instantChopCountdownTimer); instantChopCountdownTimer=null; }
+  instantChopCountdownKey=''; instantChopCountdownEnds=0;
+}
+function startInstantChopCountdown(key){
+  const overlay=$('testInstantChopOverlay');
+  if(!overlay) return;
+  if(instantChopCountdownExpiredKey===key) return;
+  if(instantChopCountdownKey===key && instantChopCountdownEnds>Date.now()) return;
+  stopInstantChopCountdown();
+  instantChopCountdownExpiredKey='';
+  instantChopCountdownKey=key;
+  instantChopCountdownExpiredKey='';
+  instantChopCountdownEnds=Date.now()+3000;
+  const tick=()=>{
+    const left=Math.max(0, instantChopCountdownEnds-Date.now());
+    const sec=Math.ceil(left/1000);
+    if(sec<=0){
+      instantChopCountdownExpiredKey=instantChopCountdownKey;
+      stopInstantChopCountdown();
+      overlay.classList.add('hidden');
+      overlay.disabled=true;
+      return;
+    }
+    overlay.dataset.countdown=String(sec);
+    overlay.innerHTML=`<span class=\"chop-now-main\">⚡ CHẶT NGAY</span><span class=\"chop-now-target\">${overlay.dataset.targetLabel||''}</span><span class=\"chop-now-countdown\">${sec}</span>`;
+  };
+  tick();
+  instantChopCountdownTimer=setInterval(tick,120);
+}
+
+function syncTestInstantChopUI(){
+  const legacy=$('btnChopInterrupt');
+  const overlay=$('testInstantChopOverlay');
+
+  // TEST 4/5 chỉ có MỘT nút trung tâm. Nút legacy dưới tay bài luôn ẩn.
+  if(legacy){
+    legacy.classList.add('hidden');
+    legacy.disabled=true;
+  }
+  if(!overlay) return;
+
+  if(!isRuleTestMode || !currentState){
+    overlay.classList.add('hidden');
+    overlay.disabled=true;
+    return;
+  }
+
+  // QUAN TRỌNG: nếu đang tới lượt người chơi thì đây là lượt đánh bình thường,
+  // TUYỆT ĐỐI KHÔNG được hiện CHẶT NGAY. Điều này đặc biệt quan trọng khi
+  // người chơi vừa bước vào lượt trong một vòng chặt 3 giây.
+  const isMyTurnNow = !isSpectator && !currentState.isEnded &&
+    (currentState.turnId === myId ||
+     (Array.isArray(currentState.order) && currentState.order[currentState.turnIdx] === myId));
+
+  const alreadyPassedThisTarget = hasPassedInstantTarget(currentState, myId, currentState.currentCombo);
+  const active=!isSpectator && !currentState.isEnded && !isMyTurnNow &&
+    !alreadyPassedThisTarget &&
+    !safeArray(currentState.finished).includes(myId) &&
+    !safeArray(currentState.coldFolded).includes(myId) &&
+    currentState.leaderId!==myId;
+
+  // VÒNG CHẶT NGANG 3 GIÂY đang mở thì TUYỆT ĐỐI không hiện CHẶT NGAY 4/5.
+  // Đây là hai cơ chế khác nhau; nếu hiện đồng thời sẽ vừa che nút, vừa khóa thao tác.
+  const chopDeadline = Number(currentState.chopInterruptDeadline || 0);
+  const chopOpen = chopDeadline > Date.now();
+
+  // Điều kiện duy nhất: bàn đang có mục tiêu + tay hiện tại thật sự có 4/5+ đôi thông
+  // có thể chặt mục tiêu. Không có mục tiêu thì tuyệt đối không hiện.
+  const best=active && !chopOpen ? getTestInstantChopCards() : null;
+  if(best){
+    const targetLabel=describeInstantTarget(currentState.currentCombo);
+    const targetKey=comboTargetKey(currentState.currentCombo);
+    // FIX: trước đây hiện "${targetLabel} • ${best.combo.count} ĐÔI" — tức lặp lại số đôi
+    // thông TRÊN TAY CHÍNH MÌNH (vd "5 ĐÔI"), điều người chơi vốn đã biết rõ vì đó là bài
+    // của họ. Thông tin họ CẦN mà chưa có là bộ đang bị chặt LÀ CỦA AI — nên đổi sang hiện
+    // tên chủ bộ bài bị chặt (currentState.leaderId) thay cho số đôi thừa đó.
+    const targetOwnerName = (currentState.names && currentState.names[currentState.leaderId]) || '';
+    // Hiện kèm số Nước đang treo (BOM chồng), giống buildChopButtonLabel(), để người quyết định
+    // chặt thấy ngay đang được/mất bao nhiêu mà không cần lật log.
+    const bomNow = Math.max(Number(currentState.chopChainValue||0), Number(currentState.chopStackValue||0));
+    const bomTxt = bomNow > 0 ? ` • ${bomNow} Nước` : '';
+    overlay.dataset.targetLabel=`${targetLabel}${targetOwnerName ? ' của ' + targetOwnerName : ''}${bomTxt}`;
+    overlay.classList.remove('hidden');
+    overlay.disabled=false;
+    overlay.title=`Chặt ${targetLabel}${targetOwnerName ? ' của ' + targetOwnerName : ''} bằng ${best.combo.count} đôi thông${bomTxt} • còn 3 giây để quyết định`;
+    startInstantChopCountdown(targetKey);
+  }else{
+    stopInstantChopCountdown();
+    instantChopCountdownExpiredKey='';
+    overlay.classList.add('hidden');
+    overlay.disabled=true;
+    overlay.textContent='⚡ CHẶT NGAY';
+    overlay.title='';
+    overlay.dataset.targetLabel='';
+  }
+}
+
 function renderCenter(){
   const st = currentState;
   const isMyTurn = !isSpectator && st.turnId === myId && !st.isEnded;
@@ -4045,9 +5058,23 @@ function renderCenter(){
     // FIX: sảnh/đôi thông dài (>6 lá) tự thu nhỏ (compact) để luôn hiện đủ, không bị tràn/cắt cụt
     pc.classList.toggle('compact', comboCards.length > 5);
     pc.classList.toggle('ultra-compact', comboCards.length > 10);
-    comboCards.forEach(c => pc.appendChild(createCardEl(c, false, false, true)));
+    const chopDeadline = Number(st.chopInterruptDeadline || 0);
+    const chopOpen = chopDeadline > Date.now();
+    const myTurnNow = !isSpectator && (st.turnId === myId || (Array.isArray(st.order) && st.order[st.turnIdx] === myId));
+    const passedThisTarget = hasPassedInstantTarget(st, myId, st.currentCombo);
+    const instantBest = (isRuleTestMode && !chopOpen && !myTurnNow && !passedThisTarget) ? getTestInstantChopCards() : null;
+    const instantTarget = !!instantBest;
+    pc.classList.toggle('instant-chop-target', instantTarget);
+    pc.onclick = null;
+    comboCards.forEach(c => {
+      const cardEl=createCardEl(c, false, false, true);
+      if(instantTarget) cardEl.onclick=()=>triggerInstantChopFromTarget();
+      pc.appendChild(cardEl);
+    });
+    if(instantTarget) pc.onclick=(e)=>{ if(e.target===pc) triggerInstantChopFromTarget(); };
   } else {
-    pc.classList.remove('compact','ultra-compact');
+    pc.classList.remove('compact','ultra-compact','instant-chop-target');
+    pc.onclick=null;
     pc.innerHTML = '<span style="color:rgba(250,246,238,.4);font-size:11px;">Bàn trống (Tự do đánh)</span>';
   }
   $('actionLog').textContent = st.log || '';
@@ -4107,28 +5134,54 @@ function renderHand(){
   $('btnPlay').disabled = !isMyTurn || selected.size === 0 || iAmColdFolded;
   $('btnPass').disabled = !isMyTurn || !currentState.currentCombo || iAmColdFolded;
 
-  // CHẶT NGANG: chỉ người có 4+ Đôi Thông mới được báo và quyết định trong 3 giây.
+  // CHẶT NGAY: chỉ người đang sở hữu 4+ Đôi Thông mới thấy nút.
+  // Nút KHÔNG phụ thuộc lượt hiện tại và KHÔNG phụ thuộc cửa sổ 3 giây.
+  // 3 Đôi Thông vẫn dùng Chặt Ngang trong cửa sổ cũ.
   const curr = currentState.currentCombo;
   const chopDeadline = Number(currentState.chopInterruptDeadline || 0);
   const chopOpen = chopDeadline > Date.now();
-  const isChoppableTarget = curr && ((curr.type === 'single' && curr.cards[0].r === 12) || (curr.type === 'pair' && curr.cards[0].r === 12) || (curr.type === 'pairs_run' && curr.count >= 3) || curr.type === 'quad');
+  const isChoppableTarget = isChoppableSpecialTarget(curr);
   const iAmActive = !isSpectator && !safeArray(currentState.finished).includes(myId) && !currentState.isEnded && !iAmColdFolded;
   const iHaveFourPairs = hasFourPairRun(myHand);
+  const isOwnLeader = currentState.leaderId === myId;
   const btnChop = $('btnChopInterrupt');
   if(btnChop){
-    if(chopOpen && isChoppableTarget && iAmActive && !isMyTurn && iHaveFourPairs){
-      const sec = Math.max(1, Math.ceil((chopDeadline - Date.now()) / 1000));
+    // TEST 4/5 đôi thông: chỉ sync theo điều kiện THỰC SỰ CHẶT ĐƯỢC.
+    // Không để nhánh Chặt Ngang chung làm nút treo/hiện sai.
+    if(isRuleTestMode){
+      syncTestInstantChopUI();
+    } else {
+    let showChop = false;
+    let selectedChopValid = false;
+
+    if(isChoppableTarget && iAmActive && !isOwnLeader && iHaveFourPairs){
+      showChop = true;
+      if(selected.size){
+        const selectedCards = [...selected]
+          .map(k => safeArray(myHand).find(c => cardKey(c) === k))
+          .filter(Boolean);
+        const selectedCombo = classify(selectedCards);
+        selectedChopValid = !!(selectedCombo && selectedCombo.type === 'pairs_run' &&
+          selectedCombo.count >= 4 && canBeat(selectedCombo, curr));
+      }
+    } else if(chopOpen && isChoppableTarget && iAmActive && !isMyTurn && !iHaveFourPairs){
+      // Người chỉ có đúng 3 Đôi Thông vẫn được Chặt Ngang theo cửa sổ 3 giây cũ.
+      showChop = true;
+      const selectedCards=[...selected].map(k=>safeArray(myHand).find(c=>cardKey(c)===k)).filter(Boolean);
+      const selectedCombo=classify(selectedCards);
+      selectedChopValid=!!(selectedCombo&&selectedCombo.type==='pairs_run'&&selectedCombo.count===3&&canBeat(selectedCombo,curr));
+    }
+
+    if(showChop){
       btnChop.classList.remove('hidden');
-      btnChop.textContent = `⚡ Chặt Ngang (${sec}s)`;
-      btnChop.disabled = selected.size === 0;
-      // TỐI ƯU MOBILE: trước đây cứ mỗi 250ms lại gọi applyState(currentState) để cập nhật
-      // số giây đếm ngược -> mỗi lần đó render lại TOÀN BỘ bàn (renderOpponents + renderCenter +
-      // renderHand, dựng lại toàn bộ DOM tay bài) chỉ để đổi 1 con số -> giật/lag trên điện thoại
-      // trong suốt 3 giây mở cửa sổ Chặt Ngang. Giờ việc đếm ngược được giao cho interval nhẹ bên
-      // dưới (updateChopCountdownTick), chỉ đổi textContent của đúng nút này, không đụng DOM khác.
+      const sec = Math.max(1, Math.ceil((chopDeadline - Date.now()) / 1000));
+      btnChop.innerHTML = buildChopButtonLabel(curr, currentState.leaderId, sec, iHaveFourPairs);
+      btnChop.disabled = !selectedChopValid;
     } else {
       btnChop.classList.add('hidden');
-      btnChop.textContent = '⚡ Chặt Ngang';
+      btnChop.textContent = '⚡ CHẶT NGAY';
+      btnChop.disabled = true;
+    }
     }
   }
   const btnFoul = $('btnReportFoul');
@@ -4243,6 +5296,7 @@ function createCardEl(c, selectable, small, tableCard){
   el.innerHTML = `<span class="rank">${RANKS[c.r]}</span><span class="suit">${SUITS[c.s]}</span>`;
   if(selectable){
     const key = cardKey(c);
+    el.dataset.cardKey = key;
     if(selected.has(key)) el.classList.add('selected');
     el.onclick = () => {
       if(isSpectator || currentState.turnId !== myId || currentState.isEnded) return;
@@ -4268,9 +5322,19 @@ function updateHandActionButtonsOnly(){
   const isMyTurn = !isSpectator && currentState.turnId === myId && !safeArray(currentState.finished).includes(myId) && !currentState.isEnded;
   const btnPlay = $('btnPlay');
   if(btnPlay) btnPlay.disabled = !isMyTurn || selected.size === 0 || iAmColdFolded;
+  // TEST 4/5 đôi thông dùng nút overlay riêng ở giữa bàn, không đụng nút cũ.
+  if(isRuleTestMode){ syncTestInstantChopUI(); return; }
   const btnChop = $('btnChopInterrupt');
-  if(btnChop && !btnChop.classList.contains('hidden')){
-    btnChop.disabled = selected.size === 0;
+  if(btnChop && !btnChop.classList.contains('hidden') && !isRuleTestMode){
+    const curr = currentState.currentCombo;
+    const selectedCards = [...selected]
+      .map(k => safeArray(myHand).find(c => cardKey(c) === k))
+      .filter(Boolean);
+    const selectedCombo=classify(selectedCards);
+    const validInstant=!!(curr&&selectedCombo&&selectedCombo.type==='pairs_run'&&selectedCombo.count>=4&&canBeat(selectedCombo,curr));
+    const chopDeadline=Number(currentState.chopInterruptDeadline||0), hasFour=hasFourPairRun(myHand);
+    const validThreeWindow=!!(curr&&!hasFour&&hasThreePairRunOnly(myHand)&&chopDeadline>Date.now()&&selectedCombo&&selectedCombo.type==='pairs_run'&&selectedCombo.count===3&&canBeat(selectedCombo,curr));
+    btnChop.disabled=!(validInstant||validThreeWindow);
   }
 }
 
@@ -4287,15 +5351,27 @@ setInterval(()=>{
 // 250ms trong renderHand(), vốn là nguyên nhân chính gây giật/lag trên điện thoại mỗi khi có
 // người đủ điều kiện Chặt Ngang (dựng lại toàn bộ DOM bàn+tay bài liên tục trong 3 giây).
 setInterval(()=>{
+  if(isRuleTestMode){ syncTestInstantChopUI(); return; }
   const btnChop = $('btnChopInterrupt');
   if(!btnChop || btnChop.classList.contains('hidden')) return;
   if(!currentState) return;
+
+  // 4+ Đôi Thông = nút CHẶT NGAY cố định, không đếm ngược.
+  if(hasFourPairRun(myHand)){
+    btnChop.innerHTML = buildChopButtonLabel(currentState.currentCombo, currentState.leaderId, 0, true);
+    return;
+  }
+
   const chopDeadline = Number(currentState.chopInterruptDeadline || 0);
   if(chopDeadline <= Date.now()){ btnChop.classList.add('hidden'); return; }
   const sec = Math.max(1, Math.ceil((chopDeadline - Date.now()) / 1000));
-  btnChop.textContent = `⚡ Chặt Ngang (${sec}s)`;
+  btnChop.innerHTML = buildChopButtonLabel(currentState.currentCombo, currentState.leaderId, sec, false);
 }, 250);
 
+$('btnOpenDebugLog').onclick=debugOpen;
+$('btnDebugClose').onclick=debugClose;
+$('btnDebugClear').onclick=debugClear;
+$('btnDebugCopy').onclick=debugCopy;
 $('btnSort').onclick = () => { 
   if (currentSortMode === 'RANK') {
     currentSortMode = 'SUIT';
@@ -4311,9 +5387,104 @@ $('btnSort').onclick = () => {
   renderHand(); 
 };
 
-$('btnPlay').onclick = () => sendAction({kind:'play', cards:[...selected]});
-$('btnPass').onclick = () => sendAction({kind:'pass'});
-$('btnChopInterrupt').onclick = () => { sendAction({kind:'interrupt_chop', cards:[...selected]}); };
+// FIX BUG: trước đây bấm "Đánh" luôn gọi sendAction() -> sendAction() LUÔN xoá sạch `selected`
+// (selected.clear()) dù nước đi có hợp lệ hay không. Ở server, nếu classify(cards) trả về null
+// (VD: bộ bài có 2 lá trùng hạng do người chơi lỡ chọn nhầm 1 lá trùng khi tay có hạng đôi như
+// "3455678"/"344555678" — rất dễ chọn nhầm vì 2-3 lá cùng hạng nằm sát nhau) hoặc canBeat() = false,
+// handleAction() return sớm và KHÔNG làm gì cả — nhưng vì sendAction() đã clear selected trước đó,
+// người chơi thấy y hệt hiện tượng "chọn đúng bài rồi mà bấm Đánh không ra gì, bài tự bỏ chọn" dù
+// họ không biết vì sao. Giờ kiểm tra hợp lệ NGAY TRÊN CLIENT trước khi gửi: nếu không phải 1 bộ hợp
+// lệ (sảnh/đôi/sám/tứ quý/đôi thông...) hoặc không chặn được bài đang có trên bàn, báo lỗi rõ ràng
+// ngay tại chỗ và GIỮ NGUYÊN lựa chọn để người chơi tự sửa, thay vì âm thầm xoá hết.
+function hideHandSelectMsg(){
+  const el=$('handSelectMsg'); if(el) el.classList.add('hidden');
+}
+function formatActionRejectMessage(reason, details={}){
+  switch(reason){
+    case 'INVALID_COMBO': return details.duplicateRanks?.length ? `⚠️ Bộ đã chọn không hợp lệ — có hạng trùng: ${details.duplicateRanks.join(', ')}. Kiểm tra lá dư.` : '⚠️ Bộ bài đã chọn không hợp lệ theo luật.';
+    case 'CANNOT_BEAT': return '⚠️ Bộ bài này không chặn được bài đang có trên bàn.';
+    case 'CARD_NOT_IN_HAND': return '⚠️ Có lá đã không còn trên tay. Lựa chọn còn lại được giữ nguyên.';
+    case 'DUPLICATE_CARD': return '⚠️ Một lá bài đang bị gửi trùng. Vui lòng chọn lại.';
+    case 'NOT_YOUR_TURN': return '⚠️ Đã chuyển lượt trước khi nước đi được xác nhận.';
+    case 'FIRST_MOVE_REQUIRED_CARD': return '⚠️ Ván đầu tiên phải có 3 Bích trong nước mở đầu.';
+    case 'CHOP_WINDOW_CLOSED': return '⚠️ Cửa sổ Chặt Ngang 3 giây đã hết.';
+    case 'INVALID_CHOP': return '⚠️ Bộ Chặt Ngang đã chọn không hợp lệ hoặc không chặt được bài trên bàn.';
+    case 'ACTION_BLOCKED': return '⚠️ Nước đi bị khóa vì lượt/quyền chặt đã thay đổi. Bài đã chọn được giữ lại.';
+    case 'REQUEST_TIMEOUT': return '⚠️ Máy chủ chưa xác nhận nước đi. Bài đã chọn vẫn được giữ lại, bạn có thể thử lại.';
+    default: return reason ? `⚠️ ${reason}` : '⚠️ Nước đi chưa được máy chủ xác nhận.';
+  }
+}
+function showHandSelectMsg(text){
+  const el=$('handSelectMsg'); if(!el) return;
+  el.textContent=text; el.classList.remove('hidden');
+  clearTimeout(showHandSelectMsg._t); showHandSelectMsg._t=setTimeout(()=>el.classList.add('hidden'),3200);
+  document.querySelectorAll('#handCards .card.selected').forEach(el2=>{
+    el2.classList.remove('selection-shake'); void el2.offsetWidth; el2.classList.add('selection-shake');
+  });
+}
+function selectedCardsFromSet(){
+  const keys=[...selected], hand=safeArray(myHand), cards=[], seen=new Set();
+  for(const k of keys){
+    if(seen.has(k)) return {ok:false,reason:'DUPLICATE_CARD'};
+    seen.add(k); const c=hand.find(x=>cardKey(x)===k);
+    if(!c) return {ok:false,reason:'CARD_NOT_IN_HAND'}; cards.push(c);
+  }
+  return {ok:true,cards,keys};
+}
+function duplicateRanks(cards){
+  const counts={}; safeArray(cards).forEach(c=>counts[c.r]=(counts[c.r]||0)+1);
+  return Object.entries(counts).filter(([,n])=>n>1).map(([r])=>RANKS[Number(r)]||r);
+}
+function validateSelectedPlay(){
+  if(!selected.size) return {ok:false,reason:'INVALID_COMBO',msg:'Hãy chọn ít nhất 1 lá bài.'};
+  const resolved=selectedCardsFromSet();
+  if(!resolved.ok) return {ok:false,reason:resolved.reason,msg:formatActionRejectMessage(resolved.reason)};
+  const combo=classify(resolved.cards);
+  if(!combo){
+    const dups=duplicateRanks(resolved.cards);
+    return {ok:false,reason:'INVALID_COMBO',details:{duplicateRanks:dups},msg:formatActionRejectMessage('INVALID_COMBO',{duplicateRanks:dups})};
+  }
+  const curr=currentState?.currentCombo;
+  if(curr && !canBeat(combo,curr)) return {ok:false,reason:'CANNOT_BEAT',msg:formatActionRejectMessage('CANNOT_BEAT')};
+  return {ok:true,combo,cards:resolved.cards};
+}
+function validateSelectedInterrupt(){
+  if(!selected.size) return {ok:false,reason:'INVALID_CHOP',msg:'Hãy chọn bộ bài để chặt.'};
+  const resolved=selectedCardsFromSet();
+  if(!resolved.ok) return {ok:false,reason:resolved.reason,msg:formatActionRejectMessage(resolved.reason)};
+  const curr=currentState?.currentCombo;
+  if(!curr) return {ok:false,reason:'INVALID_CHOP',msg:'Hiện không có bộ bài đặc biệt để chặt.'};
+  const combo=classify(resolved.cards);
+  if(!combo || combo.type!=='pairs_run' || !canBeat(combo,curr)) return {ok:false,reason:'INVALID_CHOP',msg:'Bộ đã chọn không phải đôi thông hợp lệ hoặc không chặt được bài trên bàn.'};
+  const hasFour=hasFourPairRun(myHand), hasThreeOnly=!hasFour&&hasThreePairRunOnly(myHand);
+  const deadline=Number(currentState?.chopInterruptDeadline||0);
+  if(hasThreeOnly && deadline<=Date.now()) return {ok:false,reason:'CHOP_WINDOW_CLOSED',msg:formatActionRejectMessage('CHOP_WINDOW_CLOSED')};
+  if(!hasFour && !hasThreeOnly) return {ok:false,reason:'INVALID_CHOP',msg:'Bạn không có 3 Đôi Thông/4+ Đôi Thông đủ điều kiện chặt.'};
+  if(hasFour && combo.count<4) return {ok:false,reason:'INVALID_CHOP',msg:'Bạn có 4+ Đôi Thông nhưng bộ đang chọn chưa đủ 4 đôi thông.'};
+  if(hasThreeOnly && combo.count!==3) return {ok:false,reason:'INVALID_CHOP',msg:'Bạn đang dùng quyền 3 Đôi Thông; hãy chọn đúng 3 đôi thông.'};
+  return {ok:true,combo,cards:resolved.cards};
+}
+$('btnPlay').onclick=()=>{
+  const check=validateSelectedPlay(); if(!check.ok){showHandSelectMsg(check.msg);return;}
+  sendAction({kind:'play',cards:[...selected]});
+};
+$('btnPass').onclick=()=>sendAction({kind:'pass'});
+$('btnChopInterrupt').onclick=()=>{
+  const check=validateSelectedInterrupt(); if(!check.ok){showHandSelectMsg(check.msg);return;}
+  sendAction({kind:'interrupt_chop',cards:[...selected]});
+};
+$('testInstantChopOverlay').onclick=(e)=>{
+  e.preventDefault(); e.stopPropagation();
+  if(!isRuleTestMode||!currentState)return;
+  const isMyTurnNow=currentState.turnId===myId||(Array.isArray(currentState.order)&&currentState.order[currentState.turnIdx]===myId);
+  if(isMyTurnNow){syncTestInstantChopUI();return;}
+  if(hasPassedInstantTarget(currentState,myId,currentState.currentCombo)){syncTestInstantChopUI();return;}
+  const chopDeadline=Number(currentState.chopInterruptDeadline||0);
+  if(chopDeadline>Date.now()){syncTestInstantChopUI();return;}
+  const best=getTestInstantChopCards(); if(!best){syncTestInstantChopUI();return;}
+  autoPrepareInstantChop(); sendAction({kind:'interrupt_chop',cards:best.cards.map(cardKey)});
+};
+
 $('btnReportFoul').onclick = () => reportFoul();
 $('mySlot').onclick = (e) => { e.stopPropagation(); openReactionPopover($('mySlot')); };
 
@@ -4343,10 +5514,20 @@ function reportFoul(){
 }
 
 function sendAction(act){
-  if(isSpectator) return;
-  if(isHost) handleAction(myId, act);
-  else sendToHost({t:'action', id:myId, action:act});
-  selected.clear();
+  if(isSpectator || !act) return;
+  const tracked=act.kind==='play'||act.kind==='interrupt_chop';
+  if(tracked){
+    if(pendingActionRequests.size){showHandSelectMsg('⏳ Đang chờ máy chủ xác nhận nước đi trước.');return;}
+    const requestId=makeActionRequestId(); act={...act,requestId};
+    const timer=setTimeout(()=>{
+      const pending=pendingActionRequests.get(requestId); if(!pending) return;
+      pendingActionRequests.delete(requestId);
+      showHandSelectMsg(formatActionRejectMessage('REQUEST_TIMEOUT')); updateHandActionButtonsOnly();
+    },4500);
+    pendingActionRequests.set(requestId,{action:act,timer,sentAt:Date.now()});
+  }
+  if(isHost) handleAction(myId,act); else sendToHost({t:'action',id:myId,action:act});
+  // Không clear selected ở đây. Chỉ actionResult=ACCEPT mới được clear.
 }
 
 // Định vị popover (ném đồ / reaction) sao cho luôn nằm gọn trong màn hình.
@@ -4625,11 +5806,11 @@ function describeCombo(c){
 
 // ===================== PHÒNG TEST LUẬT (CHỈ TEST) =====================
 function rtGetWeights(){
-  const ids=['wtSingle','wtPair','wtQuad','wtRun','wtSafe','wtCong1','wtCongAll','wtRank','wtWhite3'];
+  const ids=['wtSingle','wtPair','wtQuad','wtRun','wtInstantChop4','wtInstantChop5','wtSafe','wtCong1','wtCongAll','wtRank','wtWhite3'];
   return ids.map(id=>Math.max(0, Number($(id)?.value||0)));
 }
 function rtPick(){
-  const names=['single','pair','quad','run','safe','cong1','congAll','rank','white3'];
+  const names=['single','pair','quad','run','instantChop4','instantChop5','safe','cong1','congAll','rank','white3'];
   const w=rtGetWeights(); const total=w.reduce((a,b)=>a+b,0)||1; let r=Math.random()*total;
   for(let i=0;i<w.length;i++){r-=w[i]; if(r<=0) return names[i];}
   return names[names.length-1];
@@ -4675,6 +5856,16 @@ function rtAllTests(){
   out.push(rtCase('Heo đen → Heo đỏ → chặt = BOM 3',()=>rtAssert('BOM 3',rtSimChain([black,red,quad3]).bom,3)));
   out.push(rtCase('Đôi Heo đen → đôi Heo đỏ → Tứ quý → Tứ quý lớn = BOM 9',()=>rtAssert('BOM 9',rtSimChain([pairBlack,pairRed,quad3,quad4]).bom,9)));
   out.push(rtCase('Tứ quý → Tứ quý lớn = +3',()=>rtAssert('Tứ quý = 3',calculateChopReward(quad4,quad3,4),3)));
+  out.push(rtCase('4 đôi thông chặt ngay 3 đôi thông',()=>{
+    const r3=rtCombo([rtCard(4,0),rtCard(4,1),rtCard(5,0),rtCard(5,1),rtCard(6,0),rtCard(6,1)]);
+    const r4=rtCombo([rtCard(5,0),rtCard(5,1),rtCard(6,0),rtCard(6,1),rtCard(7,0),rtCard(7,1),rtCard(8,0),rtCard(8,1)]);
+    return {ok:canBeat(r4,r3),name:'4 đôi thông chặt ngay 3 đôi thông',actual:canBeat(r4,r3),expected:true};
+  }));
+  out.push(rtCase('5 đôi thông chặt ngay 4 đôi thông',()=>{
+    const r4=rtCombo([rtCard(4,0),rtCard(4,1),rtCard(5,0),rtCard(5,1),rtCard(6,0),rtCard(6,1),rtCard(7,0),rtCard(7,1)]);
+    const r5=rtCombo([rtCard(5,0),rtCard(5,1),rtCard(6,0),rtCard(6,1),rtCard(7,0),rtCard(7,1),rtCard(8,0),rtCard(8,1),rtCard(9,0),rtCard(9,1)]);
+    return {ok:canBeat(r5,r4),name:'5 đôi thông chặt ngay 4 đôi thông',actual:canBeat(r5,r4),expected:true};
+  }));
   out.push(rtCase('3 đôi thông → Tứ quý = 3',()=>{
     const run3=rtCombo([rtCard(4,0),rtCard(4,1),rtCard(5,0),rtCard(5,1),rtCard(6,0),rtCard(6,1)]);
     return rtAssert('3 đôi thông = 3',calculateChopReward(quad3,run3,4),3);
@@ -4831,9 +6022,9 @@ function rtScenarioConfig(type, order){
 function rtPickNaturalScenario(){
   // RANDOM chỉ chọn trong các kịch bản mà CHƠI TEST TỰ NHIÊN có thể chạy bằng
   // đúng engine ván thật. Tới Trắng/Cóng cũng được đưa vào random.
-  const names=['single','pair','quad','run','safe','cong1','cong2','cong3','congAll','rank','white3'];
+  const names=['single','pair','quad','run','instantChop4','instantChop5','safe','cong1','congAll','rank','white3'];
   const rawW=rtGetWeights();
-  const w=names.map((_,i)=>Number(rawW[i])||1);
+  const w=names.map((name,i)=>Number(rawW[i])||0);
   const total=w.reduce((a,b)=>a+b,0)||1;
   let r=Math.random()*total;
   for(let i=0;i<w.length;i++){
@@ -4860,6 +6051,37 @@ function rtNaturalScenarioSpec(type){
     run:{
       label:'🎯 3 ĐÔI THÔNG → 4 ĐÔI THÔNG CÓ CƠ HỘI CHẶT',
       reserve:[[0,4,0],[0,4,1],[0,5,0],[0,5,1],[0,6,0],[0,6,1],[1,5,2],[1,5,3],[1,6,2],[1,6,3],[1,7,2],[1,7,3],[1,8,2],[1,8,3]]
+    },
+    instantChop4:{
+      label:'⚡ TEST TỰ NHIÊN — Bạn có 4 Đôi Thông, BỎ LƯỢT hoặc CHẶT NGAY tùy ý',
+      // Chỉ khóa 4 đôi thông cho người test. Bot KHÔNG bị khóa bài/mục tiêu.
+      // Các Bot vẫn đánh và chặt hoàn toàn theo engine bình thường.
+      reserve:[
+        // Người test: đúng 4 đôi thông 5-8.
+        [0,5,0],[0,5,1],[0,6,0],[0,6,1],[0,7,0],[0,7,1],[0,8,0],[0,8,1],
+        // Bot 1: 4 đôi thông 6-9 để có thể chặt Heo/3 đôi/tứ quý khi có cơ hội.
+        [1,6,2],[1,6,3],[1,7,2],[1,7,3],[1,8,2],[1,8,3],[1,9,2],[1,9,3],
+        // Bot 2: 5 đôi thông 7-J, cao hơn Bot 1 để có tình huống chặt lại.
+        [2,7,0],[2,7,1],[2,8,0],[2,8,1],[2,9,0],[2,9,1],[2,10,0],[2,10,1],[2,11,0],[2,11,1],
+        // Bot 3: nhiều hàng đặc biệt: đôi Heo + tứ quý 3 + 3 đôi thông 4-6.
+        [3,12,2],[3,12,3],[3,3,0],[3,3,1],[3,3,2],[3,3,3],
+        [3,4,2],[3,4,3],[3,5,2],[3,5,3],[3,6,2],[3,6,3]
+      ]
+    },
+    instantChop5:{
+      label:'⚡ TEST TỰ NHIÊN — Bạn có 5 Đôi Thông, BỎ LƯỢT hoặc CHẶT NGAY tùy ý',
+      // Chỉ khóa 5 đôi thông cho người test. Bot KHÔNG bị khóa bài/mục tiêu.
+      reserve:[
+        // Người test: đúng 5 đôi thông 5-9.
+        [0,5,0],[0,5,1],[0,6,0],[0,6,1],[0,7,0],[0,7,1],[0,8,0],[0,8,1],[0,9,0],[0,9,1],
+        // Bot 1: 4 đôi thông 6-9.
+        [1,6,2],[1,6,3],[1,7,2],[1,7,3],[1,8,2],[1,8,3],[1,9,2],[1,9,3],
+        // Bot 2: 5 đôi thông 7-J, cao hơn để chặt lại Bot 1/người test.
+        [2,7,0],[2,7,1],[2,8,0],[2,8,1],[2,9,0],[2,9,1],[2,10,0],[2,10,1],[2,11,0],[2,11,1],
+        // Bot 3: đôi Heo + tứ quý 3 + 3 đôi thông 4-6.
+        [3,12,2],[3,12,3],[3,3,0],[3,3,1],[3,3,2],[3,3,3],
+        [3,4,2],[3,4,3],[3,5,2],[3,5,3],[3,6,2],[3,6,3]
+      ]
     },
     safe:{
       label:'🎯 CHẶT NGƯỜI VỪA VỀ',
@@ -4927,6 +6149,7 @@ function startRuleTestGame(){
 
     isHost = true;
     isBotMode = true;
+
     isRuleTestMode = true;
     isSpectator = false;
 
@@ -5049,6 +6272,7 @@ function startRuleTestGame(){
       requiredCard,
       finished:[],
       passed:new Set(),
+      instantChopPassedTarget:{},
       disconnected:new Set(),
       coldFolded:new Set(),
       scores:Object.fromEntries(order.map(id=>[id,0])),
@@ -5090,6 +6314,21 @@ function startRuleTestGame(){
       testCongRule: 'CÓNG = 4/người không Cóng; một settlement dùng chung cho live + tổng kết; phát hiện từ revealedCards'
     };
 
+    // ================================================================
+    // TEST TỰ NHIÊN — 4/5 ĐÔI THÔNG
+    // KHÔNG ép Bot nào phải đánh bộ mục tiêu và KHÔNG khóa Bot 2.
+    // Người test chỉ được bảo đảm có 4 hoặc 5 đôi thông trong tay.
+    // Các Bot đánh / bỏ lượt / chặt theo đúng engine ván thật.
+    // Người test có lượt thì có thể BỎ LƯỢT; không có lượt vẫn có thể CHẶT NGAY
+    // bất cứ thời điểm nào khi trên bàn xuất hiện bộ đặc biệt hợp lệ.
+    // ================================================================
+    if(['instantChop4','instantChop5'].includes(naturalScenario.type)){
+      gameState.testInstantChop = false;
+      gameState.testInstantChopType = naturalScenario.type;
+      gameState.actorMsg = `⚡ ${naturalScenario.label} • Bot đánh/chặt tự nhiên. Bạn có thể BỎ LƯỢT hoặc CHẶT NGAY bất cứ lúc nào khi đủ điều kiện.`;
+      gameState.log = `🧪 ${naturalScenario.label} • Không ép mục tiêu; Bot 1-2-3 đánh tự nhiên, người test tự quyết định BỎ LƯỢT hoặc CHẶT NGAY.`;
+    }
+
     isRuleTestMode = true;
     startTimerLoop();
     bumpActor(players[leadIdx].id, `🧪 TEST TỰ NHIÊN • ${naturalScenario.label}`);
@@ -5111,6 +6350,10 @@ function startRuleTestGame(){
 }
 
 function exitRuleTestMode(){
+  const testChop=$('testInstantChopOverlay');
+  if(testChop){ testChop.classList.add('hidden'); testChop.disabled=true; }
+  const legacyChop=$('btnChopInterrupt');
+  if(legacyChop){ legacyChop.classList.add('hidden'); legacyChop.disabled=true; }
   if(timerLoop) clearInterval(timerLoop);
   isRuleTestMode=false; isBotMode=false; botList=[]; gameState=null; currentState=null;
   $('resultOverlay').classList.add('hidden');
