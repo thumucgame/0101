@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -1886,6 +1888,13 @@ function calculateChopReward(next, curr, activePlayersCount = 4){
       return heoCardValue(curr.cards[0]) + heoCardValue(curr.cards[1]);
     }
   }
+  // 3 Đôi Thông chặt lại 3 Đôi Thông cao hơn: đây vẫn là một mắt xích CHOP
+  // (không phải chỉ chồng thêm BOM). Phải trả reward để luồng PLAY cập nhật
+  // lại chopChainPayer / chopChainReceiver sang người vừa chặt.
+  if(curr.type === 'pairs_run' && curr.count === 3 &&
+     next.type === 'pairs_run' && next.count === 3 &&
+     canBeat(next, curr)) return GAME_CONFIG.chop.baDoiThong;
+
   if(curr.type === 'pairs_run' && curr.count === 3 && (next.type === 'quad' || (next.type === 'pairs_run' && next.count >= 4))) return GAME_CONFIG.chop.baDoiThong;
   if(curr.type === 'quad' && next.type === 'quad') return GAME_CONFIG.chop.tuQuy;
   if(curr.type === 'quad' && next.type === 'pairs_run' && next.count >= 4) return GAME_CONFIG.chop.boDoiThongTro;
@@ -4382,6 +4391,11 @@ function endGame(){
   });
 
   if(mode === 'WATER'){
+    const lastPlaceId = gameState.finished[gameState.finished.length - 1];
+    const secondLastPlaceId = gameState.finished.length >= 2
+      ? gameState.finished[gameState.finished.length - 2]
+      : winnerId;
+
     // CÓNG: dùng đúng snapshot đã chốt lúc người đầu tiên về Nhất.
     // Tuyệt đối không tính lại sau khi coldFolded đã được đưa vào finished.
     const cong = getOrCreateCongSettlement() || calculateCongSettlement([]);
@@ -4395,16 +4409,6 @@ function endGame(){
     if(congIdSet.size && cong.receivers.length){
       applyCongSettlementLive(cong);
     }
-
-    // FIX: người bị Cóng luôn bị nối vào CUỐI mảng finished (xem dòng ~4349), nên nếu lấy
-    // Bét/Nhì-Bét trực tiếp từ gameState.finished khi bàn có Cóng, "Bét" sẽ bị tính nhầm
-    // thành người Cóng thay vì người về Bét THẬT (người vừa thua đấu 1-chọi-1 cho vị trí Bét).
-    // Phải lọc bỏ người Cóng khỏi thứ tự về đích trước khi xác định lastPlaceId/secondLastPlaceId.
-    const realFinishOrder = gameState.finished.filter(id => !congIdSet.has(id));
-    const lastPlaceId = realFinishOrder[realFinishOrder.length - 1];
-    const secondLastPlaceId = realFinishOrder.length >= 2
-      ? realFinishOrder[realFinishOrder.length - 2]
-      : winnerId;
 
     let foulPenaltiesTotal = 0;
     let foulPenaltiesToSecondLast = 0;
@@ -4514,12 +4518,9 @@ function endGame(){
       applyCongSettlementLive(cong);
     }
 
-    // FIX: cùng lỗi như block WATER — người bị Cóng luôn nằm cuối mảng finished nên phải
-    // lọc họ ra trước khi xác định Bét/Nhì-Bét THẬT, nếu không "Bét" sẽ trỏ nhầm sang người Cóng.
-    const realFinishOrder = gameState.finished.filter(id => !congIdSet.has(id));
-    const lastPlaceId = realFinishOrder[realFinishOrder.length - 1];
-    const secondLastPlaceId = realFinishOrder.length >= 2
-      ? realFinishOrder[realFinishOrder.length - 2]
+    const lastPlaceId = gameState.finished[gameState.finished.length - 1];
+    const secondLastPlaceId = gameState.finished.length >= 2
+      ? gameState.finished[gameState.finished.length - 2]
       : winnerId;
     const foulDetailsMap = {};
     let foulPenaltiesTotal = 0;
