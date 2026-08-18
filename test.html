@@ -364,6 +364,10 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .card .rank{font-size:14px;line-height:1;}
 .card .suit{font-size:14px;align-self:flex-end;line-height:1;}
 .card.selected{transform:translateY(-16px);box-shadow:0 8px 12px rgba(0,0,0,.55);border-color:var(--gold);}
+.card.selection-shake{animation:cardShake .32s ease;}
+@keyframes cardShake{0%,100%{transform:translateY(-16px) translateX(0);}25%{transform:translateY(-16px) translateX(-4px);}75%{transform:translateY(-16px) translateX(4px);}}
+.hand-select-msg{text-align:center;font-size:12px;color:var(--bad);font-weight:700;margin:2px 0;min-height:16px;transition:opacity .2s;}
+.hand-select-msg.hidden{display:none;}
 .card.table-card{
   width:76px;height:110px;margin-left:-28px;pointer-events:none;box-shadow:-3px 3px 8px rgba(0,0,0,.6);border:1.5px solid rgba(0,0,0,.35);
 }
@@ -986,6 +990,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
       <div id="myLastCardBadge" class="last-card-badge hidden">⚠️ 1 LÁ!</div>
     </div>
     <div class="hand-cards" id="handCards"><div class="hand-cards-inner" id="handCardsInner"></div></div>
+    <div class="hand-select-msg hidden" id="handSelectMsg"></div>
     <div class="controls">
       <button class="btn btn-outline" id="btnSort">Xếp bài (Giá Trị)</button>
       <button class="btn btn-danger" id="btnPass">Bỏ lượt</button>
@@ -5306,7 +5311,55 @@ $('btnSort').onclick = () => {
   renderHand(); 
 };
 
-$('btnPlay').onclick = () => sendAction({kind:'play', cards:[...selected]});
+// FIX BUG: trước đây bấm "Đánh" luôn gọi sendAction() -> sendAction() LUÔN xoá sạch `selected`
+// (selected.clear()) dù nước đi có hợp lệ hay không. Ở server, nếu classify(cards) trả về null
+// (VD: bộ bài có 2 lá trùng hạng do người chơi lỡ chọn nhầm 1 lá trùng khi tay có hạng đôi như
+// "3455678"/"344555678" — rất dễ chọn nhầm vì 2-3 lá cùng hạng nằm sát nhau) hoặc canBeat() = false,
+// handleAction() return sớm và KHÔNG làm gì cả — nhưng vì sendAction() đã clear selected trước đó,
+// người chơi thấy y hệt hiện tượng "chọn đúng bài rồi mà bấm Đánh không ra gì, bài tự bỏ chọn" dù
+// họ không biết vì sao. Giờ kiểm tra hợp lệ NGAY TRÊN CLIENT trước khi gửi: nếu không phải 1 bộ hợp
+// lệ (sảnh/đôi/sám/tứ quý/đôi thông...) hoặc không chặn được bài đang có trên bàn, báo lỗi rõ ràng
+// ngay tại chỗ và GIỮ NGUYÊN lựa chọn để người chơi tự sửa, thay vì âm thầm xoá hết.
+function showHandSelectMsg(text){
+  const el = $('handSelectMsg');
+  if(!el) return;
+  el.textContent = text;
+  el.classList.remove('hidden');
+  clearTimeout(showHandSelectMsg._t);
+  showHandSelectMsg._t = setTimeout(()=>{ el.classList.add('hidden'); }, 2200);
+  // rung nhẹ các lá đang chọn để người chơi biết chính bộ này bị từ chối
+  document.querySelectorAll('#handCards .card.selected').forEach(el2=>{
+    el2.classList.remove('selection-shake');
+    void el2.offsetWidth;
+    el2.classList.add('selection-shake');
+  });
+}
+function validateSelectedPlay(){
+  if(!selected.size) return { ok:false, msg:'Hãy chọn ít nhất 1 lá bài.' };
+  const selectedCards = [...selected]
+    .map(k => safeArray(myHand).find(c => cardKey(c) === k))
+    .filter(Boolean);
+  if(selectedCards.length !== selected.size){
+    return { ok:false, msg:'Có lá bài không hợp lệ trong lựa chọn, thử chọn lại.' };
+  }
+  const combo = classify(selectedCards);
+  if(!combo){
+    return { ok:false, msg:'Bộ bài này không hợp lệ (không phải sảnh/đôi/sám/tứ quý/đôi thông đúng luật).' };
+  }
+  const curr = currentState && currentState.currentCombo;
+  if(curr && !canBeat(combo, curr)){
+    return { ok:false, msg:'Bộ bài này không chặn được bài đang có trên bàn.' };
+  }
+  return { ok:true };
+}
+$('btnPlay').onclick = () => {
+  const check = validateSelectedPlay();
+  if(!check.ok){
+    showHandSelectMsg(check.msg);
+    return;
+  }
+  sendAction({kind:'play', cards:[...selected]});
+};
 $('btnPass').onclick = () => sendAction({kind:'pass'});
 $('btnChopInterrupt').onclick = () => { sendAction({kind:'interrupt_chop', cards:[...selected]}); };
 $('testInstantChopOverlay').onclick = (e) => {
