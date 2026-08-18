@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -278,6 +277,13 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 }
 .live-score-sticker.plus { color: var(--good); border-color: var(--good); }
 .live-score-sticker.minus { color: var(--bad); border-color: var(--bad); }
+.points-score-wrap{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;margin-top:2px;z-index:10;}
+.points-total-score{font-size:12px;font-weight:900;line-height:1.05;color:var(--gold);white-space:nowrap;}
+.points-round-score{font-size:9px;font-weight:700;line-height:1;color:var(--good);white-space:nowrap;opacity:.95;}
+.points-round-score.minus{color:var(--bad);}
+.slot-bottom .points-score-wrap{margin-top:2px;}
+.slot-bottom .points-total-score{font-size:12px;}
+.slot-bottom .points-round-score{font-size:8px;}
 /* Khung "Nước" của chính mình: đặt lại thành phần tử nằm trong dòng (giống hệt cách
    render cho đối thủ ở renderOpponents), tránh bị position:absolute làm trôi nổi lệch. */
 .slot-bottom .live-score-sticker{position:relative;top:auto;right:auto;left:auto;margin-top:2px;font-size:9px;padding:1px 4px;}
@@ -988,7 +994,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     <div id="turnBanner" class="turn-banner hidden">⚡ ĐẾN LƯỢT BẠN ĐÁNH! ⚡</div>
     <div class="p-slot slot-bottom" id="mySlot" style="cursor:pointer;" data-pid="" title="Bấm để chọn icon khóc/cười">
       <div class="avatar" id="myAvatar">👤</div>
-      <div id="myLiveScoreBox" class="live-score-sticker">0</div>
+      <div id="myLiveScoreBox" class="points-score-wrap" style="display:none;"><div class="points-total-score" id="myTotalScore">Tổng: 0</div><div class="points-round-score" id="myRoundScore"></div></div>
       <div id="myKneelingBadge" class="kneeling-badge hidden">🧎 Đang Quỳ</div>
       <div id="myLastCardBadge" class="last-card-badge hidden">⚠️ 1 LÁ!</div>
     </div>
@@ -2780,7 +2786,7 @@ function finalizeInstantWin(){
         kneelingTracker[id] = (mode === 'KNEEL_B') ? 0 : kneelingTracker[id];
         results[id] = { rank: 1, score: '🎉 TỚI TRẮNG', note: `🌟 ${label} - Giải Hạn Quỳ / Về Nhất`, name, playedCards: [], remainingCards: winnerHandCards };
       } else {
-        results[id] = { rank: 2, score: 'Miễn Quỳ Ván Này', note: `Bị Trắng Bài (${label}) - không tính là thua ván thường`, name, playedCards: [], remainingCards: safeArray(gameState.hands[id]) };
+        results[id] = { rank: 2, score: 'Miễn Quỳ Ván Này', note: `Bị Trắng Bài (${label}) → 0 điểm`, name, playedCards: [], remainingCards: safeArray(gameState.hands[id]) };
       }
     });
     broadcastInstantWinCelebration(winnerId, winnerName, label, reward, gameState.stakeUnit);
@@ -4376,11 +4382,6 @@ function endGame(){
   });
 
   if(mode === 'WATER'){
-    const lastPlaceId = gameState.finished[gameState.finished.length - 1];
-    const secondLastPlaceId = gameState.finished.length >= 2
-      ? gameState.finished[gameState.finished.length - 2]
-      : winnerId;
-
     // CÓNG: dùng đúng snapshot đã chốt lúc người đầu tiên về Nhất.
     // Tuyệt đối không tính lại sau khi coldFolded đã được đưa vào finished.
     const cong = getOrCreateCongSettlement() || calculateCongSettlement([]);
@@ -4394,6 +4395,16 @@ function endGame(){
     if(congIdSet.size && cong.receivers.length){
       applyCongSettlementLive(cong);
     }
+
+    // FIX: người bị Cóng luôn bị nối vào CUỐI mảng finished (xem dòng ~4349), nên nếu lấy
+    // Bét/Nhì-Bét trực tiếp từ gameState.finished khi bàn có Cóng, "Bét" sẽ bị tính nhầm
+    // thành người Cóng thay vì người về Bét THẬT (người vừa thua đấu 1-chọi-1 cho vị trí Bét).
+    // Phải lọc bỏ người Cóng khỏi thứ tự về đích trước khi xác định lastPlaceId/secondLastPlaceId.
+    const realFinishOrder = gameState.finished.filter(id => !congIdSet.has(id));
+    const lastPlaceId = realFinishOrder[realFinishOrder.length - 1];
+    const secondLastPlaceId = realFinishOrder.length >= 2
+      ? realFinishOrder[realFinishOrder.length - 2]
+      : winnerId;
 
     let foulPenaltiesTotal = 0;
     let foulPenaltiesToSecondLast = 0;
@@ -4503,9 +4514,12 @@ function endGame(){
       applyCongSettlementLive(cong);
     }
 
-    const lastPlaceId = gameState.finished[gameState.finished.length - 1];
-    const secondLastPlaceId = gameState.finished.length >= 2
-      ? gameState.finished[gameState.finished.length - 2]
+    // FIX: cùng lỗi như block WATER — người bị Cóng luôn nằm cuối mảng finished nên phải
+    // lọc họ ra trước khi xác định Bét/Nhì-Bét THẬT, nếu không "Bét" sẽ trỏ nhầm sang người Cóng.
+    const realFinishOrder = gameState.finished.filter(id => !congIdSet.has(id));
+    const lastPlaceId = realFinishOrder[realFinishOrder.length - 1];
+    const secondLastPlaceId = realFinishOrder.length >= 2
+      ? realFinishOrder[realFinishOrder.length - 2]
       : winnerId;
     const foulDetailsMap = {};
     let foulPenaltiesTotal = 0;
@@ -4879,16 +4893,31 @@ function applyState(st){
   $('tableScreen').classList.remove('hidden');
   $('chatToggle').classList.remove('hidden');
   $('roomTag').textContent = 'Phòng: ' + roomCode;
-  $('modeTag').textContent = 'Chế độ: ' + (st.gameMode === 'WATER' ? 'Đánh Nước' : 'Quỳ');
+  $('modeTag').textContent = 'Chế độ: ' + (st.gameMode === 'WATER' ? 'Đánh Nước' : (st.gameMode === 'POINTS' ? 'Tính Điểm' : 'Quỳ'));
   $('stakeTag').textContent = st.gameMode === 'WATER' ? 'Cược: ' + st.stakeUnit : 'Hình phạt: Quỳ';
 
-  const myLiveVal = (st.liveScores && st.liveScores[myId]) ? st.liveScores[myId] : 0;
+  const myLiveVal = (st.liveScores && st.liveScores[myId] !== undefined) ? Number(st.liveScores[myId]) : 0;
+  const myBaseTotal = Number((st.matchScores && st.matchScores[myId] !== undefined) ? st.matchScores[myId] : (matchScores[myId] || 0));
+  const myTotalVal = (st.gameMode === 'POINTS')
+    ? (st.matchScoreApplied ? myBaseTotal : myBaseTotal + myLiveVal)
+    : myLiveVal;
   const myScoreBox = $('myLiveScoreBox');
   if(myScoreBox){
     if(st.gameMode === 'WATER'){
       myScoreBox.style.display = '';
-      myScoreBox.textContent = (myLiveVal > 0 ? `+${myLiveVal}` : myLiveVal) + ' Nước';
       myScoreBox.className = 'live-score-sticker ' + (myLiveVal > 0 ? 'plus' : (myLiveVal < 0 ? 'minus' : ''));
+      myScoreBox.textContent = (myLiveVal > 0 ? `+${myLiveVal}` : myLiveVal) + ' Nước';
+    } else if(st.gameMode === 'POINTS'){
+      myScoreBox.style.display = '';
+      myScoreBox.className = 'points-score-wrap';
+      const totalEl = $('myTotalScore');
+      const roundEl = $('myRoundScore');
+      if(totalEl) totalEl.textContent = `Tổng: ${myTotalVal > 0 ? '+' : ''}${myTotalVal}`;
+      if(roundEl){
+        const delta = Number(st.liveScores && st.liveScores[myId] || 0);
+        roundEl.textContent = delta ? `${delta > 0 ? '+' : ''}${delta} Điểm` : '';
+        roundEl.className = 'points-round-score' + (delta < 0 ? ' minus' : '');
+      }
     } else {
       myScoreBox.style.display = 'none';
     }
@@ -4958,8 +4987,13 @@ function renderOpponents(){
 
     let waterSticker = '';
     if(currentState.gameMode === 'WATER'){
-      const oppLiveVal = (currentState.liveScores && currentState.liveScores[pId]) ? currentState.liveScores[pId] : 0;
+      const oppLiveVal = (currentState.liveScores && currentState.liveScores[pId] !== undefined) ? Number(currentState.liveScores[pId]) : 0;
       waterSticker = `<div class="live-score-sticker ${oppLiveVal>0?'plus':(oppLiveVal<0?'minus':'')}" style="position:relative;top:auto;right:auto;margin-top:2px;font-size:9px;padding:1px 4px;">${oppLiveVal>0?'+'+oppLiveVal:oppLiveVal} Nước</div>`;
+    } else if(currentState.gameMode === 'POINTS'){
+      const oppRoundVal = (currentState.liveScores && currentState.liveScores[pId] !== undefined) ? Number(currentState.liveScores[pId]) : 0;
+      const oppBaseTotal = Number((currentState.matchScores && currentState.matchScores[pId] !== undefined) ? currentState.matchScores[pId] : (matchScores[pId] || 0));
+      const oppTotalVal = currentState.matchScoreApplied ? oppBaseTotal : oppBaseTotal + oppRoundVal;
+      waterSticker = `<div class="points-score-wrap"><div class="points-total-score">Tổng: ${oppTotalVal>0?'+'+oppTotalVal:oppTotalVal}</div><div class="points-round-score ${oppRoundVal<0?'minus':''}">${oppRoundVal ? (oppRoundVal>0?'+':'')+oppRoundVal+' Điểm' : ''}</div></div>`;
     }
 
     let kneelingSticker = '';
@@ -5905,8 +5939,16 @@ function showResultOverlay(results, settlements){
           <span style="color:var(--gold);font-weight:bold;">${s.amount} Nước</span>
         </div>`;
     });
+  } else if(currentState && currentState.gameMode === 'POINTS'){
+    const totalMap = currentState.matchScores || {};
+    const pointRows = Object.values(results).sort((a,b)=>a.rank-b.rank).map(r=>{
+      const rid = currentState.order.find(id => currentState.names[id] === r.name);
+      const total = Number(totalMap[rid] !== undefined ? totalMap[rid] : (matchScores[rid] || 0));
+      return `<div class="settlement-item"><span><b>${escapeHtml(r.name)}</b></span><span style="color:var(--gold);font-weight:bold;">Tổng: ${total>0?'+':''}${total} điểm</span></div>`;
+    }).join('');
+    stContent.innerHTML = `<div style="margin-bottom:7px;color:rgba(250,246,238,.65);font-size:12px;">📊 Điểm đã được cộng vào tổng trận — ván sau tiếp tục cộng dồn.</div>${pointRows}`;
   } else {
-    stContent.innerHTML = '<div style="text-align:center;color:rgba(250,246,238,.5)">' + (isWater ? 'Hòa vốn / Không có đền bù.' : 'Ghi nhận tư thế quỳ trực tiếp tại bàn.') + '</div>';
+    stContent.innerHTML = '<div style="text-align:center;color:rgba(250,246,238,.5)">Ghi nhận tư thế quỳ trực tiếp tại bàn.</div>';
   }
 
   const actions = $('resultActions'); actions.innerHTML = '';
