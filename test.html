@@ -203,6 +203,23 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .chop-banner.show{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0) scale(1);}
 @media (max-width:420px){ .chop-banner{font-size:12px;padding:7px 12px;max-width:94%;} }
 
+/* DÃY BÀI VỪA DÙNG ĐỂ CHẶT: nổi ngay dưới chop-banner, cho CẢ NHÓM thấy đúng những lá bài
+   vừa hạ chặt — vì currentCombo (nguồn hiện của .played-combo) đã bị set về null ngay sau
+   cú chặt để mở lượt mới cho người chặt. Đặt cố định ngay dưới banner chữ (banner tối đa ~3
+   dòng nhờ word-break/wrap, khoảng trống 54px đủ chừa cho banner 1-2 dòng thường gặp).
+   Xếp CHỒNG KHÍT vào nhau (margin âm), giống hệt kiểu ngửa bài cuối ván (.reveal-cards-line)
+   thay vì dàn hàng ngang cách nhau như trước — nhìn gọn & đẹp hơn. */
+.chop-banner-cards{
+  position:absolute;top:54px;left:50%;transform:translateX(-50%) translateY(-8px) scale(.92);
+  display:flex;align-items:center;justify-content:center;max-width:88%;
+  z-index:69;pointer-events:none;opacity:0;visibility:hidden;
+  transition:opacity .22s ease, transform .22s ease;
+}
+.chop-banner-cards.show{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0) scale(1);}
+.chop-banner-cards .card.small{margin-left:-13px;box-shadow:-1px 1px 3px rgba(0,0,0,.45);}
+.chop-banner-cards .card.small:first-child{margin-left:0;}
+@media (max-width:420px){ .chop-banner-cards{top:64px;} .chop-banner-cards .card.small{transform:scale(.9);} }
+
 /* DÒNG THÔNG BÁO VÀ ĐỒNG HỒ DỜI XUỐNG DƯỚI GẦN BÀI NGƯỜI CHƠI */
 .turn-timer-box{
   position:relative;margin-top:0;margin-bottom:28px;background:rgba(0,0,0,.85);border:1px solid var(--gold-dim);
@@ -943,6 +960,11 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     <div class="played-combo" id="playedCombo"></div>
     <!-- BANNER CHẶT NGANG: hiện to giữa bàn vài giây cho cả nhóm cùng thấy "ai chặt gì của ai bằng gì" -->
     <div class="chop-banner" id="chopBanner"></div>
+    <!-- DÃY BÀI VỪA DÙNG ĐỂ CHẶT: currentCombo bị set về null ngay sau cú chặt (để người chặt được
+         đánh tiếp không cần đè ai), nên #playedCombo không kịp hiện được dãy bài này cho cả nhóm thấy.
+         Dùng state riêng (chopBannerCards/Seq, độc lập currentCombo) để mọi người vẫn thấy đúng những
+         lá đã chặt trong vài giây, y hệt cơ chế của chopBanner. -->
+    <div class="chop-banner-cards" id="chopBannerCards"></div>
     <!-- TEST 4/5 ĐÔI THÔNG: nút duy nhất, chỉ xuất hiện khi THỰC SỰ có thể chặt.
          Tách khỏi khu bài người chơi để không bị treo/đè lên tay bài. -->
     <button class="test-instant-chop-overlay hidden" id="testInstantChopOverlay" type="button" aria-label="Chặt ngay">⚡ CHẶT NGAY</button>
@@ -1553,8 +1575,12 @@ function bumpActor(playerId, shortMsg){
 
 // Đặt/đổi nội dung BANNER CHẶT NGANG (thông báo lớn giữa bàn, cho CẢ NHÓM cùng thấy),
 // khác với bumpActor() vốn chỉ hiện bong bóng nhỏ tại đúng 1 ghế của người vừa hành động.
-function setChopBanner(text){
+// cards: mảng lá bài THẬT SỰ vừa dùng để chặt — lưu riêng vì gameState.currentCombo bị set
+// về null ngay sau cú chặt (để mở lượt mới cho người chặt), nên không thể dựa vào currentCombo
+// để vẽ dãy bài này cho cả nhóm xem.
+function setChopBanner(text, cards){
   gameState.chopBannerText = text || null;
+  gameState.chopBannerCards = Array.isArray(cards) ? cards.map(c => ({r:c.r,s:c.s})) : null;
   gameState.chopBannerSeq = (gameState.chopBannerSeq || 0) + 1;
 }
 
@@ -3326,12 +3352,19 @@ function openChopInterruptWindow(){
   }, 3050);
 }
 // Dựng nội dung 2 dòng cho nút "Chặt Ngay" (cửa sổ đếm 3-2-1 cũ): dòng chính là nút bấm +
-// số giây còn lại, dòng phụ báo ĐANG CHẶT GÌ và CỦA AI — cùng kiểu chữ với overlay TEST 4/5.
+// số giây còn lại, dòng phụ báo ĐANG CHẶT GÌ, CỦA AI, và ĐANG TREO BAO NHIÊU NƯỚC (bomChain) —
+// cùng kiểu chữ với overlay TEST 4/5 — để người ra quyết định chặt thấy ngay toàn bộ thông tin,
+// không phải đoán mò hay lật lại log mới biết đang chặt hụt/chặt lời bao nhiêu.
 function buildChopButtonLabel(curr, ownerId, sec, isFixedButton){
   const targetLabel = describeInstantTarget(curr);
   const ownerName = (currentState && currentState.names) ? (currentState.names[ownerId] || '') : '';
+  const bomNow = Math.max(
+    Number(currentState && currentState.chopChainValue || 0),
+    Number(currentState && currentState.chopStackValue || 0)
+  );
+  const bomTxt = bomNow > 0 ? ` • Đang treo ${bomNow} Nước` : '';
   const sub = targetLabel
-    ? `<span class="chop-btn-target">${escapeHtml(targetLabel)}${ownerName ? ' • của ' + escapeHtml(ownerName) : ''}</span>`
+    ? `<span class="chop-btn-target">${escapeHtml(targetLabel)}${ownerName ? ' • của ' + escapeHtml(ownerName) : ''}${escapeHtml(bomTxt)}</span>`
     : '';
   const main = isFixedButton ? '⚡ CHẶT NGAY' : `⚡ Chặt Ngang (${sec}s)`;
   return `<span class="chop-btn-main">${main}</span>${sub}`;
@@ -3721,7 +3754,7 @@ function handleAction(playerId, action, isAuto=false){
       if(!gameState.roundLog) gameState.roundLog = [];
       gameState.roundLog.push({ icon:'🛡️', text:`${pName} chặt bộ bài của ${prevLeaderName} sau khi họ đã về → 0 Nước, không nhập BOM.` });
       bumpActor(playerId, '🛡️ Chặt nhưng 0 Nước — đối thủ đã về!');
-      setChopBanner(`🛡️ ${pName} chặt ${describeChopTargetNice(curr)} của ${prevLeaderName} bằng ${describeChopTargetNice(combo)} — không tính Nước (đã về)`);
+      setChopBanner(`🛡️ ${pName} chặt ${describeChopTargetNice(curr)} của ${prevLeaderName} bằng ${describeChopTargetNice(combo)} — không tính Nước (đã về)`, cards);
       // FIX: đã bỏ broadcastSoundEvent('CHOP') ở đây vì có 1 lệnh gọi chung
       // ngay sau khối if/else-if/else bên dưới (áp dụng cho cả 3 nhánh) → tránh phát CHOP 2 lần.
     } else if(gameState.gameMode === 'WATER' && prevLeader && prevLeader !== playerId){
@@ -3743,13 +3776,13 @@ function handleAction(playerId, action, isAuto=false){
       if(!gameState.roundLog) gameState.roundLog = [];
       gameState.roundLog.push({ icon:'⚡', text: `${pName} CHẶT NGANG ${choppedDesc} của ${prevLeaderName} bằng ${describeCombo(combo)} → dồn bom ${totalChain} Nước.${chainTag}` });
       bumpActor(playerId, `⚡ Chặt ngang! Bom ${totalChain} Nước${chainTag ? ' 🔥' : ''}`);
-      setChopBanner(`⚡ ${pName} chặt ${describeChopTargetNice(curr)} của ${prevLeaderName} bằng ${describeChopTargetNice(combo)} — Bom ${totalChain} Nước${chainTag ? ' 🔥' : ''}`);
+      setChopBanner(`⚡ ${pName} chặt ${describeChopTargetNice(curr)} của ${prevLeaderName} bằng ${describeChopTargetNice(combo)} — Bom ${totalChain} Nước${chainTag ? ' 🔥' : ''}`, cards);
     } else {
       gameState.log = `⚡ ${pName} CHẶT NGANG thành công!${chainTag}`;
       if(!gameState.roundLog) gameState.roundLog = [];
       gameState.roundLog.push({ icon:'⚡', text: `${pName} CHẶT NGANG ${choppedDesc} bằng ${describeCombo(combo)} (không đợi lượt).${chainTag}` });
       bumpActor(playerId, '⚡ Chặt ngang thành công!');
-      setChopBanner(`⚡ ${pName} chặt ${describeChopTargetNice(curr)}${prevLeaderName ? ' của ' + prevLeaderName : ''} bằng ${describeChopTargetNice(combo)}${chainTag}`);
+      setChopBanner(`⚡ ${pName} chặt ${describeChopTargetNice(curr)}${prevLeaderName ? ' của ' + prevLeaderName : ''} bằng ${describeChopTargetNice(combo)}${chainTag}`, cards);
     }
     if(!chopWillEndGame) broadcastChopSound(curr, combo, targetWasAlreadyFinished);
 
@@ -3950,6 +3983,11 @@ function handleAction(playerId, action, isAuto=false){
       if(!gameState.roundLog) gameState.roundLog = [];
       gameState.roundLog.push({ icon:'🛡️', text:`${pName} chặt sau khi ${gameState.names[gameState.leaderId]} đã về → 0 Nước, không tạo BOM.` });
       shortMsg = '🛡️ Chặt nhưng 0 Nước';
+      // FIX: nhánh CHẶT khi đánh bình thường (trong lượt) trước đây chỉ có bumpActor()
+      // (bong bóng nhỏ tại đúng 1 ghế) mà KHÔNG có setChopBanner() (banner to giữa bàn cho
+      // CẢ NHÓM cùng thấy) — khác với nhánh interrupt_chop đã có đủ. Người chơi phản ánh
+      // "chặt xong không báo hàng gì/của ai cho cả nhóm" chính là do thiếu dòng này.
+      setChopBanner(`🛡️ ${pName} chặt ${describeChopTargetNice(gameState.currentCombo)} của ${gameState.names[gameState.leaderId]} bằng ${describeChopTargetNice(combo)} — không tính Nước (đã về)`, cards);
       if(!playWillEndGame) broadcastChopSound(gameState.currentCombo, combo, true);
     } else if(isSpecialStackBeat && directReward <= 0 && gameState.leaderId && gameState.leaderId !== playerId){
       // Chồng đặc biệt nhưng CHƯA có cú chặt: ví dụ A Heo đen → B Heo đỏ.
@@ -3986,10 +4024,15 @@ function handleAction(playerId, action, isAuto=false){
         gameState.log = `${prefix}${pName} chặt thành công! Bom chồng hiện tại: ${totalChain} Nước — chưa thanh toán; người bị chặt ở mắt xích cuối sẽ chịu toàn bộ.`;
         gameState.roundLog.push({ icon:'⚡', text: `${pName} CHẶT ${choppedDesc} của ${prevLeaderName} bằng ${describeCombo(combo)} → dồn bom ${totalChain} Nước.${chainTag}` });
         shortMsg = `⚡ Chặt! Bom ${totalChain} Nước${chainTag ? ' 🔥' : ''}`;
+        // FIX: thiếu banner cho cả nhóm khi CHẶT xảy ra ngay trong lượt đánh bình thường
+        // (không qua nút CHẶT NGANG/interrupt_chop) — trước đây chỉ mỗi người chặt (qua
+        // bumpActor) thấy bong bóng nhỏ tại ghế mình, người khác không biết vừa chặt gì của ai.
+        setChopBanner(`⚡ ${pName} chặt ${describeChopTargetNice(prevCombo)} của ${prevLeaderName} bằng ${describeChopTargetNice(combo)} — Bom ${totalChain} Nước${chainTag ? ' 🔥' : ''}`, cards);
       } else {
         gameState.log = `${prefix}${pName} chặt bài thành công! Người bị chặt chuẩn bị quỳ!`;
         gameState.roundLog.push({ icon:'⚡', text: `${pName} CHẶT ${choppedDesc} của ${prevLeaderName} bằng ${describeCombo(combo)}.` });
         shortMsg = '⚡ Chặt thành công!';
+        setChopBanner(`⚡ ${pName} chặt ${describeChopTargetNice(prevCombo)} của ${prevLeaderName} bằng ${describeChopTargetNice(combo)}`, cards);
       }
       if(!playWillEndGame) broadcastChopSound(prevCombo, combo, false);
     } else {
@@ -4462,7 +4505,14 @@ function getViewStateForPlayer(id){
     actorMsg: gameState.actorMsg || null,
     actorSeq: gameState.actorSeq || 0,
     chopBannerText: gameState.chopBannerText || null,
+    chopBannerCards: gameState.chopBannerCards || null,
     chopBannerSeq: gameState.chopBannerSeq || 0,
+    // FIX: người đang cân nhắc CHẶT NGAY trước đây không thấy được đang có bao nhiêu Nước
+    // treo trong chuỗi (chopStackValue = lớp đặc biệt đang chồng chưa thanh toán, chopChainValue
+    // = tổng BOM đã dồn qua các lượt chặt liên tiếp) — phải đoán mò, xử lý chậm/nhầm. Gửi kèm
+    // 2 giá trị này để nút "CHẶT NGAY"/"Chặt Ngang" hiện luôn "Bom hiện tại: X Nước" cho dễ quyết.
+    chopStackValue: Number(gameState.chopStackValue || 0),
+    chopChainValue: Number(gameState.chopChainValue || 0),
     roundLog: safeArray(gameState.roundLog),
     debugLog: safeArray(gameState.debugLog).slice(-DEBUG_LOG_LIMIT),
     gameMode: gameState.gameMode,
@@ -4532,9 +4582,26 @@ function showChopBanner(st){
   void el.offsetWidth;
   el.classList.add('show');
 
+  // DÃY BÀI VỪA DÙNG ĐỂ CHẶT: gameState.currentCombo đã bị host set về null ngay sau cú
+  // chặt (để mở lượt mới), nên #playedCombo không kịp vẽ được. Dùng chopBannerCards (state
+  // riêng, đi kèm cùng seq) để vẽ đúng những lá bài đó cho CẢ NHÓM thấy trong cùng khoảng
+  // thời gian banner hiển thị.
+  const cardsEl = $('chopBannerCards');
+  if(cardsEl){
+    cardsEl.innerHTML = '';
+    const cards = Array.isArray(st.chopBannerCards) ? st.chopBannerCards : [];
+    cardsEl.classList.remove('show');
+    if(cards.length){
+      cards.forEach(c => cardsEl.appendChild(createCardEl(c, false, true, false)));
+      void cardsEl.offsetWidth;
+      cardsEl.classList.add('show');
+    }
+  }
+
   if(chopBannerHideTimer) clearTimeout(chopBannerHideTimer);
   chopBannerHideTimer = setTimeout(() => {
     el.classList.remove('show');
+    if(cardsEl) cardsEl.classList.remove('show');
   }, 3200);
 }
 
@@ -4868,10 +4935,19 @@ function syncTestInstantChopUI(){
   if(best){
     const targetLabel=describeInstantTarget(currentState.currentCombo);
     const targetKey=comboTargetKey(currentState.currentCombo);
-    overlay.dataset.targetLabel=`${targetLabel} • ${best.combo.count} ĐÔI`;
+    // FIX: trước đây hiện "${targetLabel} • ${best.combo.count} ĐÔI" — tức lặp lại số đôi
+    // thông TRÊN TAY CHÍNH MÌNH (vd "5 ĐÔI"), điều người chơi vốn đã biết rõ vì đó là bài
+    // của họ. Thông tin họ CẦN mà chưa có là bộ đang bị chặt LÀ CỦA AI — nên đổi sang hiện
+    // tên chủ bộ bài bị chặt (currentState.leaderId) thay cho số đôi thừa đó.
+    const targetOwnerName = (currentState.names && currentState.names[currentState.leaderId]) || '';
+    // Hiện kèm số Nước đang treo (BOM chồng), giống buildChopButtonLabel(), để người quyết định
+    // chặt thấy ngay đang được/mất bao nhiêu mà không cần lật log.
+    const bomNow = Math.max(Number(currentState.chopChainValue||0), Number(currentState.chopStackValue||0));
+    const bomTxt = bomNow > 0 ? ` • ${bomNow} Nước` : '';
+    overlay.dataset.targetLabel=`${targetLabel}${targetOwnerName ? ' của ' + targetOwnerName : ''}${bomTxt}`;
     overlay.classList.remove('hidden');
     overlay.disabled=false;
-    overlay.title=`Chặt ${targetLabel} bằng ${best.combo.count} đôi thông • còn 3 giây để quyết định`;
+    overlay.title=`Chặt ${targetLabel}${targetOwnerName ? ' của ' + targetOwnerName : ''} bằng ${best.combo.count} đôi thông${bomTxt} • còn 3 giây để quyết định`;
     startInstantChopCountdown(targetKey);
   }else{
     stopInstantChopCountdown();
