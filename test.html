@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -491,6 +492,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 @keyframes instantWinProgress{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 
 .result-panel{background:var(--panel);border:1px solid var(--gold);border-radius:16px;padding:22px;max-width:520px;width:100%;text-align:center;max-height:90vh;overflow-y:auto;}
+.match-summary-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}.match-summary-table th,.match-summary-table td{border:1px solid rgba(212,175,55,.22);padding:7px 6px;text-align:center}.match-summary-table th{color:var(--gold);background:rgba(212,175,55,.1)}.match-summary-table td:first-child,.match-summary-table th:first-child{text-align:left}.match-history-wrap{margin-top:14px;max-height:260px;overflow:auto}.match-history-wrap table{width:100%;border-collapse:collapse;font-size:11px}.match-history-wrap th,.match-history-wrap td{border-bottom:1px solid #ffffff14;padding:5px;text-align:center}.match-history-wrap th{color:var(--gold)}.match-total-plus{color:var(--green);font-weight:900}.match-total-minus{color:#ff9e91;font-weight:900}
 .result-table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px;}
 .result-table th, .result-table td{padding:5px 6px;border-bottom:1px solid var(--panel-line);text-align:left;}
 .result-table td.amt{text-align:right;font-weight:700;}
@@ -913,6 +915,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
       <label>⚙️ CHẾ ĐỘ CHƠI (CHỌN 1 TRƯỚC TRẬN)</label>
       <select class="sel" id="gameModeSelect">
         <option value="WATER" selected>[I] CHẾ ĐỘ ĐÁNH NƯỚC (Nhất +2, Nhì +1, Ba -1, Bét -2)</option>
+        <option value="POINTS">[II] CHẾ ĐỘ TÍNH ĐIỂM (Nhất 3, Nhì 2, Ba 1, Bét 0 • Tới Trắng +3)</option>
         <option value="KNEEL_A">[II] CHẾ ĐỘ QUỲ - Option A (Quỳ Chốt Ván)</option>
         <option value="KNEEL_B">[II] CHẾ ĐỘ QUỲ - Option B (Quỳ Tích Lũy)</option>
         <option value="KNEEL_C">[II] CHẾ ĐỘ QUỲ - Option C (Quỳ Thế Chân)</option>
@@ -1061,7 +1064,10 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
       <li><b>Đền Bài / Đền Làng:</b> Người vi phạm luật đền chịu toàn bộ số nước phạt của cả bàn cho người thắng. Bất kỳ người chơi nào cũng có thể bấm "🚩 Báo Vi Phạm", chủ phòng xác nhận và nhập số nước phạt để cộng/trừ trực tiếp.</li>
     </ul>
 
-    <h3>II. CHẾ ĐỘ QUỲ (TÁCH BIỆT HOÀN TOÀN)</h3>
+    <h3>II. CHẾ ĐỘ TÍNH ĐIỂM</h3>
+    <p>Tính xuyên suốt nhiều ván: <b>Nhất +3, Nhì +2, Ba +1, Bét 0</b>. <b>Tới Trắng: người Tới Trắng +3, tất cả người còn lại 0.</b> <b>Giết ngộp cả bàn: tính giống Tới Trắng.</b> <b>Cóng: mỗi người Cóng đền 1 điểm cho từng người còn lại trên bàn.</b> <b>Thối tính đúng theo cấu hình.</b> Chặt vẫn áp dụng theo cấu hình hiện tại. Tổng điểm được cộng dồn và xem ở <b>TỔNG KẾT TRẬN</b>.</p>
+
+    <h3>III. CHẾ ĐỘ QUỲ (TÁCH BIỆT HOÀN TOÀN)</h3>
     <p>Chế độ dùng hình phạt tư thế thể chất tại bàn. KHÔNG áp dụng tính Nước hay tính tiền.</p>
     <ul>
       <li><b>Lựa chọn A — Quỳ Chốt Ván:</b> Bét/Cháy quỳ ngay ván tiếp theo.</li>
@@ -1084,6 +1090,9 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     <div class="instant-win-progress"><div></div></div>
   </div>
 </div>
+
+<!-- OVERLAY TỔNG KẾT TRẬN TÍNH ĐIỂM -->
+<div class="overlay hidden" id="matchSummaryOverlay"><div class="result-panel" style="max-width:760px;"><h2 style="color:var(--gold);margin-top:0;">🏆 TỔNG KẾT TRẬN</h2><div id="matchSummarySub" style="font-size:12px;color:rgba(250,246,238,.65);margin-bottom:10px;"></div><table class="match-summary-table"><thead><tr><th>Người chơi</th><th>Tổng điểm</th><th>Ván</th><th>Nhất</th><th>Nhì</th><th>Ba</th><th>Bét</th></tr></thead><tbody id="matchSummaryBody"></tbody></table><div id="matchHistoryBox" class="match-history-wrap"></div><div id="matchSummaryActions" style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;"></div></div></div>
 
 <!-- OVERLAY RESULT -->
 <div class="overlay hidden" id="resultOverlay">
@@ -2002,6 +2011,32 @@ let players=[];
 let gameState=null;
 let myHand=[];
 let selected=new Set();
+// ACTION ACK / RACE GUARD: chỉ clear selection sau khi server xác nhận ACCEPT.
+let pendingActionRequests = new Map();
+let actionRequestSeq = 0;
+let currentRoundToken = null;
+function makeActionRequestId(){
+  actionRequestSeq++;
+  return `${myId || 'local'}-${Date.now().toString(36)}-${actionRequestSeq.toString(36)}`;
+}
+function isTrackedSelectionAction(action){
+  return !!(action && (action.kind === 'play' || action.kind === 'interrupt_chop') && action.requestId);
+}
+function sendActionResult(playerId, status, action, reason='', details={}){
+  if(!action || !action.requestId) return;
+  const payload={t:'actionResult', requestId:action.requestId, action:action.kind, status, reason:reason||'', details:details||{}, at:Date.now()};
+  if(playerId === myId) onClientMessage(payload); else sendToPlayer(playerId, payload);
+}
+function rejectTrackedAction(playerId, action, reason, details={}){
+  if(!isTrackedSelectionAction(action)) return;
+  debugActionEvent('REJECT', playerId, reason, {action:action.kind, requestId:action.requestId, reason, ...details});
+  sendActionResult(playerId, 'REJECT', action, reason, details);
+}
+function acceptTrackedAction(playerId, action, details={}){
+  if(!isTrackedSelectionAction(action)) return;
+  debugActionEvent('ACCEPT', playerId, `${action.kind} accepted`, {action:action.kind, requestId:action.requestId, ...details});
+  sendActionResult(playerId, 'ACCEPT', action, '', details);
+}
 let unreadChat = 0;
 let activeTargetId = null;
 let isSpectator = false;
@@ -2030,7 +2065,10 @@ function requestRuleAdminAccess(target){
 }
 
 let roomSettings = { gameMode: 'WATER', turnSeconds: 30, stakeUnit: 'Nước', hideCardCount: true };
-let kneelingTracker = {}; 
+let kneelingTracker = {};
+let matchScores = {};
+let matchHistory = [];
+let matchStartedAt = null; 
 
 const $=id=>document.getElementById(id);
 
@@ -2335,6 +2373,19 @@ function onClientMessage(msg){
       players = safeArray(msg.players || players); 
       roomSettings = msg.settings || roomSettings; 
       renderLobby();
+    } else if(msg.t==='actionResult'){
+      const pending = pendingActionRequests.get(msg.requestId);
+      if(!pending) return;
+      clearTimeout(pending.timer);
+      pendingActionRequests.delete(msg.requestId);
+      if(msg.status === 'ACCEPT'){
+        selected.clear();
+        hideHandSelectMsg();
+      } else {
+        showHandSelectMsg(formatActionRejectMessage(msg.reason, msg.details));
+      }
+      updateHandActionButtonsOnly();
+      return;
     } else if(msg.t==='state'){
       applyState(msg.state);
     } else if(msg.t==='chat'){
@@ -2586,6 +2637,7 @@ function triggerCountdownAnimation(onComplete){
 }
 
 function revealInstantWin(hands, winnerId, info){
+  ensureMatchLedger(players.map(p=>p.id));
   const winnerName = players.find(p=>p.id===winnerId).name;
   gameState = {
     hands, order: players.map(p=>p.id), names: Object.fromEntries(players.map(p=>[p.id, p.name])),
@@ -2593,6 +2645,10 @@ function revealInstantWin(hands, winnerId, info){
     turnIdx: 0, leaderId: winnerId, currentCombo: null, firstMove: true, requiredCard: null,
     finished: [], passed: new Set(), disconnected: new Set(), coldFolded: new Set(),
     scores: Object.fromEntries(players.map(p=>[p.id, 0])),
+    matchScores: {...matchScores},
+    matchHistory: matchHistory.map(x=>({roundNo:x.roundNo,at:x.at,players:{...x.players}})),
+    matchScoreApplied: false,
+    roundNo: matchHistory.length + 1,
     liveScores: Object.fromEntries(players.map(p=>[p.id, 0])),
     liveBaseAwards: {},
     liveCongAwards: {},
@@ -2693,6 +2749,30 @@ function finalizeInstantWin(){
     broadcastState();
     broadcastInstantWinCelebration(winnerId, winnerName, label, reward, gameState.stakeUnit);
     setTimeout(() => broadcastResult(results, settlements), 3000);
+  } else if(mode === 'POINTS') {
+    // TỚI TRẮNG trong chế độ Tính Điểm: chỉ người Tới Trắng nhận +3.
+    // Tất cả người còn lại = 0, không tính hạng Nhì/Ba/Bét.
+    gameState.order.forEach(id => {
+      const rank = id === winnerId ? 1 : 0;
+      const base = id === winnerId ? 3 : 0;
+      results[id] = {
+        rank,
+        score: base,
+        basePoints: base,
+        modifierPoints: 0,
+        note: id === winnerId ? `🌟 Tới Trắng: ${label} → +3 điểm` : `🌟 Tới Trắng: ${label} → 0 điểm`,
+        name: gameState.names[id],
+        playedCards: [],
+        remainingCards: safeArray(gameState.hands[id])
+      };
+    });
+    applyPointsRoundToMatch(results);
+    gameState.liveScores = {...matchScores};
+    gameState.matchScores = {...matchScores};
+    gameState.matchHistory = matchHistory.map(x => ({roundNo:x.roundNo,at:x.at,players:{...x.players}}));
+    broadcastState();
+    broadcastInstantWinCelebration(winnerId, winnerName, label, reward, gameState.stakeUnit);
+    setTimeout(() => broadcastResult(results, []), 3000);
   } else {
     gameState.order.forEach(id => {
       const name = gameState.names[id];
@@ -2705,11 +2785,19 @@ function finalizeInstantWin(){
     });
     broadcastInstantWinCelebration(winnerId, winnerName, label, reward, gameState.stakeUnit);
     setTimeout(() => broadcastResult(results, []), 3000);
+
   }
 }
 
+function ensureMatchLedger(order){const ids=safeArray(order);const next={};ids.forEach(id=>{next[id]=Number.isFinite(Number(matchScores[id]))?Number(matchScores[id]):0;});matchScores=next;if(!matchStartedAt)matchStartedAt=Date.now();return matchScores;}
+function resetMatchLedger(){matchScores={};matchHistory=[];matchStartedAt=null;}
+function getPointsRankValue(rank){return ({1:3,2:2,3:1,4:0})[Number(rank)]??0;}
+function applyPointsRoundToMatch(results){if(!gameState||gameState.gameMode!=='POINTS'||gameState.matchScoreApplied)return;ensureMatchLedger(gameState.order);const stats={};safeArray(gameState.order).forEach(id=>{const r=results[id]||{};const delta=Number(r.score)||0;matchScores[id]=(Number(matchScores[id])||0)+delta;stats[id]={rank:Number(r.rank)||0,base:Number(r.basePoints)||0,modifier:Number(r.modifierPoints)||0,delta};});matchHistory.push({roundNo:Number(gameState.roundNo||matchHistory.length+1),at:Date.now(),players:stats});gameState.matchScoreApplied=true;gameState.matchScores={...matchScores};gameState.matchHistory=matchHistory.map(x=>({roundNo:x.roundNo,at:x.at,players:{...x.players}}));}
+function renderMatchSummary(st=currentState){st=st||{};const scores=st.matchScores||{};const history=safeArray(st.matchHistory);const order=safeArray(st.order);const names=st.names||{};const body=$('matchSummaryBody'),sub=$('matchSummarySub'),box=$('matchHistoryBox'),actions=$('matchSummaryActions');if(!body||!sub||!box||!actions)return;const rows=order.map(id=>{const rs=history.filter(h=>h.players&&h.players[id]);const rk={1:0,2:0,3:0,4:0};rs.forEach(h=>{const r=Number(h.players[id]?.rank);if(rk[r]!==undefined)rk[r]++;});return{id,name:names[id]||id,total:Number(scores[id]||0),rounds:rs.length,rk};}).sort((a,b)=>b.total-a.total||a.name.localeCompare(b.name,'vi'));sub.textContent=`Chế độ Tính Điểm • ${history.length} ván • Nhất +3 • Nhì +2 • Ba +1 • Bét 0 • Tới Trắng/Giết ngộp +3 • Cóng 1 điểm/người • Thối/Chặt theo cấu hình.`;body.innerHTML=rows.map((r,i)=>{const cls=r.total>0?'match-total-plus':r.total<0?'match-total-minus':'';return `<tr><td><b>#${i+1} ${escapeHtml(r.name)}</b></td><td class="${cls}">${r.total>0?'+':''}${r.total}</td><td>${r.rounds}</td><td>${r.rk[1]}</td><td>${r.rk[2]}</td><td>${r.rk[3]}</td><td>${r.rk[4]}</td></tr>`;}).join('');box.innerHTML=history.length?`<h4 style="color:var(--gold);margin:0 0 6px;">📊 Chi tiết từng ván</h4><table><thead><tr><th>Ván</th>${order.map(id=>`<th>${escapeHtml(names[id]||id)}</th>`).join('')}</tr></thead><tbody>${history.map(h=>`<tr><td><b>${h.roundNo}</b></td>${order.map(id=>{const d=Number(h.players?.[id]?.delta||0);return `<td>${d>0?'+':''}${d}</td>`}).join('')}</tr>`).join('')}</tbody></table>`:'<div style="text-align:center;color:rgba(250,246,238,.5);padding:8px;">Chưa có ván nào được chốt điểm.</div>';actions.innerHTML='';const close=document.createElement('button');close.className='btn btn-outline';close.textContent='Đóng';close.onclick=()=>$("matchSummaryOverlay").classList.add('hidden');actions.appendChild(close);if(isHost||isBotMode){const end=document.createElement('button');end.className='btn btn-gold';end.textContent='🏠 Đóng tổng kết';end.onclick=()=>$("matchSummaryOverlay").classList.add('hidden');actions.appendChild(end);}$('matchSummaryOverlay').classList.remove('hidden');}
+
 function dealNewGame(){
   if(isRuleTestMode){ startRuleTestGame(); return; }
+  ensureMatchLedger(players.map(p=>p.id));
   if(isHost && !isBotMode) publishRoomToPublic(roomCode, players[0] ? players[0].name : myName);
   consecutivePlayCount = 0;
   lastNotifiedTurnId = null;
@@ -2764,6 +2852,7 @@ function dealNewGame(){
   }
 
   gameState = {
+    roundToken: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`,
     hands,
     order: players.map(p=>p.id),
     names: Object.fromEntries(players.map(p=>[p.id, p.name])),
@@ -2778,6 +2867,10 @@ function dealNewGame(){
     disconnected: new Set(),
     coldFolded: new Set(), // LUẬT CÓNG: người chưa đánh được lá nào khi đã có người về Nhất -> bị loại (úp bài) ngay
     scores: Object.fromEntries(players.map(p=>[p.id, 0])),
+    matchScores: {...matchScores},
+    matchHistory: matchHistory.map(x=>({roundNo:x.roundNo,at:x.at,players:{...x.players}})),
+    matchScoreApplied: false,
+    roundNo: matchHistory.length + 1,
     liveScores: Object.fromEntries(players.map(p=>[p.id, 0])),
     liveBaseAwards: {},
     liveCongAwards: {},
@@ -3060,13 +3153,12 @@ function calculateCongSettlement(congIdsInput){
   const congIds = new Set(safeArray(congIdsInput).filter(id => order.includes(id)));
   const receivers = order.filter(id => !congIds.has(id));
 
-  // LUẬT CHỐT: CÓNG = gấp đôi tiền BÉT.
-  // Bét = -2 => mỗi người Cóng bị -4 CHO MỖI NGƯỜI KHÔNG CÓNG.
-  // Ví dụ bàn 4:
-  //   1 Cóng -> -12, ba người còn lại nhận +4/người.
-  //   2 Cóng -> -8/người, hai người còn lại nhận +8/người.
-  //   3 Cóng -> -4/người, người còn lại nhận +12.
-  const congPerReceiver = 4;
+  // LUẬT CÓNG:
+  // - CHẾ ĐỘ TÍNH ĐIỂM: mỗi người Cóng đền 1 điểm cho MỖI người còn lại.
+  //   Bàn 4, 1 Cóng -> người Cóng -3; mỗi người còn lại +1.
+  //   Bàn 4, 3 Cóng -> mỗi người Cóng -1; người duy nhất còn lại +3.
+  // - CHẾ ĐỘ ĐÁNH NƯỚC: giữ nguyên mức Cóng hiện tại (4 Nước/người nhận).
+  const congPerReceiver = gameState && gameState.gameMode === 'POINTS' ? 1 : 4;
   const debtByCong = {};
   const receiveByPlayer = {};
   let totalDebt = 0;
@@ -3187,7 +3279,7 @@ function foldColdPlayers(){
     }
   });
 
-  if(newlyCongIds.length === 0 || gameState.gameMode !== 'WATER') return;
+  if(newlyCongIds.length === 0 || (gameState.gameMode !== 'WATER' && gameState.gameMode !== 'POINTS')) return;
 
   // Chỉ tạo snapshot một lần. Không tính lại khi endGame().
   const settlement = getOrCreateCongSettlement();
@@ -3199,7 +3291,7 @@ function foldColdPlayers(){
     const debt = Number(settlement.debtByCong[congId] || 0);
     gameState.roundLog.push({
       icon: '🧊',
-      text: `${gameState.names[congId]} bị Cóng → trừ ${debt} Nước, đền ${settlement.congPerReceiver} Nước cho mỗi người không Cóng.`
+      text: `${gameState.names[congId]} bị Cóng → trừ ${debt} ${gameState.gameMode==='POINTS'?'điểm':'Nước'}, đền ${settlement.congPerReceiver} ${gameState.gameMode==='POINTS'?'điểm':'Nước'} cho mỗi người không Cóng.`
     });
   });
 
@@ -3251,7 +3343,7 @@ function isSpecialStackContinuation(prevCombo, nextCombo){
 }
 
 function settleChopChain(reason='') {
-  if(!gameState || gameState.gameMode !== 'WATER') {
+  if(!gameState || (gameState.gameMode !== 'WATER' && gameState.gameMode !== 'POINTS')) {
     if(gameState) {
       gameState.chopChainValue = 0;
       gameState.chopStackValue = 0;
@@ -3287,9 +3379,9 @@ function settleChopChain(reason='') {
     const chainDetail = history.length > 1 ? ` — ${history.length} mắt xích chặt chồng` : '';
     gameState.roundLog.push({
       icon:'💥',
-      text:`💥 CHẶT CHỒNG kết sổ: ${payerName} chịu TOÀN BỘ ${total} Nước → ${receiverName}${chainDetail}${tag}.`
+      text:`💥 CHẶT CHỒNG kết sổ: ${payerName} chịu TOÀN BỘ ${total} ${gameState.gameMode==='POINTS'?'điểm':'Nước'} → ${receiverName}${chainDetail}${tag}.`
     });
-    gameState.log = `💥 CHẶT CHỒNG: ${payerName} chịu toàn bộ ${total} Nước → ${receiverName}.`;
+    gameState.log = `💥 CHẶT CHỒNG: ${payerName} chịu toàn bộ ${total} ${gameState.gameMode==='POINTS'?'điểm':'Nước'} → ${receiverName}.`;
   }
 
   // Reset atomically after settlement: any later call in the same end-of-round
@@ -3515,6 +3607,7 @@ function debugActionRequest(playerId, action, isAuto){
     actor:debugName(playerId,st),
     auto:!!isAuto,
     action:a.kind||'?',
+    requestId:a.requestId||null,
     cards:debugCardText((a.cards||[]).map(k=>{
       const h=safeArray(st?.hands?.[playerId]); return h.find(c=>cardKey(c)===k)||k;
     })),
@@ -3585,6 +3678,17 @@ function debugObserveState(st){
   debugWrite({type:'STATE',phase:'CHANGE',message:`State đổi: lượt ${snap.turnName||'?'} • bộ ${snap.currentCombo||'—'}`},false);
 }
 
+function resolveActionCards(hand, keys){
+  const source=safeArray(hand); if(!Array.isArray(keys)||!keys.length) return {ok:false,reason:'INVALID_COMBO',cards:[]};
+  const seen=new Set(),cards=[];
+  for(const k of keys){
+    if(seen.has(k)) return {ok:false,reason:'DUPLICATE_CARD',cards:[]};
+    seen.add(k); const c=source.find(card=>cardKey(card)===k);
+    if(!c) return {ok:false,reason:'CARD_NOT_IN_HAND',cards:[]}; cards.push(c);
+  }
+  return {ok:true,cards};
+}
+
 function handleAction(playerId, action, isAuto=false){
   if(!gameState) return;
 
@@ -3594,6 +3698,7 @@ function handleAction(playerId, action, isAuto=false){
     debugActionEvent('BLOCK', playerId, `V5 BLOCK: quyền sau CHẶT NGANG thuộc ${gameState.names[gameState.chopTurnLockId] || gameState.chopTurnLockId}`, {
       chopTurnLockId: String(gameState.chopTurnLockId), attemptedAction: action && action.kind, auto: !!isAuto
     });
+    rejectTrackedAction(playerId, action, 'ACTION_BLOCKED');
     return;
   }
 
@@ -3608,6 +3713,7 @@ function handleAction(playerId, action, isAuto=false){
         lastChopWinnerId: chopWinner, attemptedAction: action && action.kind, auto: !!isAuto,
         turnId: gameState.order[gameState.turnIdx], turnIdx: gameState.turnIdx
       });
+      rejectTrackedAction(playerId, action, 'ACTION_BLOCKED');
       return;
     }
     const winnerIdx = gameState.order.findIndex(id => String(id) === chopWinner);
@@ -3639,6 +3745,7 @@ function handleAction(playerId, action, isAuto=false){
           attemptedAction: action && action.kind,
           auto: !!isAuto
         });
+      rejectTrackedAction(playerId, action, 'ACTION_BLOCKED');
       return;
     }
 
@@ -3674,10 +3781,12 @@ function handleAction(playerId, action, isAuto=false){
     dealNewGame();
     return;
   }
-  if(gameState.instantWin && !gameState.instantWin.confirmed) return; // khoá mọi thao tác khác khi đang chờ xác nhận
+  if(gameState.instantWin && !gameState.instantWin.confirmed){ rejectTrackedAction(playerId, action, 'ACTION_BLOCKED'); return; } // khoá mọi thao tác khác khi đang chờ xác nhận
 
-  if(gameState.isEnded) return;
-  if(Number(gameState.chopInterruptDeadline || 0) > Date.now() && action.kind !== 'interrupt_chop') return;
+  if(gameState.isEnded){ rejectTrackedAction(playerId, action, 'ACTION_BLOCKED'); return; }
+  if(Number(gameState.chopInterruptDeadline || 0) > Date.now() && action.kind !== 'interrupt_chop'){
+    rejectTrackedAction(playerId, action, 'ACTION_BLOCKED'); return;
+  }
   if(Number(gameState.chopInterruptDeadline || 0) && Number(gameState.chopInterruptDeadline) <= Date.now()) gameState.chopInterruptDeadline = 0;
   const currId = gameState.order[gameState.turnIdx];
 
@@ -3689,28 +3798,28 @@ function handleAction(playerId, action, isAuto=false){
     // Đánh/Bỏ lượt bình thường, tuyệt đối không được chen CHẶT NGAY vào.
     // Nếu người chơi đã BỎ LƯỢT trong vòng hiện tại thì cũng không được quay lại
     // chặt chính bộ đang nằm trên bàn; chỉ khi mở vòng mới (passed được clear) mới xét lại.
-    if(gameState.finished.includes(playerId)) return;
-    if(gameState.order[gameState.turnIdx] === playerId) return;
-    const curr = gameState.currentCombo;
-    if(hasPassedInstantTarget(gameState, playerId, curr)) return;
-    if(!hasFourPairRun(gameState.hands[playerId])) return;
-    if(!curr || gameState.leaderId === playerId) return;
-    const isChoppableTarget = isChoppableSpecialTarget(curr);
-    if(!isChoppableTarget) return;
-
-    const hand = safeArray(gameState.hands[playerId]);
-    // TEST 4/5: không phụ thuộc selected/UI. Nếu client gửi thiếu hoặc state UI vừa đổi,
-    // server tự tìm lại đúng 4/5+ đôi thông có thể chặt mục tiêu hiện tại.
-    let cards = Array.isArray(action.cards)
-      ? action.cards.map(k => hand.find(c => cardKey(c) === k)).filter(Boolean)
-      : [];
-    let combo = classify(cards);
-    if(!combo || combo.type !== 'pairs_run' || combo.count < 4 || !canBeat(combo, curr)){
-      const autoBest=findBestInstantChopCardsForHand(hand, curr);
-      if(!autoBest) return;
-      cards=autoBest.cards;
-      combo=autoBest.combo;
+    if(gameState.finished.includes(playerId)){rejectTrackedAction(playerId,action,'ACTION_BLOCKED');return;}
+    if(gameState.order[gameState.turnIdx]===playerId){rejectTrackedAction(playerId,action,'NOT_YOUR_TURN');return;}
+    const curr=gameState.currentCombo;
+    if(hasPassedInstantTarget(gameState,playerId,curr)){rejectTrackedAction(playerId,action,'ACTION_BLOCKED');return;}
+    if(!curr||gameState.leaderId===playerId){rejectTrackedAction(playerId,action,'INVALID_CHOP');return;}
+    if(!isChoppableSpecialTarget(curr)){rejectTrackedAction(playerId,action,'INVALID_CHOP');return;}
+    const hand=safeArray(gameState.hands[playerId]);
+    const hasFour=hasFourPairRun(hand), hasThreeOnly=!hasFour&&hasThreePairRunOnly(hand);
+    const chopWindowOpen=Number(gameState.chopInterruptDeadline||0)>Date.now();
+    if(!hasFour&&!hasThreeOnly){rejectTrackedAction(playerId,action,'INVALID_CHOP');return;}
+    if(hasThreeOnly&&!chopWindowOpen){rejectTrackedAction(playerId,action,'CHOP_WINDOW_CLOSED');return;}
+    const resolved=resolveActionCards(hand,action.cards);
+    if(!resolved.ok){rejectTrackedAction(playerId,action,resolved.reason);return;}
+    let cards=resolved.cards, combo=classify(cards);
+    if(!combo||combo.type!=='pairs_run'||!canBeat(combo,curr)){
+      if(hasThreeOnly){rejectTrackedAction(playerId,action,!combo?'INVALID_CHOP':'CANNOT_BEAT',{duplicateRanks:duplicateRanks(cards)});return;}
+      const autoBest=findBestInstantChopCardsForHand(hand,curr);
+      if(!autoBest){rejectTrackedAction(playerId,action,!combo?'INVALID_CHOP':'CANNOT_BEAT');return;}
+      cards=autoBest.cards; combo=autoBest.combo;
     }
+    if(hasThreeOnly&&combo.count!==3){rejectTrackedAction(playerId,action,'INVALID_CHOP');return;}
+    if(hasFour&&combo.count<4){rejectTrackedAction(playerId,action,'INVALID_CHOP');return;}
 
     // LUẬT AN TOÀN SAU KHI VỀ: nếu người vừa ném bộ bài đã HẾT BÀI (đặc biệt
     // vừa ném Heo và về luôn), họ đã an toàn. Người khác vẫn có thể chặt bộ bài
@@ -3779,8 +3888,8 @@ function handleAction(playerId, action, isAuto=false){
       broadcastStakeTransfer(prevLeader, playerId, chopReward, gameState.stakeUnit);
       gameState.log = `⚡ ${pName} CHẶT NGANG thành công! Bom chồng hiện tại: ${totalChain} Nước — chưa thanh toán; người bị chặt ở mắt xích cuối sẽ chịu toàn bộ.`;
       if(!gameState.roundLog) gameState.roundLog = [];
-      gameState.roundLog.push({ icon:'⚡', text: `${pName} CHẶT NGANG ${choppedDesc} của ${prevLeaderName} bằng ${describeCombo(combo)} → dồn bom ${totalChain} Nước.${chainTag}` });
-      bumpActor(playerId, `⚡ Chặt ngang! Bom ${totalChain} Nước${chainTag ? ' 🔥' : ''}`);
+      gameState.roundLog.push({ icon:'⚡', text: `${pName} CHẶT NGANG ${choppedDesc} của ${prevLeaderName} bằng ${describeCombo(combo)} → dồn bom ${totalChain} ${chopUnit}.${chainTag}` });
+      bumpActor(playerId, `⚡ Chặt ngang! Bom ${totalChain} ${chopUnit}${chainTag ? ' 🔥' : ''}`);
       setChopBanner(`⚡ ${pName} chặt ${describeChopTargetNice(curr)} của ${prevLeaderName} bằng ${describeChopTargetNice(combo)} — Bom ${totalChain} Nước${chainTag ? ' 🔥' : ''}`, cards);
     } else {
       gameState.log = `⚡ ${pName} CHẶT NGANG thành công!${chainTag}`;
@@ -3839,6 +3948,7 @@ function handleAction(playerId, action, isAuto=false){
         awardLiveBaseScore(activePlayers[0], gameState.finished.length, true);
       }
       settleChopChain('ván kết thúc');
+      acceptTrackedAction(playerId,action,{combo:debugComboText(combo),cards:debugCardText(cards),final:true});
       endGame();
       return;
     }
@@ -3880,6 +3990,7 @@ function handleAction(playerId, action, isAuto=false){
     });
     debugActionEvent('TURN', playerId, `Sau CHẶT NGAY, khóa lượt cho ${pName}`, {turnId:playerId,turnIdx:chopNextIdx});
     bumpActor(playerId, '⚡ Chặt xong — ĐÁNH TIẾP!');
+    acceptTrackedAction(playerId,action,{combo:debugComboText(combo),cards:debugCardText(cards)});
     broadcastState();
     // Không gọi checkNextTurn() và không tự kích Bot. Người vừa chặt phải là người ra quân.
     return;
@@ -3923,7 +4034,7 @@ function handleAction(playerId, action, isAuto=false){
 
   // currId được tính trước khóa; sau khi ép turnIdx về người vừa chặt phải đọc lại.
   const activeTurnId = gameState.order[gameState.turnIdx];
-  if(playerId !== activeTurnId) return;
+  if(playerId !== activeTurnId){ rejectTrackedAction(playerId, action, 'NOT_YOUR_TURN'); return; }
 
   const pName = gameState.names[playerId];
   const prefix = isAuto ? '⏰ (Tự động/Bot) ' : '';
@@ -3942,15 +4053,17 @@ function handleAction(playerId, action, isAuto=false){
     checkNextTurn();
   } 
   else if(action.kind === 'play'){
-    const hand = safeArray(gameState.hands[playerId]);
-    const cards = action.cards.map(k => hand.find(c => cardKey(c) === k)).filter(Boolean);
-    const combo = classify(cards);
-
-    if(!combo) return;
-    if(gameState.firstMove && gameState.requiredCard){
-      if(!cards.some(c => c.r === gameState.requiredCard.r && c.s === gameState.requiredCard.s)) return;
+    const hand=safeArray(gameState.hands[playerId]);
+    const resolved=resolveActionCards(hand,action.cards);
+    if(!resolved.ok){rejectTrackedAction(playerId,action,resolved.reason);return;}
+    const cards=resolved.cards, combo=classify(cards);
+    if(!combo){rejectTrackedAction(playerId,action,'INVALID_COMBO',{duplicateRanks:duplicateRanks(cards)});return;}
+    if(gameState.firstMove&&gameState.requiredCard&&!cards.some(c=>c.r===gameState.requiredCard.r&&c.s===gameState.requiredCard.s)){
+      rejectTrackedAction(playerId,action,'FIRST_MOVE_REQUIRED_CARD');return;
     }
-    if(!canBeat(combo, gameState.currentCombo)) return;
+    if(!canBeat(combo,gameState.currentCombo)){
+      rejectTrackedAction(playerId,action,'CANNOT_BEAT',{currentCombo:debugComboText(gameState.currentCombo)});return;
+    }
 
     // FIX "ÂM THANH LOẠN KHI KẾT THÚC": nếu nước đi này khiến người chơi VỀ ĐÍCH và ván
     // kết thúc ngay, không phát PLAY_CARD (và CHOP bên dưới) nữa — chỉ để đúng 1 tiếng
@@ -4012,7 +4125,7 @@ function handleAction(playerId, action, isAuto=false){
       const prevLeaderName = gameState.names[gameState.leaderId];
       const choppedDesc = describeCombo(gameState.currentCombo);
       if(!gameState.roundLog) gameState.roundLog = [];
-      if(gameState.gameMode === 'WATER'){
+      if(gameState.gameMode === 'WATER' || gameState.gameMode === 'POINTS'){
         // Ghi nhận mắt xích mới; chưa thanh toán. Người bị chặt cuối cùng sẽ gánh toàn bộ bom.
         gameState.chopChainPayer = gameState.leaderId;
         gameState.chopChainReceiver = playerId;
@@ -4025,8 +4138,9 @@ function handleAction(playerId, action, isAuto=false){
           at: Date.now()
         });
         // Hiệu ứng chuyển cược chỉ để minh họa mắt xích; tiền/nước chỉ kết sổ MỘT LẦN ở cuối chuỗi.
-        broadcastStakeTransfer(gameState.leaderId, playerId, chopReward, gameState.stakeUnit);
-        gameState.log = `${prefix}${pName} chặt thành công! Bom chồng hiện tại: ${totalChain} Nước — chưa thanh toán; người bị chặt ở mắt xích cuối sẽ chịu toàn bộ.`;
+        if(gameState.gameMode === 'WATER') broadcastStakeTransfer(gameState.leaderId, playerId, chopReward, gameState.stakeUnit);
+        const chopUnit = gameState.gameMode === 'POINTS' ? 'điểm' : 'Nước';
+        gameState.log = `${prefix}${pName} chặt thành công! Bom chồng hiện tại: ${totalChain} ${chopUnit} — chưa thanh toán; người bị chặt ở mắt xích cuối sẽ chịu toàn bộ.`;
         gameState.roundLog.push({ icon:'⚡', text: `${pName} CHẶT ${choppedDesc} của ${prevLeaderName} bằng ${describeCombo(combo)} → dồn bom ${totalChain} Nước.${chainTag}` });
         shortMsg = `⚡ Chặt! Bom ${totalChain} Nước${chainTag ? ' 🔥' : ''}`;
         // FIX: thiếu banner cho cả nhóm khi CHẶT xảy ra ngay trong lượt đánh bình thường
@@ -4094,6 +4208,7 @@ function handleAction(playerId, action, isAuto=false){
         awardLiveBaseScore(activePlayers[0], gameState.finished.length, true);
       }
       settleChopChain('ván kết thúc');
+      acceptTrackedAction(playerId,action,{combo:debugComboText(combo),final:true});
       endGame();
       return;
     }
@@ -4101,6 +4216,7 @@ function handleAction(playerId, action, isAuto=false){
     checkNextTurn();
   }
 
+  acceptTrackedAction(playerId,action,{combo:debugComboText(gameState.currentCombo)});
   gameState.turnDeadline = Date.now() + gameState.turnSeconds * 1000;
   debugActionEvent('TURN', null, `Chuyển lượt → ${debugName(gameState.order[gameState.turnIdx],gameState)}`, {
     turnId:gameState.order[gameState.turnIdx]||null,
@@ -4180,41 +4296,30 @@ function awardLiveBaseScore(playerId, forcedRank, suppressFinishSound){
   if(!playerId) return;
   const finishRank = Number.isInteger(forcedRank) ? forcedRank : (gameState && gameState.finished.indexOf(playerId) + 1);
   playFinishSound(finishRank, suppressFinishSound);
-  if(!gameState || gameState.gameMode !== 'WATER') return;
+  if(!gameState || (gameState.gameMode !== 'WATER' && gameState.gameMode !== 'POINTS')) return;
 
   // Ưu tiên thứ hạng đã được chốt ngay lúc người chơi hết bài.
   // Không phụ thuộc vào việc foldColdPlayers() có thêm người vào finished sau đó.
   const rank = finishRank;
-  if(rank < 1 || rank > 2) return;
+  if(rank < 1 || (gameState.gameMode === 'WATER' && rank > 2)) return;
 
   const activeCount = gameState.order.length;
-  let baseWater = 0;
-  if(activeCount === 2){
-    if(rank === 1) baseWater = 1;
-    else return; // Hạng 2 bàn 2 người = -1, không phải thưởng live.
-  } else if(activeCount === 3){
-    if(rank === 1) baseWater = 2;
-    else baseWater = 0; // Hạng 2 bàn 3 người = 0 theo luật.
-  } else {
-    if(rank === 1) baseWater = 2;
-    else if(rank === 2) baseWater = 1;
-  }
-
+  let baseAward = 0;
+  if(gameState.gameMode === 'POINTS') baseAward = getPointsRankValue(rank);
+  else if(activeCount === 2){ if(rank === 1) baseAward = 1; else return; }
+  else if(activeCount === 3){ baseAward = rank === 1 ? 2 : 0; }
+  else { if(rank === 1) baseAward = 2; else if(rank === 2) baseAward = 1; }
   gameState.liveBaseAwards = gameState.liveBaseAwards || {};
   if(Object.prototype.hasOwnProperty.call(gameState.liveBaseAwards, playerId)) return;
-
   gameState.liveScores = gameState.liveScores || {};
-  gameState.liveScores[playerId] = (gameState.liveScores[playerId] || 0) + baseWater;
-  gameState.liveBaseAwards[playerId] = baseWater;
-
+  gameState.liveScores[playerId] = (gameState.liveScores[playerId] || 0) + baseAward;
+  gameState.liveBaseAwards[playerId] = baseAward;
   if(!gameState.roundLog) gameState.roundLog = [];
-  const title = rank === 1 ? '🏆 WIN' : '🥈 VỀ NHÌ';
-  const awardText = baseWater > 0 ? `+${baseWater}` : `${baseWater}`;
-  gameState.roundLog.push({
-    icon: rank === 1 ? '🏆' : '🥈',
-    text: `${gameState.names[playerId]} ${rank === 1 ? 'về Nhất' : 'về Nhì'} → ${awardText} Nước ngay.`
-  });
-  bumpActor(playerId, `${title}! ${awardText} Nước`);
+  const title = rank === 1 ? '🏆 NHẤT' : (rank === 2 ? '🥈 NHÌ' : (rank === 3 ? '🥉 BA' : '🏁 BÉT'));
+  const unit = gameState.gameMode === 'POINTS' ? 'điểm' : 'Nước';
+  const awardText = baseAward > 0 ? `+${baseAward}` : `${baseAward}`;
+  gameState.roundLog.push({icon:rank===1?'🏆':rank===2?'🥈':rank===3?'🥉':'🏁',text:`${gameState.names[playerId]} về hạng ${rank} → ${awardText} ${unit} ngay.`});
+  bumpActor(playerId, `${title}! ${awardText} ${unit}`);
   broadcastState();
 }
 
@@ -4223,7 +4328,7 @@ function endGame(){
   // Đặc biệt quan trọng khi ván kết thúc do mất mạng/đấu thủ cuối cùng bị loại,
   // vì các đường này có thể gọi endGame() trực tiếp mà không đi qua nhánh đánh bài.
   // settleChopChain() tự reset BOM sau khi chốt nên gọi ở đây là idempotent.
-  if(gameState && gameState.gameMode === 'WATER' && Number(gameState.chopChainValue || 0) > 0){
+  if(gameState && (gameState.gameMode === 'WATER' || gameState.gameMode === 'POINTS') && Number(gameState.chopChainValue || 0) > 0){
     settleChopChain('ván kết thúc (bảo đảm)');
   }
 
@@ -4389,6 +4494,94 @@ function endGame(){
     if(Math.abs(congBalance) > 1e-9){
       console.error('CÓNG BALANCE ERROR', congBalance, cong);
     }
+  } else if(mode === 'POINTS'){
+    // CHẾ ĐỘ TÍNH ĐIỂM: hạng cơ bản + Cóng + Chặt + Thối.
+    // Tới Trắng đã được xử lý riêng ở finalizeInstantWin().
+    const cong = getOrCreateCongSettlement() || calculateCongSettlement([]);
+    const congIdSet = new Set(safeArray(cong.congIds));
+    if(congIdSet.size && cong.receivers.length){
+      applyCongSettlementLive(cong);
+    }
+
+    const lastPlaceId = gameState.finished[gameState.finished.length - 1];
+    const secondLastPlaceId = gameState.finished.length >= 2
+      ? gameState.finished[gameState.finished.length - 2]
+      : winnerId;
+    const foulDetailsMap = {};
+    let foulPenaltiesTotal = 0;
+    let foulPenaltiesToSecondLast = 0;
+
+    gameState.order.forEach(id => {
+      if(congIdSet.has(id)) return;
+      const foulInfo = checkFoulPunishment(safeArray(gameState.hands[id]));
+      if(foulInfo.totalPenalty <= 0) return;
+      foulDetailsMap[id] = foulInfo;
+      if(id === lastPlaceId && secondLastPlaceId !== lastPlaceId){
+        foulPenaltiesToSecondLast += foulInfo.totalPenalty;
+        gameState.roundLog.push({ icon:'🐷', text:`${gameState.names[id]} (về Bét) bị Thối bài → đền ${foulInfo.totalPenalty} điểm cho ${gameState.names[secondLastPlaceId]} (${foulInfo.details.join(', ')}).` });
+      } else {
+        foulPenaltiesTotal += foulInfo.totalPenalty;
+        gameState.roundLog.push({ icon:'🐷', text:`${gameState.names[id]} bị Thối bài → đền ${foulInfo.totalPenalty} điểm cho ${gameState.names[winnerId]} (${foulInfo.details.join(', ')}).` });
+      }
+    });
+
+    gameState.order.forEach(id => {
+      const rank = gameState.finished.indexOf(id) + 1;
+      const isCong = congIdSet.has(id);
+      const congAward = isCong
+        ? -Number(cong.debtByCong[id] || 0)
+        : Number(cong.receiveByPlayer[id] || 0);
+      const chopAward = isCong ? 0 : Number((gameState.liveChopAwards || {})[id] || 0);
+
+      // Người Cóng chỉ chịu khoản Cóng, không ăn điểm hạng/chặt.
+      if(isCong){
+        const total = congAward;
+        results[id] = {
+          rank, score: total, basePoints: 0, modifierPoints: total,
+          note:`🧊 CÓNG: -${Math.abs(total)} điểm (${cong.congPerReceiver} điểm/người còn lại)`,
+          name:gameState.names[id],
+          playedCards:(finalHandsSnapshot[id] && finalHandsSnapshot[id].played) || [],
+          remainingCards:(finalHandsSnapshot[id] && finalHandsSnapshot[id].remaining) || [],
+          isCong:true
+        };
+        return;
+      }
+
+      const base = getPointsRankValue(rank);
+      let foulScore = 0;
+      let foulText = '';
+      if(id === winnerId && foulPenaltiesTotal > 0){
+        foulScore += foulPenaltiesTotal;
+        foulText += ` | Được đền Thối: +${foulPenaltiesTotal}`;
+      }
+      if(id === secondLastPlaceId && foulPenaltiesToSecondLast > 0){
+        foulScore += foulPenaltiesToSecondLast;
+        foulText += ` | Được đền Thối (từ Bét): +${foulPenaltiesToSecondLast}`;
+      }
+      if(foulDetailsMap[id]){
+        foulScore -= foulDetailsMap[id].totalPenalty;
+        foulText += ` | Thối: -${foulDetailsMap[id].totalPenalty} (${foulDetailsMap[id].details.join(', ')})`;
+      }
+
+      const total = base + chopAward + congAward + foulScore;
+      const baseText = base >= 0 ? `+${base}` : `${base}`;
+      const chopText = chopAward >= 0 ? `+${chopAward}` : `${chopAward}`;
+      const congText = congAward ? ` | Nhận Cóng: +${congAward}` : '';
+      results[id] = {
+        rank, score: total, basePoints: base, modifierPoints: total - base,
+        note:`Vị trí: ${baseText} điểm | Chặt: ${chopText}${congText}${foulText}`,
+        name:gameState.names[id],
+        playedCards:(finalHandsSnapshot[id] && finalHandsSnapshot[id].played) || [],
+        remainingCards:(finalHandsSnapshot[id] && finalHandsSnapshot[id].remaining) || [],
+        isCong:false
+      };
+    });
+
+    applyPointsRoundToMatch(results);
+    gameState.liveScores = {...matchScores};
+    gameState.matchScores = {...matchScores};
+    gameState.matchHistory = matchHistory.map(x => ({roundNo:x.roundNo,at:x.at,players:{...x.players}}));
+    broadcastState();
   } else {
     gameState.order.forEach((id) => {
       let rank = gameState.finished.indexOf(id) + 1;
@@ -4484,6 +4677,7 @@ function getViewStateForPlayer(id){
   const pendingInstantWin = gameState.instantWin && !gameState.instantWin.confirmed;
 
   return {
+    roundToken: gameState.roundToken || null,
     myHand: isPlayerInGame ? playerHand : [],
     counts: Object.fromEntries(orderArr.map(p => [p, gameState.hands && gameState.hands[p] ? safeArray(gameState.hands[p]).length : 0])),
     order: orderArr,
@@ -4661,12 +4855,22 @@ function applyState(st){
   if(st && Array.isArray(st.debugLog)){ localDebugTrace=st.debugLog.slice(-DEBUG_LOG_LIMIT); renderDebugLog(); }
   if(!st || typeof st !== 'object') return;
   
+  const prevRoundToken = currentRoundToken;
   currentState = st;
   currentState.order = safeArray(st.order);
   currentState.finished = safeArray(st.finished);
+  const nextRoundToken = st.roundToken || null;
+  currentRoundToken = nextRoundToken;
 
   myHand = sortHand(st.myHand, currentSortMode);
-  selected.clear();
+  // Cùng ván: state update không được làm mất selection đang thao tác.
+  // Ván mới: reset hoàn toàn để không giữ cardKey trùng từ ván trước.
+  if(prevRoundToken !== null && prevRoundToken !== nextRoundToken){
+    selected.clear();
+  } else {
+    const liveKeys = new Set(myHand.map(cardKey));
+    selected = new Set([...selected].filter(k => liveKeys.has(k)));
+  }
   isSpectator = st.isSpectator !== undefined ? st.isSpectator : !currentState.order.includes(myId);
 
   if(!st.isEnded) $('resultOverlay').classList.add('hidden');
@@ -5092,7 +5296,9 @@ function renderHand(){
     } else if(chopOpen && isChoppableTarget && iAmActive && !isMyTurn && !iHaveFourPairs){
       // Người chỉ có đúng 3 Đôi Thông vẫn được Chặt Ngang theo cửa sổ 3 giây cũ.
       showChop = true;
-      selectedChopValid = selected.size > 0;
+      const selectedCards=[...selected].map(k=>safeArray(myHand).find(c=>cardKey(c)===k)).filter(Boolean);
+      const selectedCombo=classify(selectedCards);
+      selectedChopValid=!!(selectedCombo&&selectedCombo.type==='pairs_run'&&selectedCombo.count===3&&canBeat(selectedCombo,curr));
     }
 
     if(showChop){
@@ -5253,12 +5459,11 @@ function updateHandActionButtonsOnly(){
     const selectedCards = [...selected]
       .map(k => safeArray(myHand).find(c => cardKey(c) === k))
       .filter(Boolean);
-    const selectedCombo = classify(selectedCards);
-    const validInstant = !!(curr && selectedCombo && selectedCombo.type === 'pairs_run' &&
-      selectedCombo.count >= 4 && canBeat(selectedCombo, curr));
-    const chopDeadline = Number(currentState.chopInterruptDeadline || 0);
-    const validOldWindow = chopDeadline > Date.now() && selectedCards.length > 0 && !hasFourPairRun(myHand);
-    btnChop.disabled = !(validInstant || validOldWindow);
+    const selectedCombo=classify(selectedCards);
+    const validInstant=!!(curr&&selectedCombo&&selectedCombo.type==='pairs_run'&&selectedCombo.count>=4&&canBeat(selectedCombo,curr));
+    const chopDeadline=Number(currentState.chopInterruptDeadline||0), hasFour=hasFourPairRun(myHand);
+    const validThreeWindow=!!(curr&&!hasFour&&hasThreePairRunOnly(myHand)&&chopDeadline>Date.now()&&selectedCombo&&selectedCombo.type==='pairs_run'&&selectedCombo.count===3&&canBeat(selectedCombo,curr));
+    btnChop.disabled=!(validInstant||validThreeWindow);
   }
 }
 
@@ -5320,68 +5525,95 @@ $('btnSort').onclick = () => {
 // họ không biết vì sao. Giờ kiểm tra hợp lệ NGAY TRÊN CLIENT trước khi gửi: nếu không phải 1 bộ hợp
 // lệ (sảnh/đôi/sám/tứ quý/đôi thông...) hoặc không chặn được bài đang có trên bàn, báo lỗi rõ ràng
 // ngay tại chỗ và GIỮ NGUYÊN lựa chọn để người chơi tự sửa, thay vì âm thầm xoá hết.
+function hideHandSelectMsg(){
+  const el=$('handSelectMsg'); if(el) el.classList.add('hidden');
+}
+function formatActionRejectMessage(reason, details={}){
+  switch(reason){
+    case 'INVALID_COMBO': return details.duplicateRanks?.length ? `⚠️ Bộ đã chọn không hợp lệ — có hạng trùng: ${details.duplicateRanks.join(', ')}. Kiểm tra lá dư.` : '⚠️ Bộ bài đã chọn không hợp lệ theo luật.';
+    case 'CANNOT_BEAT': return '⚠️ Bộ bài này không chặn được bài đang có trên bàn.';
+    case 'CARD_NOT_IN_HAND': return '⚠️ Có lá đã không còn trên tay. Lựa chọn còn lại được giữ nguyên.';
+    case 'DUPLICATE_CARD': return '⚠️ Một lá bài đang bị gửi trùng. Vui lòng chọn lại.';
+    case 'NOT_YOUR_TURN': return '⚠️ Đã chuyển lượt trước khi nước đi được xác nhận.';
+    case 'FIRST_MOVE_REQUIRED_CARD': return '⚠️ Ván đầu tiên phải có 3 Bích trong nước mở đầu.';
+    case 'CHOP_WINDOW_CLOSED': return '⚠️ Cửa sổ Chặt Ngang 3 giây đã hết.';
+    case 'INVALID_CHOP': return '⚠️ Bộ Chặt Ngang đã chọn không hợp lệ hoặc không chặt được bài trên bàn.';
+    case 'ACTION_BLOCKED': return '⚠️ Nước đi bị khóa vì lượt/quyền chặt đã thay đổi. Bài đã chọn được giữ lại.';
+    case 'REQUEST_TIMEOUT': return '⚠️ Máy chủ chưa xác nhận nước đi. Bài đã chọn vẫn được giữ lại, bạn có thể thử lại.';
+    default: return reason ? `⚠️ ${reason}` : '⚠️ Nước đi chưa được máy chủ xác nhận.';
+  }
+}
 function showHandSelectMsg(text){
-  const el = $('handSelectMsg');
-  if(!el) return;
-  el.textContent = text;
-  el.classList.remove('hidden');
-  clearTimeout(showHandSelectMsg._t);
-  showHandSelectMsg._t = setTimeout(()=>{ el.classList.add('hidden'); }, 2200);
-  // rung nhẹ các lá đang chọn để người chơi biết chính bộ này bị từ chối
+  const el=$('handSelectMsg'); if(!el) return;
+  el.textContent=text; el.classList.remove('hidden');
+  clearTimeout(showHandSelectMsg._t); showHandSelectMsg._t=setTimeout(()=>el.classList.add('hidden'),3200);
   document.querySelectorAll('#handCards .card.selected').forEach(el2=>{
-    el2.classList.remove('selection-shake');
-    void el2.offsetWidth;
-    el2.classList.add('selection-shake');
+    el2.classList.remove('selection-shake'); void el2.offsetWidth; el2.classList.add('selection-shake');
   });
 }
-function validateSelectedPlay(){
-  if(!selected.size) return { ok:false, msg:'Hãy chọn ít nhất 1 lá bài.' };
-  const selectedCards = [...selected]
-    .map(k => safeArray(myHand).find(c => cardKey(c) === k))
-    .filter(Boolean);
-  if(selectedCards.length !== selected.size){
-    return { ok:false, msg:'Có lá bài không hợp lệ trong lựa chọn, thử chọn lại.' };
+function selectedCardsFromSet(){
+  const keys=[...selected], hand=safeArray(myHand), cards=[], seen=new Set();
+  for(const k of keys){
+    if(seen.has(k)) return {ok:false,reason:'DUPLICATE_CARD'};
+    seen.add(k); const c=hand.find(x=>cardKey(x)===k);
+    if(!c) return {ok:false,reason:'CARD_NOT_IN_HAND'}; cards.push(c);
   }
-  const combo = classify(selectedCards);
-  if(!combo){
-    return { ok:false, msg:'Bộ bài này không hợp lệ (không phải sảnh/đôi/sám/tứ quý/đôi thông đúng luật).' };
-  }
-  const curr = currentState && currentState.currentCombo;
-  if(curr && !canBeat(combo, curr)){
-    return { ok:false, msg:'Bộ bài này không chặn được bài đang có trên bàn.' };
-  }
-  return { ok:true };
+  return {ok:true,cards,keys};
 }
-$('btnPlay').onclick = () => {
-  const check = validateSelectedPlay();
-  if(!check.ok){
-    showHandSelectMsg(check.msg);
-    return;
+function duplicateRanks(cards){
+  const counts={}; safeArray(cards).forEach(c=>counts[c.r]=(counts[c.r]||0)+1);
+  return Object.entries(counts).filter(([,n])=>n>1).map(([r])=>RANKS[Number(r)]||r);
+}
+function validateSelectedPlay(){
+  if(!selected.size) return {ok:false,reason:'INVALID_COMBO',msg:'Hãy chọn ít nhất 1 lá bài.'};
+  const resolved=selectedCardsFromSet();
+  if(!resolved.ok) return {ok:false,reason:resolved.reason,msg:formatActionRejectMessage(resolved.reason)};
+  const combo=classify(resolved.cards);
+  if(!combo){
+    const dups=duplicateRanks(resolved.cards);
+    return {ok:false,reason:'INVALID_COMBO',details:{duplicateRanks:dups},msg:formatActionRejectMessage('INVALID_COMBO',{duplicateRanks:dups})};
   }
-  sendAction({kind:'play', cards:[...selected]});
+  const curr=currentState?.currentCombo;
+  if(curr && !canBeat(combo,curr)) return {ok:false,reason:'CANNOT_BEAT',msg:formatActionRejectMessage('CANNOT_BEAT')};
+  return {ok:true,combo,cards:resolved.cards};
+}
+function validateSelectedInterrupt(){
+  if(!selected.size) return {ok:false,reason:'INVALID_CHOP',msg:'Hãy chọn bộ bài để chặt.'};
+  const resolved=selectedCardsFromSet();
+  if(!resolved.ok) return {ok:false,reason:resolved.reason,msg:formatActionRejectMessage(resolved.reason)};
+  const curr=currentState?.currentCombo;
+  if(!curr) return {ok:false,reason:'INVALID_CHOP',msg:'Hiện không có bộ bài đặc biệt để chặt.'};
+  const combo=classify(resolved.cards);
+  if(!combo || combo.type!=='pairs_run' || !canBeat(combo,curr)) return {ok:false,reason:'INVALID_CHOP',msg:'Bộ đã chọn không phải đôi thông hợp lệ hoặc không chặt được bài trên bàn.'};
+  const hasFour=hasFourPairRun(myHand), hasThreeOnly=!hasFour&&hasThreePairRunOnly(myHand);
+  const deadline=Number(currentState?.chopInterruptDeadline||0);
+  if(hasThreeOnly && deadline<=Date.now()) return {ok:false,reason:'CHOP_WINDOW_CLOSED',msg:formatActionRejectMessage('CHOP_WINDOW_CLOSED')};
+  if(!hasFour && !hasThreeOnly) return {ok:false,reason:'INVALID_CHOP',msg:'Bạn không có 3 Đôi Thông/4+ Đôi Thông đủ điều kiện chặt.'};
+  if(hasFour && combo.count<4) return {ok:false,reason:'INVALID_CHOP',msg:'Bạn có 4+ Đôi Thông nhưng bộ đang chọn chưa đủ 4 đôi thông.'};
+  if(hasThreeOnly && combo.count!==3) return {ok:false,reason:'INVALID_CHOP',msg:'Bạn đang dùng quyền 3 Đôi Thông; hãy chọn đúng 3 đôi thông.'};
+  return {ok:true,combo,cards:resolved.cards};
+}
+$('btnPlay').onclick=()=>{
+  const check=validateSelectedPlay(); if(!check.ok){showHandSelectMsg(check.msg);return;}
+  sendAction({kind:'play',cards:[...selected]});
 };
-$('btnPass').onclick = () => sendAction({kind:'pass'});
-$('btnChopInterrupt').onclick = () => { sendAction({kind:'interrupt_chop', cards:[...selected]}); };
-$('testInstantChopOverlay').onclick = (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  if(!isRuleTestMode || !currentState) return;
-  const isMyTurnNow = currentState.turnId === myId ||
-    (Array.isArray(currentState.order) && currentState.order[currentState.turnIdx] === myId);
-  if(isMyTurnNow){ syncTestInstantChopUI(); return; }
-  // Đã BỎ LƯỢT trong vòng hiện tại thì không được quay lại CHẶT NGAY cùng bộ.
-  if(hasPassedInstantTarget(currentState, myId, currentState.currentCombo)){ syncTestInstantChopUI(); return; }
-  // Vòng Chặt Ngang 3 giây đang mở: không cho nút TEST 4/5 chen vào.
-  const chopDeadline = Number(currentState.chopInterruptDeadline || 0);
-  if(chopDeadline > Date.now()){
-    syncTestInstantChopUI();
-    return;
-  }
-  const best=getTestInstantChopCards();
-  if(!best) { syncTestInstantChopUI(); return; }
-  autoPrepareInstantChop();
-  sendAction({kind:'interrupt_chop', cards:best.cards.map(cardKey)});
+$('btnPass').onclick=()=>sendAction({kind:'pass'});
+$('btnChopInterrupt').onclick=()=>{
+  const check=validateSelectedInterrupt(); if(!check.ok){showHandSelectMsg(check.msg);return;}
+  sendAction({kind:'interrupt_chop',cards:[...selected]});
 };
+$('testInstantChopOverlay').onclick=(e)=>{
+  e.preventDefault(); e.stopPropagation();
+  if(!isRuleTestMode||!currentState)return;
+  const isMyTurnNow=currentState.turnId===myId||(Array.isArray(currentState.order)&&currentState.order[currentState.turnIdx]===myId);
+  if(isMyTurnNow){syncTestInstantChopUI();return;}
+  if(hasPassedInstantTarget(currentState,myId,currentState.currentCombo)){syncTestInstantChopUI();return;}
+  const chopDeadline=Number(currentState.chopInterruptDeadline||0);
+  if(chopDeadline>Date.now()){syncTestInstantChopUI();return;}
+  const best=getTestInstantChopCards(); if(!best){syncTestInstantChopUI();return;}
+  autoPrepareInstantChop(); sendAction({kind:'interrupt_chop',cards:best.cards.map(cardKey)});
+};
+
 $('btnReportFoul').onclick = () => reportFoul();
 $('mySlot').onclick = (e) => { e.stopPropagation(); openReactionPopover($('mySlot')); };
 
@@ -5411,10 +5643,20 @@ function reportFoul(){
 }
 
 function sendAction(act){
-  if(isSpectator) return;
-  if(isHost) handleAction(myId, act);
-  else sendToHost({t:'action', id:myId, action:act});
-  selected.clear();
+  if(isSpectator || !act) return;
+  const tracked=act.kind==='play'||act.kind==='interrupt_chop';
+  if(tracked){
+    if(pendingActionRequests.size){showHandSelectMsg('⏳ Đang chờ máy chủ xác nhận nước đi trước.');return;}
+    const requestId=makeActionRequestId(); act={...act,requestId};
+    const timer=setTimeout(()=>{
+      const pending=pendingActionRequests.get(requestId); if(!pending) return;
+      pendingActionRequests.delete(requestId);
+      showHandSelectMsg(formatActionRejectMessage('REQUEST_TIMEOUT')); updateHandActionButtonsOnly();
+    },4500);
+    pendingActionRequests.set(requestId,{action:act,timer,sentAt:Date.now()});
+  }
+  if(isHost) handleAction(myId,act); else sendToHost({t:'action',id:myId,action:act});
+  // Không clear selected ở đây. Chỉ actionResult=ACCEPT mới được clear.
 }
 
 // Định vị popover (ném đồ / reaction) sao cho luôn nằm gọn trong màn hình.
@@ -5582,14 +5824,14 @@ function showResultOverlay(results, settlements){
   const tbody = $('resultBody'); tbody.innerHTML = '';
   const isWater = currentState && currentState.gameMode === 'WATER';
 
-  $('resultHeaderUnit').textContent = isWater ? 'Số Nước' : 'Hình Phạt Quỳ';
+  $('resultHeaderUnit').textContent = isWater ? 'Số Nước' : (currentState && currentState.gameMode === 'POINTS' ? 'Điểm' : 'Hình Phạt Quỳ');
 
   const sortedResults = Object.values(results).sort((a,b)=>a.rank-b.rank);
   const cardRevealQueue = []; // chỉ ngửa bài người Bét hoặc người Cóng
 
   sortedResults.forEach((r, idx) => {
     let cls = isWater ? (r.score > 0 ? 'plus' : (r.score < 0 ? 'minus' : '')) : '';
-    let scoreTxt = isWater ? (r.score > 0 ? `+${r.score} Nước` : `${r.score} Nước`) : r.score;
+    let scoreTxt = isWater ? (r.score > 0 ? `+${r.score} Nước` : `${r.score} Nước`) : (currentState && currentState.gameMode === 'POINTS' ? (r.score > 0 ? `+${r.score} Điểm` : `${r.score} Điểm`) : r.score);
 
     const playedCards = safeArray(r.playedCards);
     const remainingCards = safeArray(r.remainingCards);
@@ -6039,6 +6281,7 @@ function startRuleTestGame(){
 
     isRuleTestMode = true;
     isSpectator = false;
+    resetMatchLedger();
 
     myName = $('nameInput').value.trim() || 'NGƯỜI TEST';
     myId = 'ruletester_me';
@@ -6163,6 +6406,10 @@ function startRuleTestGame(){
       disconnected:new Set(),
       coldFolded:new Set(),
       scores:Object.fromEntries(order.map(id=>[id,0])),
+      matchScores:{...matchScores},
+      matchHistory:matchHistory.map(x=>({roundNo:x.roundNo,at:x.at,players:{...x.players}})),
+      matchScoreApplied:false,
+      roundNo:matchHistory.length+1,
       liveScores:Object.fromEntries(order.map(id=>[id,0])),
       liveBaseAwards:{},
       liveCongAwards:{},
