@@ -3107,7 +3107,64 @@ function applyPointsRoundToMatch(results){
   gameState.matchScoreApplied=false;
   gameState.matchScores={...matchScores};
   gameState.matchHistory=matchHistory.map(x=>({roundNo:x.roundNo,at:x.at,players:{...x.players}}));
+
+  // BOT: tự xác nhận điểm sau khi kết thúc ván.
+  // Online KHÔNG tự xác nhận: người chơi thật vẫn phải bấm xác nhận.
+  if(isBotMode){
+    const pendingToken = Number(gameState.pendingRound.roundNo);
+    botList.forEach((botId, idx)=>{
+      setTimeout(()=>{
+        if(!gameState || gameState.isEnded !== true) return;
+        if(!gameState.pendingRound) return;
+        if(Number(gameState.pendingRound.roundNo) !== pendingToken) return;
+        handleScoreRoundConfirm(botId,{roundNo:pendingToken});
+      }, 120 + idx * 80);
+    });
+  }
 }
+
+function applyPendingRoundWithoutEdit(){
+  if(!isHost || !gameState || gameState.gameMode!=='POINTS' || !gameState.isEnded) return false;
+  const p=gameState.pendingRound;
+  if(!p || p.scoreEditActive) return false;
+
+  ensureMatchLedger(gameState.order);
+  const stats={};
+  gameState.order.forEach(id=>{
+    const proposed=Number(p.proposedScores?.[id] ?? matchScores[id] ?? 0);
+    const delta=proposed-Number(matchScores[id]||0);
+    const base=Number(p.stats?.[id]?.base||0);
+    const rank=Number(p.stats?.[id]?.rank||0);
+    const modifier=delta-base;
+    matchScores[id]=proposed;
+    stats[id]={rank,base,modifier,delta};
+    if(p.results?.[id]){
+      p.results[id].score=delta;
+      p.results[id].modifierPoints=modifier;
+    }
+  });
+
+  matchHistory.push({
+    roundNo:Number(p.roundNo),
+    at:Date.now(),
+    players:stats
+  });
+
+  gameState.matchScoreApplied=true;
+  gameState.matchScores={...matchScores};
+  gameState.matchHistory=matchHistory.map(x=>({
+    roundNo:x.roundNo,
+    at:x.at,
+    players:{...x.players}
+  }));
+  gameState.pendingRound=null;
+  console.log('📊 Chốt điểm không điều chỉnh:', {...matchScores});
+
+  broadcastState();
+  broadcastResult(gameState.lastResults||{},[]);
+  return true;
+}
+
 function handleScoreRoundEdit(fromId,msg){
   if(!isHost || !gameState || gameState.gameMode!=='POINTS' || !gameState.isEnded || !gameState.pendingRound) return;
   const p=gameState.pendingRound;
@@ -3238,6 +3295,24 @@ function handleHostUtilityRequest(playerId, req){
 
 function dealNewGame(){
   if(isRuleTestMode){ startRuleTestGame(); return; }
+
+  // Nếu ván trước không chỉnh điểm, chốt proposedScores vào sổ điểm
+  // trước khi chia ván mới. Nếu đã bấm Điều chỉnh, bắt buộc đi qua xác nhận.
+  if(isHost && gameState && gameState.gameMode==='POINTS' && gameState.pendingRound && !gameState.pendingRound.scoreEditActive){
+    applyPendingRoundWithoutEdit();
+  }
+
+  // SỔ ĐIỂM TRẬN là nguồn duy nhất cho ván kế tiếp.
+  // Host giữ matchScores; gameState.matchScores chỉ là bản đồng bộ xuống client.
+  // Trước khi chia ván mới, đảm bảo ledger không bị rơi về 0.
+  if(gameState && gameState.gameMode === 'POINTS' && gameState.matchScores){
+    const persisted = {};
+    safeArray(players).forEach(p=>{
+      const v = Number(gameState.matchScores[p.id]);
+      if(Number.isFinite(v)) persisted[p.id] = v;
+    });
+    if(Object.keys(persisted).length) matchScores = {...matchScores, ...persisted};
+  }
   ensureMatchLedger(players.map(p=>p.id));
   if(isHost && !isBotMode) publishRoomToPublic(roomCode, players[0] ? players[0].name : myName);
   consecutivePlayCount = 0;
@@ -6517,7 +6592,12 @@ function showResultOverlay(results, settlements){
       next.className='btn btn-gold';
       next.textContent='▶️ Ván mới';
       next.style.cssText='width:100%;font-weight:900;';
-      next.onclick=()=>dealNewGame();
+      next.onclick=()=>{
+        if(currentState && currentState.gameMode==='POINTS' && currentState.pendingRound && !currentState.pendingRound.scoreEditActive){
+          if(!applyPendingRoundWithoutEdit()) return;
+        }
+        dealNewGame();
+      };
       actions.appendChild(next);
     }else{
       const wait=document.createElement('div');
