@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -4738,7 +4736,16 @@ function getViewStateForPlayer(id){
     isSpectator: !isPlayerInGame,
     instantWin: gameState.instantWin || null,
     // Ngửa bài toàn bộ cho cả bàn xem khi đang chờ xác nhận Tới Trắng
-    revealedHands: pendingInstantWin ? Object.fromEntries(orderArr.map(p => [p, safeArray(gameState.hands[p])])) : null
+    revealedHands: pendingInstantWin ? Object.fromEntries(orderArr.map(p => [p, safeArray(gameState.hands[p])])) : null,
+    // FIX: trước đây view-state gửi xuống KHÔNG có 3 trường này, nên chỉ chủ phòng (người
+    // trực tiếp chạy applyPointsRoundToMatch() và giữ biến matchScores cục bộ) mới thấy đúng
+    // điểm TỔNG xuyên suốt nhiều ván ở chế độ Tính Điểm. Mọi người chơi khác trong phòng online
+    // luôn thấy điểm Tổng = 0 vì client của họ không có state.matchScores để đọc, dù chế độ BOT
+    // vẫn "đúng" một cách tình cờ (client và host là cùng một máy). Giờ gửi kèm để đồng bộ đúng
+    // cho tất cả mọi người trong phòng online.
+    matchScores: gameState.matchScores || {},
+    matchScoreApplied: !!gameState.matchScoreApplied,
+    matchHistory: safeArray(gameState.matchHistory)
   };
 }
 
