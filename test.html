@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -6,7 +7,14 @@
 <title>Tiến Lên Online - Bộ Luật Chuẩn & Chế Độ Đánh Nước / Quỳ</title>
 <!-- Firebase compat SDK -->
 <!-- RULE TEST LAB: chỉ là lớp giao diện test cục bộ, không liên quan Firebase/trận thật -->
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js">
+
+function openScoreAdjustmentForPendingRound(round){
+  if(typeof window.openScoreEdit === 'function') return window.openScoreEdit(round);
+  alert('Chưa tìm thấy giao diện điều chỉnh điểm của ván này.');
+}
+
+</script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
 <style>
 :root{
@@ -102,6 +110,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 }
 @keyframes pulseCount { 0% { transform: scale(0.9); opacity: 0.8; } 100% { transform: scale(1.15); opacity: 1; } }
 .countdown-text { font-size: 20px; color: var(--cream); margin-top: 10px; font-weight: 600; letter-spacing: 1px; }
+.pause-countdown-number{margin:14px auto 8px;width:112px;height:112px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid var(--gold);background:rgba(0,0,0,.5);color:#ffe600;font:900 58px/1 monospace;text-shadow:0 0 18px rgba(255,230,0,.5);box-shadow:0 0 24px rgba(255,230,0,.22),inset 0 0 18px rgba(255,230,0,.08);}
 
 /* TABLE LAYOUT */
 #tableScreen{
@@ -123,6 +132,9 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
   cursor:pointer;min-width:76px;
 }
 .p-slot.active{border-color:var(--gold);box-shadow:0 0 10px rgba(212,175,55,.5);}
+.p-slot.finished{border-color:#ffe600;background:linear-gradient(180deg,rgba(255,230,0,.22),rgba(0,0,0,.72));box-shadow:0 0 14px rgba(255,230,0,.42),inset 0 0 10px rgba(255,230,0,.08);}
+.p-slot.finished .card-cnt{color:#ffe600;font-weight:900;}
+.finish-badge{display:inline-flex;align-items:center;justify-content:center;margin-top:2px;padding:2px 7px;border-radius:7px;background:#ffe600;color:#17110a;font-size:10px;font-weight:1000;letter-spacing:.35px;box-shadow:0 0 8px rgba(255,230,0,.45);}
 .p-slot.cold-folded{opacity:.5;filter:grayscale(.7);border-color:#5aa9d6;}
 .p-slot .avatar{width:26px;height:26px;border-radius:50%;background:#1d4d3e;display:flex;align-items:center;justify-content:center;font-size:13px;position:relative;}
 .p-slot .name{font-size:10px;font-weight:600;margin-top:2px;max-width:70px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -427,6 +439,8 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 
 .controls{display:flex;flex-wrap:wrap;gap:6px;width:100%;max-width:320px;justify-content:center;padding:0 6px;box-sizing:border-box;}
 .controls .btn{flex:1 1 auto;min-width:74px;padding:7px 8px;font-size:12px;}
+.controls #btnPlay{flex:1.45 1 0;min-width:104px;font-size:13px;font-weight:900;}
+.controls #btnPass{flex:.9 1 0;min-width:82px;}
 /* TEST 4/5 ĐÔI THÔNG: chỉ 1 nút CHẶT NGAY, nằm độc lập trong .table-center.
    Tuyệt đối không dùng lại btnChopInterrupt trong khu bài người chơi vì sẽ làm nút
    "treo" ở dưới tay bài khi state vừa đổi. */
@@ -671,6 +685,228 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .test-instant-chop-overlay .chop-now-main{font-size:18px;font-weight:1000;}
 .test-instant-chop-overlay .chop-now-target{font-size:13px;font-weight:900;color:#fff3a0;width:100%;}
 .test-instant-chop-overlay .chop-now-countdown{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:#ffe600;color:#17110a;font-size:18px;font-weight:1000;box-shadow:0 0 16px rgba(255,230,0,.7);}
+
+
+
+</style>
+<style id="finish-visual-fix">
+.p-slot.finished{
+  background:linear-gradient(145deg,rgba(255,193,7,.30),rgba(255,112,0,.16)) !important;
+  border:2px solid rgba(255,193,7,.95) !important;
+  box-shadow:0 0 0 2px rgba(255,193,7,.20),0 8px 24px rgba(255,152,0,.20) !important;
+}
+.finish-status{
+  display:inline-block;
+  margin-top:4px;
+  padding:4px 10px;
+  border-radius:999px;
+  background:#ffd54f !important;
+  color:#251800 !important;
+  font-weight:900 !important;
+  font-size:12px !important;
+  letter-spacing:.2px;
+}
+</style>
+
+<style id="v4-ui-fixes">
+#btnReportFoul{font-size:10px!important;padding:4px 7px!important;min-height:26px!important;line-height:1.1!important;}
+.finish-status{background:linear-gradient(135deg,#ffd54f,#ff9800)!important;color:#3b2200!important;border:2px solid #ffe082!important;box-shadow:0 2px 10px rgba(255,152,0,.45)!important;opacity:1!important;}
+</style>
+
+<style id="main-action-size-fix">
+.controls #btnPass,
+.controls #btnPlay,
+.controls #btnSort {
+  min-height: 52px !important;
+  padding: 12px 18px !important;
+  font-size: 16px !important;
+  font-weight: 900 !important;
+  border-radius: 10px !important;
+  white-space: nowrap !important;
+}
+.controls #btnPass { min-width: 125px !important; width: 125px !important; }
+.controls #btnPlay { min-width: 125px !important; width: 125px !important; }
+.controls #btnSort { min-width: 145px !important; width: 145px !important; }
+
+.controls #btnReportFoul {
+  min-height: 36px !important;
+  padding: 6px 10px !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  border-radius: 8px !important;
+  white-space: nowrap !important;
+}
+
+@media (max-width: 600px) {
+  .controls #btnPass,
+  .controls #btnPlay,
+  .controls #btnSort {
+    min-height: 44px !important;
+    padding: 9px 12px !important;
+    font-size: 14px !important;
+  }
+  .controls #btnReportFoul {
+    min-height: 32px !important;
+    padding: 5px 8px !important;
+    font-size: 11px !important;
+  }
+}
+</style>
+
+
+<style id="finish-orange-fix">
+/* ===== VỀ ĐÍCH: nền vàng/cam riêng, nổi bật ===== */
+.p-slot.finished,
+.p-slot.finish-highlight,
+.p-slot[data-finished="true"] {
+  background: linear-gradient(135deg, #ffd54a 0%, #ff9800 55%, #f57c00 100%) !important;
+  border: 2px solid #ffe082 !important;
+  box-shadow:
+    0 0 0 2px rgba(255, 193, 7, .35),
+    0 8px 24px rgba(255, 152, 0, .45),
+    inset 0 0 18px rgba(255, 235, 59, .22) !important;
+}
+
+/* Nhãn VỀ ĐÍCH */
+.finish-status,
+.finished .finish-status {
+  display: inline-block !important;
+  margin-top: 5px !important;
+  padding: 5px 12px !important;
+  border-radius: 999px !important;
+  background: linear-gradient(135deg, #ffeb3b, #ff9800) !important;
+  color: #3a2100 !important;
+  border: 1px solid #fff3b0 !important;
+  box-shadow: 0 3px 10px rgba(0,0,0,.25) !important;
+  font-size: 13px !important;
+  font-weight: 1000 !important;
+  letter-spacing: .3px !important;
+}
+</style>
+
+
+<style id="finish-final-visible-fix">
+/* VỀ ĐÍCH - hiển thị cam/vàng thật sự */
+.p-slot.finished {
+  background: linear-gradient(135deg, #FFD54A 0%, #FFB300 45%, #F4511E 100%) !important;
+  border: 3px solid #FFE082 !important;
+  box-shadow: 0 0 0 3px rgba(255,193,7,.35), 0 10px 28px rgba(245,124,0,.55), inset 0 0 20px rgba(255,255,255,.14) !important;
+}
+.p-slot.finished .card-cnt {
+  color: #2b1700 !important;
+  font-weight: 1000 !important;
+}
+.p-slot.finished .finish-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 6px 12px !important;
+  border-radius: 999px !important;
+  background: linear-gradient(135deg, #FFF176 0%, #FFCA28 45%, #FF8F00 100%) !important;
+  color: #2b1700 !important;
+  border: 2px solid #FFF8E1 !important;
+  box-shadow: 0 3px 12px rgba(0,0,0,.35), 0 0 12px rgba(255,193,7,.5) !important;
+  font-size: 14px !important;
+  font-weight: 1000 !important;
+  letter-spacing: .3px !important;
+  opacity: 1 !important;
+}
+</style>
+
+<style id="finish-badge-only-fix">
+/* Không tô màu toàn bộ khung người chơi khi về đích */
+.p-slot.finished,
+.p-slot.finish-highlight,
+.p-slot[data-finished="true"] {
+  background: inherit !important;
+  border-color: var(--panel-line) !important;
+  box-shadow: none !important;
+}
+
+/* Chỉ huy hiệu 🏁 VỀ ĐÍCH màu cam */
+.finish-status,
+.finish-badge,
+.finished .finish-status,
+.finished .finish-badge {
+  display: inline-block !important;
+  margin-top: 4px !important;
+  padding: 4px 11px !important;
+  border-radius: 999px !important;
+  background: linear-gradient(135deg, #ffb300, #f57c00) !important;
+  color: #2b1800 !important;
+  border: 1px solid #ffd54f !important;
+  box-shadow: 0 2px 8px rgba(245,124,0,.30) !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  letter-spacing: .2px !important;
+}
+</style>
+
+
+<style id="finish-final-correct-fix">
+/* CHỈ tô màu nhãn VỀ ĐÍCH, tuyệt đối không tô cả khung người chơi */
+.p-slot.finished {
+  background: rgba(0,0,0,.55) !important;
+  border: 1px solid var(--panel-line) !important;
+  box-shadow: none !important;
+}
+.p-slot.finished .card-cnt {
+  color: inherit !important;
+}
+.p-slot.finished .finish-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-top: 2px !important;
+  padding: 4px 10px !important;
+  border-radius: 8px !important;
+  background: #f57c00 !important;
+  color: #fff8e1 !important;
+  border: 1px solid #ffb74d !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,.25) !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  letter-spacing: .2px !important;
+}
+</style>
+
+
+<style id="finish-rank-badge-fix">
+/* Về đích chỉ là huy hiệu nhỏ, không tô toàn bộ ghế */
+.finish-badge {
+  display:inline-block !important;
+  padding:4px 10px !important;
+  border-radius:999px !important;
+  font-size:11px !important;
+  font-weight:900 !important;
+  line-height:1.2 !important;
+  white-space:nowrap !important;
+}
+.finish-rank-1 {
+  background:linear-gradient(135deg,#ffd54f,#ff9800) !important;
+  color:#2b1800 !important;
+  border:1px solid #ffe082 !important;
+}
+.finish-rank-2 {
+  background:linear-gradient(135deg,#e6e9ed,#9aa4ad) !important;
+  color:#17202a !important;
+  border:1px solid #f4f6f8 !important;
+}
+.finish-rank-3 {
+  background:linear-gradient(135deg,#d89b63,#a95d2a) !important;
+  color:#fff7ef !important;
+  border:1px solid #f0c08a !important;
+}
+</style>
+
+<style id="finish-rank-only-v15">
+.p-slot.finished{
+  background:rgba(0,0,0,.55) !important;
+  border-color:var(--panel-line) !important;
+  box-shadow:none !important;
+}
+.p-slot.finished .card-cnt{color:inherit !important;}
+.finish-badge{padding:4px 10px !important;border-radius:999px !important;font-size:11px !important;font-weight:900 !important;}
 </style>
 </head>
 <body>
@@ -782,7 +1018,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;">
       <div>
         <h2 style="margin:0;color:var(--gold);font-size:20px;">⚙️ CẤU HÌNH BOM CHẶT · PHẠT · ÂM THANH</h2>
-        <div style="font-size:11px;color:rgba(250,246,238,.65);margin-top:4px;">Lưu riêng trên trình duyệt này. Không ảnh hưởng người chơi khác. Bấm "Khôi phục mặc định" để trả lại đúng luật gốc hiện tại.</div>
+        <div style="font-size:11px;color:rgba(250,246,238,.65);margin-top:4px;">Ăn Trắng và Cóng được cấu hình cùng bộ luật hiện tại; âm thanh và các tùy chọn cá nhân lưu riêng trên trình duyệt này. Bấm "Khôi phục mặc định" để trả lại đúng luật gốc hiện tại.</div>
       </div>
       <button class="btn btn-outline" id="btnCloseConfig" type="button">✕ Đóng</button>
     </div>
@@ -966,6 +1202,9 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     <span id="roomTag" style="color:var(--gold);font-weight:700;">Phòng: ----</span>
     <span id="modeTag" style="color:var(--cream);">Chế độ: Đánh Nước</span>
     <span id="stakeTag">Cược: ---</span>
+    <div style="margin-left:auto;display:flex;gap:6px;align-items:center;">
+      <button class="btn btn-outline" id="btnInGameSettings" type="button" style="font-size:11px;padding:5px 8px;">⚙️ Cài đặt</button>
+    </div>
   </div>
 
   <div class="table-center">
@@ -1001,12 +1240,33 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     <div class="hand-cards" id="handCards"><div class="hand-cards-inner" id="handCardsInner"></div></div>
     <div class="hand-select-msg hidden" id="handSelectMsg"></div>
     <div class="controls">
-      <button class="btn btn-outline" id="btnSort">Xếp bài (Giá Trị)</button>
       <button class="btn btn-danger" id="btnPass">Bỏ lượt</button>
       <button class="btn btn-gold" id="btnPlay">Đánh</button>
+      <button class="btn btn-outline" id="btnSort">Xếp bài (Giá Trị)</button>
       <button class="btn btn-outline hidden" id="btnChopInterrupt" style="border-color:#ffe600;color:#ffe600;">⚡ CHẶT NGAY</button>
-      <button class="btn btn-outline hidden" id="btnReportFoul" style="border-color:var(--bad);color:var(--bad);">🚩 Báo Vi Phạm</button>
+      <button class="btn btn-outline hidden" id="btnReportFoul" style="border-color:var(--bad);color:var(--bad);font-size:11px;padding:5px 9px;min-height:30px;width:auto;">🚩 Báo Vi Phạm</button>
     </div>
+  </div>
+</div>
+
+<!-- CÀI ĐẶT TRONG VÁN -->
+<div class="overlay hidden" id="inGameSettingsOverlay" style="z-index:1200;">
+  <div class="result-panel" style="max-width:420px;">
+    <h3 style="color:var(--gold);margin-top:0;">⚙️ CÀI ĐẶT TRONG VÁN</h3>
+    <button class="btn btn-outline" id="btnPause30" style="width:100%;margin:6px 0;">⏸ Tạm dừng 30 giây</button>
+    <button class="btn btn-danger" id="btnExitMatchSettings" style="width:100%;margin:6px 0;">🚪 Thoát trận</button>
+    <button class="btn btn-outline" id="btnToggleSound" style="width:100%;margin:6px 0;">🔊 Âm thanh</button>
+    <button class="btn btn-outline" id="btnCloseInGameSettings" style="width:100%;margin-top:6px;">Đóng</button>
+    <div id="inGameSettingsMsg" style="font-size:12px;text-align:center;min-height:18px;margin-top:8px;color:var(--gold);"></div>
+  </div>
+</div>
+<div class="overlay hidden" id="pauseOverlay" style="z-index:1100;">
+  <div class="result-panel pause-panel" style="max-width:390px;text-align:center;">
+    <div style="font-size:38px;line-height:1;margin-bottom:6px;">⏸️</div>
+    <h2 style="color:var(--gold);margin-bottom:4px;">TRẬN ĐẤU ĐANG TẠM DỪNG</h2>
+    <div id="pauseOverlayText" style="font-size:13px;color:rgba(250,246,238,.8);">Đang tạm dừng...</div>
+    <div id="pauseCountdownNumber" class="pause-countdown-number">30</div>
+    <div style="font-size:11px;color:rgba(250,246,238,.55);">Mọi đồng hồ và lượt chơi đều đứng lại</div>
   </div>
 </div>
 
@@ -1114,6 +1374,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
       <h4 id="settlementTitle">💡 Thống kê chi tiết từng ván</h4>
       <div id="settlementContent"></div>
     </div>
+    <div id="pendingScoreEditor" style="margin-top:12px;"></div>
     <div id="resultActions" style="margin-top:14px;"></div>
   </div>
 </div>
@@ -1549,7 +1810,11 @@ function playInstantWinVoice(){
   }catch(e){ console.warn('Không phát được âm Tới Trắng:', e); }
 }
 
+const LOCAL_SOUND_ENABLED_KEY = 'tienlen_local_sound_enabled_v1';
+let localSoundEnabled = (()=>{ try { return localStorage.getItem(LOCAL_SOUND_ENABLED_KEY) !== '0'; } catch(e){ return true; } })();
+function setLocalSoundEnabled(enabled){ localSoundEnabled=!!enabled; try{ localStorage.setItem(LOCAL_SOUND_ENABLED_KEY, localSoundEnabled?'1':'0'); }catch(e){}; updateInGameSettingsUI(); }
 function playGlobalSound(item, customVolume = 0.9){
+  if(!localSoundEnabled) return;
   // Mọi đường phát âm (bấm tại chỗ, nhận qua broadcast, bot...) đều đi qua đây,
   // nên chỉ cần chặn/chỉnh âm lượng ở MỘT nơi duy nhất là áp dụng được cho toàn bộ game.
   const category = getSoundCategory(item);
@@ -2110,6 +2375,11 @@ document.addEventListener('click', function(e){
 
 
 $('btnOpenRules').onclick = () => $('rulesOverlay').classList.remove('hidden');
+$('btnInGameSettings').onclick=()=>{ updateInGameSettingsUI(); $('inGameSettingsMsg').textContent=''; $('inGameSettingsOverlay').classList.remove('hidden'); };
+$('btnCloseInGameSettings').onclick=()=>$('inGameSettingsOverlay').classList.add('hidden');
+$('btnToggleSound').onclick=()=>{ setLocalSoundEnabled(!localSoundEnabled); };
+$('btnPause30').onclick=()=>{ requestPause30(); $('inGameSettingsOverlay').classList.add('hidden'); };
+$('btnExitMatchSettings').onclick=()=>{ if(confirm('🚪 Thoát trận này?')){ $('inGameSettingsOverlay').classList.add('hidden'); leaveRoom(); } };
 $('btnCloseRules').onclick = () => $('rulesOverlay').classList.add('hidden');
 
 $('roomCodeDisplay').onclick = () => {
@@ -2347,6 +2617,12 @@ function onHostMessage(fromId, msg, token){
     broadcastSoundEvent(msg.key, 0.9, fromId);
     bumpActor(fromId, REACTION_LABELS[msg.key] || '');
     broadcastState();
+  } else if(msg.t==='utility'){
+    handleHostUtilityRequest(fromId, msg.request||{});
+  } else if(msg.t==='scoreRoundEdit'){
+    handleScoreRoundEdit(fromId, msg);
+  } else if(msg.t==='scoreRoundConfirm'){
+    handleScoreRoundConfirm(fromId, msg);
   } else if(msg.t==='reportFoul'){
     if(!gameState) return;
     const { targetId, beneficiaryId, amount, reason } = msg;
@@ -2401,6 +2677,9 @@ function onClientMessage(msg){
       return;
     } else if(msg.t==='state'){
       applyState(msg.state);
+      if(msg.state && msg.state.isEnded && msg.state.pendingRound && msg.state.gameMode==='POINTS') showResultOverlay(msg.state.pendingRound.results, msg.state.pendingRound.settlements||[]);
+    } else if(msg.t==='scoreRoundAck'){
+      if(msg.ok && msg.state) applyState(msg.state);
     } else if(msg.t==='chat'){
       // FIX: nếu chính mình là người gửi (fromId===myId), máy mình đã tự hiện tin nhắn này
       // ngay lúc gửi rồi (xem sendChat()) -> bỏ qua, tránh hiện đúp 2 lần khi tin nhắn dội
@@ -2673,7 +2952,7 @@ function revealInstantWin(hands, winnerId, info){
     roundLog: [{ icon:'🌟', text: `${winnerName} chia được ${info.label} — Tới Trắng, kết thúc ván ngay lập tức!` }],
     log: `🌟 TỚI TRẮNG! ${winnerName} có ${info.label} — kết thúc ván ngay.`,
     gameMode: roomSettings.gameMode, turnSeconds: roomSettings.turnSeconds, stakeUnit: roomSettings.stakeUnit,
-    hideCardCount: roomSettings.hideCardCount, turnDeadline: Date.now(), isEnded: false,
+    hideCardCount: roomSettings.hideCardCount, turnDeadline: Date.now(), isEnded: false, pauseState: {active:false, by:null, until:0}, pauseUsed: Object.fromEntries(players.map(p=>[p.id,false])),
     // FIX: Tới Trắng giờ không cần chủ phòng xác nhận nữa (bước xác nhận cũ hay bị lỗi/treo bàn).
     // confirmed luôn = true ngay từ đầu, kết thúc ván tự động giống hệt lúc "giết ngộp" bình
     // thường (đánh hết bài / chặt hết bàn) — chỉ khác lý do thắng ghi trong roundLog/kết quả.
@@ -2780,6 +3059,7 @@ function finalizeInstantWin(){
       };
     });
     applyPointsRoundToMatch(results);
+    gameState.lastResults = results;
     gameState.liveScores = {...matchScores};
     gameState.matchScores = {...matchScores};
     gameState.matchHistory = matchHistory.map(x => ({roundNo:x.roundNo,at:x.at,players:{...x.players}}));
@@ -2805,8 +3085,156 @@ function finalizeInstantWin(){
 function ensureMatchLedger(order){const ids=safeArray(order);const next={};ids.forEach(id=>{next[id]=Number.isFinite(Number(matchScores[id]))?Number(matchScores[id]):0;});matchScores=next;if(!matchStartedAt)matchStartedAt=Date.now();return matchScores;}
 function resetMatchLedger(){matchScores={};matchHistory=[];matchStartedAt=null;}
 function getPointsRankValue(rank){return ({1:3,2:2,3:1,4:0})[Number(rank)]??0;}
-function applyPointsRoundToMatch(results){if(!gameState||gameState.gameMode!=='POINTS'||gameState.matchScoreApplied)return;ensureMatchLedger(gameState.order);const stats={};safeArray(gameState.order).forEach(id=>{const r=results[id]||{};const delta=Number(r.score)||0;matchScores[id]=(Number(matchScores[id])||0)+delta;stats[id]={rank:Number(r.rank)||0,base:Number(r.basePoints)||0,modifier:Number(r.modifierPoints)||0,delta};});matchHistory.push({roundNo:Number(gameState.roundNo||matchHistory.length+1),at:Date.now(),players:stats});gameState.matchScoreApplied=true;gameState.matchScores={...matchScores};gameState.matchHistory=matchHistory.map(x=>({roundNo:x.roundNo,at:x.at,players:{...x.players}}));}
-function renderMatchSummary(st=currentState){st=st||{};const scores=st.matchScores||{};const history=safeArray(st.matchHistory);const order=safeArray(st.order);const names=st.names||{};const body=$('matchSummaryBody'),sub=$('matchSummarySub'),box=$('matchHistoryBox'),actions=$('matchSummaryActions');if(!body||!sub||!box||!actions)return;const rows=order.map(id=>{const rs=history.filter(h=>h.players&&h.players[id]);const rk={1:0,2:0,3:0,4:0};rs.forEach(h=>{const r=Number(h.players[id]?.rank);if(rk[r]!==undefined)rk[r]++;});return{id,name:names[id]||id,total:Number(scores[id]||0),rounds:rs.length,rk};}).sort((a,b)=>b.total-a.total||a.name.localeCompare(b.name,'vi'));sub.textContent=`Chế độ Tính Điểm • ${history.length} ván • Nhất +3 • Nhì +2 • Ba +1 • Bét 0 • Tới Trắng/Giết ngộp +3 • Cóng 1 điểm/người • Thối/Chặt theo cấu hình.`;body.innerHTML=rows.map((r,i)=>{const cls=r.total>0?'match-total-plus':r.total<0?'match-total-minus':'';return `<tr><td><b>#${i+1} ${escapeHtml(r.name)}</b></td><td class="${cls}">${r.total>0?'+':''}${r.total}</td><td>${r.rounds}</td><td>${r.rk[1]}</td><td>${r.rk[2]}</td><td>${r.rk[3]}</td><td>${r.rk[4]}</td></tr>`;}).join('');box.innerHTML=history.length?`<h4 style="color:var(--gold);margin:0 0 6px;">📊 Chi tiết từng ván</h4><table><thead><tr><th>Ván</th>${order.map(id=>`<th>${escapeHtml(names[id]||id)}</th>`).join('')}</tr></thead><tbody>${history.map(h=>`<tr><td><b>${h.roundNo}</b></td>${order.map(id=>{const d=Number(h.players?.[id]?.delta||0);return `<td>${d>0?'+':''}${d}</td>`}).join('')}</tr>`).join('')}</tbody></table>`:'<div style="text-align:center;color:rgba(250,246,238,.5);padding:8px;">Chưa có ván nào được chốt điểm.</div>';actions.innerHTML='';const close=document.createElement('button');close.className='btn btn-outline';close.textContent='Đóng';close.onclick=()=>$("matchSummaryOverlay").classList.add('hidden');actions.appendChild(close);if(isHost||isBotMode){const end=document.createElement('button');end.className='btn btn-gold';end.textContent='🏠 Đóng tổng kết';end.onclick=()=>$("matchSummaryOverlay").classList.add('hidden');actions.appendChild(end);}$('matchSummaryOverlay').classList.remove('hidden');}
+function applyPointsRoundToMatch(results){
+  if(!gameState||gameState.gameMode!=='POINTS'||gameState.matchScoreApplied) return;
+  ensureMatchLedger(gameState.order);
+  const stats={};
+  safeArray(gameState.order).forEach(id=>{
+    const r=results[id]||{}; const delta=Number(r.score)||0;
+    stats[id]={rank:Number(r.rank)||0,base:Number(r.basePoints)||0,modifier:Number(r.modifierPoints)||0,delta};
+  });
+  const threshold=Math.ceil((2*gameState.order.length)/3);
+  gameState.pendingRound={
+    roundNo:Number(gameState.roundNo||matchHistory.length+1),
+    at:Date.now(),
+    results,
+    stats,
+    proposedScores:Object.fromEntries(gameState.order.map(id=>[id,Number(matchScores[id]||0)+Number(stats[id]?.delta||0)])),
+    confirmations:{},
+    threshold,
+    scoreEditActive:false
+  };
+  gameState.matchScoreApplied=false;
+  gameState.matchScores={...matchScores};
+  gameState.matchHistory=matchHistory.map(x=>({roundNo:x.roundNo,at:x.at,players:{...x.players}}));
+}
+function handleScoreRoundEdit(fromId,msg){
+  if(!isHost || !gameState || gameState.gameMode!=='POINTS' || !gameState.isEnded || !gameState.pendingRound) return;
+  const p=gameState.pendingRound;
+  const next={...p.proposedScores};
+  for(const id of gameState.order){ if(msg.scores && Object.prototype.hasOwnProperty.call(msg.scores,id)){ const v=Number(msg.scores[id]); if(Number.isFinite(v)) next[id]=Math.trunc(v); } }
+  p.proposedScores=next;
+  p.confirmations={};
+  p.scoreEditActive=true;
+  p.at=Date.now();
+  if(isBotMode){
+    for(const id of gameState.order){
+      if(botList.includes(id)) p.confirmations[id]=true;
+    }
+  }
+  gameState.pendingRound=p;
+  broadcastState();
+  broadcastResult(p.results,p.settlements||[]);
+}
+function handleScoreRoundConfirm(fromId,msg){
+  if(!isHost || !gameState || !gameState.pendingRound || !gameState.isEnded) return;
+  if(!gameState.pendingRound.scoreEditActive) return;
+  if(!gameState.order.includes(fromId)) return;
+  const p=gameState.pendingRound;
+  if(msg.roundNo && Number(msg.roundNo)!==Number(p.roundNo)) return;
+  p.confirmations=p.confirmations||{};
+  p.confirmations[fromId]=true;
+  const count=gameState.order.filter(id=>p.confirmations[id]).length;
+  if(count>=Number(p.threshold||Math.ceil(2*gameState.order.length/3))){
+    ensureMatchLedger(gameState.order);
+    const stats={};
+    gameState.order.forEach(id=>{
+      const proposed=Number(p.proposedScores[id]||0);
+      const delta=proposed-Number(matchScores[id]||0);
+      const base=Number(p.stats?.[id]?.base||0), rank=Number(p.stats?.[id]?.rank||0);
+      const modifier=delta-base;
+      matchScores[id]=proposed;
+      stats[id]={rank,base,modifier,delta,adjusted:true};
+      if(gameState.pendingRound.results[id]){
+        gameState.pendingRound.results[id].score=delta;
+        gameState.pendingRound.results[id].modifierPoints=modifier;
+      }
+    });
+    matchHistory.push({roundNo:Number(p.roundNo),at:Date.now(),players:stats});
+    gameState.matchScoreApplied=true;
+    gameState.matchScores={...matchScores};
+    gameState.matchHistory=matchHistory.map(x=>({roundNo:x.roundNo,at:x.at,players:{...x.players}}));
+    gameState.pendingRound=null;
+    broadcastState();
+    broadcastResult(gameState.lastResults||{},[]);
+  }else{
+    gameState.pendingRound=p; broadcastState();
+  }
+}
+function renderMatchSummary(st=currentState){st=st||{};const scores=st.matchScores||{};const history=safeArray(st.matchHistory);const order=safeArray(st.order);const names=st.names||{};const body=$('matchSummaryBody'),sub=$('matchSummarySub'),box=$('matchHistoryBox'),actions=$('matchSummaryActions');if(!body||!sub||!box||!actions)return;const rows=order.map(id=>{const rs=history.filter(h=>h.players&&h.players[id]);const rk={1:0,2:0,3:0,4:0};rs.forEach(h=>{const r=Number(h.players[id]?.rank);if(rk[r]!==undefined)rk[r]++;});return{id,name:names[id]||id,total:Number(scores[id]||0),rounds:rs.length,rk};}).sort((a,b)=>b.total-a.total||a.name.localeCompare(b.name,'vi'));sub.textContent=`Chế độ Tính Điểm • ${history.length} ván • Nhất +3 • Nhì +2 • Ba +1 • Bét 0 • Tới Trắng/Giết ngộp +3 • Cóng 1 điểm/người • Thối/Chặt theo cấu hình.`;body.innerHTML=rows.map((r,i)=>{const cls=r.total>0?'match-total-plus':r.total<0?'match-total-minus':'';return `<tr><td><b>#${i+1} ${escapeHtml(r.name)}</b></td><td class="${cls}">${r.total>0?'+':''}${r.total}</td><td>${r.rounds}</td><td>${r.rk[1]}</td><td>${r.rk[2]}</td><td>${r.rk[3]}</td><td>${r.rk[4]}</td></tr>`;}).join('');box.innerHTML=history.length?`<h4 style="color:var(--gold);margin:0 0 6px;">📊 Chi tiết từng ván</h4><table><thead><tr><th>Ván</th>${order.map(id=>`<th>${escapeHtml(names[id]||id)}</th>`).join('')}</tr></thead><tbody>${history.map(h=>`<tr><td><b>${h.roundNo}</b></td>${order.map(id=>{const d=Number(h.players?.[id]?.delta||0);return `<td>${d>0?'+':''}${d}</td>`}).join('')}</tr>`).join('')}</tbody></table>`:'<div style="text-align:center;color:rgba(250,246,238,.5);padding:8px;">Chưa có ván nào được chốt điểm.</div>';actions.innerHTML='';
+if(isHost && st.gameMode==='POINTS'){
+  const edit=document.createElement('button');
+  edit.className='btn btn-outline';
+  edit.textContent='✏️ Điều chỉnh điểm';
+  edit.style.cssText='width:100%;font-size:15px;font-weight:900;margin-bottom:7px;display:block!important;';
+  edit.onclick=()=>{
+    if(st.pendingRound){
+      showResultOverlay(st.pendingRound.results||{}, st.pendingRound.settlements||[]);
+      setTimeout(()=>{const r=document.querySelector('#scoreEditRows');const b=document.querySelector('#btnFinishScoreEdit');if(r)r.classList.remove('hidden');if(b)b.style.display='inline-block';},50);
+    }else alert('Chưa có dữ liệu điểm của ván này để điều chỉnh.');
+  };
+  actions.appendChild(edit);
+}
+const close=document.createElement('button');close.className='btn btn-outline';close.textContent='Đóng';close.onclick=()=>$("matchSummaryOverlay").classList.add('hidden');actions.appendChild(close);
+const exitMatch=document.createElement('button');exitMatch.className='btn btn-danger';exitMatch.textContent='🚪 Thoát trận';exitMatch.onclick=()=>{ if(confirm('🚪 Thoát trận này?')) leaveRoom(); };actions.appendChild(exitMatch);
+$('matchSummaryOverlay').classList.remove('hidden');}
+
+function updateInGameSettingsUI(){
+  const b=$('btnToggleSound');
+  if(b) b.textContent=localSoundEnabled?'🔊 Âm thanh: BẬT':'🔇 Âm thanh: TẮT';
+  const p=$('btnPause30');
+  const used=!!(currentState && currentState.pauseUsed && currentState.pauseUsed[myId]);
+  const active=!!(currentState && currentState.pauseState && currentState.pauseState.active);
+  if(p){ p.disabled=used||active||!!(currentState&&currentState.isEnded); p.textContent=used?'⏸ Đã dùng lượt tạm dừng':(active?'⏸ Đang tạm dừng':'⏸ Tạm dừng 30 giây'); }
+}
+function updatePauseOverlay(st){
+  const ov=$('pauseOverlay'); if(!ov) return;
+  const ps=st&&st.pauseState;
+  if(ps&&ps.active&&Number(ps.until)>Date.now()){
+    ov.classList.remove('hidden');
+    const left=Math.max(0,Math.ceil((Number(ps.until)-Date.now())/1000));
+    const who=(st.names&&st.names[ps.by])||'người chơi';
+    $('pauseOverlayText').textContent=`${who} đã tạm dừng trận — còn ${left} giây.`;
+    const num=$('pauseCountdownNumber'); if(num) num.textContent=String(left);
+  }else{
+    ov.classList.add('hidden');
+    const num=$('pauseCountdownNumber'); if(num) num.textContent='0';
+  }
+  updateInGameSettingsUI();
+}
+function requestPause30(){
+  if(!currentState || currentState.isEnded) return;
+  if(currentState.pauseUsed && currentState.pauseUsed[myId]) return;
+  if(currentState.pauseState && currentState.pauseState.active) return;
+  if(isHost || isBotMode) handleHostUtilityRequest(myId,{kind:'pause30'});
+  else sendToHost({t:'utility', request:{kind:'pause30'}});
+}
+function handleHostUtilityRequest(playerId, req){
+  if(!isHost && !isBotMode) return;
+  if(!gameState || gameState.isEnded || !req) return;
+  if(req.kind==='pause30'){
+    if(!gameState.order.includes(playerId)) return;
+    gameState.pauseUsed=gameState.pauseUsed||{};
+    gameState.pauseState=gameState.pauseState||{active:false,by:null,until:0};
+    if(gameState.pauseUsed[playerId] || gameState.pauseState.active) return;
+    const startedAt=Date.now();
+    gameState.pauseUsed[playerId]=true;
+    gameState.pauseState={active:true,by:playerId,startedAt,until:startedAt+30000};
+    broadcastState();
+    setTimeout(()=>{
+      if(!gameState || gameState.isEnded) return;
+      const ps=gameState.pauseState;
+      if(ps && ps.active && String(ps.by)===String(playerId) && Number(ps.until)<=Date.now()){
+        const frozenMs=Math.max(0,Date.now()-Number(ps.startedAt||ps.until-30000));
+        if(gameState.turnDeadline) gameState.turnDeadline += frozenMs;
+        if(gameState.chopInterruptDeadline) gameState.chopInterruptDeadline += frozenMs;
+        if(gameState.forcedNextTurnAt) gameState.forcedNextTurnAt += frozenMs;
+        gameState.pauseState={active:false,by:null,startedAt:0,until:0};
+        broadcastState();
+      }
+    },30100);
+  }
+}
 
 function dealNewGame(){
   if(isRuleTestMode){ startRuleTestGame(); return; }
@@ -2917,6 +3345,7 @@ function startTimerLoop(){
   if(timerLoop) clearInterval(timerLoop);
   timerLoop = setInterval(()=>{
     if(!isHost || !gameState || gameState.isEnded) return;
+    if(gameState.pauseState && gameState.pauseState.active && Number(gameState.pauseState.until)>Date.now()) return;
     const currId = gameState.order[gameState.turnIdx];
     if(botList.includes(currId)){
       if(!gameState.botThinking){
@@ -2925,6 +3354,10 @@ function startTimerLoop(){
         const scheduledBotId = currId;
         setTimeout(() => {
           if(!gameState || gameState.isEnded) return;
+          if(gameState.pauseState && gameState.pauseState.active && Number(gameState.pauseState.until)>Date.now()){
+            gameState.botThinking = false;
+            return;
+          }
           // Nếu trong thời gian Bot đang chờ có CHẶT NGANG/đổi quyền,
           // callback cũ tuyệt đối không được gọi makeBotMove().
           if(scheduledTurnToken !== turnControlToken){
@@ -3704,6 +4137,7 @@ function resolveActionCards(hand, keys){
 
 function handleAction(playerId, action, isAuto=false){
   if(!gameState) return;
+  if(gameState.pauseState && gameState.pauseState.active && Number(gameState.pauseState.until)>Date.now()){ rejectTrackedAction(playerId, action, 'GAME_PAUSED'); return; }
 
   // V5 ABSOLUTE CHOP LOCK: nguồn khóa độc lập, không phụ thuộc turnIdx/currentCombo.
   if(gameState.chopTurnLockId && String(playerId) !== String(gameState.chopTurnLockId)){
@@ -4371,10 +4805,12 @@ function endGame(){
   // (làm mờ phần đã đánh, viền vàng nổi bật phần còn giữ) cho dễ nhìn/đối chiếu.
   const finalHandsSnapshot = {};
   gameState.order.forEach(id => {
-    const played = safeArray(gameState.revealedCards && gameState.revealedCards[id]);
+    // LỊCH SỬ NGỬA BÀI: revealedCards được append ngay lúc ACCEPT một nước đánh.
+    // Không gọi sortHand() ở bất kỳ bước nào cho danh sách này.
+    const playedHistory = safeArray(gameState.revealedCards && gameState.revealedCards[id]).map(c => ({r:c.r,s:c.s}));
     const remaining = safeArray(gameState.hands[id]);
     const seenPlayed = new Set();
-    const playedUnique = played.filter(c => {
+    const playedUnique = playedHistory.filter(c => {
       const k = cardKey(c);
       if(seenPlayed.has(k)) return false;
       seenPlayed.add(k); return true;
@@ -4591,6 +5027,7 @@ function endGame(){
     });
 
     applyPointsRoundToMatch(results);
+    gameState.lastResults = results;
     gameState.liveScores = {...matchScores};
     gameState.matchScores = {...matchScores};
     gameState.matchHistory = matchHistory.map(x => ({roundNo:x.roundNo,at:x.at,players:{...x.players}}));
@@ -4667,6 +5104,7 @@ function endGame(){
     Object.keys(results).forEach(id => { gameState.liveScores[id] = Number(results[id].score) || 0; });
     broadcastState();
   }
+  if(mode==='POINTS'){ gameState.liveScores = Object.fromEntries(Object.keys(results).map(id=>[id,Number(results[id].score)||0])); broadcastState(); }
   broadcastResult(results, settlements);
 }
 
@@ -4733,6 +5171,9 @@ function getViewStateForPlayer(id){
     stakeUnit: gameState.stakeUnit,
     hideCardCount: gameState.hideCardCount,
     isEnded: !!gameState.isEnded,
+    pauseState: gameState.pauseState || {active:false,by:null,until:0},
+    pauseUsed: gameState.pauseUsed || {},
+    pendingRound: gameState.pendingRound || null,
     isSpectator: !isPlayerInGame,
     instantWin: gameState.instantWin || null,
     // Ngửa bài toàn bộ cho cả bàn xem khi đang chờ xác nhận Tới Trắng
@@ -4879,6 +5320,7 @@ function applyState(st){
   
   const prevRoundToken = currentRoundToken;
   currentState = st;
+  updatePauseOverlay(st);
   currentState.order = safeArray(st.order);
   currentState.finished = safeArray(st.finished);
   const nextRoundToken = st.roundToken || null;
@@ -4981,16 +5423,24 @@ function renderOpponents(){
     const pId = order[(myIdx + i) % order.length];
     const posClass = positions[posIdx++];
     const isTurn = pId === currentState.turnId;
-    const isFinished = safeArray(currentState.finished).includes(pId);
+    const finishedList = safeArray(currentState.finished);
+    const finishRank = finishedList.indexOf(pId) + 1;
+    const isFinished = finishRank > 0;
     const isColdFolded = safeArray(currentState.coldFolded).includes(pId); // LUẬT CÓNG: chưa đánh lá nào khi có người về Nhất -> bị loại
 
     let cardCountVal = currentState.counts && currentState.counts[pId] !== undefined ? currentState.counts[pId] : 0;
     let cardCountDisplay = currentState.hideCardCount ? '🙈 Bài: ??' : `${cardCountVal} lá`;
     if(isColdFolded) cardCountDisplay = '❄️ Cóng - Bị loại';
-    else if(isFinished) cardCountDisplay = 'Về đích';
+    else if(isFinished){
+      const finishLabel = finishRank === 1 ? '🏆 VỀ NHẤT'
+        : finishRank === 2 ? '🥈 VỀ NHÌ'
+        : finishRank === 3 ? '🥉 VỀ BA'
+        : `🏁 VỀ ${finishRank}`;
+      cardCountDisplay = finishLabel;
+    }
 
     const slotDiv = document.createElement('div');
-    slotDiv.className = `p-slot ${posClass} ${isTurn?'active':''} ${isColdFolded?'cold-folded':''}`;
+    slotDiv.className = `p-slot ${posClass} ${isTurn?'active':''} ${isFinished?'finished':''} ${isColdFolded?'cold-folded':''}`;
     slotDiv.dataset.pid = pId;
 
     let waterSticker = '';
@@ -5019,7 +5469,7 @@ function renderOpponents(){
     slotDiv.innerHTML = `
       <div class="avatar" id="avatar-${pId}">👤</div>
       <div class="name">${escapeHtml(currentState.names[pId]) || 'Người chơi'}</div>
-      <div class="card-cnt">${cardCountDisplay}</div>
+      <div class="card-cnt">${isFinished ? `<span class="finish-badge finish-rank-${finishRank}">${finishRank===1?'🏆 VỀ NHẤT':finishRank===2?'🥈 VỀ NHÌ':finishRank===3?'🥉 VỀ BA':`🏁 VỀ ${finishRank}`}</span>` : cardCountDisplay}</div>
       ${waterSticker}
       ${kneelingSticker}
       ${lastCardSticker}
@@ -5510,6 +5960,10 @@ function updateHandActionButtonsOnly(){
 }
 
 setInterval(()=>{
+  if(currentState && currentState.pauseState && currentState.pauseState.active){
+    updatePauseOverlay(currentState);
+    return;
+  }
   if(!currentState || !currentState.turnDeadline || currentState.isEnded) return;
   const rem = Math.max(0, Math.ceil((currentState.turnDeadline - Date.now())/1000));
   const el = $('turnTimerSecs');
@@ -5522,6 +5976,11 @@ setInterval(()=>{
 // 250ms trong renderHand(), vốn là nguyên nhân chính gây giật/lag trên điện thoại mỗi khi có
 // người đủ điều kiện Chặt Ngang (dựng lại toàn bộ DOM bàn+tay bài liên tục trong 3 giây).
 setInterval(()=>{
+  if(currentState && currentState.pauseState && currentState.pauseState.active){
+    const btnChopPaused=$('btnChopInterrupt');
+    if(btnChopPaused && !btnChopPaused.classList.contains('hidden')) btnChopPaused.innerHTML='⏸️ TRẬN ĐANG TẠM DỪNG';
+    return;
+  }
   if(isRuleTestMode){ syncTestInstantChopUI(); return; }
   const btnChop = $('btnChopInterrupt');
   if(!btnChop || btnChop.classList.contains('hidden')) return;
@@ -5861,6 +6320,26 @@ function updateChatBadge(){
   else { btn.classList.remove('has-unread'); btn.textContent = '💬'; }
 }
 
+function broadcastScoreRoundEdit(scores){
+  if(!isHost || !currentState || !currentState.pendingRound) return;
+  const safe={}; safeArray(currentState.order).forEach(id=>{ const v=Number(scores[id]); if(Number.isFinite(v)) safe[id]=Math.trunc(v); });
+  handleScoreRoundEdit(myId,{scores:safe});
+}
+function confirmScoreRound(roundNo){
+  if(!currentState || !currentState.pendingRound) return;
+  if(isHost || isBotMode) handleScoreRoundConfirm(myId,{roundNo});
+  else sendToHost({t:'scoreRoundConfirm',roundNo});
+}
+function renderPlayedCardsInPlayOrder(line, playedCards){
+  // QUAN TRỌNG: đây là thứ tự lịch sử người chơi đã đánh.
+  // Không sort theo RANK/SUIT/SMART và không dùng sortHand().
+  safeArray(playedCards).forEach(c => {
+    const el = createCardEl(c, false, true, false);
+    el.classList.add('already-played');
+    line.appendChild(el);
+  });
+}
+
 function showResultOverlay(results, settlements){
   $('instantWinOverlay')?.classList.add('hidden');
   const tbody = $('resultBody'); tbody.innerHTML = '';
@@ -5922,12 +6401,16 @@ function showResultOverlay(results, settlements){
       const line = document.createElement('div');
       line.className = 'reveal-cards-line';
 
-      sortHand([...playedCards], 'RANK').forEach(c => {
-        const el = createCardEl(c, false, true, false);
-        el.classList.add('already-played');
-        line.appendChild(el);
-      });
-      sortHand([...remainingCards], 'RANK').forEach(c => {
+      // NGỬA BÀI CUỐI VÁN:
+      // THỨ TỰ LỊCH SỬ ĐÁNH: playedCards lấy trực tiếp từ revealedCards,
+      // nên phải giữ nguyên thứ tự người đó đánh xuống bàn.
+      // Bài ĐÃ ĐÁNH phải giữ đúng thứ tự thời gian người chơi đánh xuống,
+      // KHÔNG sort theo Giá Trị nữa. revealedCards được append theo từng nước đánh.
+      renderPlayedCardsInPlayOrder(line, playedCards);
+
+      // Bài còn giữ trên tay không có thứ tự "đã đánh", nên giữ nguyên thứ tự
+      // hiện có trong remainingCards, không tự sắp lại theo Giá Trị.
+      remainingCards.forEach(c => {
         const el = createCardEl(c, false, true, false);
         el.classList.add('still-holding');
         line.appendChild(el);
@@ -5951,7 +6434,7 @@ function showResultOverlay(results, settlements){
     const totalMap = currentState.matchScores || {};
     const pointRows = Object.values(results).sort((a,b)=>a.rank-b.rank).map(r=>{
       const rid = currentState.order.find(id => currentState.names[id] === r.name);
-      const total = Number(totalMap[rid] !== undefined ? totalMap[rid] : (matchScores[rid] || 0));
+      const total = currentState.pendingRound ? Number(currentState.pendingRound.proposedScores?.[rid] ?? (totalMap[rid] ?? 0)) : Number(totalMap[rid] !== undefined ? totalMap[rid] : (matchScores[rid] || 0));
       return `<div class="settlement-item"><span><b>${escapeHtml(r.name)}</b></span><span style="color:var(--gold);font-weight:bold;">Tổng: ${total>0?'+':''}${total} điểm</span></div>`;
     }).join('');
     stContent.innerHTML = `<div style="margin-bottom:7px;color:rgba(250,246,238,.65);font-size:12px;">📊 Điểm đã được cộng vào tổng trận — ván sau tiếp tục cộng dồn.</div>${pointRows}`;
@@ -5959,14 +6442,105 @@ function showResultOverlay(results, settlements){
     stContent.innerHTML = '<div style="text-align:center;color:rgba(250,246,238,.5)">Ghi nhận tư thế quỳ trực tiếp tại bàn.</div>';
   }
 
+  const editor=$('pendingScoreEditor');
+  if(editor){
+    editor.innerHTML='';
+    if(currentState && currentState.gameMode==='POINTS' && currentState.pendingRound && currentState.pendingRound.scoreEditActive){
+      const p=currentState.pendingRound, names=currentState.names||{}, order=safeArray(currentState.order);
+      const count=order.filter(id=>p.confirmations&&p.confirmations[id]).length;
+      const confirmed=!!(p.confirmations&&p.confirmations[myId]);
+      const wrap=document.createElement('div');
+      wrap.style.cssText='border:1px solid rgba(212,175,55,.35);border-radius:10px;padding:10px;background:rgba(0,0,0,.15)';
+      wrap.innerHTML='<div style="font-weight:800;color:var(--gold);margin-bottom:7px;">✋ XÁC NHẬN ĐIỂM VÁN '+p.roundNo+'</div><div id="scoreConfirmStatus" style="font-size:12px;margin-top:7px;color:rgba(250,246,238,.7)"></div><div id="scoreEditRows" class="hidden"></div>';
+      editor.appendChild(wrap);
+      const rows=wrap.querySelector('#scoreEditRows');
+      order.forEach(id=>{
+        const row=document.createElement('div'); row.style.cssText='display:grid;grid-template-columns:1fr 100px;gap:8px;align-items:center;margin:5px 0';
+        const label=document.createElement('span'); label.textContent=names[id]||id;
+        const input=document.createElement('input'); input.type='number'; input.value=Number(p.proposedScores?.[id]||0); input.dataset.scoreId=id; input.disabled=!isHost || !!p.confirmations?.[id]; input.style.cssText='width:100%;padding:7px;border-radius:7px;background:#111;color:var(--cream);border:1px solid var(--panel-line)';
+        row.append(label,input); rows.appendChild(row);
+      });
+      wrap.querySelector('#scoreConfirmStatus').textContent=`Đã xác nhận ${count}/${order.length} • cần ${p.threshold}/${order.length}.`;
+      const actionsBox=document.createElement('div'); actionsBox.style.cssText='display:flex;gap:7px;margin-top:8px;flex-wrap:wrap';
+      let save=null;
+      if(isHost){
+        save=document.createElement('button'); save.className='btn btn-gold'; save.textContent='✅ Sửa xong & gửi lại xác nhận'; save.style.display='none';
+        save.id='btnFinishScoreEdit';
+        save.onclick=()=>{
+          const scores={};
+          rows.querySelectorAll('input[data-score-id]').forEach(i=>scores[i.dataset.scoreId]=Number(i.value)||0);
+          broadcastScoreRoundEdit(scores);
+        };
+        actionsBox.appendChild(save);
+      }
+      if(!confirmed){
+        const c=document.createElement('button'); c.className='btn btn-outline'; c.textContent='✅ Tôi xác nhận điểm'; c.onclick=()=>confirmScoreRound(p.roundNo); actionsBox.appendChild(c);
+      }else{
+        const t=document.createElement('span'); t.style.cssText='padding:9px;color:var(--good);font-weight:700'; t.textContent='✅ Bạn đã xác nhận'; actionsBox.appendChild(t);
+      }
+      wrap.appendChild(actionsBox);
+    }
+  }
   const actions = $('resultActions'); actions.innerHTML = '';
-  if(isHost || isBotMode){
+  if(currentState && currentState.gameMode==='POINTS' && isHost){
+    const pending = currentState.pendingRound;
+    const order = safeArray(currentState.order);
+    const editActive = !!pending?.scoreEditActive;
+    const confirmCount = editActive ? order.filter(id=>pending.confirmations && pending.confirmations[id]).length : 0;
+    const confirmNeed = pending ? Number(pending.threshold || Math.ceil(2*order.length/3)) : order.length;
+    const fullyConfirmed = !!pending && editActive && confirmCount >= confirmNeed;
+
+    // Chủ phòng luôn có nút Điều chỉnh điểm, nhưng CHỈ mở ô sửa khi bấm.
+    const edit=document.createElement('button');
+    edit.className='btn btn-outline';
+    edit.textContent='✏️ Điều chỉnh điểm';
+    edit.style.cssText='width:100%;margin-bottom:7px;font-size:15px;font-weight:900;display:block!important;';
+    edit.onclick=()=>{
+      const p=currentState && currentState.pendingRound;
+      if(!p){ alert('Chưa có dữ liệu điểm của ván này để điều chỉnh.'); return; }
+      const scores={};
+      safeArray(p.order || currentState.order).forEach(id=>{ scores[id]=Number(p.proposedScores?.[id] ?? 0); });
+      handleScoreRoundEdit(myId,{scores});
+      setTimeout(()=>{
+        const rows=document.querySelector('#scoreEditRows');
+        const save=document.querySelector('#btnFinishScoreEdit');
+        if(rows) rows.classList.remove('hidden');
+        if(save) save.style.display='inline-block';
+        edit.style.display='none';
+      },0);
+    };
+    actions.appendChild(edit);
+
+    if(!editActive || fullyConfirmed){
+      // Không điều chỉnh điểm: không cần xác nhận lại, được sang ván mới ngay.
+      const next=document.createElement('button');
+      next.className='btn btn-gold';
+      next.textContent='▶️ Ván mới';
+      next.style.cssText='width:100%;font-weight:900;';
+      next.onclick=()=>dealNewGame();
+      actions.appendChild(next);
+    }else{
+      const wait=document.createElement('div');
+      wait.style.cssText='text-align:center;font-size:13px;color:rgba(250,246,238,.75)';
+      wait.textContent=`⏳ Đã xác nhận ${confirmCount}/${order.length} • cần ${confirmNeed}/${order.length} để sang ván mới.`;
+      actions.appendChild(wait);
+    }
+
+    const exit=document.createElement('button');
+    exit.className='btn btn-danger';
+    exit.textContent='🚪 Thoát trận';
+    exit.style.cssText='width:100%;margin-top:7px';
+    exit.onclick=()=>{ if(confirm('🚪 Thoát trận này?')) leaveRoom(); };
+    actions.appendChild(exit);
+  } else if(isHost || isBotMode){
     const btn = document.createElement('button');
     btn.className = 'btn btn-gold'; btn.textContent = 'Chơi Ván Mới'; btn.style.width = '100%';
     btn.onclick = () => { if(isRuleTestMode){ dealNewGame(); } else { dealNewGame(); } };
     actions.appendChild(btn);
+    const exit=document.createElement('button'); exit.className='btn btn-outline'; exit.textContent='🚪 Thoát trận'; exit.style.cssText='width:100%;margin-top:7px'; exit.onclick=()=>{ if(confirm('Thoát trận này?')) leaveRoom(); }; actions.appendChild(exit);
   } else {
     actions.innerHTML = '<div style="text-align:center;font-size:13px;color:rgba(250,246,238,.6);">Đang chờ chủ phòng bắt đầu ván mới...</div>';
+    const exit=document.createElement('button'); exit.className='btn btn-outline'; exit.textContent='🚪 Thoát trận'; exit.style.cssText='width:100%;margin-top:7px'; exit.onclick=()=>{ if(confirm('Thoát trận này?')) leaveRoom(); }; actions.appendChild(exit);
   }
   $('resultOverlay').classList.remove('hidden');
 }
