@@ -29,44 +29,19 @@
     button{border:0;border-radius:11px;padding:12px 16px;font-weight:800;cursor:pointer}
     #start{background:#fff;color:#111}#stop{background:#000b;color:#fff;border:1px solid #fff5}
     button:disabled{opacity:.45;cursor:not-allowed}.tip{font-size:12px;text-shadow:0 1px 6px #000}
-  
-    #aiPanel{position:absolute;top:72px;left:18px;width:min(360px,calc(100vw - 36px));
-      padding:14px;background:#000b;border:1px solid #fff3;border-radius:14px;
-      backdrop-filter:blur(10px);pointer-events:auto;box-shadow:0 10px 35px #0005}
-    #aiPanel h3{margin:0 0 10px;font-size:14px}
-    #aiPanel label{display:block;font-size:11px;opacity:.8;margin:8px 0 4px}
-    #aiPanel input,#aiPanel select{width:100%;padding:9px;border-radius:8px;border:1px solid #fff3;
-      background:#111;color:#fff;outline:none}
-    #aiPanel .row{display:flex;gap:7px;margin-top:9px}
-    #aiPanel button{flex:1;padding:9px}
-    #aiLog{margin-top:9px;max-height:120px;overflow:auto;font-size:12px;line-height:1.35;
-      white-space:pre-wrap;background:#0006;border-radius:8px;padding:8px}
-    #micAI{background:#ffd84d;color:#111}
-    @media(max-width:700px){#aiPanel{top:62px;left:10px;width:calc(100vw - 20px)}}
-</style>
+  </style>
 </head>
 <body>
 <div id="app"></div>
 <div id="hud">
-  <div id="aiPanel">
-    <h3>🧠 FREE AI VOICE TEST — không cần ElevenLabs</h3>
-    <label>Gemini API Key</label>
-    <input id="geminiKey" type="password" placeholder="AIza..." autocomplete="off">
-    <label>Ngôn ngữ microphone</label>
-    <select id="speechLang">
-      <option value="en-US">🇬🇧 English</option>
-      <option value="vi-VN">🇻🇳 Tiếng Việt</option>
-    </select>
-    <div class="row">
-      <button id="micAI">🎤 AI TALK</button>
-      <button id="clearAI">CLEAR</button>
-    </div>
-    <div id="aiLog">Miễn phí để test: MIC → Browser STT → Gemini → Gemini TTS → NPC.</div>
-  </div>
-
   <div class="top">
     <div><div class="title">ENGLISH STREET</div><div class="hint">WASD / Arrow keys • Speak naturally</div></div>
     <div id="status">OFFLINE</div>
+  </div>
+  <div id="geminiKeyBox" style="position:absolute;right:18px;top:58px;pointer-events:auto;display:flex;gap:6px;align-items:center;background:#0009;padding:8px;border-radius:12px;">
+    <input id="geminiKey" type="password" placeholder="Gemini API key" autocomplete="off"
+      style="width:230px;padding:9px 10px;border:0;border-radius:9px;outline:none;">
+    <button id="saveKey" style="padding:9px 12px;background:#fff;color:#111;">SAVE</button>
   </div>
   <div id="npcBox">
     <span>👋 <span id="npcName">NPC</span></span>
@@ -74,7 +49,7 @@
   </div>
   <div id="subtitle">Walk toward someone on the street.</div>
   <div class="controls">
-    <button id="start">🎤 START TALKING</button>
+    <button id="start">🎤 START GEMINI LIVE</button>
     <button id="stop" disabled>STOP</button>
     <span class="tip">Walk with WASD</span>
   </div>
@@ -83,14 +58,27 @@
 <script type="importmap">
 {
   "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+    "@google/genai": "https://esm.sh/@google/genai@1.17.0"
   }
 }
 </script>
 
 <script type="module">
 import * as THREE from "three";
+import { GoogleGenAI, Modality } from "@google/genai";
 
+const GEMINI_MODEL = "gemini-3.1-flash-live-preview";
+let geminiApiKey = "";
+let session = null;
+let micStream = null;
+let audioContext = null;
+let micSource = null;
+let processor = null;
+let silentGain = null;
+let playbackContext = null;
+let nextPlayTime = 0;
+let activeNPC = null;
 
 const app = document.getElementById("app");
 const status = document.getElementById("status");
@@ -100,11 +88,6 @@ const stop = document.getElementById("stop");
 const npcBox = document.getElementById("npcBox");
 const npcName = document.getElementById("npcName");
 const talk = document.getElementById("talk");
-const geminiKeyEl = document.getElementById("geminiKey");
-const micAI = document.getElementById("micAI");
-const clearAI = document.getElementById("clearAI");
-const aiLog = document.getElementById("aiLog");
-
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9fc7e8);
@@ -175,6 +158,7 @@ const npcs=[
 ];
 
 let nearbyNPC=null;
+let conversation=null;
 
 function setNearbyNPC(npc){
   if(nearbyNPC === npc) return;
@@ -188,10 +172,26 @@ function clearNearbyNPC(){
   if(!nearbyNPC) return;
   nearbyNPC=null;
   npcBox.style.display="none";
-  if(!busy) subtitle.textContent="Walk toward someone on the street.";
+  if(!conversation) subtitle.textContent="Walk toward someone on the street.";
 }
 
 talk.disabled=true;
+
+const geminiKeyInput = document.getElementById("geminiKey");
+const saveKeyBtn = document.getElementById("saveKey");
+
+geminiKeyInput.value = localStorage.getItem("gemini_api_key") || "AQ.Ab8RN6IhkgfA25BUA_jgZUgBHl9LXsIsIiaQ_lSAVuryPKMZqw";
+geminiApiKey = geminiKeyInput.value.trim();
+
+saveKeyBtn.onclick = () => {
+  geminiApiKey = geminiKeyInput.value.trim();
+  if (!geminiApiKey) {
+    subtitle.textContent = "Paste your Gemini API key first.";
+    return;
+  }
+  localStorage.setItem("gemini_api_key", geminiApiKey);
+  subtitle.textContent = "Gemini key saved. Press START TALKING.";
+};
 
 const keys=new Set();
 addEventListener("keydown",e=>keys.add(e.key.toLowerCase()));
@@ -219,265 +219,232 @@ function move(dt){
   camera.lookAt(player.position.x,1.5,player.position.z);
 }
 
-
-
-let listening = false;
-let startingRecognition = false;
-let busy = false;
-let history = [];
-let recognition = null;
-
-const speechLangEl = document.getElementById("speechLang");
-
-function logAI(text){
-  aiLog.textContent = text;
-}
-
-function getGeminiKey(){
-  const key = geminiKeyEl.value.trim();
-  if(!key) throw new Error("Cần nhập Gemini API Key.");
-  return key;
-}
-
-async function askGemini(userText){
-  const key = getGeminiKey();
-  const system = `You are a natural street conversation NPC in a 3D English learning game.
-Speak like a real person, not like a teacher or robot.
-Understand both English and Vietnamese and answer in the language the player used.
-Keep replies short and natural, usually 1-3 sentences.
-Current NPC: ${nearbyNPC?.name || "a friendly stranger"}.
-Role: ${nearbyNPC?.role || "local person"}.
-Scenario: ${nearbyNPC?.scenario || "casual street conversation"}.`;
-
-  const contents = [
-    {role:"user", parts:[{text:system}]},
-    ...history.map(x=>({role:x.role, parts:[{text:x.text}]})),
-    {role:"user", parts:[{text:userText}]}
-  ];
-
-  const r = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key="+encodeURIComponent(key),
-    {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        contents,
-        generationConfig:{maxOutputTokens:180}
-      })
-    }
-  );
-
-  const raw = await r.text();
-  if(!r.ok){
-    let msg=raw;
-    try{ const j=JSON.parse(raw); msg=j?.error?.message||raw; }catch{}
-    throw new Error("Gemini lỗi: "+msg);
+function bytesToBase64(bytes){
+  let binary="";
+  const chunkSize=0x8000;
+  for(let i=0;i<bytes.length;i+=chunkSize){
+    binary += String.fromCharCode(...bytes.subarray(i, Math.min(i+chunkSize, bytes.length)));
   }
-
-  const data=JSON.parse(raw);
-  const answer=data?.candidates?.[0]?.content?.parts?.map(p=>p.text||"").join("").trim();
-  if(!answer) throw new Error("Gemini không trả về câu trả lời.");
-
-  history.push({role:"user",text:userText},{role:"model",text:answer});
-  if(history.length>12) history=history.slice(-12);
-  return answer;
+  return btoa(binary);
 }
 
-function base64ToBytes(b64){
-  const bin=atob(b64);
-  const out=new Uint8Array(bin.length);
-  for(let i=0;i<bin.length;i++) out[i]=bin.charCodeAt(i);
-  return out;
+function floatTo16BitPCM(float32){
+  const out = new Int16Array(float32.length);
+  for(let i=0;i<float32.length;i++){
+    const s=Math.max(-1,Math.min(1,float32[i]));
+    out[i]=s<0?s*0x8000:s*0x7fff;
+  }
+  return new Uint8Array(out.buffer);
 }
 
-async function playPcm16Base64(b64, sampleRate=24000){
-  const bytes=base64ToBytes(b64);
-  const pcm=new Int16Array(bytes.buffer, bytes.byteOffset, Math.floor(bytes.byteLength/2));
-  const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-  if(audioCtx.state==="suspended") await audioCtx.resume();
+function base64ToBytes(base64){
+  const binary=atob(base64);
+  const bytes=new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+  return bytes;
+}
 
-  const buffer=audioCtx.createBuffer(1, pcm.length, sampleRate);
+function playPCM24k(base64){
+  const bytes=base64ToBytes(base64);
+  const samples=new Int16Array(bytes.buffer, bytes.byteOffset, Math.floor(bytes.byteLength/2));
+  if(!playbackContext) playbackContext=new AudioContext({sampleRate:24000});
+  const buffer=playbackContext.createBuffer(1,samples.length,24000);
   const channel=buffer.getChannelData(0);
-  for(let i=0;i<pcm.length;i++) channel[i]=pcm[i]/32768;
-
-  const source=audioCtx.createBufferSource();
+  for(let i=0;i<samples.length;i++) channel[i]=samples[i]/32768;
+  const source=playbackContext.createBufferSource();
   source.buffer=buffer;
-  source.connect(audioCtx.destination);
-  await new Promise(resolve=>{
-    source.onended=resolve;
-    source.start();
+  source.connect(playbackContext.destination);
+  const now=playbackContext.currentTime;
+  nextPlayTime=Math.max(nextPlayTime,now);
+  source.start(nextPlayTime);
+  nextPlayTime += buffer.duration;
+}
+
+function clearPlayback(){
+  if(playbackContext) nextPlayTime=playbackContext.currentTime;
+}
+
+async function startMicrophone(){
+  micStream=await navigator.mediaDevices.getUserMedia({
+    audio:{
+      channelCount:1,
+      echoCancellation:true,
+      noiseSuppression:true,
+      autoGainControl:true
+    }
   });
-  await audioCtx.close();
+
+  audioContext=new AudioContext();
+  await audioContext.resume();
+
+  micSource=audioContext.createMediaStreamSource(micStream);
+  processor=audioContext.createScriptProcessor(4096,1,1);
+  silentGain=audioContext.createGain();
+  silentGain.gain.value=0;
+
+  processor.onaudioprocess=(event)=>{
+    if(!session) return;
+    const input=event.inputBuffer.getChannelData(0);
+    const pcm=floatTo16BitPCM(input);
+    session.sendRealtimeInput({
+      audio:{
+        data:bytesToBase64(pcm),
+        mimeType:`audio/pcm;rate=${audioContext.sampleRate}`
+      }
+    });
+  };
+
+  micSource.connect(processor);
+  processor.connect(silentGain);
+  silentGain.connect(audioContext.destination);
 }
 
-async function speakGemini(text){
-  const key=getGeminiKey();
+async function stopMicrophone(){
+  try{ processor?.disconnect(); }catch{}
+  try{ micSource?.disconnect(); }catch{}
+  try{ silentGain?.disconnect(); }catch{}
+  processor=null; micSource=null; silentGain=null;
+  if(micStream){
+    micStream.getTracks().forEach(t=>t.stop());
+    micStream=null;
+  }
+  if(audioContext){
+    await audioContext.close().catch(()=>{});
+    audioContext=null;
+  }
+}
 
-  const r=await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key="+encodeURIComponent(key),
-    {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        contents:[{
-          parts:[{
-            text:`Speak naturally and conversationally. Do not sound like a narrator. Say exactly this reply:
-${text}`
-          }]
-        }],
-        generationConfig:{
-          responseModalities:["AUDIO"],
-          speechConfig:{
-            voiceConfig:{
-              prebuiltVoiceConfig:{voiceName:"Kore"}
-            }
-          }
-        }
-      })
-    }
-  );
-
-  const raw=await r.text();
-  if(!r.ok){
-    let msg=raw;
-    try{const j=JSON.parse(raw);msg=j?.error?.message||raw;}catch{}
-    throw new Error("Gemini TTS lỗi: "+msg);
+async function startConversation(targetNPC=null){
+  if(!geminiApiKey){
+    subtitle.textContent="Enter your Gemini API key in the box above first.";
+    geminiKeyInput.focus();
+    return;
   }
 
-  const data=JSON.parse(raw);
-  const part=data?.candidates?.[0]?.content?.parts?.find(
-    p=>p?.inlineData?.data
-  );
-  if(!part) throw new Error("Gemini TTS không trả về audio.");
-
-  await playPcm16Base64(part.inlineData.data,24000);
-}
-
-function setupBrowserSTT(){
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR) throw new Error("Chrome/Edge của bạn không hỗ trợ SpeechRecognition.");
-
-  if(!(location.protocol==="https:" || location.hostname==="localhost" || location.hostname==="127.0.0.1")){
-    throw new Error("Trang phải chạy qua HTTPS hoặc localhost thì mic mới hoạt động (không mở trực tiếp file HTML).");
-  }
-
-  // Tạo instance mới mỗi lần để tránh lỗi 'aborted' ngẫu nhiên khi tái sử dụng
-  recognition=new SR();
-  recognition.lang=speechLangEl.value;
-  recognition.continuous=false;
-  recognition.interimResults=true;
-  recognition.maxAlternatives=1;
-
-  recognition.onstart=()=>{
-    startingRecognition=false;
-    listening=true;
-    status.textContent="LISTENING";
-    subtitle.textContent=speechLangEl.value==="vi-VN"?"Tôi đang nghe...":"I'm listening...";
-    micAI.textContent="⏹ STOP";
-  };
-
-  recognition.onresult=async(event)=>{
-    let finalText="";
-    for(let i=event.resultIndex;i<event.results.length;i++){
-      const t=event.results[i][0].transcript;
-      if(event.results[i].isFinal) finalText+=t;
-      else if(t) subtitle.textContent=t;
-    }
-    if(finalText.trim()) await processUserSpeech(finalText.trim());
-  };
-
-  recognition.onerror=(event)=>{
-    startingRecognition=false;
-    listening=false;
-    micAI.textContent="🎤 AI TALK";
-    status.textContent="ERROR";
-    const code=event.error;
-    if(code==="no-speech"){
-      logAI("Không nghe thấy giọng nói. Hãy nói gần microphone hơn và thử lại.");
-    }else if(code==="not-allowed"){
-      logAI("Microphone bị chặn. Cho phép Microphone cho trang này rồi thử lại.");
-    }else if(code==="aborted"){
-      logAI("STT bị hủy (aborted). Thường do: (1) trang không chạy qua HTTPS/localhost, (2) bấm TALK 2 lần liên tiếp quá nhanh, hoặc (3) đổi tab/mất focus khi đang nghe. Hãy thử lại, chỉ bấm 1 lần và giữ tab đang mở.");
-    }else{
-      logAI("STT: "+code);
-    }
-  };
-
-  recognition.onend=()=>{
-    startingRecognition=false;
-    listening=false;
-    micAI.textContent="🎤 AI TALK";
-    if(!busy) status.textContent="READY";
-  };
-}
-
-async function processUserSpeech(text){
-  if(busy) return;
-  busy=true;
   try{
-    status.textContent="THINKING";
-    subtitle.textContent=text;
-    logAI("YOU: "+text);
+    status.textContent="CONNECTING...";
+    subtitle.textContent=targetNPC
+      ? `Connecting to ${targetNPC.name}...`
+      : "Connecting to Gemini Live...";
+    start.disabled=true;
+    talk.disabled=true;
+    activeNPC=targetNPC;
 
-    const answer=await askGemini(text);
+    const ai=new GoogleGenAI({apiKey:geminiApiKey});
 
-    subtitle.textContent=answer;
-    logAI("YOU: "+text+"\\n\\nNPC: "+answer);
+    const npcContext=targetNPC
+      ? `You are ${targetNPC.name}, a ${targetNPC.role}. Scenario: ${targetNPC.scenario}.`
+      : "You are a friendly person on an English-speaking city street.";
 
-    status.textContent="SPEAKING";
-    await speakGemini(answer);
-    status.textContent="READY";
+    session=await ai.live.connect({
+      model:GEMINI_MODEL,
+      config:{
+        responseModalities:[Modality.AUDIO],
+        inputAudioTranscription:{},
+        outputAudioTranscription:{},
+        thinkingConfig:{thinkingLevel:"minimal"},
+        systemInstruction:{
+          parts:[{
+            text:`${npcContext}
+You are a natural real-time conversation partner for a 3D street English practice game.
+Speak naturally and concisely. Use English by default, but understand Vietnamese and English.
+If the player speaks Vietnamese, you may reply in Vietnamese when helpful.
+Keep the conversation casual and interactive. Do not describe your internal reasoning.
+Do not say you are an AI unless directly asked.`
+          }]
+        }
+      },
+      callbacks:{
+        onopen(){
+          status.textContent="CONNECTED";
+          stop.disabled=false;
+          subtitle.textContent=targetNPC
+            ? `You're talking with ${targetNPC.name}. Speak naturally.`
+            : "Connected. Speak naturally.";
+        },
+        onmessage(message){
+          try{
+            const sc=message.serverContent;
+
+            if(sc?.inputTranscription?.text){
+              subtitle.textContent="You: "+sc.inputTranscription.text;
+            }
+            if(sc?.outputTranscription?.text){
+              subtitle.textContent=sc.outputTranscription.text;
+            }
+
+            const parts=sc?.modelTurn?.parts || [];
+            for(const part of parts){
+              const data=part?.inlineData?.data || part?.inline_data?.data;
+              const mime=part?.inlineData?.mimeType || part?.inline_data?.mimeType || "";
+              if(data && mime.startsWith("audio/")){
+                playPCM24k(data);
+              }
+            }
+
+            if(sc?.interrupted){
+              clearPlayback();
+              subtitle.textContent="Listening...";
+            }
+          }catch(err){
+            console.warn("Gemini message handling:",err);
+          }
+        },
+        onerror(e){
+          console.error(e);
+          status.textContent="ERROR";
+          subtitle.textContent="Gemini Live error: "+(e?.message||"check API key, billing and microphone permission.");
+          start.disabled=false;
+          stop.disabled=true;
+          talk.disabled=false;
+          stopMicrophone();
+          session=null;
+        },
+        onclose(e){
+          console.log("Gemini Live closed:",e);
+          status.textContent="OFFLINE";
+          start.disabled=false;
+          stop.disabled=true;
+          talk.disabled=false;
+          session=null;
+          stopMicrophone();
+        }
+      }
+    });
+
+    await startMicrophone();
+
   }catch(e){
     console.error(e);
     status.textContent="ERROR";
-    logAI(e.message||String(e));
-    subtitle.textContent="AI pipeline error.";
-  }finally{
-    busy=false;
+    start.disabled=false;
+    stop.disabled=true;
+    talk.disabled=false;
+    subtitle.textContent=e?.message || "Cannot start Gemini Live.";
+    session=null;
+    await stopMicrophone();
   }
 }
 
-function startFreeTalk(){
-  if(busy || startingRecognition || listening) return;
+start.onclick=()=>startConversation(nearbyNPC);
+talk.onclick=()=>startConversation(nearbyNPC);
+
+stop.onclick=async()=>{
   try{
-    getGeminiKey();
-    setupBrowserSTT();
-    startingRecognition=true;
-    status.textContent="STARTING MIC";
-    recognition.start();
-  }catch(e){
-    startingRecognition=false;
-    status.textContent="ERROR";
-    logAI(e.message||String(e));
-  }
-}
-
-function stopFreeTalk(){
-  try{ if(recognition && listening) recognition.stop(); }catch{}
-  startingRecognition=false;
-  listening=false;
-  micAI.textContent="🎤 AI TALK";
-  status.textContent="READY";
-}
-
-micAI.onclick=()=>{
-  if(listening || startingRecognition) stopFreeTalk();
-  else startFreeTalk();
+    session?.sendRealtimeInput?.({audioStreamEnd:true});
+  }catch{}
+  try{session?.close?.();}catch{}
+  session=null;
+  await stopMicrophone();
+  status.textContent="OFFLINE";
+  start.disabled=false;
+  stop.disabled=true;
+  talk.disabled=false;
+  npcBox.style.display=nearbyNPC ? "flex" : "none";
+  subtitle.textContent=nearbyNPC
+    ? `You're near ${nearbyNPC.name}. Press TALK to start a natural conversation.`
+    : "Walk toward someone on the street.";
 };
-
-clearAI.onclick=()=>{
-  history=[];
-  logAI("Conversation memory cleared.");
-  subtitle.textContent="Memory cleared.";
-};
-
-speechLangEl.onchange=()=>{
-  if(recognition && !listening) recognition.lang=speechLangEl.value;
-};
-
-start.onclick=()=>micAI.click();
-talk.onclick=()=>micAI.click();
-stop.onclick=()=>stopFreeTalk();
 
 addEventListener("resize",()=>{
   camera.aspect=innerWidth/innerHeight;
