@@ -1,265 +1,498 @@
-<!DOCTYPE html>
-<html lang="vi">
+<!doctype html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Học Giao Tiếp Tiếng Anh AI</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f2f2f7;
-            margin: 0;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-        h2 {
-            text-align: center;
-            color: #1c1c1e;
-            margin: 10px 0 5px 0;
-            font-size: 18px;
-        }
-        #chat-container {
-            flex: 1;
-            background: white;
-            border-radius: 16px;
-            padding: 15px;
-            overflow-y: auto;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            margin-bottom: 10px;
-        }
-        .message {
-            margin: 10px 0;
-            padding: 12px 16px;
-            border-radius: 20px;
-            max-width: 85%;
-            word-wrap: break-word;
-            font-size: 16px;
-            line-height: 1.4;
-        }
-        .user {
-            background-color: #34c759;
-            color: white;
-            margin-left: auto;
-        }
-        .bot {
-            background-color: #e5e5ea;
-            color: black;
-        }
-        #controls {
-            background: white;
-            padding: 12px;
-            border-radius: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        #input-row {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-        textarea {
-            flex: 1;
-            padding: 12px;
-            border: 1px solid #d1d1d6;
-            border-radius: 18px;
-            font-size: 16px;
-            outline: none;
-            resize: none;
-            font-family: inherit;
-            height: 44px;
-            line-height: 20px;
-        }
-        button {
-            border: none;
-            color: white;
-            font-size: 15px;
-            font-weight: bold;
-            cursor: pointer;
-            border-radius: 18px;
-            height: 44px;
-            transition: opacity 0.2s;
-        }
-        button:active {
-            opacity: 0.7;
-        }
-        .btn-clear {
-            background-color: #8e8e93;
-            padding: 0 12px;
-        }
-        .btn-send {
-            background-color: #007aff;
-            padding: 0 20px;
-        }
-        .btn-mic {
-            background-color: #ff3b30;
-            width: 100%;
-            border-radius: 22px;
-            font-size: 16px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 4px 6px rgba(255, 59, 48, 0.2);
-        }
-        .btn-mic.recording {
-            background-color: #5856d6;
-            animation: pulse 1.5s infinite;
-            box-shadow: 0 4px 6px rgba(88, 86, 214, 0.3);
-        }
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.6; }
-            100% { opacity: 1; }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>English Street Talk</title>
+  <style>
+    *{box-sizing:border-box}html,body,#app{margin:0;width:100%;height:100%;overflow:hidden}
+    body{font-family:Arial,sans-serif;background:#9fc7e8}
+    #hud{position:fixed;inset:0;z-index:5;pointer-events:none;color:#fff}
+    .top{display:flex;justify-content:space-between;padding:16px 18px;text-shadow:0 2px 8px #0008}
+    .title{font-size:20px;font-weight:800;letter-spacing:.12em}
+    .hint{font-size:12px;margin-top:4px;opacity:.85}
+    #status{background:#0009;padding:8px 12px;border-radius:20px;font-size:12px}
+    #subtitle{position:absolute;left:50%;bottom:105px;transform:translateX(-50%);
+      width:min(900px,88vw);min-height:42px;padding:10px 15px;text-align:center;
+      background:#000a;border-radius:14px;font-size:16px;line-height:1.4}
+    #npcBox{position:absolute;left:50%;bottom:178px;transform:translateX(-50%);
+      display:none;align-items:center;gap:10px;padding:10px 14px;background:#000b;
+      border:1px solid #fff4;border-radius:14px;backdrop-filter:blur(8px)}
+    #npcName{font-weight:800}
+    #talk{background:#ffd84d;color:#111}
+    .npcLabel{position:absolute;transform:translate(-50%,-100%);padding:4px 8px;
+      border-radius:8px;background:#000a;color:#fff;font-size:11px;pointer-events:none;
+      white-space:nowrap;font-weight:700}
+    .controls{position:absolute;bottom:25px;left:50%;transform:translateX(-50%);
+      display:flex;gap:8px;align-items:center;pointer-events:auto}
+    button{border:0;border-radius:11px;padding:12px 16px;font-weight:800;cursor:pointer}
+    #start{background:#fff;color:#111}#stop{background:#000b;color:#fff;border:1px solid #fff5}
+    button:disabled{opacity:.45;cursor:not-allowed}.tip{font-size:12px;text-shadow:0 1px 6px #000}
+  
+    #aiPanel{position:absolute;top:72px;left:18px;width:min(360px,calc(100vw - 36px));
+      padding:14px;background:#000b;border:1px solid #fff3;border-radius:14px;
+      backdrop-filter:blur(10px);pointer-events:auto;box-shadow:0 10px 35px #0005}
+    #aiPanel h3{margin:0 0 10px;font-size:14px}
+    #aiPanel label{display:block;font-size:11px;opacity:.8;margin:8px 0 4px}
+    #aiPanel input,#aiPanel select{width:100%;padding:9px;border-radius:8px;border:1px solid #fff3;
+      background:#111;color:#fff;outline:none}
+    #aiPanel .row{display:flex;gap:7px;margin-top:9px}
+    #aiPanel button{flex:1;padding:9px}
+    #aiLog{margin-top:9px;max-height:120px;overflow:auto;font-size:12px;line-height:1.35;
+      white-space:pre-wrap;background:#0006;border-radius:8px;padding:8px}
+    #micAI{background:#ffd84d;color:#111}
+    @media(max-width:700px){#aiPanel{top:62px;left:10px;width:calc(100vw - 20px)}}
+</style>
 </head>
 <body>
-
-    <h2>🇬🇧 Luyện Giao Tiếp Tiếng Anh AI 🤖</h2>
-
-    <div id="chat-container">
-        <div class="message bot">Hi! Chào mừng bạn đến với lớp học giao tiếp. <br><br><b>Cách học:</b><br>1. Nhấn nút <b>🎤 BẬT MIC</b>.<br>2. Nói một câu hoặc một đoạn dài bằng tiếng Anh.<br>3. Nhấn <b>🛑 TẮT MIC</b> khi nói xong.<br>4. Bấm <b>Gửi</b> để tôi sửa lỗi và trò chuyện cùng bạn nhé!</div>
+<div id="app"></div>
+<div id="hud">
+  <div id="aiPanel">
+    <h3>🧠 FREE AI VOICE TEST — không cần ElevenLabs</h3>
+    <label>Gemini API Key</label>
+    <input id="geminiKey" type="password" placeholder="AIza..." autocomplete="off">
+    <label>Ngôn ngữ microphone</label>
+    <select id="speechLang">
+      <option value="en-US">🇬🇧 English</option>
+      <option value="vi-VN">🇻🇳 Tiếng Việt</option>
+    </select>
+    <div class="row">
+      <button id="micAI">🎤 AI TALK</button>
+      <button id="clearAI">CLEAR</button>
     </div>
+    <div id="aiLog">Miễn phí để test: MIC → Browser STT → Gemini → Gemini TTS → NPC.</div>
+  </div>
 
-    <div id="controls">
-        <div id="input-row">
-            <button class="btn-clear" onclick="clearInput()">Xóa</button>
-            <textarea id="userInput" placeholder="Chữ bạn nói sẽ hiện ở đây..."></textarea>
-            <button class="btn-send" onclick="sendMessage()">Gửi</button>
-        </div>
-        <button id="micBtn" class="btn-mic" onclick="toggleMic()">
-            🎤 BẬT MIC ĐỂ NÓI
-        </button>
-    </div>
+  <div class="top">
+    <div><div class="title">ENGLISH STREET</div><div class="hint">WASD / Arrow keys • Speak naturally</div></div>
+    <div id="status">OFFLINE</div>
+  </div>
+  <div id="npcBox">
+    <span>👋 <span id="npcName">NPC</span></span>
+    <button id="talk">💬 TALK</button>
+  </div>
+  <div id="subtitle">Walk toward someone on the street.</div>
+  <div class="controls">
+    <button id="start">🎤 START TALKING</button>
+    <button id="stop" disabled>STOP</button>
+    <span class="tip">Walk with WASD</span>
+  </div>
+</div>
 
-    <script>
-        // LƯU Ý BẮT BUỘC: Hãy lấy lại Key mới bắt đầu bằng AIzaSy... dán vào đây để kích hoạt kết nối nhé!
-        const API_KEY = "AQ.Ab8RN6JNjENeyefl0geDtIAg9NUcUZPwcUzxB7C6yw84YjmlEQ"; 
-        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
+  }
+}
+</script>
 
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        let recognition;
-        let isRecording = false;
-        let finalTranscript = ''; // Đã sửa: Đưa biến này ra ngoài phạm vi toàn cục để tránh lỗi sập code
-        
-        const userInput = document.getElementById("userInput");
-        const micBtn = document.getElementById("micBtn");
-        const chatContainer = document.getElementById("chat-container");
+<script type="module">
+import * as THREE from "three";
 
-        if (SpeechRecognition) {
-            recognition = new SpeechRecognition();
-            recognition.lang = 'en-US';        
-            recognition.continuous = true;     
-            recognition.interimResults = true;  
 
-            recognition.onstart = () => {
-                isRecording = true;
-                micBtn.innerText = "🛑 TẮT MIC (Bấm khi nói xong)";
-                micBtn.classList.add("recording");
-            };
+const app = document.getElementById("app");
+const status = document.getElementById("status");
+const subtitle = document.getElementById("subtitle");
+const start = document.getElementById("start");
+const stop = document.getElementById("stop");
+const npcBox = document.getElementById("npcBox");
+const npcName = document.getElementById("npcName");
+const talk = document.getElementById("talk");
+const geminiKeyEl = document.getElementById("geminiKey");
+const micAI = document.getElementById("micAI");
+const clearAI = document.getElementById("clearAI");
+const aiLog = document.getElementById("aiLog");
 
-            recognition.onresult = (event) => {
-                let interimTranscript = '';
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript + ' ';
-                    } else {
-                        interimTranscript += event.results[i][0].transcript;
-                    }
-                }
-                userInput.value = finalTranscript + interimTranscript;
-                userInput.scrollTop = userInput.scrollHeight;
-            };
 
-            recognition.onerror = (event) => {
-                console.error("Lỗi Mic: ", event.error);
-                if(event.error === 'not-allowed') {
-                    alert("Hãy vào Cài đặt trên iPhone -> Safari -> Cho phép quyền truy cập Micro nhé!");
-                }
-                stopMicLogic();
-            };
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x9fc7e8);
+scene.fog = new THREE.Fog(0x9fc7e8, 35, 100);
 
-            recognition.onend = () => {
-                stopMicLogic();
-            };
-        } else {
-            alert("Trình duyệt này không hỗ trợ Mic. Bạn hãy mở trang web này bằng Safari trên iPhone nhé!");
-        }
+const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, .1, 200);
+camera.position.set(0,5,9);
 
-        function toggleMic() {
-            if (!recognition) return;
-            if (!isRecording) {
-                finalTranscript = userInput.value ? userInput.value + ' ' : '';
-                recognition.start();
-            } else {
-                recognition.stop();
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled = true;
+app.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xffffff,0x667788,2));
+const sun = new THREE.DirectionalLight(0xffffff,2.2);
+sun.position.set(20,30,10);
+sun.castShadow = true;
+scene.add(sun);
+
+function box(w,h,d,x,y,z,color){
+  const m = new THREE.Mesh(
+    new THREE.BoxGeometry(w,h,d),
+    new THREE.MeshStandardMaterial({color,roughness:.9})
+  );
+  m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true; scene.add(m);
+  return m;
+}
+
+box(18,.2,80,0,-.1,-20,0x40444a);
+box(5,.3,80,-11.5,0,-20,0xb9b1a4);
+box(5,.3,80,11.5,0,-20,0xb9b1a4);
+box(7,.2,80,-17.5,0,-20,0x6f9b61);
+box(7,.2,80,17.5,0,-20,0x6f9b61);
+
+for(let z=18;z>-58;z-=6) box(.25,.03,3,0,.03,z,0xf4e6b3);
+
+function building(x,z,color,h){
+  box(7,h,8,x,h/2,z,color);
+  for(let y=2;y<h-.5;y+=2)
+    for(let dx=-2;dx<=2;dx+=2)
+      box(.8,1,.08,x+dx,y,z-4.05,0x9ed1dc);
+}
+building(-16,10,0xcdb79c,8); building(16,4,0x9daab5,9);
+building(-16,-10,0xb8a2a0,10); building(16,-14,0xd2c0a0,7);
+building(-16,-30,0xaeb8a4,8); building(16,-34,0xc0a8a0,9);
+
+function person(color,x,z){
+  const g=new THREE.Group();
+  const body=new THREE.Mesh(
+    new THREE.CapsuleGeometry(.45,1,6,12),
+    new THREE.MeshStandardMaterial({color})
+  );
+  body.position.y=1; body.castShadow=true; g.add(body);
+  const head=new THREE.Mesh(
+    new THREE.SphereGeometry(.38,16,12),
+    new THREE.MeshStandardMaterial({color:0xe0b28f})
+  );
+  head.position.y=2; head.castShadow=true; g.add(head);
+  g.position.set(x,0,z); scene.add(g); return g;
+}
+
+const player=person(0x315a9b,0,5);
+const npcs=[
+  { mesh: person(0xc15f4a,-5,-4), name:"Alex", role:"local person", scenario:"casual street conversation" },
+  { mesh: person(0x4f8f66,5,-10), name:"Mia", role:"person going for coffee", scenario:"casual street conversation" },
+  { mesh: person(0x8065a9,-4,-22), name:"Sam", role:"traveler", scenario:"casual street conversation" }
+];
+
+let nearbyNPC=null;
+
+function setNearbyNPC(npc){
+  if(nearbyNPC === npc) return;
+  nearbyNPC=npc;
+  npcName.textContent=npc.name;
+  npcBox.style.display="flex";
+  subtitle.textContent=`You're near ${npc.name}. Press TALK to start a natural conversation.`;
+}
+
+function clearNearbyNPC(){
+  if(!nearbyNPC) return;
+  nearbyNPC=null;
+  npcBox.style.display="none";
+  if(!busy) subtitle.textContent="Walk toward someone on the street.";
+}
+
+talk.disabled=true;
+
+const keys=new Set();
+addEventListener("keydown",e=>keys.add(e.key.toLowerCase()));
+addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
+
+function move(dt){
+  let x=0,z=0;
+  if(keys.has("w")||keys.has("arrowup"))z--;
+  if(keys.has("s")||keys.has("arrowdown"))z++;
+  if(keys.has("a")||keys.has("arrowleft"))x--;
+  if(keys.has("d")||keys.has("arrowright"))x++;
+  const len=Math.hypot(x,z)||1;
+  player.position.x=Math.max(-8,Math.min(8,player.position.x+x/len*dt*4.5));
+  player.position.z=Math.max(-48,Math.min(12,player.position.z+z/len*dt*4.5));
+
+  let closest=null, best=Infinity;
+  for(const npc of npcs){
+    const d=player.position.distanceTo(npc.mesh.position);
+    if(d<best){best=d;closest=npc;}
+  }
+  if(best<3.2) setNearbyNPC(closest);
+  else clearNearbyNPC();
+
+  camera.position.lerp(new THREE.Vector3(player.position.x,5,player.position.z+8.5),.08);
+  camera.lookAt(player.position.x,1.5,player.position.z);
+}
+
+
+
+let listening = false;
+let startingRecognition = false;
+let busy = false;
+let history = [];
+let recognition = null;
+
+const speechLangEl = document.getElementById("speechLang");
+
+function logAI(text){
+  aiLog.textContent = text;
+}
+
+function getGeminiKey(){
+  const key = geminiKeyEl.value.trim();
+  if(!key) throw new Error("Cần nhập Gemini API Key.");
+  return key;
+}
+
+async function askGemini(userText){
+  const key = getGeminiKey();
+  const system = `You are a natural street conversation NPC in a 3D English learning game.
+Speak like a real person, not like a teacher or robot.
+Understand both English and Vietnamese and answer in the language the player used.
+Keep replies short and natural, usually 1-3 sentences.
+Current NPC: ${nearbyNPC?.name || "a friendly stranger"}.
+Role: ${nearbyNPC?.role || "local person"}.
+Scenario: ${nearbyNPC?.scenario || "casual street conversation"}.`;
+
+  const contents = [
+    {role:"user", parts:[{text:system}]},
+    ...history.map(x=>({role:x.role, parts:[{text:x.text}]})),
+    {role:"user", parts:[{text:userText}]}
+  ];
+
+  const r = await fetch(
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key="+encodeURIComponent(key),
+    {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        contents,
+        generationConfig:{maxOutputTokens:180}
+      })
+    }
+  );
+
+  const raw = await r.text();
+  if(!r.ok){
+    let msg=raw;
+    try{ const j=JSON.parse(raw); msg=j?.error?.message||raw; }catch{}
+    throw new Error("Gemini lỗi: "+msg);
+  }
+
+  const data=JSON.parse(raw);
+  const answer=data?.candidates?.[0]?.content?.parts?.map(p=>p.text||"").join("").trim();
+  if(!answer) throw new Error("Gemini không trả về câu trả lời.");
+
+  history.push({role:"user",text:userText},{role:"model",text:answer});
+  if(history.length>12) history=history.slice(-12);
+  return answer;
+}
+
+function base64ToBytes(b64){
+  const bin=atob(b64);
+  const out=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) out[i]=bin.charCodeAt(i);
+  return out;
+}
+
+async function playPcm16Base64(b64, sampleRate=24000){
+  const bytes=base64ToBytes(b64);
+  const pcm=new Int16Array(bytes.buffer, bytes.byteOffset, Math.floor(bytes.byteLength/2));
+  const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==="suspended") await audioCtx.resume();
+
+  const buffer=audioCtx.createBuffer(1, pcm.length, sampleRate);
+  const channel=buffer.getChannelData(0);
+  for(let i=0;i<pcm.length;i++) channel[i]=pcm[i]/32768;
+
+  const source=audioCtx.createBufferSource();
+  source.buffer=buffer;
+  source.connect(audioCtx.destination);
+  await new Promise(resolve=>{
+    source.onended=resolve;
+    source.start();
+  });
+  await audioCtx.close();
+}
+
+async function speakGemini(text){
+  const key=getGeminiKey();
+
+  const r=await fetch(
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key="+encodeURIComponent(key),
+    {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        contents:[{
+          parts:[{
+            text:`Speak naturally and conversationally. Do not sound like a narrator. Say exactly this reply:
+${text}`
+          }]
+        }],
+        generationConfig:{
+          responseModalities:["AUDIO"],
+          speechConfig:{
+            voiceConfig:{
+              prebuiltVoiceConfig:{voiceName:"Kore"}
             }
+          }
         }
+      })
+    }
+  );
 
-        function stopMicLogic() {
-            isRecording = false;
-            micBtn.innerText = "🎤 BẬT MIC ĐỂ NÓI";
-            micBtn.classList.remove("recording");
-        }
+  const raw=await r.text();
+  if(!r.ok){
+    let msg=raw;
+    try{const j=JSON.parse(raw);msg=j?.error?.message||raw;}catch{}
+    throw new Error("Gemini TTS lỗi: "+msg);
+  }
 
-        function clearInput() {
-            userInput.value = "";
-            finalTranscript = "";
-        }
+  const data=JSON.parse(raw);
+  const part=data?.candidates?.[0]?.content?.parts?.find(
+    p=>p?.inlineData?.data
+  );
+  if(!part) throw new Error("Gemini TTS không trả về audio.");
 
-        async function sendMessage() {
-            const rawText = userInput.value.trim();
-            if (!rawText) return;
+  await playPcm16Base64(part.inlineData.data,24000);
+}
 
-            if (isRecording) {
-                recognition.stop();
-            }
+function setupBrowserSTT(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR) throw new Error("Chrome/Edge của bạn không hỗ trợ SpeechRecognition.");
 
-            chatContainer.innerHTML += `<div class="message user">${rawText}</div>`;
-            clearInput();
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+  if(!(location.protocol==="https:" || location.hostname==="localhost" || location.hostname==="127.0.0.1")){
+    throw new Error("Trang phải chạy qua HTTPS hoặc localhost thì mic mới hoạt động (không mở trực tiếp file HTML).");
+  }
 
-            const loadingId = "loading-" + Date.now();
-            chatContainer.innerHTML += `<div class="message bot" id="${loadingId}">Giáo viên AI đang nghe và phân tích...</div>`;
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+  // Tạo instance mới mỗi lần để tránh lỗi 'aborted' ngẫu nhiên khi tái sử dụng
+  recognition=new SR();
+  recognition.lang=speechLangEl.value;
+  recognition.continuous=false;
+  recognition.interimResults=true;
+  recognition.maxAlternatives=1;
 
-            const promptSystem = `Bạn là một giáo viên dạy tiếng Anh giao tiếp bản xứ cực kỳ tâm huyết. Người học vừa nói một câu/đoạn văn sau đây: "${rawText}".
-            Nhiệm vụ của bạn trả về kết quả theo cấu trúc rõ ràng sau bằng tiếng Việt:
-            1. Câu chuẩn của người bản xứ (đặt trong thẻ <b> để in đậm).
-            2. Giải thích ngắn gọn bằng tiếng Việt xem họ sai ở đâu, hoặc cách dùng từ thế nào cho tự nhiên, Tây hơn.
-            3. Trả lời hoặc đặt một câu hỏi tiếng Anh ngắn gọn, đơn giản liên quan tới chủ đề để tiếp tục cuộc trò chuyện giao tiếp.`;
+  recognition.onstart=()=>{
+    startingRecognition=false;
+    listening=true;
+    status.textContent="LISTENING";
+    subtitle.textContent=speechLangEl.value==="vi-VN"?"Tôi đang nghe...":"I'm listening...";
+    micAI.textContent="⏹ STOP";
+  };
 
-            try {
-                const response = await fetch(API_URL, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: promptSystem }] }]
-                    })
-                });
+  recognition.onresult=async(event)=>{
+    let finalText="";
+    for(let i=event.resultIndex;i<event.results.length;i++){
+      const t=event.results[i][0].transcript;
+      if(event.results[i].isFinal) finalText+=t;
+      else if(t) subtitle.textContent=t;
+    }
+    if(finalText.trim()) await processUserSpeech(finalText.trim());
+  };
 
-                const data = await response.json();
-                let botReply = data.candidates[0].content.parts[0].text;
-                
-                // Đã sửa: Xử lý định dạng xuống dòng và dấu in đậm Markdown thành HTML chuẩn iOS
-                botReply = botReply.replace(/\n/g, "<br>");
-                botReply = botReply.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
+  recognition.onerror=(event)=>{
+    startingRecognition=false;
+    listening=false;
+    micAI.textContent="🎤 AI TALK";
+    status.textContent="ERROR";
+    const code=event.error;
+    if(code==="no-speech"){
+      logAI("Không nghe thấy giọng nói. Hãy nói gần microphone hơn và thử lại.");
+    }else if(code==="not-allowed"){
+      logAI("Microphone bị chặn. Cho phép Microphone cho trang này rồi thử lại.");
+    }else if(code==="aborted"){
+      logAI("STT bị hủy (aborted). Thường do: (1) trang không chạy qua HTTPS/localhost, (2) bấm TALK 2 lần liên tiếp quá nhanh, hoặc (3) đổi tab/mất focus khi đang nghe. Hãy thử lại, chỉ bấm 1 lần và giữ tab đang mở.");
+    }else{
+      logAI("STT: "+code);
+    }
+  };
 
-                document.getElementById(loadingId).innerHTML = botReply;
-            } catch (error) {
-                document.getElementById(loadingId).innerText = "Hệ thống bận hoặc API Key chưa đúng định dạng AIzaSy. Bạn hãy kiểm tra lại nhé!";
-                console.error(error);
-            }
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-    </script>
+  recognition.onend=()=>{
+    startingRecognition=false;
+    listening=false;
+    micAI.textContent="🎤 AI TALK";
+    if(!busy) status.textContent="READY";
+  };
+}
+
+async function processUserSpeech(text){
+  if(busy) return;
+  busy=true;
+  try{
+    status.textContent="THINKING";
+    subtitle.textContent=text;
+    logAI("YOU: "+text);
+
+    const answer=await askGemini(text);
+
+    subtitle.textContent=answer;
+    logAI("YOU: "+text+"\\n\\nNPC: "+answer);
+
+    status.textContent="SPEAKING";
+    await speakGemini(answer);
+    status.textContent="READY";
+  }catch(e){
+    console.error(e);
+    status.textContent="ERROR";
+    logAI(e.message||String(e));
+    subtitle.textContent="AI pipeline error.";
+  }finally{
+    busy=false;
+  }
+}
+
+function startFreeTalk(){
+  if(busy || startingRecognition || listening) return;
+  try{
+    getGeminiKey();
+    setupBrowserSTT();
+    startingRecognition=true;
+    status.textContent="STARTING MIC";
+    recognition.start();
+  }catch(e){
+    startingRecognition=false;
+    status.textContent="ERROR";
+    logAI(e.message||String(e));
+  }
+}
+
+function stopFreeTalk(){
+  try{ if(recognition && listening) recognition.stop(); }catch{}
+  startingRecognition=false;
+  listening=false;
+  micAI.textContent="🎤 AI TALK";
+  status.textContent="READY";
+}
+
+micAI.onclick=()=>{
+  if(listening || startingRecognition) stopFreeTalk();
+  else startFreeTalk();
+};
+
+clearAI.onclick=()=>{
+  history=[];
+  logAI("Conversation memory cleared.");
+  subtitle.textContent="Memory cleared.";
+};
+
+speechLangEl.onchange=()=>{
+  if(recognition && !listening) recognition.lang=speechLangEl.value;
+};
+
+start.onclick=()=>micAI.click();
+talk.onclick=()=>micAI.click();
+stop.onclick=()=>stopFreeTalk();
+
+addEventListener("resize",()=>{
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+
+let last=performance.now();
+function loop(now){
+  requestAnimationFrame(loop);
+  const dt=Math.min((now-last)/1000,.05); last=now;
+  move(dt);
+  npcs.forEach((n,i)=>n.mesh.rotation.y=Math.sin(now*.0006+i)*.08);
+  renderer.render(scene,camera);
+}
+loop(performance.now());
+</script>
 </body>
 </html>
