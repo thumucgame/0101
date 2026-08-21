@@ -75,7 +75,12 @@
     button{border:0;border-radius:11px;padding:12px 16px;font-weight:800;cursor:pointer}
     #start{background:#fff;color:#111}#stop{background:#000b;color:#fff;border:1px solid #fff5}
     button:disabled{opacity:.45;cursor:not-allowed}.tip{font-size:12px;text-shadow:0 1px 6px #000}
-  </style>
+  
+    html,body,#app{width:100%;height:100%;min-height:100%;}
+    @supports (padding: env(safe-area-inset-top)) {
+      #hud{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
+    }
+</style>
 </head>
 <body>
 <div id="app"></div>
@@ -257,10 +262,24 @@ const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, .1, 200);
 camera.position.set(0,5,9);
 
 const renderer = new THREE.WebGLRenderer({antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+// MOBILE FIX V5.2: keep WebGL lightweight and do not depend on motion/orientation sensors.
+const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, isMobileDevice ? 1.5 : 2));
 renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled = true;
 app.appendChild(renderer.domElement);
+// Mobile browsers may report sensor/gesture permission errors. This game does not require
+// DeviceOrientation/DeviceMotion, so never request them and keep touch input as fallback.
+renderer.domElement.style.touchAction = "none";
+renderer.domElement.style.webkitTapHighlightColor = "transparent";
+renderer.domElement.addEventListener("webglcontextlost", e => {
+  e.preventDefault();
+  console.warn("WebGL context lost; waiting for browser to restore it.");
+}, false);
+renderer.domElement.addEventListener("webglcontextrestored", () => {
+  console.warn("WebGL context restored.");
+  try { renderer.setSize(innerWidth, innerHeight, false); } catch {}
+}, false);
 
 scene.add(new THREE.HemisphereLight(0xffffff,0x667788,2));
 const sun = new THREE.DirectionalLight(0xffffff,2.2);
@@ -617,7 +636,8 @@ function resetJoy(){
 }
 
 joystick.addEventListener("touchstart",e=>{
-  const t=e.changedTouches[0];
+  const t=e.changedTouches && e.changedTouches[0];
+  if(!t) return;
   joyActive=true; joyId=t.identifier;
   joystick.classList.add("active");
   updateJoy(t.clientX,t.clientY);
@@ -816,6 +836,32 @@ async function releaseMicrophone(){
   }
 }
 
+function normalizeNPCNameText(text){
+  return (text||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+}
+
+function detectCalledNPC(text){
+  const t=normalizeNPCNameText(text);
+  if(!t) return null;
+  // Prefer the longest name so multi-word NPC names are handled safely.
+  const ordered=[...npcs].sort((a,b)=>b.name.length-a.name.length);
+  return ordered.find(n=>{
+    const name=normalizeNPCNameText(n.name);
+    return t===name || t.startsWith(name+' ') || t.includes(' '+name+' ') || t.endsWith(' '+name);
+  }) || null;
+}
+
+function activateNPCFromName(npc){
+  if(!npc) return;
+  activeNPC=npc;
+  npc.conversationPaused=true;
+  npc.walking=false;
+  nearbyNPC=npc;
+  npcName.textContent=`${npc.name} · ${npc.icon} ${npc.topic}`;
+  npcBox.style.display='flex';
+  subtitle.textContent=`${npc.name} is listening...`;
+}
+
 async function startConversation(targetNPC=null){
   if(isConnecting) return;
   if(session) return;
@@ -867,6 +913,9 @@ async function startConversation(targetNPC=null){
           parts:[{
             text:`${npcContext}
 You are a natural real-time conversation partner for a 3D street practice game.
+The street has NPCs with these names and roles: ${npcs.map(n=>`${n.name} (${n.role})`).join(', ')}.
+Do not speak or greet just because the connection starts. Wait for the learner to speak.
+When the learner clearly calls an NPC by name, respond as that NPC and stay in that NPC's role until the learner addresses another NPC by name.
 Speak whatever language the learner speaks to you in — match their language naturally.
 Speak naturally and concisely. Keep the conversation casual and interactive.
 Do not describe your internal reasoning. Do not say you are an AI unless directly asked.`
@@ -890,10 +939,16 @@ Do not describe your internal reasoning. Do not say you are an AI unless directl
             const sc=message.serverContent;
 
             if(sc?.inputTranscription?.text){
-              userTurnBuffer += sc.inputTranscription.text;
+              const heard=sc.inputTranscription.text;
+              userTurnBuffer += heard;
               subtitle.textContent="You: "+userTurnBuffer;
-              // The NPC keeps walking until the learner actually speaks.
-              if(activeNPC){
+
+              // Calling an NPC by name selects that NPC and makes only that
+              // NPC stop. No new Gemini session is created here.
+              const calledNPC=detectCalledNPC(heard);
+              if(calledNPC){
+                activateNPCFromName(calledNPC);
+              }else if(activeNPC){
                 activeNPC.conversationPaused=true;
                 activeNPC.walking=false;
               }
@@ -956,21 +1011,6 @@ Do not describe your internal reasoning. Do not say you are an AI unless directl
     await startMicrophone();
     await ensurePlaybackAudio();
 
-    // IMPORTANT: send the first text turn only after live.connect() has
-    // resolved and the microphone/audio are ready. The previous version tried
-    // to use `session` inside onopen, before the outer `session = await ...`
-    // assignment had completed, so the greeting was never sent.
-    if(targetNPC && session){
-      try{
-        session.sendRealtimeInput({
-          text:`As ${targetNPC.name}, greet the learner first, naturally and in character. Keep it short, then wait for their reply.`
-        });
-        subtitle.textContent=`${targetNPC.name} is speaking...`;
-      }catch(err){
-        console.error('Greeting send failed:',err);
-        subtitle.textContent='Connected, but could not start the NPC greeting: '+(err?.message||String(err));
-      }
-    }
 
     if(navigator.audioSession){
       try{ navigator.audioSession.type = "playback"; }catch{}
@@ -994,7 +1034,7 @@ Do not describe your internal reasoning. Do not say you are an AI unless directl
 }
 
 start.onclick=async()=>{
-  if(nearbyNPC) await selectNPCAndStart(nearbyNPC);
+  if(nearbyNPC) await startNPCConversation(nearbyNPC);
   else await startConversation(null);
 };
 talk.onclick=async()=>{
@@ -1030,6 +1070,12 @@ addEventListener("resize",()=>{
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight);
 });
+// iOS Safari/Android Chrome can change viewport size when the address bar appears/disappears.
+addEventListener("orientationchange",()=>setTimeout(()=>{
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight,false);
+},150),{passive:true});
 
 let last=performance.now();
 function loop(now){
