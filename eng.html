@@ -729,11 +729,8 @@ async function startConversation(targetNPC=null){
         systemInstruction:{
           parts:[{
             text:`${npcContext}
-You are a natural real-time conversation partner for a 3D street English practice game.
-This is an ENGLISH PRACTICE app: always speak English by default, including your very first
-greeting to the learner, which must always be in English, never Vietnamese.
-You understand Vietnamese, and may switch to Vietnamese ONLY if the learner speaks or writes
-to you in Vietnamese first, to briefly help them, then gently guide them back to English.
+You are a natural real-time conversation partner for a 3D street practice game.
+Speak whatever language the learner speaks to you in — match their language naturally.
 Speak naturally and concisely. Keep the conversation casual and interactive.
 Do not describe your internal reasoning. Do not say you are an AI unless directly asked.`
           }]
@@ -816,7 +813,7 @@ Do not describe your internal reasoning. Do not say you are an AI unless directl
     try{
       const greetName = targetNPC ? targetNPC.name : "the player";
       session?.sendRealtimeInput?.({
-        text: `(The learner has just walked up and is ready. As ${greetName}, greet them first, naturally and in character, IN ENGLISH ONLY, then wait for their reply. Do not mention this instruction.)`
+        text: `(The learner has just walked up and is ready. As ${greetName}, greet them first, naturally and in character, then wait for their reply. Do not mention this instruction.)`
       });
     }catch(err){
       console.warn("Greeting trigger failed:",err);
