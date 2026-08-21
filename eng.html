@@ -1,1104 +1,162 @@
-
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>English Street Talk</title>
-  <style>
-    *{box-sizing:border-box}html,body,#app{margin:0;width:100%;height:100%;overflow:hidden}
-    body{font-family:Arial,sans-serif;background:#9fc7e8}
-    #hud{position:fixed;inset:0;z-index:5;pointer-events:none;color:#fff}
-    .top{display:flex;justify-content:space-between;padding:16px 18px;text-shadow:0 2px 8px #0008}
-    .title{font-size:20px;font-weight:800;letter-spacing:.12em}
-    .hint{font-size:12px;margin-top:4px;opacity:.85}
-    #status{background:#0009;padding:8px 12px;border-radius:20px;font-size:12px}
-    #subtitle{position:absolute;left:50%;bottom:105px;transform:translateX(-50%);
-      width:min(900px,88vw);min-height:42px;padding:10px 15px;text-align:center;
-      background:#000a;border-radius:14px;font-size:16px;line-height:1.4}
-    #npcBox{position:absolute;left:50%;bottom:178px;transform:translateX(-50%);
-      display:none;align-items:center;gap:10px;padding:10px 14px;background:#000b;
-      border:1px solid #fff4;border-radius:14px;backdrop-filter:blur(8px)}
-    #npcName{font-weight:800}
-    #talk{background:#ffd84d;color:#111}
-    .npcLabel{position:absolute;transform:translate(-50%,-100%);padding:5px 10px;
-      border-radius:9px;background:#000c;color:#fff;font-size:12px;pointer-events:none;
-      white-space:nowrap;font-weight:800;border:1px solid #fff3}
-    #topicsToggle{position:fixed;left:18px;top:112px;pointer-events:auto;background:#000b;
-      color:#fff;border:1px solid #fff4;border-radius:10px;padding:9px 13px;font-size:12px;
-      font-weight:800;cursor:pointer;z-index:6}
-    #topicsPanel{position:fixed;left:18px;top:158px;width:min(300px,86vw);max-height:60vh;
-      overflow-y:auto;background:#000c;border:1px solid #fff3;border-radius:14px;
-      padding:10px;display:none;flex-direction:column;gap:8px;pointer-events:auto;z-index:6;
-      backdrop-filter:blur(8px)}
-    #topicsPanel.open{display:flex}
-    .roomCard{display:flex;gap:10px;align-items:center;background:#fff1;border:1px solid #fff2;
-      border-radius:12px;padding:9px 11px;cursor:pointer;text-align:left}
-    .roomCard:hover{background:#fff2}
-    .roomCard .ic{font-size:22px;line-height:1}
-    .roomCard .info{display:flex;flex-direction:column;gap:2px}
-    .roomCard .rt{font-weight:800;font-size:13px}
-    .roomCard .rd{font-size:11px;opacity:.8;line-height:1.3}
-    #chatLogToggle{position:fixed;right:18px;top:150px;pointer-events:auto;background:#000b;
-      color:#fff;border:1px solid #fff4;border-radius:10px;padding:9px 13px;font-size:12px;
-      font-weight:800;cursor:pointer;z-index:6}
-    #chatLog{position:fixed;right:18px;top:196px;width:min(320px,86vw);max-height:46vh;
-      background:#000c;border:1px solid #fff3;border-radius:14px;
-      padding:10px;display:none;flex-direction:column;gap:8px;pointer-events:auto;z-index:6;
-      backdrop-filter:blur(8px)}
-    #chatLog.open{display:flex}
-    #chatLogHeader{display:flex;justify-content:space-between;align-items:center}
-    #chatLogHeader span{font-size:11px;font-weight:800;opacity:.7;letter-spacing:.04em}
-    #clearChatLog{background:#fff1;color:#fff;border:1px solid #fff3;border-radius:8px;
-      padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer}
-    #chatLogMessages{overflow-y:auto;display:flex;flex-direction:column;gap:8px}
-    #chatLogCompose{display:flex;gap:6px;margin-top:2px}
-    #chatLogInput{flex:1;padding:9px 10px;border:0;border-radius:9px;outline:none;font-size:13px;
-      background:#fff;color:#111}
-    #chatLogSend{padding:9px 12px;background:#2f6fed;color:#fff;border:0;border-radius:9px;
-      font-weight:800;font-size:12px;cursor:pointer}
-    #chatLogSend:disabled{opacity:.5;cursor:not-allowed}
-    #chatLog .empty{color:#fff9;font-size:12px;text-align:center;padding:10px 4px}
-    .msg{max-width:85%;padding:8px 12px;border-radius:13px;font-size:13px;line-height:1.35;
-      word-wrap:break-word}
-    .msg .who{font-size:10px;opacity:.75;margin-bottom:2px;font-weight:800;
-      letter-spacing:.03em;text-transform:uppercase}
-    .msg.user{align-self:flex-end;background:#2f6fed;color:#fff;border-bottom-right-radius:4px}
-    .msg.npc{align-self:flex-start;background:#fff;color:#111;border-bottom-left-radius:4px}
-    #joystick{position:fixed;left:22px;bottom:130px;width:120px;height:120px;border-radius:50%;
-      background:#0005;border:2px solid #fff5;pointer-events:auto;touch-action:none;z-index:6}
-    #joystickKnob{position:absolute;left:50%;top:50%;width:54px;height:54px;border-radius:50%;
-      background:#fffc;transform:translate(-50%,-50%);pointer-events:none;transition:background .15s}
-    #joystick.active #joystickKnob{background:#ffd84dcc}
-    .controls{position:absolute;bottom:25px;left:50%;transform:translateX(-50%);
-      display:flex;gap:8px;align-items:center;pointer-events:auto}
-    button{border:0;border-radius:11px;padding:12px 16px;font-weight:800;cursor:pointer}
-    #start{background:#fff;color:#111}#stop{background:#000b;color:#fff;border:1px solid #fff5}
-    button:disabled{opacity:.45;cursor:not-allowed}.tip{font-size:12px;text-shadow:0 1px 6px #000}
-  
-    html,body,#app{width:100%;height:100%;min-height:100%;}
-    @supports (padding: env(safe-area-inset-top)) {
-      #hud{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
-    }
-</style>
-</head>
-<body>
-<div id="app"></div>
-<div id="hud">
-  <div class="top">
-    <div><div class="title">ENGLISH STREET</div><div class="hint">WASD / Arrow keys • Speak naturally</div></div>
-    <div id="status">OFFLINE</div>
-  </div>
-  <button id="chatLogToggle">💬 CHAT LOG</button>
-  <div id="chatLog">
-    <div id="chatLogHeader"><span>TRANSCRIPT</span><button id="clearChatLog">🗑 Clear</button></div>
-    <div id="chatLogMessages"><div class="empty">Conversation transcript will appear here.</div></div>
-    <div id="chatLogCompose">
-      <input id="chatLogInput" type="text" placeholder="Type a message..." autocomplete="off">
-      <button id="chatLogSend">SEND</button>
-    </div>
-  </div>
-  <button id="topicsToggle">📚 TOPICS</button>
-  <div id="topicsPanel"></div>
-  <div id="geminiKeyBox" style="position:absolute;right:18px;top:58px;pointer-events:auto;display:flex;gap:6px;align-items:center;background:#0009;padding:8px;border-radius:12px;">
-    <input id="geminiKey" type="password" placeholder="Gemini API key" autocomplete="off"
-      style="width:230px;padding:9px 10px;border:0;border-radius:9px;outline:none;">
-    <button id="saveKey" style="padding:9px 12px;background:#fff;color:#111;">SAVE</button>
-  </div>
-  <div id="outputBox" style="display:none;position:absolute;right:18px;top:104px;pointer-events:auto;background:#0009;padding:8px;border-radius:12px;gap:6px;align-items:center;">
-    <select id="outputSelect" style="padding:7px 8px;border:0;border-radius:8px;max-width:180px;font-size:12px;"></select>
-    <button id="choosePickerBtn" style="display:none;padding:7px 10px;background:#fff;color:#111;font-size:12px;border-radius:8px;border:0;font-weight:800;cursor:pointer;">🎧 Choose</button>
-  </div>
-  <div id="npcBox">
-    <span>👋 <span id="npcName">NPC</span></span>
-    <button id="talk">💬 TALK</button>
-  </div>
-  <div id="subtitle">Walk toward someone on the street.</div>
-  <div id="joystick"><div id="joystickKnob"></div></div>
-  <audio id="playbackAudio" autoplay playsinline style="display:none"></audio>
-  <div class="controls">
-    <button id="start">🎤 START GEMINI LIVE</button>
-    <button id="stop" disabled>STOP</button>
-    <span class="tip">Walk with WASD</span>
-  </div>
-</div>
-
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
-    "@google/genai": "https://esm.sh/@google/genai@2.17.1"
-  }
-}
-</script>
-
-<script type="module">
-import * as THREE from "three";
-import { GoogleGenAI, Modality } from "@google/genai";
-
-const GEMINI_MODEL = "gemini-3.1-flash-live-preview";
-let geminiApiKey = "";
-let session = null;
-let micStream = null;
 let audioContext = null;
+let micStream = null;
 let micSource = null;
 let processor = null;
-let silentGain = null;
-let playbackContext = null;
 let nextPlayTime = 0;
-let activeNPC = null;
-let isConnecting = false;
-let connectionId = 0;
+let isAiSpeaking = false;
 
-const app = document.getElementById("app");
-const status = document.getElementById("status");
-const subtitle = document.getElementById("subtitle");
-const start = document.getElementById("start");
-const stop = document.getElementById("stop");
-const npcBox = document.getElementById("npcBox");
-const npcName = document.getElementById("npcName");
-const talk = document.getElementById("talk");
-const chatLog = document.getElementById("chatLog");
-const chatLogMessages = document.getElementById("chatLogMessages");
-const chatLogToggle = document.getElementById("chatLogToggle");
-const clearChatLogBtn = document.getElementById("clearChatLog");
-
-let chatOpen = false;
-let userTurnBuffer = "";
-let npcTurnBuffer = "";
-
-const CHAT_HISTORY_KEY = "english_street_chat_history_v1";
-let chatHistory = [];
-try{ chatHistory = JSON.parse(localStorage.getItem(CHAT_HISTORY_KEY) || "[]"); }catch{ chatHistory = []; }
-
-function currentNPCLabel(){
-  return activeNPC ? activeNPC.name : "Stranger";
-}
-
-function renderChatMessage(who, text){
-  if(chatLogMessages.querySelector(".empty")) chatLogMessages.innerHTML = "";
-  const el = document.createElement("div");
-  el.className = "msg " + (who === "You" ? "user" : "npc");
-  const whoEl = document.createElement("div");
-  whoEl.className = "who";
-  whoEl.textContent = who;
-  const textEl = document.createElement("div");
-  textEl.textContent = text.trim();
-  el.appendChild(whoEl);
-  el.appendChild(textEl);
-  chatLogMessages.appendChild(el);
-  chatLogMessages.scrollTop = chatLogMessages.scrollHeight;
-}
-
-function saveChatHistory(){
-  try{ localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(chatHistory)); }catch{}
-}
-
-function addChatMessage(who, text){
-  if(!text || !text.trim()) return;
-  renderChatMessage(who, text);
-  chatHistory.push({who, text: text.trim(), ts: Date.now()});
-  saveChatHistory();
-}
-
-// Restore previous conversation history on load
-if(chatHistory.length){
-  chatHistory.forEach(m => renderChatMessage(m.who, m.text));
-}
-
-clearChatLogBtn.onclick = () => {
-  chatHistory = [];
-  saveChatHistory();
-  chatLogMessages.innerHTML = '<div class="empty">Conversation transcript will appear here.</div>';
-};
-
-const chatLogInput = document.getElementById("chatLogInput");
-const chatLogSend = document.getElementById("chatLogSend");
-
-function sendTypedMessage(){
-  const text = chatLogInput.value.trim();
-  if(!text) return;
-  if(!session){
-    subtitle.textContent = "Press TALK to start a conversation first, then you can type messages.";
-    return;
+// 1. Hàm khởi tạo/kích hoạt AudioContext duy nhất cho cả Thu & Phát
+async function initAudioContext() {
+  if (!audioContext || audioContext.state === "closed") {
+    // Tạo AudioContext chung với sampleRate cố định
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    audioContext = new AudioCtx({ sampleRate: 24000 });
   }
-  addChatMessage("You", text);
-  try{
-    session.sendRealtimeInput({text});
-  }catch(err){
-    console.warn("Failed to send typed message:", err);
-    subtitle.textContent = "Could not send message. Check your connection.";
-  }
-  chatLogInput.value = "";
-  chatLogInput.focus();
-}
-
-chatLogSend.onclick = sendTypedMessage;
-chatLogInput.addEventListener("keydown", e=>{
-  if(e.key === "Enter"){
-    e.preventDefault();
-    sendTypedMessage();
-  }
-});
-
-function finalizeTurn(){
-  if(userTurnBuffer.trim()) addChatMessage("You", userTurnBuffer);
-  if(npcTurnBuffer.trim()) addChatMessage(currentNPCLabel(), npcTurnBuffer);
-  userTurnBuffer = "";
-  npcTurnBuffer = "";
-}
-
-chatLogToggle.onclick = () => {
-  chatOpen = !chatOpen;
-  chatLog.classList.toggle("open", chatOpen);
-  chatLogToggle.textContent = chatOpen ? "💬 HIDE LOG" : "💬 CHAT LOG";
-};
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x9fc7e8);
-scene.fog = new THREE.Fog(0x9fc7e8, 35, 100);
-
-const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, .1, 200);
-camera.position.set(0,5,9);
-
-const renderer = new THREE.WebGLRenderer({antialias:true});
-// MOBILE FIX V5.2: keep WebGL lightweight and do not depend on motion/orientation sensors.
-const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-renderer.setPixelRatio(Math.min(devicePixelRatio || 1, isMobileDevice ? 1.5 : 2));
-renderer.setSize(innerWidth,innerHeight);
-renderer.shadowMap.enabled = true;
-app.appendChild(renderer.domElement);
-// Mobile browsers may report sensor/gesture permission errors. This game does not require
-// DeviceOrientation/DeviceMotion, so never request them and keep touch input as fallback.
-renderer.domElement.style.touchAction = "none";
-renderer.domElement.style.webkitTapHighlightColor = "transparent";
-renderer.domElement.addEventListener("webglcontextlost", e => {
-  e.preventDefault();
-  console.warn("WebGL context lost; waiting for browser to restore it.");
-}, false);
-renderer.domElement.addEventListener("webglcontextrestored", () => {
-  console.warn("WebGL context restored.");
-  try { renderer.setSize(innerWidth, innerHeight, false); } catch {}
-}, false);
-
-scene.add(new THREE.HemisphereLight(0xffffff,0x667788,2));
-const sun = new THREE.DirectionalLight(0xffffff,2.2);
-sun.position.set(20,30,10);
-sun.castShadow = true;
-scene.add(sun);
-
-function box(w,h,d,x,y,z,color){
-  const m = new THREE.Mesh(
-    new THREE.BoxGeometry(w,h,d),
-    new THREE.MeshStandardMaterial({color,roughness:.9})
-  );
-  m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true; scene.add(m);
-  return m;
-}
-
-box(18,.2,80,0,-.1,-20,0x40444a);
-box(5,.3,80,-11.5,0,-20,0xb9b1a4);
-box(5,.3,80,11.5,0,-20,0xb9b1a4);
-box(7,.2,80,-17.5,0,-20,0x6f9b61);
-box(7,.2,80,17.5,0,-20,0x6f9b61);
-
-for(let z=18;z>-58;z-=6) box(.25,.03,3,0,.03,z,0xf4e6b3);
-
-function building(x,z,color,h){
-  box(7,h,8,x,h/2,z,color);
-  for(let y=2;y<h-.5;y+=2)
-    for(let dx=-2;dx<=2;dx+=2)
-      box(.8,1,.08,x+dx,y,z-4.05,0x9ed1dc);
-}
-building(-16,10,0xcdb79c,8); building(16,4,0x9daab5,9);
-building(-16,-10,0xb8a2a0,10); building(16,-14,0xd2c0a0,7);
-building(-16,-30,0xaeb8a4,8); building(16,-34,0xc0a8a0,9);
-
-function person(color,x,z){
-  const g=new THREE.Group();
-  const body=new THREE.Mesh(
-    new THREE.CapsuleGeometry(.45,1,6,12),
-    new THREE.MeshStandardMaterial({color})
-  );
-  body.position.y=1; body.castShadow=true; g.add(body);
-  const head=new THREE.Mesh(
-    new THREE.SphereGeometry(.38,16,12),
-    new THREE.MeshStandardMaterial({color:0xe0b28f})
-  );
-  head.position.y=2; head.castShadow=true; g.add(head);
-  g.position.set(x,0,z); scene.add(g); return g;
-}
-
-const player=person(0x315a9b,0,5);
-const npcs=[
-  { mesh: person(0xc15f4a,-5,-4), name:"Lucy", icon:"☕", topic:"Coffee Shop",
-    role:"friendly barista at a coffee shop",
-    description:"Order a drink and a snack, ask about the menu.",
-    scenario:"The player is a customer at your coffee shop. Ask what they'd like to drink, suggest sizes and snacks, make small talk, and handle payment.", color:0xc15f4a },
-  { mesh: person(0x4f8f66,5,-10), name:"Ben", icon:"🛍️", topic:"Clothing Store",
-    role:"shop assistant in a clothing store",
-    description:"Shop for clothes, ask about sizes, colors and prices.",
-    scenario:"The player is shopping in your clothing store. Help them find items, discuss sizes/colors/prices, and offer the fitting room.", color:0x4f8f66 },
-  { mesh: person(0x8065a9,-4,-16), name:"Grace", icon:"✈️", topic:"Airport Check-in",
-    role:"airline check-in agent at the airport",
-    description:"Check in for a flight, talk about luggage and seat choice.",
-    scenario:"The player is checking in for a flight. Ask for their passport, destination, luggage, and seat preference, then give boarding info.", color:0x8065a9 },
-  { mesh: person(0xd1a25c,5,-22), name:"Daniel", icon:"🏨", topic:"Hotel Front Desk",
-    role:"hotel receptionist",
-    description:"Check into a hotel and ask about the room and amenities.",
-    scenario:"The player is checking into your hotel. Confirm their reservation, ask for ID, explain the room, breakfast times, wifi, and checkout time.", color:0xd1a25c },
-  { mesh: person(0xe0637a,-5,-28), name:"Maria", icon:"🍽️", topic:"Restaurant",
-    role:"waiter at a restaurant",
-    description:"Order a meal, ask about the menu, and pay the bill.",
-    scenario:"The player is dining at your restaurant. Take their order, suggest specials, ask about drinks, and discuss the bill and tip at the end.", color:0xe0637a },
-  { mesh: person(0x5678a8,5,-34), name:"Mr. Carter", icon:"💼", topic:"Job Interview",
-    role:"job interviewer at an office",
-    description:"Practice answering common job interview questions.",
-    scenario:"The player is being interviewed for a job. Ask about their experience, strengths/weaknesses, and why they want the job. Keep a professional, encouraging tone.", color:0x5678a8 }
-];
-
-// NPCs wander naturally around their own area. They stop only when the
-// learner actually starts talking to them; clicking/selecting never starts
-// a conversation and never freezes the NPC.
-npcs.forEach((npc, i) => {
-  npc.homeX = npc.mesh.position.x;
-  npc.homeZ = npc.mesh.position.z;
-  npc.targetX = npc.homeX;
-  npc.targetZ = npc.homeZ;
-  npc.walkSpeed = 0.45 + (i % 3) * 0.12;
-  npc.walkPause = 0.5 + (i % 4) * 0.7;
-  npc.walkTimer = 0.2 + i * 0.35;
-  npc.conversationPaused = false;
-  npc.walking = false;
-});
-
-function chooseNPCWalkTarget(npc){
-  npc.targetX = npc.homeX + (Math.random() * 2 - 1) * 2.2;
-  npc.targetZ = npc.homeZ + (Math.random() * 2 - 1) * 2.8;
-  npc.walkTimer = 0.5 + Math.random() * 1.4;
-  npc.walking = true;
-}
-
-function updateNPCMovement(npc, dt){
-  if(npc.conversationPaused || session && activeNPC === npc){
-    npc.walking = false;
-    return;
-  }
-  if(npc.walkTimer > 0){
-    npc.walkTimer -= dt;
-    return;
-  }
-  if(!npc.walking){
-    chooseNPCWalkTarget(npc);
-    return;
-  }
-  const dx=npc.targetX-npc.mesh.position.x;
-  const dz=npc.targetZ-npc.mesh.position.z;
-  const dist=Math.hypot(dx,dz);
-  if(dist < 0.08){
-    npc.walking=false;
-    npc.walkTimer=0.8+Math.random()*2.0;
-    return;
-  }
-  const step=Math.min(dist,npc.walkSpeed*dt);
-  npc.mesh.position.x += dx/dist*step;
-  npc.mesh.position.z += dz/dist*step;
-  npc.mesh.rotation.y = Math.atan2(dx,dz);
-}
-
-// Direct click/tap on the 3D NPCs.
-const npcRaycaster = new THREE.Raycaster();
-const npcPointer = new THREE.Vector2();
-npcs.forEach(npc => npc.mesh.traverse(obj => { if(obj.isMesh) obj.userData.npc = npc; }));
-function handleNPCPointer(clientX, clientY){
-  const rect=renderer.domElement.getBoundingClientRect();
-  if(!rect.width || !rect.height) return;
-  npcPointer.x=((clientX-rect.left)/rect.width)*2-1;
-  npcPointer.y=-((clientY-rect.top)/rect.height)*2+1;
-  npcRaycaster.setFromCamera(npcPointer,camera);
-
-  const roots=npcs.map(n=>n.mesh);
-  const hits=npcRaycaster.intersectObjects(roots,true);
-  if(!hits.length) return;
-
-  let obj=hits[0].object;
-  let npc=null;
-  while(obj){
-    if(obj.userData && obj.userData.npc){ npc=obj.userData.npc; break; }
-    obj=obj.parent;
-  }
-  if(!npc) return;
-  // Clicking an NPC only selects/focuses them. It must NOT start Gemini Live.
-  selectNPC(npc);
-}
-function selectNPC(npc){
-  if(!npc) return;
-  nearbyNPC=npc;
-  npcName.textContent=`${npc.name} · ${npc.icon} ${npc.topic}`;
-  npcBox.style.display='flex';
-  subtitle.textContent=`${npc.icon} ${npc.topic}: ${npc.description} Press TALK to start.`;
-}
-async function startNPCConversation(npc){
-  if(!npc || isConnecting || session) return;
-  selectNPC(npc);
-  activeNPC=npc;
-  npc.conversationPaused=true;
-  try{
-    await ensurePlaybackAudio();
-    await startConversation(npc);
-  }catch(err){
-    console.error('NPC conversation start failed:',err);
-    subtitle.textContent='ERROR: '+(err?.message||String(err));
-    npc.conversationPaused=false;
+  if (audioContext.state === "suspended") {
+    await audioContext.resume();
   }
 }
 
-renderer.domElement.addEventListener('pointerdown',e=>{
-  handleNPCPointer(e.clientX,e.clientY);
-});
+// 2. Phát âm thanh PCM từ AI
+function playPCM24k(base64) {
+  if (!audioContext) return;
+  isAiSpeaking = true;
 
-const roomLabels = npcs.map(r=>{
-  const el=document.createElement("div");
-  el.className="npcLabel";
-  el.textContent=`${r.icon} ${r.topic}`;
-  document.getElementById("hud").appendChild(el);
-  const rug=new THREE.Mesh(
-    new THREE.CylinderGeometry(1.7,1.7,.05,24),
-    new THREE.MeshStandardMaterial({color:r.color,roughness:.85})
-  );
-  rug.position.set(r.mesh.position.x,.03,r.mesh.position.z);
-  rug.receiveShadow=true;
-  scene.add(rug);
-  return el;
-});
+  const bytes = base64ToBytes(base64);
+  const samples = new Int16Array(bytes.buffer, bytes.byteOffset, Math.floor(bytes.byteLength / 2));
 
-const topicsPanel = document.getElementById("topicsPanel");
-const topicsToggle = document.getElementById("topicsToggle");
-let topicsOpen = false;
-
-npcs.forEach(r=>{
-  const card=document.createElement("button");
-  card.className="roomCard";
-  card.innerHTML=`<div class="ic">${r.icon}</div><div class="info"><div class="rt">${r.topic}</div><div class="rd">${r.description}</div></div>`;
-  card.onclick=async ()=>{
-    topicsOpen=false;
-    topicsPanel.classList.remove("open");
-    topicsToggle.textContent="📚 TOPICS";
-    selectNPC(r);
-  };
-  topicsPanel.appendChild(card);
-});
-
-topicsToggle.onclick = () => {
-  topicsOpen = !topicsOpen;
-  topicsPanel.classList.toggle("open", topicsOpen);
-  topicsToggle.textContent = topicsOpen ? "📚 HIDE TOPICS" : "📚 TOPICS";
-};
-
-let nearbyNPC=null;
-
-function setNearbyNPC(npc){
-  if(nearbyNPC === npc) return;
-  nearbyNPC=npc;
-  npcName.textContent=`${npc.name} · ${npc.icon} ${npc.topic}`;
-  npcBox.style.display="flex";
-  subtitle.textContent=`${npc.icon} ${npc.topic}: ${npc.description} Press TALK to start.`;
-}
-
-function clearNearbyNPC(){
-  if(!nearbyNPC) return;
-  nearbyNPC=null;
-  npcBox.style.display="none";
-  if(!session && status.textContent!=="ERROR") subtitle.textContent="Walk toward someone on the street.";
-}
-
-talk.disabled=true;
-
-if("ontouchstart" in window){
-  document.querySelector(".hint").textContent="Use the joystick to move • Speak naturally";
-  document.querySelector(".tip").textContent="Drag the joystick";
-}
-
-const geminiKeyInput = document.getElementById("geminiKey");
-const saveKeyBtn = document.getElementById("saveKey");
-const outputBox = document.getElementById("outputBox");
-const outputSelect = document.getElementById("outputSelect");
-const playbackAudioEl = document.getElementById("playbackAudio");
-let selectedOutputId = localStorage.getItem("preferred_output_device") || "";
-
-const supportsSinkId = typeof HTMLMediaElement !== "undefined" && "setSinkId" in HTMLMediaElement.prototype;
-
-async function applySinkId(){
-  if(!supportsSinkId || !selectedOutputId) return;
-  try{ await playbackAudioEl.setSinkId(selectedOutputId); }
-  catch(err){ console.warn("setSinkId failed:", err); }
-}
-
-async function refreshOutputDevices(){
-  if(!supportsSinkId) return;
-  try{
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const outputs = devices.filter(d => d.kind === "audiooutput");
-    if(!outputs.length) return;
-    outputSelect.innerHTML = "";
-    const defaultOpt = document.createElement("option");
-    defaultOpt.value = "";
-    defaultOpt.textContent = "🔊 Default output";
-    outputSelect.appendChild(defaultOpt);
-    outputs.forEach(d=>{
-      const opt = document.createElement("option");
-      opt.value = d.deviceId;
-      opt.textContent = d.label || "Audio output";
-      if(d.deviceId === selectedOutputId) opt.selected = true;
-      outputSelect.appendChild(opt);
-    });
-    outputBox.style.display = "flex";
-  }catch(err){
-    console.warn("Could not list audio outputs:", err);
-  }
-}
-
-outputSelect?.addEventListener("change", async () => {
-  selectedOutputId = outputSelect.value;
-  localStorage.setItem("preferred_output_device", selectedOutputId);
-  await applySinkId();
-});
-
-const choosePickerBtn = document.getElementById("choosePickerBtn");
-const supportsOutputPicker = !!navigator.mediaDevices?.selectAudioOutput;
-if(supportsOutputPicker && choosePickerBtn){
-  choosePickerBtn.style.display = "inline-block";
-  outputBox.style.display = "flex";
-  choosePickerBtn.onclick = async () => {
-    try{
-      const device = await navigator.mediaDevices.selectAudioOutput();
-      selectedOutputId = device.deviceId;
-      localStorage.setItem("preferred_output_device", selectedOutputId);
-      await applySinkId();
-      subtitle.textContent = `Audio output set to: ${device.label || "selected device"}.`;
-      refreshOutputDevices();
-    }catch(err){
-      console.warn("selectAudioOutput cancelled/failed:", err);
-    }
-  };
-}
-
-if(navigator.mediaDevices?.addEventListener){
-  navigator.mediaDevices.addEventListener("devicechange", refreshOutputDevices);
-}
-
-geminiKeyInput.value = localStorage.getItem("gemini_api_key") || "";
-geminiApiKey = geminiKeyInput.value.trim();
-
-saveKeyBtn.onclick = () => {
-  geminiApiKey = geminiKeyInput.value.trim();
-  if (!geminiApiKey) {
-    subtitle.textContent = "Paste your Gemini API key first.";
-    return;
-  }
-  localStorage.setItem("gemini_api_key", geminiApiKey);
-  subtitle.textContent = "Gemini key saved. Press START TALKING.";
-};
-
-const keys=new Set();
-function isTypingTarget(e){
-  const tag = e.target?.tagName;
-  return tag === "INPUT" || tag === "TEXTAREA" || e.target?.isContentEditable;
-}
-addEventListener("keydown",e=>{ if(!isTypingTarget(e)) keys.add(e.key.toLowerCase()); });
-addEventListener("keyup",e=>{ if(!isTypingTarget(e)) keys.delete(e.key.toLowerCase()); });
-
-const joystick = document.getElementById("joystick");
-const joystickKnob = document.getElementById("joystickKnob");
-let joyActive=false, joyId=null;
-const touchVec={x:0,z:0};
-
-function joyGeometry(){
-  const r=joystick.getBoundingClientRect();
-  return {cx:r.left+r.width/2, cy:r.top+r.height/2, radius:r.width/2};
-}
-
-function updateJoy(clientX, clientY){
-  const g=joyGeometry();
-  let dx=clientX-g.cx, dy=clientY-g.cy;
-  const dist=Math.hypot(dx,dy);
-  if(dist>g.radius){ dx=dx/dist*g.radius; dy=dy/dist*g.radius; }
-  joystickKnob.style.transform=`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-  touchVec.x=dx/g.radius;
-  touchVec.z=dy/g.radius;
-}
-
-function resetJoy(){
-  joyActive=false; joyId=null;
-  touchVec.x=0; touchVec.z=0;
-  joystick.classList.remove("active");
-  joystickKnob.style.transform="translate(-50%,-50%)";
-}
-
-joystick.addEventListener("touchstart",e=>{
-  const t=e.changedTouches && e.changedTouches[0];
-  if(!t) return;
-  joyActive=true; joyId=t.identifier;
-  joystick.classList.add("active");
-  updateJoy(t.clientX,t.clientY);
-  e.preventDefault();
-},{passive:false});
-
-joystick.addEventListener("touchmove",e=>{
-  if(!joyActive) return;
-  const t=Array.from(e.changedTouches).find(tt=>tt.identifier===joyId);
-  if(t) updateJoy(t.clientX,t.clientY);
-  e.preventDefault();
-},{passive:false});
-
-function joyTouchEnd(e){
-  if(!joyActive) return;
-  const ended=Array.from(e.changedTouches).some(tt=>tt.identifier===joyId);
-  if(ended) resetJoy();
-}
-joystick.addEventListener("touchend",joyTouchEnd);
-joystick.addEventListener("touchcancel",joyTouchEnd);
-
-joystick.addEventListener("mousedown",e=>{
-  joyActive=true;
-  joystick.classList.add("active");
-  updateJoy(e.clientX,e.clientY);
-});
-addEventListener("mousemove",e=>{ if(joyActive) updateJoy(e.clientX,e.clientY); });
-addEventListener("mouseup",()=>{ if(joyActive) resetJoy(); });
-
-function move(dt){
-  let x=0,z=0;
-  if(keys.has("w")||keys.has("arrowup"))z--;
-  if(keys.has("s")||keys.has("arrowdown"))z++;
-  if(keys.has("a")||keys.has("arrowleft"))x--;
-  if(keys.has("d")||keys.has("arrowright"))x++;
-
-  let speedMul=1;
-  if(x===0 && z===0 && (touchVec.x!==0 || touchVec.z!==0)){
-    x=touchVec.x; z=touchVec.z;
-    speedMul=Math.min(1,Math.hypot(x,z));
+  const buffer = audioContext.createBuffer(1, samples.length, 24000);
+  const channel = buffer.getChannelData(0);
+  for (let i = 0; i < samples.length; i++) {
+    channel[i] = samples[i] / 32768;
   }
 
-  const len=Math.hypot(x,z)||1;
-  player.position.x=Math.max(-8,Math.min(8,player.position.x+x/len*dt*4.5*speedMul));
-  player.position.z=Math.max(-48,Math.min(12,player.position.z+z/len*dt*4.5*speedMul));
+  const source = audioContext.createBufferSource();
+  source.buffer = buffer;
+  source.connect(audioContext.destination);
 
-  let closest=null, best=Infinity;
-  for(const npc of npcs){
-    const d=player.position.distanceTo(npc.mesh.position);
-    if(d<best){best=d;closest=npc;}
-  }
-  if(best<3.2) setNearbyNPC(closest);
-  else clearNearbyNPC();
-
-  camera.position.lerp(new THREE.Vector3(player.position.x,5,player.position.z+8.5),.08);
-  camera.lookAt(player.position.x,1.5,player.position.z);
-}
-
-function bytesToBase64(bytes){
-  let binary="";
-  const chunkSize=0x8000;
-  for(let i=0;i<bytes.length;i+=chunkSize){
-    binary += String.fromCharCode(...bytes.subarray(i, Math.min(i+chunkSize, bytes.length)));
-  }
-  return btoa(binary);
-}
-
-function floatTo16BitPCM(float32){
-  const out = new Int16Array(float32.length);
-  for(let i=0;i<float32.length;i++){
-    const s=Math.max(-1,Math.min(1,float32[i]));
-    out[i]=s<0?s*0x8000:s*0x7fff;
-  }
-  return new Uint8Array(out.buffer);
-}
-
-function base64ToBytes(base64){
-  const binary=atob(base64);
-  const bytes=new Uint8Array(binary.length);
-  for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
-  return bytes;
-}
-
-let playbackDestination = null;
-
-async function ensurePlaybackAudio(){
-  if(!playbackContext){
-    playbackContext=new (window.AudioContext||window.webkitAudioContext)({sampleRate:24000});
-    playbackDestination=playbackContext.createMediaStreamDestination();
-    playbackAudioEl.srcObject=playbackDestination.stream;
-    playbackAudioEl.autoplay=true;
-    playbackAudioEl.playsInline=true;
-    await applySinkId();
-  }
-  if(playbackContext.state !== 'running') await playbackContext.resume();
-  try{ await playbackAudioEl.play(); }catch(err){ console.warn('Playback audio element play() failed:',err); }
-}
-
-function playPCM24k(base64){
-  const bytes=base64ToBytes(base64);
-  const samples=new Int16Array(bytes.buffer, bytes.byteOffset, Math.floor(bytes.byteLength/2));
-  if(!playbackContext){
-    // Normally initialized from the user's click, but keep this fallback.
-    playbackContext=new (window.AudioContext||window.webkitAudioContext)({sampleRate:24000});
-    playbackDestination=playbackContext.createMediaStreamDestination();
-    playbackAudioEl.srcObject=playbackDestination.stream;
-    applySinkId();
-  }
-  if(playbackContext.state !== 'running') playbackContext.resume().catch(()=>{});
-  const buffer=playbackContext.createBuffer(1,samples.length,24000);
-  const channel=buffer.getChannelData(0);
-  for(let i=0;i<samples.length;i++) channel[i]=samples[i]/32768;
-  const source=playbackContext.createBufferSource();
-  source.buffer=buffer;
-  source.connect(playbackDestination);
-  const now=playbackContext.currentTime;
-  nextPlayTime=Math.max(nextPlayTime,now);
+  const now = audioContext.currentTime;
+  nextPlayTime = Math.max(nextPlayTime, now);
   source.start(nextPlayTime);
   nextPlayTime += buffer.duration;
 }
 
-function clearPlayback(){
-  if(playbackContext) nextPlayTime=playbackContext.currentTime;
+function clearPlayback() {
+  if (audioContext) nextPlayTime = audioContext.currentTime;
+  isAiSpeaking = false;
 }
 
-async function startMicrophone(){
-  if(!navigator.mediaDevices?.getUserMedia){
-    throw new Error("Microphone is unavailable. Run this file from localhost or HTTPS and allow microphone access.");
-  }
-
-  // IMPORTANT: request permission only once. Keep the same MediaStream alive
-  // while switching NPCs, so clicking another NPC never asks for the mic again.
-  const liveTrack = micStream?.getAudioTracks?.().find(t => t.readyState === "live");
-  if(!liveTrack){
-    micStream=await navigator.mediaDevices.getUserMedia({
-      audio:{channelCount:1,echoCancellation:false,noiseSuppression:true,autoGainControl:true}
-    });
-  }
-
-  refreshOutputDevices();
-
-  if(!audioContext){
-    audioContext=new (window.AudioContext||window.webkitAudioContext)();
-  }
-  await audioContext.resume();
-
-  // Reuse the existing processing chain when possible.
-  if(processor && micSource) return;
-
-  micSource=audioContext.createMediaStreamSource(micStream);
-  processor=audioContext.createScriptProcessor(4096,1,1);
-  silentGain=audioContext.createGain();
-  silentGain.gain.value=0;
-
-  const inputRate=audioContext.sampleRate, targetRate=16000;
-  processor.onaudioprocess=(event)=>{
-    if(!session) return;
-    const input=event.inputBuffer.getChannelData(0);
-    const ratio=inputRate/targetRate;
-    const outLength=Math.max(1,Math.floor(input.length/ratio));
-    const resampled=new Float32Array(outLength);
-    for(let i=0;i<outLength;i++){
-      const pos=i*ratio, i0=Math.floor(pos), i1=Math.min(i0+1,input.length-1), f=pos-i0;
-      resampled[i]=input[i0]*(1-f)+input[i1]*f;
+// 3. Khởi chạy Micro
+async function startMicrophone() {
+  // Yêu cầu quyền Micro để Safari kích hoạt chế độ AudioSession thu/phát
+  micStream = await navigator.mediaDevices.getUserMedia({
+    audio: {
+      channelCount: 1,
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
     }
-    const pcm=floatTo16BitPCM(resampled);
-    try{
-      session.sendRealtimeInput({audio:{data:bytesToBase64(pcm),mimeType:"audio/pcm;rate=16000"}});
-    }catch(err){ console.warn("Gemini audio send failed:",err); }
+  });
+
+  micSource = audioContext.createMediaStreamSource(micStream);
+  processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+  processor.onaudioprocess = (event) => {
+    if (!session || isAiSpeaking) return;
+    const input = event.inputBuffer.getChannelData(0);
+    const pcm = floatTo16BitPCM(input);
+    session.sendRealtimeInput({
+      audio: {
+        data: bytesToBase64(pcm),
+        mimeType: `audio/pcm;rate=${audioContext.sampleRate}`
+      }
+    });
   };
 
   micSource.connect(processor);
+  // Kết nối giả lập để giữ luồng ghi âm hoạt động trên iOS
+  const silentGain = audioContext.createGain();
+  silentGain.gain.value = 0;
   processor.connect(silentGain);
   silentGain.connect(audioContext.destination);
 }
 
-// Disconnect processing but DO NOT stop the MediaStream. This preserves the
-// browser's granted microphone permission for the next NPC/session.
-async function pauseMicrophone(){
-  try{ processor?.disconnect(); }catch{}
-  try{ micSource?.disconnect(); }catch{}
-  try{ silentGain?.disconnect(); }catch{}
-  processor=null; micSource=null; silentGain=null;
-}
+// 4. Dừng Micro
+async function stopMicrophone() {
+  try { processor?.disconnect(); } catch {}
+  try { micSource?.disconnect(); } catch {}
+  processor = null; 
+  micSource = null;
 
-// Only call this when the page is being closed/reloaded.
-async function releaseMicrophone(){
-  await pauseMicrophone();
-  if(micStream){
-    micStream.getTracks().forEach(t=>t.stop());
-    micStream=null;
-  }
-  if(audioContext){
-    await audioContext.close().catch(()=>{});
-    audioContext=null;
+  if (micStream) {
+    micStream.getTracks().forEach(t => t.stop());
+    micStream = null;
   }
 }
 
-function normalizeNPCNameText(text){
-  return (text||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
-}
-
-function detectCalledNPC(text){
-  const t=normalizeNPCNameText(text);
-  if(!t) return null;
-  // Prefer the longest name so multi-word NPC names are handled safely.
-  const ordered=[...npcs].sort((a,b)=>b.name.length-a.name.length);
-  return ordered.find(n=>{
-    const name=normalizeNPCNameText(n.name);
-    return t===name || t.startsWith(name+' ') || t.includes(' '+name+' ') || t.endsWith(' '+name);
-  }) || null;
-}
-
-function activateNPCFromName(npc){
-  if(!npc) return;
-  activeNPC=npc;
-  npc.conversationPaused=true;
-  npc.walking=false;
-  nearbyNPC=npc;
-  npcName.textContent=`${npc.name} · ${npc.icon} ${npc.topic}`;
-  npcBox.style.display='flex';
-  subtitle.textContent=`${npc.name} is listening...`;
-}
-
-async function startConversation(targetNPC=null){
-  if(isConnecting) return;
-  if(session) return;
-  if(!geminiApiKey){
-    subtitle.textContent="Enter your Gemini API key in the box above first.";
+// 5. Cập nhật hàm startConversation - kích hoạt Audio trước khi gọi API
+async function startConversation(targetNPC = null) {
+  if (!geminiApiKey) {
+    subtitle.textContent = "Enter your Gemini API key in the box above first.";
     geminiKeyInput.focus();
     return;
   }
 
-  const myConnectionId = ++connectionId;
-  isConnecting = true;
+  try {
+    status.textContent = "CONNECTING...";
+    start.disabled = true;
+    talk.disabled = true;
 
-  try{
-    // iOS Safari (WebKit) exposes navigator.audioSession. On iOS 17+, the
-    // "play-and-record" type (the one meant for calls) has a known OS bug
-    // that forces output to the built-in speaker even with Bluetooth
-    // connected. Since we only need built-in mic input (not a Bluetooth
-    // headset mic) and just want output to play like normal browser/media
-    // audio, "playback" keeps the OS treating this as regular media audio,
-    // which correctly stays routed to the Bluetooth speaker (A2DP).
-    if(navigator.audioSession){
-      try{ navigator.audioSession.type = "playback"; }catch(err){ console.warn("audioSession set failed:",err); }
-    }
-    playbackAudioEl.play().catch(()=>{});
-    status.textContent="CONNECTING...";
-    subtitle.textContent=targetNPC
-      ? `Connecting to ${targetNPC.name}...`
-      : "Connecting to Gemini Live...";
-    start.disabled=true;
-    talk.disabled=true;
-    activeNPC=targetNPC;
-    userTurnBuffer="";
-    npcTurnBuffer="";
+    // BẮT BUỘC: Khởi tạo Audio Context ngay trong sự kiện Click của người dùng
+    await initAudioContext();
+    await startMicrophone();
 
-    const ai=new GoogleGenAI({apiKey:geminiApiKey});
-
-    const npcContext=targetNPC
+    const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+    const npcContext = targetNPC
       ? `You are ${targetNPC.name}, a ${targetNPC.role}, in a roleplay scenario called "${targetNPC.topic}". ${targetNPC.scenario} The learner's goal: ${targetNPC.description}`
       : "You are a friendly person on an English-speaking city street.";
 
-    session=await ai.live.connect({
-      model:GEMINI_MODEL,
-      config:{
-        responseModalities:[Modality.AUDIO],
-        inputAudioTranscription:{},
-        outputAudioTranscription:{},
-        thinkingConfig:{thinkingLevel:"minimal"},
-        systemInstruction:{
-          parts:[{
-            text:`${npcContext}
-You are a natural real-time conversation partner for a 3D street practice game.
-The street has NPCs with these names and roles: ${npcs.map(n=>`${n.name} (${n.role})`).join(', ')}.
-Do not speak or greet just because the connection starts. Wait for the learner to speak.
-When the learner clearly calls an NPC by name, respond as that NPC and stay in that NPC's role until the learner addresses another NPC by name.
-Speak whatever language the learner speaks to you in — match their language naturally.
-Speak naturally and concisely. Keep the conversation casual and interactive.
-Do not describe your internal reasoning. Do not say you are an AI unless directly asked.`
-          }]
+    session = await ai.live.connect({
+      model: GEMINI_MODEL,
+      config: {
+        responseModalities: [Modality.AUDIO],
+        inputAudioTranscription: {},
+        outputAudioTranscription: {},
+        thinkingConfig: { thinkingLevel: "minimal" },
+        systemInstruction: {
+          parts: [{ text: `${npcContext}\nSpeak naturally and concisely.` }]
         }
       },
-      callbacks:{
-        onopen(){
-          if(myConnectionId !== connectionId) return;
-          try{ playbackContext?.resume?.(); }catch{}
-          status.textContent="CONNECTED";
-          stop.disabled=false;
-          subtitle.textContent=targetNPC
-            ? `You're talking with ${targetNPC.name}. Speak naturally.`
-            : "Connected. Speak naturally.";
-
+      callbacks: {
+        onopen() {
+          status.textContent = "CONNECTED";
+          stop.disabled = false;
         },
-        onmessage(message){
-          if(myConnectionId !== connectionId) return;
-          try{
-            const sc=message.serverContent;
-
-            if(sc?.inputTranscription?.text){
-              const heard=sc.inputTranscription.text;
-              userTurnBuffer += heard;
-              subtitle.textContent="You: "+userTurnBuffer;
-
-              // Calling an NPC by name selects that NPC and makes only that
-              // NPC stop. No new Gemini session is created here.
-              const calledNPC=detectCalledNPC(heard);
-              if(calledNPC){
-                activateNPCFromName(calledNPC);
-              }else if(activeNPC){
-                activeNPC.conversationPaused=true;
-                activeNPC.walking=false;
-              }
-            }
-            if(sc?.outputTranscription?.text){
-              npcTurnBuffer += sc.outputTranscription.text;
-              subtitle.textContent=npcTurnBuffer;
-            }
-
-            const parts=sc?.modelTurn?.parts || [];
-            if(sc?.modelTurn && !parts.length){
-              console.warn("Gemini returned a model turn without parts", sc);
-            }
-            for(const part of parts){
-              const data=part?.inlineData?.data || part?.inline_data?.data;
-              const mime=part?.inlineData?.mimeType || part?.inline_data?.mimeType || "";
-              if(data && mime.startsWith("audio/")){
-                playPCM24k(data);
-              }
-            }
-
-            if(sc?.turnComplete){
-              finalizeTurn();
-            }
-
-            if(sc?.interrupted){
-              finalizeTurn();
-              clearPlayback();
-              subtitle.textContent="Listening...";
-            }
-          }catch(err){
-            console.warn("Gemini message handling:",err);
+        onmessage(message) {
+          const sc = message.serverContent;
+          const parts = sc?.modelTurn?.parts || [];
+          for (const part of parts) {
+            const data = part?.inlineData?.data || part?.inline_data?.data;
+            if (data) playPCM24k(data);
           }
         },
-        onerror(e){
-          if(myConnectionId !== connectionId) return;
-          console.error("Gemini Live error:",e);
-          status.textContent="ERROR";
-          subtitle.textContent="Gemini error: "+(e?.message||e?.error?.message||"Unknown error");
-          start.disabled=false;
-          stop.disabled=true;
-          talk.disabled=false;
-          pauseMicrophone();
-          try{session?.close?.();}catch{}
-          session=null;
+        onerror(e) {
+          console.error(e);
+          status.textContent = "ERROR";
+          subtitle.textContent = "Error: " + (e?.message || "Check permissions/key.");
+          stopMicrophone();
         },
-        onclose(e){
-          if(myConnectionId !== connectionId) return;
-          console.log("Gemini Live closed:",e);
-          status.textContent="OFFLINE";
-          start.disabled=false;
-          stop.disabled=true;
-          talk.disabled=false;
-          session=null;
-          pauseMicrophone();
+        onclose() {
+          status.textContent = "OFFLINE";
+          stopMicrophone();
         }
       }
     });
 
-    await startMicrophone();
-    await ensurePlaybackAudio();
-
-
-    if(navigator.audioSession){
-      try{ navigator.audioSession.type = "playback"; }catch{}
-      navigator.audioSession.onstatechange = () => {
-        try{ navigator.audioSession.type = "playback"; }catch{}
-      };
-    }
-
-  }catch(e){
-    console.error("Cannot start Gemini Live:",e);
-    status.textContent="ERROR";
-    start.disabled=false;
-    stop.disabled=true;
-    talk.disabled=false;
-    subtitle.textContent="ERROR: "+(e?.message||e?.error?.message||String(e));
-    session=null;
-    await pauseMicrophone();
-  } finally {
-    if(myConnectionId === connectionId) isConnecting = false;
+  } catch (e) {
+    console.error(e);
+    status.textContent = "ERROR";
+    subtitle.textContent = e?.message || "Cannot start Gemini Live.";
+    await stopMicrophone();
   }
 }
-
-start.onclick=async()=>{
-  if(nearbyNPC) await startNPCConversation(nearbyNPC);
-  else await startConversation(null);
-};
-talk.onclick=async()=>{
-  if(nearbyNPC) await startNPCConversation(nearbyNPC);
-  else await startConversation(null);
-};
-
-stop.onclick=async()=>{
-  finalizeTurn();
-  try{
-    session?.sendRealtimeInput?.({audioStreamEnd:true});
-  }catch{}
-  try{session?.close?.();}catch{}
-  session=null;
-  await pauseMicrophone();
-  if(activeNPC) activeNPC.conversationPaused=false;
-  activeNPC=null;
-  status.textContent="OFFLINE";
-  start.disabled=false;
-  stop.disabled=true;
-  talk.disabled=false;
-  npcBox.style.display=nearbyNPC ? "flex" : "none";
-  subtitle.textContent=nearbyNPC
-    ? `You're near ${nearbyNPC.name}. Press TALK to start a natural conversation.`
-    : "Walk toward someone on the street.";
-};
-
-addEventListener("pagehide",()=>{ releaseMicrophone(); });
-addEventListener("beforeunload",()=>{ releaseMicrophone(); });
-
-addEventListener("resize",()=>{
-  camera.aspect=innerWidth/innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);
-});
-// iOS Safari/Android Chrome can change viewport size when the address bar appears/disappears.
-addEventListener("orientationchange",()=>setTimeout(()=>{
-  camera.aspect=innerWidth/innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight,false);
-},150),{passive:true});
-
-let last=performance.now();
-function loop(now){
-  requestAnimationFrame(loop);
-  const dt=Math.min((now-last)/1000,.05); last=now;
-  move(dt);
-  npcs.forEach((n,i)=>{
-    updateNPCMovement(n,dt);
-    if(!n.conversationPaused && !n.walking) n.mesh.rotation.y=Math.sin(now*.0006+i)*.08;
-    const v=n.mesh.position.clone();
-    v.y+=2.5;
-    v.project(camera);
-    if(v.z>1){
-      roomLabels[i].style.display="none";
-    }else{
-      roomLabels[i].style.display="block";
-      roomLabels[i].style.left=((v.x*.5+.5)*innerWidth)+"px";
-      roomLabels[i].style.top=((-v.y*.5+.5)*innerHeight)+"px";
-    }
-  });
-  renderer.render(scene,camera);
-}
-loop(performance.now());
-</script>
-</body>
-</html>
