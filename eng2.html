@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -144,8 +143,9 @@ let audioContext = null;
 let micSource = null;
 let processor = null;
 let silentGain = null;
-let playbackContext = null;
 let nextPlayTime = 0;
+let scheduledSources = []; // currently-scheduled/playing TTS buffer sources
+const PLAYBACK_JITTER_BUFFER = 0.12; // seconds of lead time to smooth out network jitter
 let activeNPC = null;
 let isConnecting = false;
 let connectionId = 0;
@@ -723,44 +723,80 @@ function base64ToBytes(base64){
 
 let playbackDestination = null;
 
+// IMPORTANT: mic capture and TTS playback now share a SINGLE AudioContext
+// (see ensureAudioContext). On iOS, once the audio session type is
+// "play-and-record", the OS hands the page one physical audio unit; running
+// two separate AudioContexts against it (one for mic, one for playback) is
+// what caused the stutter/overlap, since iOS was constantly tearing down and
+// re-negotiating the hardware between the two contexts. A single shared
+// context avoids that entirely.
+async function ensureAudioContext(){
+  if(!audioContext){
+    // Do NOT force a custom sampleRate here. iOS/WebKit does not always
+    // honor a requested sampleRate once the session is in "play-and-record"
+    // mode, which silently produces a mismatched clock and audible
+    // glitching. Web Audio resamples buffers of any rate automatically, so
+    // letting the context use the hardware's native rate is both safer and
+    // smoother.
+    audioContext=new (window.AudioContext||window.webkitAudioContext)();
+  }
+  if(audioContext.state !== 'running') await audioContext.resume();
+  return audioContext;
+}
+
 async function ensurePlaybackAudio(){
-  if(!playbackContext){
-    playbackContext=new (window.AudioContext||window.webkitAudioContext)({sampleRate:24000});
-    playbackDestination=playbackContext.createMediaStreamDestination();
+  await ensureAudioContext();
+  if(!playbackDestination){
+    playbackDestination=audioContext.createMediaStreamDestination();
     playbackAudioEl.srcObject=playbackDestination.stream;
     playbackAudioEl.autoplay=true;
     playbackAudioEl.playsInline=true;
     await applySinkId();
   }
-  if(playbackContext.state !== 'running') await playbackContext.resume();
   try{ await playbackAudioEl.play(); }catch(err){ console.warn('Playback audio element play() failed:',err); }
 }
 
 function playPCM24k(base64){
   const bytes=base64ToBytes(base64);
   const samples=new Int16Array(bytes.buffer, bytes.byteOffset, Math.floor(bytes.byteLength/2));
-  if(!playbackContext){
+  if(!audioContext || !playbackDestination){
     // Normally initialized from the user's click, but keep this fallback.
-    playbackContext=new (window.AudioContext||window.webkitAudioContext)({sampleRate:24000});
-    playbackDestination=playbackContext.createMediaStreamDestination();
-    playbackAudioEl.srcObject=playbackDestination.stream;
-    applySinkId();
+    ensurePlaybackAudio();
   }
-  if(playbackContext.state !== 'running') playbackContext.resume().catch(()=>{});
-  const buffer=playbackContext.createBuffer(1,samples.length,24000);
+  if(audioContext.state !== 'running') audioContext.resume().catch(()=>{});
+  const buffer=audioContext.createBuffer(1,samples.length,24000);
   const channel=buffer.getChannelData(0);
   for(let i=0;i<samples.length;i++) channel[i]=samples[i]/32768;
-  const source=playbackContext.createBufferSource();
+  const source=audioContext.createBufferSource();
   source.buffer=buffer;
   source.connect(playbackDestination);
-  const now=playbackContext.currentTime;
-  nextPlayTime=Math.max(nextPlayTime,now);
+
+  const now=audioContext.currentTime;
+  // Keep a small lead time (jitter buffer) ahead of "now" so slightly late
+  // network chunks don't cause an audible gap/stutter, but don't let the
+  // queue drift arbitrarily far ahead either.
+  if(nextPlayTime < now + 0.01) nextPlayTime = now + PLAYBACK_JITTER_BUFFER;
   source.start(nextPlayTime);
+
+  scheduledSources.push(source);
+  source.onended=()=>{
+    const idx=scheduledSources.indexOf(source);
+    if(idx !== -1) scheduledSources.splice(idx,1);
+  };
+
   nextPlayTime += buffer.duration;
 }
 
 function clearPlayback(){
-  if(playbackContext) nextPlayTime=playbackContext.currentTime;
+  // Stop every currently scheduled/playing chunk. Without this, a barge-in
+  // interruption only reset the scheduling clock while the OLD audio
+  // buffers kept playing on their previously-scheduled times, which is what
+  // caused new speech to overlap with leftover old speech.
+  for(const src of scheduledSources){
+    try{ src.onended=null; src.stop(); }catch{}
+  }
+  scheduledSources=[];
+  if(audioContext) nextPlayTime=audioContext.currentTime;
 }
 
 async function startMicrophone(){
@@ -779,10 +815,7 @@ async function startMicrophone(){
 
   refreshOutputDevices();
 
-  if(!audioContext){
-    audioContext=new (window.AudioContext||window.webkitAudioContext)();
-  }
-  await audioContext.resume();
+  await ensureAudioContext();
 
   // Reuse the existing processing chain when possible.
   if(processor && micSource) return;
@@ -926,7 +959,7 @@ Do not describe your internal reasoning. Do not say you are an AI unless directl
       callbacks:{
         onopen(){
           if(myConnectionId !== connectionId) return;
-          try{ playbackContext?.resume?.(); }catch{}
+          try{ audioContext?.resume?.(); }catch{}
           status.textContent="CONNECTED";
           stop.disabled=false;
           subtitle.textContent=targetNPC
