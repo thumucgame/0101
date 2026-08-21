@@ -142,6 +142,8 @@ let silentGain = null;
 let playbackContext = null;
 let nextPlayTime = 0;
 let activeNPC = null;
+let isConnecting = false;
+let connectionId = 0;
 
 const app = document.getElementById("app");
 const status = document.getElementById("status");
@@ -361,7 +363,8 @@ function handleNPCPointer(clientX, clientY){
   selectNPCAndStart(npc);
 }
 async function selectNPCAndStart(npc){
-  if(!npc) return;
+  if(!npc || isConnecting) return;
+  if(session) return;
 
   nearbyNPC=npc;
   activeNPC=npc;
@@ -387,9 +390,6 @@ async function selectNPCAndStart(npc){
 }
 
 renderer.domElement.addEventListener('pointerdown',e=>{
-  handleNPCPointer(e.clientX,e.clientY);
-});
-renderer.domElement.addEventListener('click',e=>{
   handleNPCPointer(e.clientX,e.clientY);
 });
 
@@ -772,11 +772,16 @@ async function releaseMicrophone(){
 }
 
 async function startConversation(targetNPC=null){
+  if(isConnecting) return;
+  if(session) return;
   if(!geminiApiKey){
     subtitle.textContent="Enter your Gemini API key in the box above first.";
     geminiKeyInput.focus();
     return;
   }
+
+  const myConnectionId = ++connectionId;
+  isConnecting = true;
 
   try{
     // iOS Safari (WebKit) exposes navigator.audioSession. On iOS 17+, the
@@ -825,6 +830,7 @@ Do not describe your internal reasoning. Do not say you are an AI unless directl
       },
       callbacks:{
         onopen(){
+          if(myConnectionId !== connectionId) return;
           try{ playbackContext?.resume?.(); }catch{}
           status.textContent="CONNECTED";
           stop.disabled=false;
@@ -834,6 +840,7 @@ Do not describe your internal reasoning. Do not say you are an AI unless directl
 
         },
         onmessage(message){
+          if(myConnectionId !== connectionId) return;
           try{
             const sc=message.serverContent;
 
@@ -872,6 +879,7 @@ Do not describe your internal reasoning. Do not say you are an AI unless directl
           }
         },
         onerror(e){
+          if(myConnectionId !== connectionId) return;
           console.error("Gemini Live error:",e);
           status.textContent="ERROR";
           subtitle.textContent="Gemini error: "+(e?.message||e?.error?.message||"Unknown error");
@@ -883,6 +891,7 @@ Do not describe your internal reasoning. Do not say you are an AI unless directl
           session=null;
         },
         onclose(e){
+          if(myConnectionId !== connectionId) return;
           console.log("Gemini Live closed:",e);
           status.textContent="OFFLINE";
           start.disabled=false;
@@ -929,6 +938,8 @@ Do not describe your internal reasoning. Do not say you are an AI unless directl
     subtitle.textContent="ERROR: "+(e?.message||e?.error?.message||String(e));
     session=null;
     await pauseMicrophone();
+  } finally {
+    if(myConnectionId === connectionId) isConnecting = false;
   }
 }
 
