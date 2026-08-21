@@ -99,17 +99,12 @@
       style="width:230px;padding:9px 10px;border:0;border-radius:9px;outline:none;">
     <button id="saveKey" style="padding:9px 12px;background:#fff;color:#111;">SAVE</button>
   </div>
-  <div id="outputBox" style="display:none;position:absolute;right:18px;top:104px;pointer-events:auto;background:#0009;padding:8px;border-radius:12px;gap:6px;align-items:center;">
-    <select id="outputSelect" style="padding:7px 8px;border:0;border-radius:8px;max-width:180px;font-size:12px;"></select>
-    <button id="choosePickerBtn" style="display:none;padding:7px 10px;background:#fff;color:#111;font-size:12px;border-radius:8px;border:0;font-weight:800;cursor:pointer;">🎧 Choose</button>
-  </div>
   <div id="npcBox">
     <span>👋 <span id="npcName">NPC</span></span>
     <button id="talk">💬 TALK</button>
   </div>
   <div id="subtitle">Walk toward someone on the street.</div>
   <div id="joystick"><div id="joystickKnob"></div></div>
-  <audio id="playbackAudio" autoplay playsinline style="display:none"></audio>
   <div class="controls">
     <button id="start">🎤 START GEMINI LIVE</button>
     <button id="stop" disabled>STOP</button>
@@ -137,21 +132,10 @@ let micStream = null;
 let audioContext = null;
 let micSource = null;
 let processor = null;
-let silentGain = null;
 let playbackContext = null;
 let nextPlayTime = 0;
 let activeNPC = null;
-let isAiSpeaking = false; // Biến kiểm soát trạng thái AI đang nói
-
-function setAudioMode(mode){
-  if (!navigator.audioSession) return;
-  try {
-    navigator.audioSession.type = mode;
-    console.log("AudioSession:", mode);
-  } catch (err) {
-    console.warn("audioSession set failed:", err);
-  }
-}
+let isAiSpeaking = false;
 
 const app = document.getElementById("app");
 const status = document.getElementById("status");
@@ -248,7 +232,7 @@ function finalizeTurn(){
   if(npcTurnBuffer.trim()) addChatMessage(currentNPCLabel(), npcTurnBuffer);
   userTurnBuffer = "";
   npcTurnBuffer = "";
-  isAiSpeaking = false; // Bật lại mic khi hoàn thành lượt thoại
+  isAiSpeaking = false;
 }
 
 chatLogToggle.onclick = () => {
@@ -411,71 +395,6 @@ if("ontouchstart" in window){
 
 const geminiKeyInput = document.getElementById("geminiKey");
 const saveKeyBtn = document.getElementById("saveKey");
-const outputBox = document.getElementById("outputBox");
-const outputSelect = document.getElementById("outputSelect");
-const playbackAudioEl = document.getElementById("playbackAudio");
-let selectedOutputId = localStorage.getItem("preferred_output_device") || "";
-
-const supportsSinkId = typeof HTMLMediaElement !== "undefined" && "setSinkId" in HTMLMediaElement.prototype;
-
-async function applySinkId(){
-  if(!supportsSinkId || !selectedOutputId) return;
-  try{ await playbackAudioEl.setSinkId(selectedOutputId); }
-  catch(err){ console.warn("setSinkId failed:", err); }
-}
-
-async function refreshOutputDevices(){
-  if(!supportsSinkId) return;
-  try{
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const outputs = devices.filter(d => d.kind === "audiooutput");
-    if(!outputs.length) return;
-    outputSelect.innerHTML = "";
-    const defaultOpt = document.createElement("option");
-    defaultOpt.value = "";
-    defaultOpt.textContent = "🔊 Default output";
-    outputSelect.appendChild(defaultOpt);
-    outputs.forEach(d=>{
-      const opt = document.createElement("option");
-      opt.value = d.deviceId;
-      opt.textContent = d.label || "Audio output";
-      if(d.deviceId === selectedOutputId) opt.selected = true;
-      outputSelect.appendChild(opt);
-    });
-    outputBox.style.display = "flex";
-  }catch(err){
-    console.warn("Could not list audio outputs:", err);
-  }
-}
-
-outputSelect?.addEventListener("change", async () => {
-  selectedOutputId = outputSelect.value;
-  localStorage.setItem("preferred_output_device", selectedOutputId);
-  await applySinkId();
-});
-
-const choosePickerBtn = document.getElementById("choosePickerBtn");
-const supportsOutputPicker = !!navigator.mediaDevices?.selectAudioOutput;
-if(supportsOutputPicker && choosePickerBtn){
-  choosePickerBtn.style.display = "inline-block";
-  outputBox.style.display = "flex";
-  choosePickerBtn.onclick = async () => {
-    try{
-      const device = await navigator.mediaDevices.selectAudioOutput();
-      selectedOutputId = device.deviceId;
-      localStorage.setItem("preferred_output_device", selectedOutputId);
-      await applySinkId();
-      subtitle.textContent = `Audio output set to: ${device.label || "selected device"}.`;
-      refreshOutputDevices();
-    }catch(err){
-      console.warn("selectAudioOutput cancelled/failed:", err);
-    }
-  };
-}
-
-if(navigator.mediaDevices?.addEventListener){
-  navigator.mediaDevices.addEventListener("devicechange", refreshOutputDevices);
-}
 
 geminiKeyInput.value = localStorage.getItem("gemini_api_key") || "";
 geminiApiKey = geminiKeyInput.value.trim();
@@ -610,85 +529,82 @@ function base64ToBytes(base64){
   return bytes;
 }
 
-let playbackDestination = null;
-
 function playPCM24k(base64){
-  isAiSpeaking = true; // Đánh dấu AI đang phát âm
-  const bytes=base64ToBytes(base64);
-  const samples=new Int16Array(bytes.buffer, bytes.byteOffset, Math.floor(bytes.byteLength/2));
+  isAiSpeaking = true;
+  const bytes = base64ToBytes(base64);
+  const samples = new Int16Array(bytes.buffer, bytes.byteOffset, Math.floor(bytes.byteLength / 2));
+  
   if(!playbackContext){
-    playbackContext=new (window.AudioContext || window.webkitAudioContext)({sampleRate:24000});
-    playbackDestination=playbackContext.createMediaStreamDestination();
-    playbackAudioEl.srcObject=playbackDestination.stream;
-    playbackAudioEl.play().catch(err=>console.warn("Playback audio element play() failed:",err));
-    applySinkId();
+    playbackContext = new (window.AudioContext || window.webkitAudioContext)();
   }
-  const buffer=playbackContext.createBuffer(1,samples.length,24000);
-  const channel=buffer.getChannelData(0);
-  for(let i=0;i<samples.length;i++) channel[i]=samples[i]/32768;
-  const source=playbackContext.createBufferSource();
-  source.buffer=buffer;
-  source.connect(playbackDestination);
-  const now=playbackContext.currentTime;
-  nextPlayTime=Math.max(nextPlayTime,now);
+  if(playbackContext.state === "suspended"){
+    playbackContext.resume();
+  }
+
+  const buffer = playbackContext.createBuffer(1, samples.length, 24000);
+  const channel = buffer.getChannelData(0);
+  for(let i = 0; i < samples.length; i++){
+    channel[i] = samples[i] / 32768;
+  }
+
+  const source = playbackContext.createBufferSource();
+  source.buffer = buffer;
+  source.connect(playbackContext.destination);
+
+  const now = playbackContext.currentTime;
+  nextPlayTime = Math.max(nextPlayTime, now);
   source.start(nextPlayTime);
   nextPlayTime += buffer.duration;
 }
 
 function clearPlayback(){
-  if(playbackContext) nextPlayTime=playbackContext.currentTime;
+  if(playbackContext) nextPlayTime = playbackContext.currentTime;
   isAiSpeaking = false;
 }
 
 async function startMicrophone(){
-  micStream=await navigator.mediaDevices.getUserMedia({
-    audio:{
-      channelCount:1,
-      echoCancellation:true, // Sửa: Bật echoCancellation bắt buộc trên iOS
-      noiseSuppression:true,
-      autoGainControl:true
+  micStream = await navigator.mediaDevices.getUserMedia({
+    audio: {
+      channelCount: 1,
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
     }
   });
 
-  refreshOutputDevices();
-
-  audioContext=new (window.AudioContext || window.webkitAudioContext)();
+  audioContext = new (window.AudioContext || window.webkitAudioContext)();
   await audioContext.resume();
 
-  micSource=audioContext.createMediaStreamSource(micStream);
-  processor=audioContext.createScriptProcessor(4096,1,1);
-  silentGain=audioContext.createGain();
-  silentGain.gain.value=0;
+  micSource = audioContext.createMediaStreamSource(micStream);
+  processor = audioContext.createScriptProcessor(4096, 1, 1);
 
-  processor.onaudioprocess=(event)=>{
-    if(!session || isAiSpeaking) return; // Không gửi âm thanh từ Mic khi AI đang phát tiếng
-    const input=event.inputBuffer.getChannelData(0);
-    const pcm=floatTo16BitPCM(input);
+  processor.onaudioprocess = (event) => {
+    if (!session || isAiSpeaking) return;
+    const input = event.inputBuffer.getChannelData(0);
+    const pcm = floatTo16BitPCM(input);
     session.sendRealtimeInput({
-      audio:{
-        data:bytesToBase64(pcm),
-        mimeType:`audio/pcm;rate=${audioContext.sampleRate}`
+      audio: {
+        data: bytesToBase64(pcm),
+        mimeType: `audio/pcm;rate=${audioContext.sampleRate}`
       }
     });
   };
 
   micSource.connect(processor);
-  processor.connect(silentGain);
-  silentGain.connect(audioContext.destination);
+  processor.connect(audioContext.destination);
 }
 
 async function stopMicrophone(){
   try{ processor?.disconnect(); }catch{}
   try{ micSource?.disconnect(); }catch{}
-  try{ silentGain?.disconnect(); }catch{}
-  processor=null; micSource=null; silentGain=null;
+  processor = null; micSource = null;
   if(micStream){
-    micStream.getTracks().forEach(t=>t.stop());
-    micStream=null;
+    micStream.getTracks().forEach(t => t.stop());
+    micStream = null;
   }
   if(audioContext){
     await audioContext.close().catch(()=>{});
-    audioContext=null;
+    audioContext = null;
   }
 }
 
@@ -700,10 +616,6 @@ async function startConversation(targetNPC=null){
   }
 
   try{
-    if(navigator.audioSession){
-      try{ navigator.audioSession.type = "play-and-record"; }catch(err){ console.warn("audioSession set failed:",err); }
-    }
-    playbackAudioEl.play().catch(()=>{});
     status.textContent="CONNECTING...";
     subtitle.textContent=targetNPC
       ? `Connecting to ${targetNPC.name}...`
@@ -792,7 +704,6 @@ Do not describe your internal reasoning. Do not say you are an AI unless directl
         },
         onclose(e){
           console.log("Gemini Live closed:",e);
-          setAudioMode("playback");
           status.textContent="OFFLINE";
           start.disabled=false;
           stop.disabled=true;
@@ -804,13 +715,6 @@ Do not describe your internal reasoning. Do not say you are an AI unless directl
     });
 
     await startMicrophone();
-
-    if(navigator.audioSession){
-      try{ navigator.audioSession.type = "play-and-record"; }catch{}
-      navigator.audioSession.onstatechange = () => {
-        try{ navigator.audioSession.type = "play-and-record"; }catch{}
-      };
-    }
 
     try{
       const greetName = targetNPC ? targetNPC.name : "the player";
@@ -844,7 +748,6 @@ stop.onclick=async()=>{
   try{session?.close?.();}catch{}
   session=null;
   await stopMicrophone();
-  setAudioMode("playback");
   status.textContent="OFFLINE";
   start.disabled=false;
   stop.disabled=true;
