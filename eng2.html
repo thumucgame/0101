@@ -143,9 +143,9 @@ let audioContext = null;
 let micSource = null;
 let processor = null;
 let silentGain = null;
-let nextPlayTime = 0;
-let scheduledSources = []; // currently-scheduled/playing TTS buffer sources
-const PLAYBACK_JITTER_BUFFER = 0.12; // seconds of lead time to smooth out network jitter
+let playbackQueue = [];      // FIFO of Float32Array chunks waiting to be played
+let playbackQueueOffset = 0; // read offset into playbackQueue[0]
+let playbackProcessor = null;
 let activeNPC = null;
 let isConnecting = false;
 let connectionId = 0;
@@ -753,50 +753,79 @@ async function ensurePlaybackAudio(){
     playbackAudioEl.playsInline=true;
     await applySinkId();
   }
+  if(!playbackProcessor){
+    // A continuous streaming player instead of scheduling many separate
+    // AudioBufferSourceNodes back-to-back. Each incoming PCM chunk is
+    // resampled and pushed into a FIFO queue; this node just drains that
+    // queue sample-by-sample every audio callback. Because it's one
+    // uninterrupted output stream (not many independently-scheduled
+    // buffers glued together at estimated timestamps), there are no
+    // per-chunk boundary clicks/pops and, since it's a single consumer, two
+    // chunks can never overlap.
+    playbackProcessor=audioContext.createScriptProcessor(4096,0,1);
+    playbackProcessor.onaudioprocess=(event)=>{
+      const output=event.outputBuffer.getChannelData(0);
+      let filled=0;
+      while(filled<output.length && playbackQueue.length){
+        const chunk=playbackQueue[0];
+        const avail=chunk.length-playbackQueueOffset;
+        const toCopy=Math.min(avail, output.length-filled);
+        output.set(chunk.subarray(playbackQueueOffset, playbackQueueOffset+toCopy), filled);
+        filled+=toCopy;
+        playbackQueueOffset+=toCopy;
+        if(playbackQueueOffset>=chunk.length){
+          playbackQueue.shift();
+          playbackQueueOffset=0;
+        }
+      }
+      // Any remaining samples stay at 0 (the spec guarantees the output
+      // buffer starts as silence), so an empty queue just plays silence
+      // instead of glitching.
+    };
+    playbackProcessor.connect(playbackDestination);
+  }
   try{ await playbackAudioEl.play(); }catch(err){ console.warn('Playback audio element play() failed:',err); }
+}
+
+// Linear-interpolation resample from Gemini's fixed 24kHz PCM output to
+// whatever native sample rate this device's AudioContext is actually
+// running at (iOS does not always honor a custom requested sampleRate).
+function resamplePCM(floatSamples, fromRate, toRate){
+  if(fromRate===toRate) return floatSamples;
+  const ratio=fromRate/toRate;
+  const outLength=Math.max(1,Math.floor(floatSamples.length/ratio));
+  const out=new Float32Array(outLength);
+  for(let i=0;i<outLength;i++){
+    const pos=i*ratio, i0=Math.floor(pos), i1=Math.min(i0+1,floatSamples.length-1), f=pos-i0;
+    out[i]=floatSamples[i0]*(1-f)+floatSamples[i1]*f;
+  }
+  return out;
 }
 
 function playPCM24k(base64){
   const bytes=base64ToBytes(base64);
   const samples=new Int16Array(bytes.buffer, bytes.byteOffset, Math.floor(bytes.byteLength/2));
-  if(!audioContext || !playbackDestination){
+  if(!audioContext || !playbackDestination || !playbackProcessor){
     // Normally initialized from the user's click, but keep this fallback.
     ensurePlaybackAudio();
+    if(!playbackProcessor) return; // will catch up on the next chunk
   }
   if(audioContext.state !== 'running') audioContext.resume().catch(()=>{});
-  const buffer=audioContext.createBuffer(1,samples.length,24000);
-  const channel=buffer.getChannelData(0);
-  for(let i=0;i<samples.length;i++) channel[i]=samples[i]/32768;
-  const source=audioContext.createBufferSource();
-  source.buffer=buffer;
-  source.connect(playbackDestination);
 
-  const now=audioContext.currentTime;
-  // Keep a small lead time (jitter buffer) ahead of "now" so slightly late
-  // network chunks don't cause an audible gap/stutter, but don't let the
-  // queue drift arbitrarily far ahead either.
-  if(nextPlayTime < now + 0.01) nextPlayTime = now + PLAYBACK_JITTER_BUFFER;
-  source.start(nextPlayTime);
+  const floatSamples=new Float32Array(samples.length);
+  for(let i=0;i<samples.length;i++) floatSamples[i]=samples[i]/32768;
 
-  scheduledSources.push(source);
-  source.onended=()=>{
-    const idx=scheduledSources.indexOf(source);
-    if(idx !== -1) scheduledSources.splice(idx,1);
-  };
-
-  nextPlayTime += buffer.duration;
+  const resampled=resamplePCM(floatSamples, 24000, audioContext.sampleRate);
+  playbackQueue.push(resampled);
 }
 
 function clearPlayback(){
-  // Stop every currently scheduled/playing chunk. Without this, a barge-in
-  // interruption only reset the scheduling clock while the OLD audio
-  // buffers kept playing on their previously-scheduled times, which is what
-  // caused new speech to overlap with leftover old speech.
-  for(const src of scheduledSources){
-    try{ src.onended=null; src.stop(); }catch{}
-  }
-  scheduledSources=[];
-  if(audioContext) nextPlayTime=audioContext.currentTime;
+  // Drop every chunk waiting to be played. Since playback is a single FIFO
+  // queue drained by one continuous node, clearing it is instant and safe
+  // — there's nothing else still "in flight" that could overlap with
+  // whatever plays next.
+  playbackQueue=[];
+  playbackQueueOffset=0;
 }
 
 async function startMicrophone(){
@@ -863,6 +892,11 @@ async function releaseMicrophone(){
     micStream.getTracks().forEach(t=>t.stop());
     micStream=null;
   }
+  try{ playbackProcessor?.disconnect(); }catch{}
+  playbackProcessor=null;
+  playbackQueue=[];
+  playbackQueueOffset=0;
+  playbackDestination=null;
   if(audioContext){
     await audioContext.close().catch(()=>{});
     audioContext=null;
