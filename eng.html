@@ -20,9 +20,24 @@
       border:1px solid #fff4;border-radius:14px;backdrop-filter:blur(8px)}
     #npcName{font-weight:800}
     #talk{background:#ffd84d;color:#111}
-    .npcLabel{position:absolute;transform:translate(-50%,-100%);padding:4px 8px;
-      border-radius:8px;background:#000a;color:#fff;font-size:11px;pointer-events:none;
-      white-space:nowrap;font-weight:700}
+    .npcLabel{position:absolute;transform:translate(-50%,-100%);padding:5px 10px;
+      border-radius:9px;background:#000c;color:#fff;font-size:12px;pointer-events:none;
+      white-space:nowrap;font-weight:800;border:1px solid #fff3}
+    #topicsToggle{position:fixed;left:18px;top:112px;pointer-events:auto;background:#000b;
+      color:#fff;border:1px solid #fff4;border-radius:10px;padding:9px 13px;font-size:12px;
+      font-weight:800;cursor:pointer;z-index:6}
+    #topicsPanel{position:fixed;left:18px;top:158px;width:min(300px,86vw);max-height:60vh;
+      overflow-y:auto;background:#000c;border:1px solid #fff3;border-radius:14px;
+      padding:10px;display:none;flex-direction:column;gap:8px;pointer-events:auto;z-index:6;
+      backdrop-filter:blur(8px)}
+    #topicsPanel.open{display:flex}
+    .roomCard{display:flex;gap:10px;align-items:center;background:#fff1;border:1px solid #fff2;
+      border-radius:12px;padding:9px 11px;cursor:pointer;text-align:left}
+    .roomCard:hover{background:#fff2}
+    .roomCard .ic{font-size:22px;line-height:1}
+    .roomCard .info{display:flex;flex-direction:column;gap:2px}
+    .roomCard .rt{font-weight:800;font-size:13px}
+    .roomCard .rd{font-size:11px;opacity:.8;line-height:1.3}
     #chatLogToggle{position:fixed;right:18px;top:112px;pointer-events:auto;background:#000b;
       color:#fff;border:1px solid #fff4;border-radius:10px;padding:9px 13px;font-size:12px;
       font-weight:800;cursor:pointer;z-index:6}
@@ -54,6 +69,8 @@
   </div>
   <button id="chatLogToggle">💬 CHAT LOG</button>
   <div id="chatLog"><div class="empty">Conversation transcript will appear here.</div></div>
+  <button id="topicsToggle">📚 TOPICS</button>
+  <div id="topicsPanel"></div>
   <div id="geminiKeyBox" style="position:absolute;right:18px;top:58px;pointer-events:auto;display:flex;gap:6px;align-items:center;background:#0009;padding:8px;border-radius:12px;">
     <input id="geminiKey" type="password" placeholder="Gemini API key" autocomplete="off"
       style="width:230px;padding:9px 10px;border:0;border-radius:9px;outline:none;">
@@ -207,10 +224,70 @@ function person(color,x,z){
 
 const player=person(0x315a9b,0,5);
 const npcs=[
-  { mesh: person(0xc15f4a,-5,-4), name:"Alex", role:"local person", scenario:"casual street conversation" },
-  { mesh: person(0x4f8f66,5,-10), name:"Mia", role:"person going for coffee", scenario:"casual street conversation" },
-  { mesh: person(0x8065a9,-4,-22), name:"Sam", role:"traveler", scenario:"casual street conversation" }
+  { mesh: person(0xc15f4a,-5,-4), name:"Lucy", icon:"☕", topic:"Coffee Shop",
+    role:"friendly barista at a coffee shop",
+    description:"Order a drink and a snack, ask about the menu.",
+    scenario:"The player is a customer at your coffee shop. Ask what they'd like to drink, suggest sizes and snacks, make small talk, and handle payment.", color:0xc15f4a },
+  { mesh: person(0x4f8f66,5,-10), name:"Ben", icon:"🛍️", topic:"Clothing Store",
+    role:"shop assistant in a clothing store",
+    description:"Shop for clothes, ask about sizes, colors and prices.",
+    scenario:"The player is shopping in your clothing store. Help them find items, discuss sizes/colors/prices, and offer the fitting room.", color:0x4f8f66 },
+  { mesh: person(0x8065a9,-4,-16), name:"Grace", icon:"✈️", topic:"Airport Check-in",
+    role:"airline check-in agent at the airport",
+    description:"Check in for a flight, talk about luggage and seat choice.",
+    scenario:"The player is checking in for a flight. Ask for their passport, destination, luggage, and seat preference, then give boarding info.", color:0x8065a9 },
+  { mesh: person(0xd1a25c,5,-22), name:"Daniel", icon:"🏨", topic:"Hotel Front Desk",
+    role:"hotel receptionist",
+    description:"Check into a hotel and ask about the room and amenities.",
+    scenario:"The player is checking into your hotel. Confirm their reservation, ask for ID, explain the room, breakfast times, wifi, and checkout time.", color:0xd1a25c },
+  { mesh: person(0xe0637a,-5,-28), name:"Maria", icon:"🍽️", topic:"Restaurant",
+    role:"waiter at a restaurant",
+    description:"Order a meal, ask about the menu, and pay the bill.",
+    scenario:"The player is dining at your restaurant. Take their order, suggest specials, ask about drinks, and discuss the bill and tip at the end.", color:0xe0637a },
+  { mesh: person(0x5678a8,5,-34), name:"Mr. Carter", icon:"💼", topic:"Job Interview",
+    role:"job interviewer at an office",
+    description:"Practice answering common job interview questions.",
+    scenario:"The player is being interviewed for a job. Ask about their experience, strengths/weaknesses, and why they want the job. Keep a professional, encouraging tone.", color:0x5678a8 }
 ];
+
+const roomLabels = npcs.map(r=>{
+  const el=document.createElement("div");
+  el.className="npcLabel";
+  el.textContent=`${r.icon} ${r.topic}`;
+  document.getElementById("hud").appendChild(el);
+  const rug=new THREE.Mesh(
+    new THREE.CylinderGeometry(1.7,1.7,.05,24),
+    new THREE.MeshStandardMaterial({color:r.color,roughness:.85})
+  );
+  rug.position.set(r.mesh.position.x,.03,r.mesh.position.z);
+  rug.receiveShadow=true;
+  scene.add(rug);
+  return el;
+});
+
+const topicsPanel = document.getElementById("topicsPanel");
+const topicsToggle = document.getElementById("topicsToggle");
+let topicsOpen = false;
+
+npcs.forEach(r=>{
+  const card=document.createElement("button");
+  card.className="roomCard";
+  card.innerHTML=`<div class="ic">${r.icon}</div><div class="info"><div class="rt">${r.topic}</div><div class="rd">${r.description}</div></div>`;
+  card.onclick=()=>{
+    player.position.x = r.mesh.position.x;
+    player.position.z = r.mesh.position.z + 2.4;
+    topicsOpen=false;
+    topicsPanel.classList.remove("open");
+    topicsToggle.textContent="📚 TOPICS";
+  };
+  topicsPanel.appendChild(card);
+});
+
+topicsToggle.onclick = () => {
+  topicsOpen = !topicsOpen;
+  topicsPanel.classList.toggle("open", topicsOpen);
+  topicsToggle.textContent = topicsOpen ? "📚 HIDE TOPICS" : "📚 TOPICS";
+};
 
 let nearbyNPC=null;
 let conversation=null;
@@ -218,9 +295,9 @@ let conversation=null;
 function setNearbyNPC(npc){
   if(nearbyNPC === npc) return;
   nearbyNPC=npc;
-  npcName.textContent=npc.name;
+  npcName.textContent=`${npc.name} · ${npc.icon} ${npc.topic}`;
   npcBox.style.display="flex";
-  subtitle.textContent=`You're near ${npc.name}. Press TALK to start a natural conversation.`;
+  subtitle.textContent=`${npc.icon} ${npc.topic}: ${npc.description} Press TALK to start.`;
 }
 
 function clearNearbyNPC(){
@@ -235,7 +312,7 @@ talk.disabled=true;
 const geminiKeyInput = document.getElementById("geminiKey");
 const saveKeyBtn = document.getElementById("saveKey");
 
-geminiKeyInput.value = localStorage.getItem("gemini_api_key") || "AQ.Ab8RN6IhkgfA25BUA_jgZUgBHl9LXsIsIiaQ_lSAVuryPKMZqw";
+geminiKeyInput.value = localStorage.getItem("gemini_api_key") || "";
 geminiApiKey = geminiKeyInput.value.trim();
 
 saveKeyBtn.onclick = () => {
@@ -390,7 +467,7 @@ async function startConversation(targetNPC=null){
     const ai=new GoogleGenAI({apiKey:geminiApiKey});
 
     const npcContext=targetNPC
-      ? `You are ${targetNPC.name}, a ${targetNPC.role}. Scenario: ${targetNPC.scenario}.`
+      ? `You are ${targetNPC.name}, a ${targetNPC.role}, in a roleplay scenario called "${targetNPC.topic}". ${targetNPC.scenario} The learner's goal: ${targetNPC.description}`
       : "You are a friendly person on an English-speaking city street.";
 
     session=await ai.live.connect({
@@ -457,7 +534,7 @@ Do not say you are an AI unless directly asked.`
         onerror(e){
           console.error(e);
           status.textContent="ERROR";
-          subtitle.textContent="Gemini Live error: "+(e?.message||"check API key, billing and microphone permission.");
+          subtitle.textContent="Connection failed: "+(e?.message||"check your API key, billing status, and microphone permission.");
           start.disabled=false;
           stop.disabled=true;
           talk.disabled=false;
@@ -522,7 +599,19 @@ function loop(now){
   requestAnimationFrame(loop);
   const dt=Math.min((now-last)/1000,.05); last=now;
   move(dt);
-  npcs.forEach((n,i)=>n.mesh.rotation.y=Math.sin(now*.0006+i)*.08);
+  npcs.forEach((n,i)=>{
+    n.mesh.rotation.y=Math.sin(now*.0006+i)*.08;
+    const v=n.mesh.position.clone();
+    v.y+=2.5;
+    v.project(camera);
+    if(v.z>1){
+      roomLabels[i].style.display="none";
+    }else{
+      roomLabels[i].style.display="block";
+      roomLabels[i].style.left=((v.x*.5+.5)*innerWidth)+"px";
+      roomLabels[i].style.top=((-v.y*.5+.5)*innerHeight)+"px";
+    }
+  });
   renderer.render(scene,camera);
 }
 loop(performance.now());
