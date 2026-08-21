@@ -99,8 +99,9 @@
       style="width:230px;padding:9px 10px;border:0;border-radius:9px;outline:none;">
     <button id="saveKey" style="padding:9px 12px;background:#fff;color:#111;">SAVE</button>
   </div>
-  <div id="outputBox" style="display:none;position:absolute;right:18px;top:104px;pointer-events:auto;background:#0009;padding:8px;border-radius:12px;">
-    <select id="outputSelect" style="padding:7px 8px;border:0;border-radius:8px;max-width:230px;font-size:12px;"></select>
+  <div id="outputBox" style="display:none;position:absolute;right:18px;top:104px;pointer-events:auto;background:#0009;padding:8px;border-radius:12px;gap:6px;align-items:center;">
+    <select id="outputSelect" style="padding:7px 8px;border:0;border-radius:8px;max-width:180px;font-size:12px;"></select>
+    <button id="choosePickerBtn" style="display:none;padding:7px 10px;background:#fff;color:#111;font-size:12px;border-radius:8px;border:0;font-weight:800;cursor:pointer;">🎧 Choose</button>
   </div>
   <div id="npcBox">
     <span>👋 <span id="npcName">NPC</span></span>
@@ -443,6 +444,25 @@ outputSelect?.addEventListener("change", async () => {
   await applySinkId();
 });
 
+const choosePickerBtn = document.getElementById("choosePickerBtn");
+const supportsOutputPicker = !!navigator.mediaDevices?.selectAudioOutput;
+if(supportsOutputPicker && choosePickerBtn){
+  choosePickerBtn.style.display = "inline-block";
+  outputBox.style.display = "flex";
+  choosePickerBtn.onclick = async () => {
+    try{
+      const device = await navigator.mediaDevices.selectAudioOutput();
+      selectedOutputId = device.deviceId;
+      localStorage.setItem("preferred_output_device", selectedOutputId);
+      await applySinkId();
+      subtitle.textContent = `Audio output set to: ${device.label || "selected device"}.`;
+      refreshOutputDevices();
+    }catch(err){
+      console.warn("selectAudioOutput cancelled/failed:", err);
+    }
+  };
+}
+
 if(navigator.mediaDevices?.addEventListener){
   navigator.mediaDevices.addEventListener("devicechange", refreshOutputDevices);
 }
@@ -672,6 +692,13 @@ async function startConversation(targetNPC=null){
   }
 
   try{
+    // iOS Safari (WebKit) exposes navigator.audioSession: setting type to
+    // "play-and-record" tells the OS this is a live mic+speaker session, which
+    // stops it from force-switching output to the built-in speaker once the
+    // mic starts, keeping Bluetooth active for both input and output.
+    if(navigator.audioSession){
+      try{ navigator.audioSession.type = "play-and-record"; }catch(err){ console.warn("audioSession set failed:",err); }
+    }
     playbackAudioEl.play().catch(()=>{});
     status.textContent="CONNECTING...";
     subtitle.textContent=targetNPC
