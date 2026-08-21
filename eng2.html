@@ -143,6 +143,17 @@ let playbackContext = null;
 let nextPlayTime = 0;
 let activeNPC = null;
 
+function setAudioMode(mode){
+  if (!navigator.audioSession) return;
+  try {
+    navigator.audioSession.type = mode;
+    console.log("AudioSession:", mode);
+  } catch (err) {
+    console.warn("audioSession set failed:", err);
+  }
+}
+
+
 const app = document.getElementById("app");
 const status = document.getElementById("status");
 const subtitle = document.getElementById("subtitle");
@@ -700,7 +711,7 @@ async function startConversation(targetNPC=null){
     // audio, "playback" keeps the OS treating this as regular media audio,
     // which correctly stays routed to the Bluetooth speaker (A2DP).
     if(navigator.audioSession){
-      try{ navigator.audioSession.type = "playback"; }catch(err){ console.warn("audioSession set failed:",err); }
+      try{ navigator.audioSession.type = "play-and-record"; }catch(err){ console.warn("audioSession set failed:",err); }
     }
     playbackAudioEl.play().catch(()=>{});
     status.textContent="CONNECTING...";
@@ -791,7 +802,8 @@ Do not describe your internal reasoning. Do not say you are an AI unless directl
         },
         onclose(e){
           console.log("Gemini Live closed:",e);
-          status.textContent="OFFLINE";
+          setAudioMode("playback");
+  status.textContent="OFFLINE";
           start.disabled=false;
           stop.disabled=true;
           talk.disabled=false;
@@ -804,9 +816,9 @@ Do not describe your internal reasoning. Do not say you are an AI unless directl
     await startMicrophone();
 
     if(navigator.audioSession){
-      try{ navigator.audioSession.type = "playback"; }catch{}
+      try{ navigator.audioSession.type = "play-and-record"; }catch{}
       navigator.audioSession.onstatechange = () => {
-        try{ navigator.audioSession.type = "playback"; }catch{}
+        try{ navigator.audioSession.type = "play-and-record"; }catch{}
       };
     }
 
@@ -842,6 +854,7 @@ stop.onclick=async()=>{
   try{session?.close?.();}catch{}
   session=null;
   await stopMicrophone();
+  setAudioMode("playback");
   status.textContent="OFFLINE";
   start.disabled=false;
   stop.disabled=true;
