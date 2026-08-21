@@ -375,7 +375,6 @@ topicsToggle.onclick = () => {
 };
 
 let nearbyNPC=null;
-let conversation=null;
 
 function setNearbyNPC(npc){
   if(nearbyNPC === npc) return;
@@ -389,7 +388,7 @@ function clearNearbyNPC(){
   if(!nearbyNPC) return;
   nearbyNPC=null;
   npcBox.style.display="none";
-  if(!conversation) subtitle.textContent="Walk toward someone on the street.";
+  if(!session && status.textContent!=="ERROR") subtitle.textContent="Walk toward someone on the street.";
 }
 
 talk.disabled=true;
