@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -142,6 +141,7 @@ let silentGain = null;
 let playbackContext = null;
 let nextPlayTime = 0;
 let activeNPC = null;
+let isAiSpeaking = false; // Biến kiểm soát trạng thái AI đang nói
 
 function setAudioMode(mode){
   if (!navigator.audioSession) return;
@@ -152,7 +152,6 @@ function setAudioMode(mode){
     console.warn("audioSession set failed:", err);
   }
 }
-
 
 const app = document.getElementById("app");
 const status = document.getElementById("status");
@@ -205,7 +204,6 @@ function addChatMessage(who, text){
   saveChatHistory();
 }
 
-// Restore previous conversation history on load
 if(chatHistory.length){
   chatHistory.forEach(m => renderChatMessage(m.who, m.text));
 }
@@ -250,6 +248,7 @@ function finalizeTurn(){
   if(npcTurnBuffer.trim()) addChatMessage(currentNPCLabel(), npcTurnBuffer);
   userTurnBuffer = "";
   npcTurnBuffer = "";
+  isAiSpeaking = false; // Bật lại mic khi hoàn thành lượt thoại
 }
 
 chatLogToggle.onclick = () => {
@@ -614,10 +613,11 @@ function base64ToBytes(base64){
 let playbackDestination = null;
 
 function playPCM24k(base64){
+  isAiSpeaking = true; // Đánh dấu AI đang phát âm
   const bytes=base64ToBytes(base64);
   const samples=new Int16Array(bytes.buffer, bytes.byteOffset, Math.floor(bytes.byteLength/2));
   if(!playbackContext){
-    playbackContext=new AudioContext({sampleRate:24000});
+    playbackContext=new (window.AudioContext || window.webkitAudioContext)({sampleRate:24000});
     playbackDestination=playbackContext.createMediaStreamDestination();
     playbackAudioEl.srcObject=playbackDestination.stream;
     playbackAudioEl.play().catch(err=>console.warn("Playback audio element play() failed:",err));
@@ -637,17 +637,14 @@ function playPCM24k(base64){
 
 function clearPlayback(){
   if(playbackContext) nextPlayTime=playbackContext.currentTime;
+  isAiSpeaking = false;
 }
 
 async function startMicrophone(){
   micStream=await navigator.mediaDevices.getUserMedia({
     audio:{
       channelCount:1,
-      // echoCancellation forces Android/Chrome into "communication mode",
-      // which reroutes output audio to the earpiece or a low-quality Bluetooth
-      // call profile (HFP) instead of the normal Bluetooth media speaker (A2DP).
-      // Keeping it off lets audio play through Bluetooth speakers/media output normally.
-      echoCancellation:false,
+      echoCancellation:true, // Sửa: Bật echoCancellation bắt buộc trên iOS
       noiseSuppression:true,
       autoGainControl:true
     }
@@ -655,7 +652,7 @@ async function startMicrophone(){
 
   refreshOutputDevices();
 
-  audioContext=new AudioContext();
+  audioContext=new (window.AudioContext || window.webkitAudioContext)();
   await audioContext.resume();
 
   micSource=audioContext.createMediaStreamSource(micStream);
@@ -664,7 +661,7 @@ async function startMicrophone(){
   silentGain.gain.value=0;
 
   processor.onaudioprocess=(event)=>{
-    if(!session) return;
+    if(!session || isAiSpeaking) return; // Không gửi âm thanh từ Mic khi AI đang phát tiếng
     const input=event.inputBuffer.getChannelData(0);
     const pcm=floatTo16BitPCM(input);
     session.sendRealtimeInput({
@@ -703,13 +700,6 @@ async function startConversation(targetNPC=null){
   }
 
   try{
-    // iOS Safari (WebKit) exposes navigator.audioSession. On iOS 17+, the
-    // "play-and-record" type (the one meant for calls) has a known OS bug
-    // that forces output to the built-in speaker even with Bluetooth
-    // connected. Since we only need built-in mic input (not a Bluetooth
-    // headset mic) and just want output to play like normal browser/media
-    // audio, "playback" keeps the OS treating this as regular media audio,
-    // which correctly stays routed to the Bluetooth speaker (A2DP).
     if(navigator.audioSession){
       try{ navigator.audioSession.type = "play-and-record"; }catch(err){ console.warn("audioSession set failed:",err); }
     }
@@ -803,7 +793,7 @@ Do not describe your internal reasoning. Do not say you are an AI unless directl
         onclose(e){
           console.log("Gemini Live closed:",e);
           setAudioMode("playback");
-  status.textContent="OFFLINE";
+          status.textContent="OFFLINE";
           start.disabled=false;
           stop.disabled=true;
           talk.disabled=false;
