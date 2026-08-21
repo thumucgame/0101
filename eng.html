@@ -51,6 +51,12 @@
     #clearChatLog{background:#fff1;color:#fff;border:1px solid #fff3;border-radius:8px;
       padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer}
     #chatLogMessages{overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+    #chatLogCompose{display:flex;gap:6px;margin-top:2px}
+    #chatLogInput{flex:1;padding:9px 10px;border:0;border-radius:9px;outline:none;font-size:13px;
+      background:#fff;color:#111}
+    #chatLogSend{padding:9px 12px;background:#2f6fed;color:#fff;border:0;border-radius:9px;
+      font-weight:800;font-size:12px;cursor:pointer}
+    #chatLogSend:disabled{opacity:.5;cursor:not-allowed}
     #chatLog .empty{color:#fff9;font-size:12px;text-align:center;padding:10px 4px}
     .msg{max-width:85%;padding:8px 12px;border-radius:13px;font-size:13px;line-height:1.35;
       word-wrap:break-word}
@@ -81,6 +87,10 @@
   <div id="chatLog">
     <div id="chatLogHeader"><span>TRANSCRIPT</span><button id="clearChatLog">🗑 Clear</button></div>
     <div id="chatLogMessages"><div class="empty">Conversation transcript will appear here.</div></div>
+    <div id="chatLogCompose">
+      <input id="chatLogInput" type="text" placeholder="Type a message..." autocomplete="off">
+      <button id="chatLogSend">SEND</button>
+    </div>
   </div>
   <button id="topicsToggle">📚 TOPICS</button>
   <div id="topicsPanel"></div>
@@ -192,6 +202,35 @@ clearChatLogBtn.onclick = () => {
   saveChatHistory();
   chatLogMessages.innerHTML = '<div class="empty">Conversation transcript will appear here.</div>';
 };
+
+const chatLogInput = document.getElementById("chatLogInput");
+const chatLogSend = document.getElementById("chatLogSend");
+
+function sendTypedMessage(){
+  const text = chatLogInput.value.trim();
+  if(!text) return;
+  if(!session){
+    subtitle.textContent = "Press TALK to start a conversation first, then you can type messages.";
+    return;
+  }
+  addChatMessage("You", text);
+  try{
+    session.sendRealtimeInput({text});
+  }catch(err){
+    console.warn("Failed to send typed message:", err);
+    subtitle.textContent = "Could not send message. Check your connection.";
+  }
+  chatLogInput.value = "";
+  chatLogInput.focus();
+}
+
+chatLogSend.onclick = sendTypedMessage;
+chatLogInput.addEventListener("keydown", e=>{
+  if(e.key === "Enter"){
+    e.preventDefault();
+    sendTypedMessage();
+  }
+});
 
 function finalizeTurn(){
   if(userTurnBuffer.trim()) addChatMessage("You", userTurnBuffer);
@@ -422,8 +461,12 @@ saveKeyBtn.onclick = () => {
 };
 
 const keys=new Set();
-addEventListener("keydown",e=>keys.add(e.key.toLowerCase()));
-addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
+function isTypingTarget(e){
+  const tag = e.target?.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || e.target?.isContentEditable;
+}
+addEventListener("keydown",e=>{ if(!isTypingTarget(e)) keys.add(e.key.toLowerCase()); });
+addEventListener("keyup",e=>{ if(!isTypingTarget(e)) keys.delete(e.key.toLowerCase()); });
 
 const joystick = document.getElementById("joystick");
 const joystickKnob = document.getElementById("joystickKnob");
