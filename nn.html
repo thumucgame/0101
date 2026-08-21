@@ -1,1 +1,623 @@
 
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Language Coach — Phòng Luyện Phát Âm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Manrope:wght@500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #12201a;
+    --bg-deep: #0b1510;
+    --card: #1a2b22;
+    --card-line: #22392c;
+    --chalk: #f4efe1;
+    --chalk-dim: #b9c9bd;
+    --gold: #e3c16f;
+    --gold-soft: rgba(227,193,111,.28);
+    --coral: #ee7a67;
+    --coral-soft: rgba(238,122,103,.25);
+    --sage: #7fae8f;
+    --skin: #f0c9a3;
+    --skin-shadow: #dba97e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Manrope', system-ui, sans-serif;
+    color: var(--chalk);
+    min-height: 100vh;
+    display: flex; justify-content: center; align-items: center;
+    padding: 28px;
+    background:
+      radial-gradient(circle at 15% 10%, rgba(227,193,111,0.06), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(127,174,143,0.08), transparent 45%),
+      var(--bg-deep);
+    background-attachment: fixed;
+  }
+  body::before {
+    content: "";
+    position: fixed; inset: 0; pointer-events: none; opacity: .5;
+    background-image:
+      radial-gradient(rgba(244,239,225,0.025) 1px, transparent 1px),
+      radial-gradient(rgba(244,239,225,0.02) 1px, transparent 1px);
+    background-size: 3px 3px, 7px 7px;
+    background-position: 0 0, 2px 3px;
+  }
+
+  .app-container {
+    position: relative;
+    background: var(--bg);
+    width: 100%;
+    max-width: 820px;
+    border-radius: 20px;
+    padding: 30px 32px 34px;
+    border: 1px solid var(--card-line);
+    box-shadow: 0 30px 60px -25px rgba(0,0,0,.7), inset 0 0 90px rgba(0,0,0,.25);
+    display: flex; flex-direction: column; gap: 22px;
+  }
+  .app-container::after {
+    content: ""; position: absolute; inset: 10px;
+    border: 1px dashed rgba(244,239,225,.09);
+    border-radius: 14px; pointer-events: none;
+  }
+
+  .header {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    border-bottom: 2px dashed var(--card-line);
+    padding-bottom: 16px;
+  }
+  .header .title-block h1 {
+    font-family: 'Caveat', cursive;
+    font-size: 40px; font-weight: 700; color: var(--gold);
+    line-height: 1;
+    letter-spacing: .3px;
+  }
+  .header .title-block p {
+    font-size: 12px; color: var(--chalk-dim); margin-top: 4px;
+    text-transform: uppercase; letter-spacing: 1.5px;
+  }
+  .status-badge {
+    display: flex; align-items: center; gap: 7px;
+    padding: 7px 14px; border-radius: 999px; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px;
+    border: 1px solid;
+  }
+  .status-badge .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .status-offline { background: rgba(238,122,103,.1); color: var(--coral); border-color: rgba(238,122,103,.35); }
+  .status-offline .dot { background: var(--coral); }
+  .status-online { background: rgba(127,174,143,.12); color: #a9d6b8; border-color: rgba(127,174,143,.45); }
+  .status-online .dot { background: #6fe39a; box-shadow: 0 0 8px #6fe39a; animation: pulse-dot 1.4s infinite ease-in-out; }
+  @keyframes pulse-dot { 0%,100%{opacity:1; transform:scale(1);} 50%{opacity:.4; transform:scale(1.3);} }
+
+  .stage-wrapper {
+    position: relative;
+    width: 100%; height: 300px;
+    border-radius: 18px;
+    display: flex; justify-content: center; align-items: center;
+    background:
+      radial-gradient(ellipse at center, rgba(227,193,111,.10) 0%, transparent 62%),
+      linear-gradient(180deg, #10201a 0%, #0b1712 100%);
+    border: 1px solid var(--card-line);
+    overflow: hidden;
+  }
+  .stage-wrapper::before {
+    content: "";
+    position: absolute; inset: 14px;
+    border: 1.5px dashed rgba(227,193,111,.25);
+    border-radius: 50%;
+  }
+  .teacher-tag {
+    position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%) rotate(-1.5deg);
+    background: var(--gold); color: #1a2b22;
+    font-family: 'Caveat', cursive; font-size: 18px; font-weight: 700;
+    padding: 3px 16px 5px; border-radius: 4px;
+    box-shadow: 0 4px 10px rgba(0,0,0,.35);
+  }
+  #avatarCanvas { width: 250px; height: 250px; position: relative; z-index: 2; }
+
+  .grid-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .field { display: flex; flex-direction: column; gap: 7px; }
+  .field-full { grid-column: span 2; }
+  label {
+    font-size: 11px; font-weight: 700; color: var(--gold);
+    text-transform: uppercase; letter-spacing: 1.2px;
+  }
+  input, select {
+    background: var(--card);
+    border: 1.5px solid var(--card-line);
+    color: var(--chalk);
+    padding: 12px 13px;
+    border-radius: 10px;
+    outline: none;
+    font-size: 14px;
+    font-family: 'Manrope', sans-serif;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input::placeholder { color: #5c7568; }
+  input:focus, select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-soft); }
+  select { cursor: pointer; }
+
+  .controls { display: flex; gap: 12px; margin-top: 2px; }
+  button {
+    flex: 1; padding: 15px; border-radius: 12px; font-weight: 800; cursor: pointer;
+    font-size: 13.5px; letter-spacing: .3px; text-transform: uppercase;
+    border: 1.5px solid transparent;
+    transition: transform .12s ease, filter .15s ease, opacity .15s ease;
+    font-family: 'Manrope', sans-serif;
+  }
+  button:active:not(:disabled) { transform: scale(0.98); }
+  #btnConnect { background: var(--gold); color: #1a2b22; box-shadow: 0 8px 18px -6px rgba(227,193,111,.5); }
+  #btnConnect:hover:not(:disabled) { filter: brightness(1.08); }
+  #btnConnect:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
+  #btnDisconnect { background: transparent; color: var(--coral); border-color: var(--coral); }
+  #btnDisconnect:hover:not(:disabled) { background: var(--coral-soft); }
+  #btnDisconnect:disabled { opacity: .3; cursor: not-allowed; }
+
+  .box-container { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .box {
+    background: var(--card);
+    border: 1.5px solid var(--card-line);
+    border-radius: 12px;
+    padding: 14px 15px;
+    min-height: 92px; max-height: 160px; overflow-y: auto;
+    font-family: 'Space Mono', monospace;
+    font-size: 12.5px; line-height: 1.6; color: var(--chalk);
+  }
+  .box.you { border-left: 3px solid var(--sage); }
+  .box.teacher { border-left: 3px solid var(--gold); }
+  .box::-webkit-scrollbar { width: 6px; }
+  .box::-webkit-scrollbar-thumb { background: var(--card-line); border-radius: 3px; }
+
+  @media (max-width: 560px) {
+    .grid-fields, .box-container { grid-template-columns: 1fr; }
+    .field-full { grid-column: span 1; }
+    .header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <div class="header">
+    <div class="title-block">
+      <h1>AI Language Coach</h1>
+      <p>Phòng luyện phát âm trực tiếp</p>
+    </div>
+    <div id="statusBadge" class="status-badge status-offline"><span class="dot"></span>Offline</div>
+  </div>
+
+  <div class="stage-wrapper">
+    <canvas id="avatarCanvas" width="250" height="250"></canvas>
+    <div class="teacher-tag">Cô giáo AI</div>
+  </div>
+
+  <div class="grid-fields">
+    <div class="field">
+      <label>Gemini API Key</label>
+      <input type="password" id="apiKey" placeholder="Dán Gemini API Key...">
+    </div>
+    <div class="field">
+      <label>Ngôn ngữ muốn học</label>
+      <select id="langSelect">
+        <option value="English">🇺🇸 Tiếng Anh (English)</option>
+        <option value="Japanese">🇯🇵 Tiếng Nhật (日本語)</option>
+        <option value="Korean">🇰🇷 Tiếng Hàn (한국어)</option>
+        <option value="Chinese">🇨🇳 Tiếng Trung (中文)</option>
+        <option value="French">🇫🇷 Tiếng Pháp (Français)</option>
+        <option value="German">🇩🇪 Tiếng Đức (Deutsch)</option>
+      </select>
+    </div>
+    <div class="field field-full">
+      <label>Chủ đề luyện tập</label>
+      <select id="topicSelect">
+        <option value="daily">💬 Giao tiếp hằng ngày</option>
+        <option value="restaurant">🍽️ Nhà hàng &amp; Ẩm thực</option>
+        <option value="travel">✈️ Du lịch &amp; Sân bay</option>
+        <option value="work">💼 Công sở &amp; Phỏng vấn</option>
+        <option value="shopping">🛍️ Mua sắm</option>
+        <option value="school">🎓 Trường học</option>
+        <option value="health">🏥 Sức khỏe &amp; Bác sĩ</option>
+        <option value="free">🎲 Để cô tự chọn theo trình độ</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="btnConnect">🎤 Bắt đầu luyện nói</button>
+    <button id="btnDisconnect" disabled>⏹ Bảo cô dừng</button>
+  </div>
+
+  <div class="box-container">
+    <div class="field">
+      <label>Bạn vừa nói</label>
+      <div id="sttOutput" class="box you">Chưa có dữ liệu...</div>
+    </div>
+    <div class="field">
+      <label>Giáo viên nhận xét</label>
+      <div id="geminiOutput" class="box teacher">Chờ kết nối...</div>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://esm.sh/@google/genai@1.17.0"
+  }
+}
+</script>
+
+<script type="module">
+import { GoogleGenAI, Modality } from "@google/genai";
+
+const apiKeyInput = document.getElementById('apiKey');
+const topicSelect = document.getElementById('topicSelect');
+const langSelect = document.getElementById('langSelect');
+
+const TOPICS = {
+  daily:      { label: "Giao tiếp hằng ngày",     desc: "chào hỏi, làm quen, trò chuyện thường ngày" },
+  restaurant: { label: "Nhà hàng & Ẩm thực",       desc: "gọi món, đặt bàn, hỏi về món ăn tại nhà hàng/quán cà phê" },
+  travel:     { label: "Du lịch & Sân bay",        desc: "làm thủ tục bay, hỏi đường, đặt phòng khách sạn, xin chỉ dẫn khi du lịch" },
+  work:       { label: "Công sở & Phỏng vấn",      desc: "phỏng vấn xin việc, họp hành, trao đổi công việc qua email/điện thoại" },
+  shopping:   { label: "Mua sắm",                  desc: "hỏi giá, mặc cả, đổi trả hàng khi mua sắm" },
+  school:     { label: "Trường học",               desc: "giao tiếp trong lớp học, hỏi bài, nói chuyện với giáo viên/bạn học" },
+  health:     { label: "Sức khỏe & Bác sĩ",        desc: "mô tả triệu chứng, khám bệnh, mua thuốc tại hiệu thuốc" },
+  free:       { label: "Tự do",                    desc: "cô giáo tự chọn chủ đề và độ khó phù hợp với học viên" },
+};
+
+const btnConnect = document.getElementById('btnConnect');
+const btnDisconnect = document.getElementById('btnDisconnect');
+const sttOutput = document.getElementById('sttOutput');
+const geminiOutput = document.getElementById('geminiOutput');
+const statusBadge = document.getElementById('statusBadge');
+const canvas = document.getElementById('avatarCanvas');
+const ctx = canvas.getContext('2d');
+
+apiKeyInput.value = localStorage.getItem('gemini_api_key') || '';
+apiKeyInput.onchange = () => localStorage.setItem('gemini_api_key', apiKeyInput.value.trim());
+
+const GEMINI_MODEL = "gemini-3.1-flash-live-preview";
+let session = null, micStream = null, audioContext = null, micSource = null, processor = null;
+let playbackContext = null, analyser = null, animFrameId = null;
+let nextPlayTime = 0, isAiSpeaking = false, userBuffer = "", aiBuffer = "";
+
+const anim = {
+  mouthCurrent: 0,
+  mouthTarget: 0,
+  blinking: false,
+  blinkStart: 0,
+  blinkTimer: 2 + Math.random() * 3,
+  eyeOpen: 1,
+  lastTime: performance.now(),
+};
+
+function drawHumanAvatar() {
+  const t = performance.now() / 1000;
+  const cx = 125, cyBase = 122;
+
+  const breathe = Math.sin(t * 1.1) * 2;
+  const talkSway = isAiSpeaking ? Math.sin(t * 7) * anim.mouthCurrent * 2.2 : 0;
+  const tilt = (Math.sin(t * 0.45) * 1.6 + talkSway) * (Math.PI / 180);
+  const cy = cyBase + breathe;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const glowR = 108 + anim.mouthCurrent * 10 + Math.sin(t * 2) * 2;
+  const glow = ctx.createRadialGradient(cx, cy, 40, cx, cy, glowR);
+  glow.addColorStop(0, isAiSpeaking ? "rgba(227,193,111,0.22)" : "rgba(227,193,111,0.10)");
+  glow.addColorStop(1, "rgba(227,193,111,0)");
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(cx, cy, glowR, 0, Math.PI * 2); ctx.fill();
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(tilt);
+  ctx.translate(-cx, -cy);
+
+  const hairGrad = ctx.createLinearGradient(cx, cy - 90, cx, cy + 60);
+  hairGrad.addColorStop(0, "#3a2418");
+  hairGrad.addColorStop(1, "#231309");
+  ctx.fillStyle = hairGrad;
+  ctx.beginPath(); ctx.arc(cx, cy - 8, 76, 0, Math.PI * 2); ctx.fill();
+
+  ctx.fillStyle = "#e7b088";
+  ctx.fillRect(cx - 16, cy + 50, 32, 42);
+  ctx.fillStyle = "rgba(0,0,0,0.08)";
+  ctx.fillRect(cx - 16, cy + 50, 32, 8);
+
+  const shirtGrad = ctx.createLinearGradient(cx, cy + 78, cx, cy + 140);
+  shirtGrad.addColorStop(0, "#e3c16f");
+  shirtGrad.addColorStop(1, "#c79f4c");
+  ctx.fillStyle = shirtGrad;
+  ctx.beginPath(); ctx.ellipse(cx, cy + 108, 62, 32, 0, 0, Math.PI * 2); ctx.fill();
+
+  const faceGrad = ctx.createRadialGradient(cx - 15, cy - 20, 10, cx, cy, 80);
+  faceGrad.addColorStop(0, "#ffe3c2");
+  faceGrad.addColorStop(1, "#f0c9a3");
+  ctx.fillStyle = faceGrad;
+  ctx.beginPath(); ctx.ellipse(cx, cy, 53, 65, 0, 0, Math.PI * 2); ctx.fill();
+
+  ctx.fillStyle = hairGrad;
+  ctx.beginPath(); ctx.arc(cx, cy - 24, 55, Math.PI * 0.85, Math.PI * 2.15); ctx.fill();
+
+  ctx.fillStyle = "#e3c16f";
+  ctx.beginPath();
+  ctx.moveTo(cx + 44, cy - 58);
+  ctx.lineTo(cx + 62, cy - 68);
+  ctx.lineTo(cx + 60, cy - 50);
+  ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + 47, cy - 58, 5, 0, Math.PI * 2); ctx.fill();
+
+  const browLift = isAiSpeaking ? anim.mouthCurrent * 2.5 : 0;
+  ctx.strokeStyle = "#2a170e"; ctx.lineWidth = 3; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.arc(cx - 24, cy - 22 - browLift, 12, Math.PI * 1.1, Math.PI * 1.8); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx + 24, cy - 22 - browLift, 12, Math.PI * 1.2, Math.PI * 1.9); ctx.stroke();
+
+  const eo = Math.max(0.06, anim.eyeOpen);
+  ctx.fillStyle = "#fff9f0";
+  ctx.beginPath();
+  ctx.ellipse(cx - 22, cy - 8, 10, 7 * eo, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx + 22, cy - 8, 10, 7 * eo, 0, 0, Math.PI * 2);
+  ctx.fill();
+  if (eo > 0.25) {
+    ctx.fillStyle = "#2c1b3d";
+    ctx.beginPath();
+    ctx.arc(cx - 22, cy - 8, 4.6 * eo, 0, Math.PI * 2);
+    ctx.arc(cx + 22, cy - 8, 4.6 * eo, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.beginPath();
+    ctx.arc(cx - 24, cy - 10, 1.4, 0, Math.PI * 2);
+    ctx.arc(cx + 20, cy - 10, 1.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.strokeStyle = "#5c3a2a"; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.ellipse(cx - 22, cy - 8, 10, 7 * eo, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(cx + 22, cy - 8, 10, 7 * eo, 0, 0, Math.PI * 2); ctx.stroke();
+
+  ctx.fillStyle = "rgba(238,122,103,0.28)";
+  ctx.beginPath(); ctx.arc(cx - 31, cy + 13, 10, 0, Math.PI * 2); ctx.arc(cx + 31, cy + 13, 10, 0, Math.PI * 2); ctx.fill();
+
+  ctx.strokeStyle = "#d69f76"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx, cy + 10, 4, 0, Math.PI * 0.8); ctx.stroke();
+
+  const mouthY = cy + 33;
+  const openness = anim.mouthCurrent;
+  const widthWobble = 1 + Math.sin(t * 8) * 0.07 * openness;
+  const w = 15 * widthWobble;
+  const openPx = 3 + openness * 24;
+  const smile = isAiSpeaking ? 2 : 3.5;
+  const topY = mouthY - openPx * 0.22;
+  const botY = mouthY + openPx * 0.78;
+
+  const mouthPath = () => {
+    ctx.beginPath();
+    ctx.moveTo(cx - w, mouthY);
+    ctx.quadraticCurveTo(cx - w * 0.35, topY - smile, cx, topY);
+    ctx.quadraticCurveTo(cx + w * 0.35, topY - smile, cx + w, mouthY);
+    ctx.quadraticCurveTo(cx + w * 0.5, botY + (openness > 0.05 ? 3 : 0), cx, botY);
+    ctx.quadraticCurveTo(cx - w * 0.5, botY + (openness > 0.05 ? 3 : 0), cx - w, mouthY);
+    ctx.closePath();
+  };
+
+  ctx.save();
+  mouthPath();
+  const mouthGrad = ctx.createLinearGradient(cx, topY, cx, botY);
+  mouthGrad.addColorStop(0, "#5c1420");
+  mouthGrad.addColorStop(1, "#7d2231");
+  ctx.fillStyle = mouthGrad;
+  ctx.fill();
+  ctx.clip();
+
+  if (openness > 0.14) {
+    ctx.fillStyle = "#fffdf8";
+    ctx.fillRect(cx - w * 0.7, topY, w * 1.4, 5);
+  }
+  if (openness > 0.4) {
+    ctx.fillStyle = "#d1495c";
+    ctx.beginPath(); ctx.ellipse(cx, botY - 3, w * 0.4, 5, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+
+  mouthPath();
+  ctx.strokeStyle = "#b6465a"; ctx.lineWidth = 2.3; ctx.stroke();
+
+  ctx.restore();
+}
+
+function updateLipSync() {
+  const now = performance.now();
+  const dt = Math.min(0.1, (now - anim.lastTime) / 1000);
+  anim.lastTime = now;
+
+  if (analyser && isAiSpeaking) {
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(dataArray);
+    let sum = 0;
+    for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+    const average = sum / dataArray.length;
+    anim.mouthTarget = Math.min(1, average / 70);
+  } else {
+    anim.mouthTarget = 0;
+  }
+  anim.mouthCurrent += (anim.mouthTarget - anim.mouthCurrent) * 0.3;
+
+  const t = now / 1000;
+  if (!anim.blinking) {
+    anim.blinkTimer -= dt;
+    if (anim.blinkTimer <= 0) { anim.blinking = true; anim.blinkStart = t; }
+  } else {
+    const e = t - anim.blinkStart;
+    if (e < 0.09) anim.eyeOpen = 1 - e / 0.09;
+    else if (e < 0.18) anim.eyeOpen = (e - 0.09) / 0.09;
+    else { anim.blinking = false; anim.eyeOpen = 1; anim.blinkTimer = 2 + Math.random() * 3.5; }
+  }
+
+  drawHumanAvatar();
+  animFrameId = requestAnimationFrame(updateLipSync);
+}
+
+function bytesToBase64(bytes){
+  let binary=""; const chunkSize=0x8000;
+  for(let i=0;i<bytes.length;i+=chunkSize){ binary += String.fromCharCode(...bytes.subarray(i, Math.min(i+chunkSize, bytes.length))); }
+  return btoa(binary);
+}
+function floatTo16BitPCM(float32){
+  const out = new Int16Array(float32.length);
+  for(let i=0;i<float32.length;i++){ const s=Math.max(-1,Math.min(1,float32[i])); out[i]=s<0?s*0x8000:s*0x7fff; }
+  return new Uint8Array(out.buffer);
+}
+function base64ToBytes(base64){
+  const binary=atob(base64); const bytes=new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+  return bytes;
+}
+
+function initPlaybackAudio() {
+  if (!playbackContext) {
+    playbackContext = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = playbackContext.createAnalyser();
+    analyser.fftSize = 64;
+    analyser.connect(playbackContext.destination);
+  }
+  if (playbackContext.state === "suspended") {
+    playbackContext.resume();
+  }
+}
+
+function playPCM24k(base64){
+  initPlaybackAudio();
+  isAiSpeaking = true;
+
+  const bytes = base64ToBytes(base64);
+  const samples = new Int16Array(bytes.buffer, bytes.byteOffset, Math.floor(bytes.byteLength / 2));
+
+  const buffer = playbackContext.createBuffer(1, samples.length, 24000);
+  const channel = buffer.getChannelData(0);
+  for(let i = 0; i < samples.length; i++){ channel[i] = samples[i] / 32768; }
+
+  const source = playbackContext.createBufferSource();
+  source.buffer = buffer;
+  source.connect(analyser);
+
+  const now = playbackContext.currentTime;
+  nextPlayTime = Math.max(nextPlayTime, now);
+  source.start(nextPlayTime);
+  nextPlayTime += buffer.duration;
+
+  setTimeout(() => {
+    if (playbackContext && playbackContext.currentTime >= nextPlayTime) {
+      isAiSpeaking = false;
+    }
+  }, buffer.duration * 1000);
+}
+
+async function startMicrophone(){
+  micStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true } });
+  audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  await audioContext.resume();
+  micSource = audioContext.createMediaStreamSource(micStream);
+  processor = audioContext.createScriptProcessor(4096, 1, 1);
+  processor.onaudioprocess = (e) => {
+    if (!session || isAiSpeaking) return;
+    const pcm = floatTo16BitPCM(e.inputBuffer.getChannelData(0));
+    session.sendRealtimeInput({ audio: { data: bytesToBase64(pcm), mimeType: `audio/pcm;rate=${audioContext.sampleRate}` } });
+  };
+  micSource.connect(processor); processor.connect(audioContext.destination);
+}
+
+async function stopMicrophone(){
+  try{ processor?.disconnect(); micSource?.disconnect(); }catch{}
+  processor = null; micSource = null;
+  if(micStream) micStream.getTracks().forEach(t => t.stop());
+  if(audioContext) await audioContext.close().catch(()=>{});
+}
+
+// --- KẾT NỐI GEMINI LIVE STREAM ---
+async function startLiveSession() {
+  const key = apiKeyInput.value.trim();
+  if (!key) return alert("Vui lòng nhập API Key!");
+
+  try {
+    statusBadge.innerHTML = '<span class="dot"></span>Connecting...';
+    statusBadge.className = "status-badge status-offline";
+    btnConnect.disabled = true;
+    userBuffer = ""; aiBuffer = ""; sttOutput.textContent = "";
+
+    const selectedLang = langSelect.value;
+    const selectedTopicKey = topicSelect.value;
+    const topicObj = TOPICS[selectedTopicKey] || TOPICS.daily;
+
+    const ai = new GoogleGenAI({ apiKey: key });
+
+    session = await ai.live.connect({
+      model: GEMINI_MODEL,
+      config: {
+        responseModalities: [Modality.AUDIO],
+        inputAudioTranscription: {},
+        outputAudioTranscription: {},
+        systemInstruction: {
+          parts: [{
+            text: `Bạn là giáo viên dạy phát âm chuẩn chuyên dạy ngôn ngữ: ${selectedLang}.
+                   Chủ đề buổi học hôm nay: "${topicObj.label}" (${topicObj.desc}).
+
+                   Nhiệm vụ của bạn:
+                   1. Khi bắt đầu, chào học viên bằng tiếng Việt thân thiện, sau đó đưa ra 1 câu mẫu ngắn bằng tiếng ${selectedLang} thuộc chủ đề "${topicObj.label}" và mời học viên đọc lại.
+                   2. Lắng nghe người dùng đọc qua micro.
+                   3. Phản hồi hoàn toàn BẰNG TIẾNG VIỆT tự nhiên, thân thiện.
+                   4. Chỉ ra lỗi sai khẩu hình, lỗi phát âm từ/âm tiết cụ thể bằng tiếng ${selectedLang}.
+                   5. Hướng dẫn sửa cách đặt lưỡi, môi ngắn gọn và đọc mẫu lại từ đúng.
+                   6. Giữ lời nói súc tích, ngắn gọn để tối ưu tốc độ phản hồi Live.`
+          }]
+        }
+      },
+      callbacks: {
+        onopen() {
+          statusBadge.innerHTML = '<span class="dot"></span>Online (Live)';
+          statusBadge.className = "status-badge status-online";
+          btnDisconnect.disabled = false;
+          geminiOutput.textContent = `🟢 Giáo viên sẵn sàng! Đang khởi tạo chủ đề ${topicObj.label}...`;
+        },
+        onmessage(message) {
+          const sc = message.serverContent;
+          if (sc?.inputTranscription?.text) { userBuffer += sc.inputTranscription.text; sttOutput.textContent = userBuffer; }
+          if (sc?.outputTranscription?.text) { aiBuffer += sc.outputTranscription.text; geminiOutput.textContent = aiBuffer; }
+          const parts = sc?.modelTurn?.parts || [];
+          for (const part of parts) {
+            const data = part?.inlineData?.data || part?.inline_data?.data;
+            const mime = part?.inlineData?.mimeType || part?.inline_data?.mimeType || "";
+            if (data && mime.startsWith("audio/")) playPCM24k(data);
+          }
+          if (sc?.turnComplete || sc?.interrupted) {
+            isAiSpeaking = false;
+            userBuffer = ""; aiBuffer = "";
+          }
+        },
+        onerror(e) { geminiOutput.textContent = "❌ Lỗi: " + e.message; stopSession(); },
+        onclose() { stopSession(); }
+      }
+    });
+
+    await startMicrophone();
+  } catch (err) { geminiOutput.textContent = "❌ Lỗi khởi tạo: " + err.message; stopSession(); }
+}
+
+async function stopSession() {
+  try { session?.sendRealtimeInput?.({ audioStreamEnd: true }); session?.close?.(); } catch {}
+  session = null; await stopMicrophone();
+  isAiSpeaking = false;
+
+  statusBadge.innerHTML = '<span class="dot"></span>Offline';
+  statusBadge.className = "status-badge status-offline";
+  btnConnect.disabled = false; btnDisconnect.disabled = true;
+}
+
+btnConnect.onclick = startLiveSession;
+btnDisconnect.onclick = stopSession;
+
+updateLipSync();
+</script>
+</body>
+</html>
