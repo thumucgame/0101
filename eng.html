@@ -53,6 +53,11 @@
       letter-spacing:.03em;text-transform:uppercase}
     .msg.user{align-self:flex-end;background:#2f6fed;color:#fff;border-bottom-right-radius:4px}
     .msg.npc{align-self:flex-start;background:#fff;color:#111;border-bottom-left-radius:4px}
+    #joystick{position:fixed;left:22px;bottom:130px;width:120px;height:120px;border-radius:50%;
+      background:#0005;border:2px solid #fff5;pointer-events:auto;touch-action:none;z-index:6}
+    #joystickKnob{position:absolute;left:50%;top:50%;width:54px;height:54px;border-radius:50%;
+      background:#fffc;transform:translate(-50%,-50%);pointer-events:none;transition:background .15s}
+    #joystick.active #joystickKnob{background:#ffd84dcc}
     .controls{position:absolute;bottom:25px;left:50%;transform:translateX(-50%);
       display:flex;gap:8px;align-items:center;pointer-events:auto}
     button{border:0;border-radius:11px;padding:12px 16px;font-weight:800;cursor:pointer}
@@ -81,6 +86,7 @@
     <button id="talk">💬 TALK</button>
   </div>
   <div id="subtitle">Walk toward someone on the street.</div>
+  <div id="joystick"><div id="joystickKnob"></div></div>
   <div class="controls">
     <button id="start">🎤 START GEMINI LIVE</button>
     <button id="stop" disabled>STOP</button>
@@ -309,6 +315,11 @@ function clearNearbyNPC(){
 
 talk.disabled=true;
 
+if("ontouchstart" in window){
+  document.querySelector(".hint").textContent="Use the joystick to move • Speak naturally";
+  document.querySelector(".tip").textContent="Drag the joystick";
+}
+
 const geminiKeyInput = document.getElementById("geminiKey");
 const saveKeyBtn = document.getElementById("saveKey");
 
@@ -329,15 +340,80 @@ const keys=new Set();
 addEventListener("keydown",e=>keys.add(e.key.toLowerCase()));
 addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
 
+const joystick = document.getElementById("joystick");
+const joystickKnob = document.getElementById("joystickKnob");
+let joyActive=false, joyId=null;
+const touchVec={x:0,z:0};
+
+function joyGeometry(){
+  const r=joystick.getBoundingClientRect();
+  return {cx:r.left+r.width/2, cy:r.top+r.height/2, radius:r.width/2};
+}
+
+function updateJoy(clientX, clientY){
+  const g=joyGeometry();
+  let dx=clientX-g.cx, dy=clientY-g.cy;
+  const dist=Math.hypot(dx,dy);
+  if(dist>g.radius){ dx=dx/dist*g.radius; dy=dy/dist*g.radius; }
+  joystickKnob.style.transform=`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+  touchVec.x=dx/g.radius;
+  touchVec.z=dy/g.radius;
+}
+
+function resetJoy(){
+  joyActive=false; joyId=null;
+  touchVec.x=0; touchVec.z=0;
+  joystick.classList.remove("active");
+  joystickKnob.style.transform="translate(-50%,-50%)";
+}
+
+joystick.addEventListener("touchstart",e=>{
+  const t=e.changedTouches[0];
+  joyActive=true; joyId=t.identifier;
+  joystick.classList.add("active");
+  updateJoy(t.clientX,t.clientY);
+  e.preventDefault();
+},{passive:false});
+
+joystick.addEventListener("touchmove",e=>{
+  if(!joyActive) return;
+  const t=Array.from(e.changedTouches).find(tt=>tt.identifier===joyId);
+  if(t) updateJoy(t.clientX,t.clientY);
+  e.preventDefault();
+},{passive:false});
+
+function joyTouchEnd(e){
+  if(!joyActive) return;
+  const ended=Array.from(e.changedTouches).some(tt=>tt.identifier===joyId);
+  if(ended) resetJoy();
+}
+joystick.addEventListener("touchend",joyTouchEnd);
+joystick.addEventListener("touchcancel",joyTouchEnd);
+
+joystick.addEventListener("mousedown",e=>{
+  joyActive=true;
+  joystick.classList.add("active");
+  updateJoy(e.clientX,e.clientY);
+});
+addEventListener("mousemove",e=>{ if(joyActive) updateJoy(e.clientX,e.clientY); });
+addEventListener("mouseup",()=>{ if(joyActive) resetJoy(); });
+
 function move(dt){
   let x=0,z=0;
   if(keys.has("w")||keys.has("arrowup"))z--;
   if(keys.has("s")||keys.has("arrowdown"))z++;
   if(keys.has("a")||keys.has("arrowleft"))x--;
   if(keys.has("d")||keys.has("arrowright"))x++;
+
+  let speedMul=1;
+  if(x===0 && z===0 && (touchVec.x!==0 || touchVec.z!==0)){
+    x=touchVec.x; z=touchVec.z;
+    speedMul=Math.min(1,Math.hypot(x,z));
+  }
+
   const len=Math.hypot(x,z)||1;
-  player.position.x=Math.max(-8,Math.min(8,player.position.x+x/len*dt*4.5));
-  player.position.z=Math.max(-48,Math.min(12,player.position.z+z/len*dt*4.5));
+  player.position.x=Math.max(-8,Math.min(8,player.position.x+x/len*dt*4.5*speedMul));
+  player.position.z=Math.max(-48,Math.min(12,player.position.z+z/len*dt*4.5*speedMul));
 
   let closest=null, best=Infinity;
   for(const npc of npcs){
