@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -74,12 +75,7 @@
     button{border:0;border-radius:11px;padding:12px 16px;font-weight:800;cursor:pointer}
     #start{background:#fff;color:#111}#stop{background:#000b;color:#fff;border:1px solid #fff5}
     button:disabled{opacity:.45;cursor:not-allowed}.tip{font-size:12px;text-shadow:0 1px 6px #000}
-  
-    html,body,#app{width:100%;height:100%;min-height:100%;}
-    @supports (padding: env(safe-area-inset-top)) {
-      #hud{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
-    }
-</style>
+  </style>
 </head>
 <body>
 <div id="app"></div>
@@ -126,7 +122,7 @@
 {
   "imports": {
     "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
-    "@google/genai": "https://esm.sh/@google/genai@2.17.1"
+    "@google/genai": "https://esm.sh/@google/genai@1.17.0"
   }
 }
 </script>
@@ -143,12 +139,9 @@ let audioContext = null;
 let micSource = null;
 let processor = null;
 let silentGain = null;
-let playbackQueue = [];      // FIFO of Float32Array chunks waiting to be played
-let playbackQueueOffset = 0; // read offset into playbackQueue[0]
-let playbackProcessor = null;
+let playbackContext = null;
+let nextPlayTime = 0;
 let activeNPC = null;
-let isConnecting = false;
-let connectionId = 0;
 
 const app = document.getElementById("app");
 const status = document.getElementById("status");
@@ -262,24 +255,10 @@ const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, .1, 200);
 camera.position.set(0,5,9);
 
 const renderer = new THREE.WebGLRenderer({antialias:true});
-// MOBILE FIX V5.2: keep WebGL lightweight and do not depend on motion/orientation sensors.
-const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-renderer.setPixelRatio(Math.min(devicePixelRatio || 1, isMobileDevice ? 1.5 : 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled = true;
 app.appendChild(renderer.domElement);
-// Mobile browsers may report sensor/gesture permission errors. This game does not require
-// DeviceOrientation/DeviceMotion, so never request them and keep touch input as fallback.
-renderer.domElement.style.touchAction = "none";
-renderer.domElement.style.webkitTapHighlightColor = "transparent";
-renderer.domElement.addEventListener("webglcontextlost", e => {
-  e.preventDefault();
-  console.warn("WebGL context lost; waiting for browser to restore it.");
-}, false);
-renderer.domElement.addEventListener("webglcontextrestored", () => {
-  console.warn("WebGL context restored.");
-  try { renderer.setSize(innerWidth, innerHeight, false); } catch {}
-}, false);
 
 scene.add(new THREE.HemisphereLight(0xffffff,0x667788,2));
 const sun = new THREE.DirectionalLight(0xffffff,2.2);
@@ -357,106 +336,6 @@ const npcs=[
     scenario:"The player is being interviewed for a job. Ask about their experience, strengths/weaknesses, and why they want the job. Keep a professional, encouraging tone.", color:0x5678a8 }
 ];
 
-// NPCs wander naturally around their own area. They stop only when the
-// learner actually starts talking to them; clicking/selecting never starts
-// a conversation and never freezes the NPC.
-npcs.forEach((npc, i) => {
-  npc.homeX = npc.mesh.position.x;
-  npc.homeZ = npc.mesh.position.z;
-  npc.targetX = npc.homeX;
-  npc.targetZ = npc.homeZ;
-  npc.walkSpeed = 0.45 + (i % 3) * 0.12;
-  npc.walkPause = 0.5 + (i % 4) * 0.7;
-  npc.walkTimer = 0.2 + i * 0.35;
-  npc.conversationPaused = false;
-  npc.walking = false;
-});
-
-function chooseNPCWalkTarget(npc){
-  npc.targetX = npc.homeX + (Math.random() * 2 - 1) * 2.2;
-  npc.targetZ = npc.homeZ + (Math.random() * 2 - 1) * 2.8;
-  npc.walkTimer = 0.5 + Math.random() * 1.4;
-  npc.walking = true;
-}
-
-function updateNPCMovement(npc, dt){
-  if(npc.conversationPaused || session && activeNPC === npc){
-    npc.walking = false;
-    return;
-  }
-  if(npc.walkTimer > 0){
-    npc.walkTimer -= dt;
-    return;
-  }
-  if(!npc.walking){
-    chooseNPCWalkTarget(npc);
-    return;
-  }
-  const dx=npc.targetX-npc.mesh.position.x;
-  const dz=npc.targetZ-npc.mesh.position.z;
-  const dist=Math.hypot(dx,dz);
-  if(dist < 0.08){
-    npc.walking=false;
-    npc.walkTimer=0.8+Math.random()*2.0;
-    return;
-  }
-  const step=Math.min(dist,npc.walkSpeed*dt);
-  npc.mesh.position.x += dx/dist*step;
-  npc.mesh.position.z += dz/dist*step;
-  npc.mesh.rotation.y = Math.atan2(dx,dz);
-}
-
-// Direct click/tap on the 3D NPCs.
-const npcRaycaster = new THREE.Raycaster();
-const npcPointer = new THREE.Vector2();
-npcs.forEach(npc => npc.mesh.traverse(obj => { if(obj.isMesh) obj.userData.npc = npc; }));
-function handleNPCPointer(clientX, clientY){
-  const rect=renderer.domElement.getBoundingClientRect();
-  if(!rect.width || !rect.height) return;
-  npcPointer.x=((clientX-rect.left)/rect.width)*2-1;
-  npcPointer.y=-((clientY-rect.top)/rect.height)*2+1;
-  npcRaycaster.setFromCamera(npcPointer,camera);
-
-  const roots=npcs.map(n=>n.mesh);
-  const hits=npcRaycaster.intersectObjects(roots,true);
-  if(!hits.length) return;
-
-  let obj=hits[0].object;
-  let npc=null;
-  while(obj){
-    if(obj.userData && obj.userData.npc){ npc=obj.userData.npc; break; }
-    obj=obj.parent;
-  }
-  if(!npc) return;
-  // Clicking an NPC only selects/focuses them. It must NOT start Gemini Live.
-  selectNPC(npc);
-}
-function selectNPC(npc){
-  if(!npc) return;
-  nearbyNPC=npc;
-  npcName.textContent=`${npc.name} · ${npc.icon} ${npc.topic}`;
-  npcBox.style.display='flex';
-  subtitle.textContent=`${npc.icon} ${npc.topic}: ${npc.description} Press TALK to start.`;
-}
-async function startNPCConversation(npc){
-  if(!npc || isConnecting || session) return;
-  selectNPC(npc);
-  activeNPC=npc;
-  npc.conversationPaused=true;
-  try{
-    await ensurePlaybackAudio();
-    await startConversation(npc);
-  }catch(err){
-    console.error('NPC conversation start failed:',err);
-    subtitle.textContent='ERROR: '+(err?.message||String(err));
-    npc.conversationPaused=false;
-  }
-}
-
-renderer.domElement.addEventListener('pointerdown',e=>{
-  handleNPCPointer(e.clientX,e.clientY);
-});
-
 const roomLabels = npcs.map(r=>{
   const el=document.createElement("div");
   el.className="npcLabel";
@@ -480,11 +359,12 @@ npcs.forEach(r=>{
   const card=document.createElement("button");
   card.className="roomCard";
   card.innerHTML=`<div class="ic">${r.icon}</div><div class="info"><div class="rt">${r.topic}</div><div class="rd">${r.description}</div></div>`;
-  card.onclick=async ()=>{
+  card.onclick=()=>{
+    player.position.x = r.mesh.position.x;
+    player.position.z = r.mesh.position.z + 2.4;
     topicsOpen=false;
     topicsPanel.classList.remove("open");
     topicsToggle.textContent="📚 TOPICS";
-    selectNPC(r);
   };
   topicsPanel.appendChild(card);
 });
@@ -636,8 +516,7 @@ function resetJoy(){
 }
 
 joystick.addEventListener("touchstart",e=>{
-  const t=e.changedTouches && e.changedTouches[0];
-  if(!t) return;
+  const t=e.changedTouches[0];
   joyActive=true; joyId=t.identifier;
   joystick.classList.add("active");
   updateJoy(t.clientX,t.clientY);
@@ -723,152 +602,66 @@ function base64ToBytes(base64){
 
 let playbackDestination = null;
 
-// IMPORTANT: mic capture and TTS playback now share a SINGLE AudioContext
-// (see ensureAudioContext). On iOS, once the audio session type is
-// "play-and-record", the OS hands the page one physical audio unit; running
-// two separate AudioContexts against it (one for mic, one for playback) is
-// what caused the stutter/overlap, since iOS was constantly tearing down and
-// re-negotiating the hardware between the two contexts. A single shared
-// context avoids that entirely.
-async function ensureAudioContext(){
-  if(!audioContext){
-    // Do NOT force a custom sampleRate here. iOS/WebKit does not always
-    // honor a requested sampleRate once the session is in "play-and-record"
-    // mode, which silently produces a mismatched clock and audible
-    // glitching. Web Audio resamples buffers of any rate automatically, so
-    // letting the context use the hardware's native rate is both safer and
-    // smoother.
-    audioContext=new (window.AudioContext||window.webkitAudioContext)();
-  }
-  if(audioContext.state !== 'running') await audioContext.resume();
-  return audioContext;
-}
-
-async function ensurePlaybackAudio(){
-  await ensureAudioContext();
-  if(!playbackDestination){
-    playbackDestination=audioContext.createMediaStreamDestination();
-    playbackAudioEl.srcObject=playbackDestination.stream;
-    playbackAudioEl.autoplay=true;
-    playbackAudioEl.playsInline=true;
-    await applySinkId();
-  }
-  if(!playbackProcessor){
-    // A continuous streaming player instead of scheduling many separate
-    // AudioBufferSourceNodes back-to-back. Each incoming PCM chunk is
-    // resampled and pushed into a FIFO queue; this node just drains that
-    // queue sample-by-sample every audio callback. Because it's one
-    // uninterrupted output stream (not many independently-scheduled
-    // buffers glued together at estimated timestamps), there are no
-    // per-chunk boundary clicks/pops and, since it's a single consumer, two
-    // chunks can never overlap.
-    playbackProcessor=audioContext.createScriptProcessor(4096,0,1);
-    playbackProcessor.onaudioprocess=(event)=>{
-      const output=event.outputBuffer.getChannelData(0);
-      let filled=0;
-      while(filled<output.length && playbackQueue.length){
-        const chunk=playbackQueue[0];
-        const avail=chunk.length-playbackQueueOffset;
-        const toCopy=Math.min(avail, output.length-filled);
-        output.set(chunk.subarray(playbackQueueOffset, playbackQueueOffset+toCopy), filled);
-        filled+=toCopy;
-        playbackQueueOffset+=toCopy;
-        if(playbackQueueOffset>=chunk.length){
-          playbackQueue.shift();
-          playbackQueueOffset=0;
-        }
-      }
-      // Any remaining samples stay at 0 (the spec guarantees the output
-      // buffer starts as silence), so an empty queue just plays silence
-      // instead of glitching.
-    };
-    playbackProcessor.connect(playbackDestination);
-  }
-  try{ await playbackAudioEl.play(); }catch(err){ console.warn('Playback audio element play() failed:',err); }
-}
-
-// Linear-interpolation resample from Gemini's fixed 24kHz PCM output to
-// whatever native sample rate this device's AudioContext is actually
-// running at (iOS does not always honor a custom requested sampleRate).
-function resamplePCM(floatSamples, fromRate, toRate){
-  if(fromRate===toRate) return floatSamples;
-  const ratio=fromRate/toRate;
-  const outLength=Math.max(1,Math.floor(floatSamples.length/ratio));
-  const out=new Float32Array(outLength);
-  for(let i=0;i<outLength;i++){
-    const pos=i*ratio, i0=Math.floor(pos), i1=Math.min(i0+1,floatSamples.length-1), f=pos-i0;
-    out[i]=floatSamples[i0]*(1-f)+floatSamples[i1]*f;
-  }
-  return out;
-}
-
 function playPCM24k(base64){
   const bytes=base64ToBytes(base64);
   const samples=new Int16Array(bytes.buffer, bytes.byteOffset, Math.floor(bytes.byteLength/2));
-  if(!audioContext || !playbackDestination || !playbackProcessor){
-    // Normally initialized from the user's click, but keep this fallback.
-    ensurePlaybackAudio();
-    if(!playbackProcessor) return; // will catch up on the next chunk
+  if(!playbackContext){
+    playbackContext=new AudioContext({sampleRate:24000});
+    playbackDestination=playbackContext.createMediaStreamDestination();
+    playbackAudioEl.srcObject=playbackDestination.stream;
+    playbackAudioEl.play().catch(err=>console.warn("Playback audio element play() failed:",err));
+    applySinkId();
   }
-  if(audioContext.state !== 'running') audioContext.resume().catch(()=>{});
-
-  const floatSamples=new Float32Array(samples.length);
-  for(let i=0;i<samples.length;i++) floatSamples[i]=samples[i]/32768;
-
-  const resampled=resamplePCM(floatSamples, 24000, audioContext.sampleRate);
-  playbackQueue.push(resampled);
+  const buffer=playbackContext.createBuffer(1,samples.length,24000);
+  const channel=buffer.getChannelData(0);
+  for(let i=0;i<samples.length;i++) channel[i]=samples[i]/32768;
+  const source=playbackContext.createBufferSource();
+  source.buffer=buffer;
+  source.connect(playbackDestination);
+  const now=playbackContext.currentTime;
+  nextPlayTime=Math.max(nextPlayTime,now);
+  source.start(nextPlayTime);
+  nextPlayTime += buffer.duration;
 }
 
 function clearPlayback(){
-  // Drop every chunk waiting to be played. Since playback is a single FIFO
-  // queue drained by one continuous node, clearing it is instant and safe
-  // — there's nothing else still "in flight" that could overlap with
-  // whatever plays next.
-  playbackQueue=[];
-  playbackQueueOffset=0;
+  if(playbackContext) nextPlayTime=playbackContext.currentTime;
 }
 
 async function startMicrophone(){
-  if(!navigator.mediaDevices?.getUserMedia){
-    throw new Error("Microphone is unavailable. Run this file from localhost or HTTPS and allow microphone access.");
-  }
-
-  // IMPORTANT: request permission only once. Keep the same MediaStream alive
-  // while switching NPCs, so clicking another NPC never asks for the mic again.
-  const liveTrack = micStream?.getAudioTracks?.().find(t => t.readyState === "live");
-  if(!liveTrack){
-    micStream=await navigator.mediaDevices.getUserMedia({
-      audio:{channelCount:1,echoCancellation:false,noiseSuppression:true,autoGainControl:true}
-    });
-  }
+  micStream=await navigator.mediaDevices.getUserMedia({
+    audio:{
+      channelCount:1,
+      // echoCancellation forces Android/Chrome into "communication mode",
+      // which reroutes output audio to the earpiece or a low-quality Bluetooth
+      // call profile (HFP) instead of the normal Bluetooth media speaker (A2DP).
+      // Keeping it off lets audio play through Bluetooth speakers/media output normally.
+      echoCancellation:false,
+      noiseSuppression:true,
+      autoGainControl:true
+    }
+  });
 
   refreshOutputDevices();
 
-  await ensureAudioContext();
-
-  // Reuse the existing processing chain when possible.
-  if(processor && micSource) return;
+  audioContext=new AudioContext();
+  await audioContext.resume();
 
   micSource=audioContext.createMediaStreamSource(micStream);
   processor=audioContext.createScriptProcessor(4096,1,1);
   silentGain=audioContext.createGain();
   silentGain.gain.value=0;
 
-  const inputRate=audioContext.sampleRate, targetRate=16000;
   processor.onaudioprocess=(event)=>{
     if(!session) return;
     const input=event.inputBuffer.getChannelData(0);
-    const ratio=inputRate/targetRate;
-    const outLength=Math.max(1,Math.floor(input.length/ratio));
-    const resampled=new Float32Array(outLength);
-    for(let i=0;i<outLength;i++){
-      const pos=i*ratio, i0=Math.floor(pos), i1=Math.min(i0+1,input.length-1), f=pos-i0;
-      resampled[i]=input[i0]*(1-f)+input[i1]*f;
-    }
-    const pcm=floatTo16BitPCM(resampled);
-    try{
-      session.sendRealtimeInput({audio:{data:bytesToBase64(pcm),mimeType:"audio/pcm;rate=16000"}});
-    }catch(err){ console.warn("Gemini audio send failed:",err); }
+    const pcm=floatTo16BitPCM(input);
+    session.sendRealtimeInput({
+      audio:{
+        data:bytesToBase64(pcm),
+        mimeType:`audio/pcm;rate=${audioContext.sampleRate}`
+      }
+    });
   };
 
   micSource.connect(processor);
@@ -876,82 +669,38 @@ async function startMicrophone(){
   silentGain.connect(audioContext.destination);
 }
 
-// Disconnect processing but DO NOT stop the MediaStream. This preserves the
-// browser's granted microphone permission for the next NPC/session.
-async function pauseMicrophone(){
+async function stopMicrophone(){
   try{ processor?.disconnect(); }catch{}
   try{ micSource?.disconnect(); }catch{}
   try{ silentGain?.disconnect(); }catch{}
   processor=null; micSource=null; silentGain=null;
-}
-
-// Only call this when the page is being closed/reloaded.
-async function releaseMicrophone(){
-  await pauseMicrophone();
   if(micStream){
     micStream.getTracks().forEach(t=>t.stop());
     micStream=null;
   }
-  try{ playbackProcessor?.disconnect(); }catch{}
-  playbackProcessor=null;
-  playbackQueue=[];
-  playbackQueueOffset=0;
-  playbackDestination=null;
   if(audioContext){
     await audioContext.close().catch(()=>{});
     audioContext=null;
   }
 }
 
-function normalizeNPCNameText(text){
-  return (text||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
-}
-
-function detectCalledNPC(text){
-  const t=normalizeNPCNameText(text);
-  if(!t) return null;
-  // Prefer the longest name so multi-word NPC names are handled safely.
-  const ordered=[...npcs].sort((a,b)=>b.name.length-a.name.length);
-  return ordered.find(n=>{
-    const name=normalizeNPCNameText(n.name);
-    return t===name || t.startsWith(name+' ') || t.includes(' '+name+' ') || t.endsWith(' '+name);
-  }) || null;
-}
-
-function activateNPCFromName(npc){
-  if(!npc) return;
-  activeNPC=npc;
-  npc.conversationPaused=true;
-  npc.walking=false;
-  nearbyNPC=npc;
-  npcName.textContent=`${npc.name} · ${npc.icon} ${npc.topic}`;
-  npcBox.style.display='flex';
-  subtitle.textContent=`${npc.name} is listening...`;
-}
-
 async function startConversation(targetNPC=null){
-  if(isConnecting) return;
-  if(session) return;
   if(!geminiApiKey){
     subtitle.textContent="Enter your Gemini API key in the box above first.";
     geminiKeyInput.focus();
     return;
   }
 
-  const myConnectionId = ++connectionId;
-  isConnecting = true;
-
   try{
-    // iOS Safari (WebKit) exposes navigator.audioSession. We need to both
-    // capture microphone input AND play audio back, so the session type
-    // MUST be "play-and-record" — "playback" is output-only and iOS will
-    // throw "AudioSession category is not compatible with audio capture"
-    // the moment we try to open the microphone with it.
-    // (Known trade-off: on iOS 17+ "play-and-record" has an OS bug that can
-    // force output to the built-in speaker instead of a connected Bluetooth
-    // speaker/headset. Mic capture is required for this app, so that wins.)
+    // iOS Safari (WebKit) exposes navigator.audioSession. On iOS 17+, the
+    // "play-and-record" type (the one meant for calls) has a known OS bug
+    // that forces output to the built-in speaker even with Bluetooth
+    // connected. Since we only need built-in mic input (not a Bluetooth
+    // headset mic) and just want output to play like normal browser/media
+    // audio, "playback" keeps the OS treating this as regular media audio,
+    // which correctly stays routed to the Bluetooth speaker (A2DP).
     if(navigator.audioSession){
-      try{ navigator.audioSession.type = "play-and-record"; }catch(err){ console.warn("audioSession set failed:",err); }
+      try{ navigator.audioSession.type = "playback"; }catch(err){ console.warn("audioSession set failed:",err); }
     }
     playbackAudioEl.play().catch(()=>{});
     status.textContent="CONNECTING...";
@@ -981,9 +730,6 @@ async function startConversation(targetNPC=null){
           parts:[{
             text:`${npcContext}
 You are a natural real-time conversation partner for a 3D street practice game.
-The street has NPCs with these names and roles: ${npcs.map(n=>`${n.name} (${n.role})`).join(', ')}.
-Do not speak or greet just because the connection starts. Wait for the learner to speak.
-When the learner clearly calls an NPC by name, respond as that NPC and stay in that NPC's role until the learner addresses another NPC by name.
 Speak whatever language the learner speaks to you in — match their language naturally.
 Speak naturally and concisely. Keep the conversation casual and interactive.
 Do not describe your internal reasoning. Do not say you are an AI unless directly asked.`
@@ -992,34 +738,19 @@ Do not describe your internal reasoning. Do not say you are an AI unless directl
       },
       callbacks:{
         onopen(){
-          if(myConnectionId !== connectionId) return;
-          try{ audioContext?.resume?.(); }catch{}
           status.textContent="CONNECTED";
           stop.disabled=false;
           subtitle.textContent=targetNPC
             ? `You're talking with ${targetNPC.name}. Speak naturally.`
             : "Connected. Speak naturally.";
-
         },
         onmessage(message){
-          if(myConnectionId !== connectionId) return;
           try{
             const sc=message.serverContent;
 
             if(sc?.inputTranscription?.text){
-              const heard=sc.inputTranscription.text;
-              userTurnBuffer += heard;
+              userTurnBuffer += sc.inputTranscription.text;
               subtitle.textContent="You: "+userTurnBuffer;
-
-              // Calling an NPC by name selects that NPC and makes only that
-              // NPC stop. No new Gemini session is created here.
-              const calledNPC=detectCalledNPC(heard);
-              if(calledNPC){
-                activateNPCFromName(calledNPC);
-              }else if(activeNPC){
-                activeNPC.conversationPaused=true;
-                activeNPC.walking=false;
-              }
             }
             if(sc?.outputTranscription?.text){
               npcTurnBuffer += sc.outputTranscription.text;
@@ -1027,9 +758,6 @@ Do not describe your internal reasoning. Do not say you are an AI unless directl
             }
 
             const parts=sc?.modelTurn?.parts || [];
-            if(sc?.modelTurn && !parts.length){
-              console.warn("Gemini returned a model turn without parts", sc);
-            }
             for(const part of parts){
               const data=part?.inlineData?.data || part?.inline_data?.data;
               const mime=part?.inlineData?.mimeType || part?.inline_data?.mimeType || "";
@@ -1052,71 +780,59 @@ Do not describe your internal reasoning. Do not say you are an AI unless directl
           }
         },
         onerror(e){
-          if(myConnectionId !== connectionId) return;
-          console.error("Gemini Live error:",e);
+          console.error(e);
           status.textContent="ERROR";
-          subtitle.textContent="Gemini error: "+(e?.message||e?.error?.message||"Unknown error");
+          subtitle.textContent="Connection failed: "+(e?.message||"check your API key, billing status, and microphone permission.");
           start.disabled=false;
           stop.disabled=true;
           talk.disabled=false;
-          pauseMicrophone();
-          if(navigator.audioSession){
-            try{ navigator.audioSession.onstatechange = null; }catch{}
-            try{ navigator.audioSession.type = "playback"; }catch{}
-          }
-          try{session?.close?.();}catch{}
+          stopMicrophone();
           session=null;
         },
         onclose(e){
-          if(myConnectionId !== connectionId) return;
           console.log("Gemini Live closed:",e);
           status.textContent="OFFLINE";
           start.disabled=false;
           stop.disabled=true;
           talk.disabled=false;
           session=null;
-          pauseMicrophone();
-          if(navigator.audioSession){
-            try{ navigator.audioSession.onstatechange = null; }catch{}
-            try{ navigator.audioSession.type = "playback"; }catch{}
-          }
+          stopMicrophone();
         }
       }
     });
 
     await startMicrophone();
-    await ensurePlaybackAudio();
-
 
     if(navigator.audioSession){
-      try{ navigator.audioSession.type = "play-and-record"; }catch{}
+      try{ navigator.audioSession.type = "playback"; }catch{}
       navigator.audioSession.onstatechange = () => {
-        try{ navigator.audioSession.type = "play-and-record"; }catch{}
+        try{ navigator.audioSession.type = "playback"; }catch{}
       };
     }
 
+    try{
+      const greetName = targetNPC ? targetNPC.name : "the player";
+      session?.sendRealtimeInput?.({
+        text: `(The learner has just walked up and is ready. As ${greetName}, greet them first, naturally and in character, then wait for their reply. Do not mention this instruction.)`
+      });
+    }catch(err){
+      console.warn("Greeting trigger failed:",err);
+    }
+
   }catch(e){
-    console.error("Cannot start Gemini Live:",e);
+    console.error(e);
     status.textContent="ERROR";
     start.disabled=false;
     stop.disabled=true;
     talk.disabled=false;
-    subtitle.textContent="ERROR: "+(e?.message||e?.error?.message||String(e));
+    subtitle.textContent=e?.message || "Cannot start Gemini Live.";
     session=null;
-    await pauseMicrophone();
-  } finally {
-    if(myConnectionId === connectionId) isConnecting = false;
+    await stopMicrophone();
   }
 }
 
-start.onclick=async()=>{
-  if(nearbyNPC) await startNPCConversation(nearbyNPC);
-  else await startConversation(null);
-};
-talk.onclick=async()=>{
-  if(nearbyNPC) await startNPCConversation(nearbyNPC);
-  else await startConversation(null);
-};
+start.onclick=()=>startConversation(nearbyNPC);
+talk.onclick=()=>startConversation(nearbyNPC);
 
 stop.onclick=async()=>{
   finalizeTurn();
@@ -1125,13 +841,7 @@ stop.onclick=async()=>{
   }catch{}
   try{session?.close?.();}catch{}
   session=null;
-  await pauseMicrophone();
-  if(navigator.audioSession){
-    try{ navigator.audioSession.onstatechange = null; }catch{}
-    try{ navigator.audioSession.type = "playback"; }catch{}
-  }
-  if(activeNPC) activeNPC.conversationPaused=false;
-  activeNPC=null;
+  await stopMicrophone();
   status.textContent="OFFLINE";
   start.disabled=false;
   stop.disabled=true;
@@ -1142,20 +852,11 @@ stop.onclick=async()=>{
     : "Walk toward someone on the street.";
 };
 
-addEventListener("pagehide",()=>{ releaseMicrophone(); });
-addEventListener("beforeunload",()=>{ releaseMicrophone(); });
-
 addEventListener("resize",()=>{
   camera.aspect=innerWidth/innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight);
 });
-// iOS Safari/Android Chrome can change viewport size when the address bar appears/disappears.
-addEventListener("orientationchange",()=>setTimeout(()=>{
-  camera.aspect=innerWidth/innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight,false);
-},150),{passive:true});
 
 let last=performance.now();
 function loop(now){
@@ -1163,8 +864,7 @@ function loop(now){
   const dt=Math.min((now-last)/1000,.05); last=now;
   move(dt);
   npcs.forEach((n,i)=>{
-    updateNPCMovement(n,dt);
-    if(!n.conversationPaused && !n.walking) n.mesh.rotation.y=Math.sin(now*.0006+i)*.08;
+    n.mesh.rotation.y=Math.sin(now*.0006+i)*.08;
     const v=n.mesh.position.clone();
     v.y+=2.5;
     v.project(camera);
