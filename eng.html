@@ -338,6 +338,55 @@ const npcs=[
     scenario:"The player is being interviewed for a job. Ask about their experience, strengths/weaknesses, and why they want the job. Keep a professional, encouraging tone.", color:0x5678a8 }
 ];
 
+// NPCs wander naturally around their own area. They stop only when the
+// learner actually starts talking to them; clicking/selecting never starts
+// a conversation and never freezes the NPC.
+npcs.forEach((npc, i) => {
+  npc.homeX = npc.mesh.position.x;
+  npc.homeZ = npc.mesh.position.z;
+  npc.targetX = npc.homeX;
+  npc.targetZ = npc.homeZ;
+  npc.walkSpeed = 0.45 + (i % 3) * 0.12;
+  npc.walkPause = 0.5 + (i % 4) * 0.7;
+  npc.walkTimer = 0.2 + i * 0.35;
+  npc.conversationPaused = false;
+  npc.walking = false;
+});
+
+function chooseNPCWalkTarget(npc){
+  npc.targetX = npc.homeX + (Math.random() * 2 - 1) * 2.2;
+  npc.targetZ = npc.homeZ + (Math.random() * 2 - 1) * 2.8;
+  npc.walkTimer = 0.5 + Math.random() * 1.4;
+  npc.walking = true;
+}
+
+function updateNPCMovement(npc, dt){
+  if(npc.conversationPaused || session && activeNPC === npc){
+    npc.walking = false;
+    return;
+  }
+  if(npc.walkTimer > 0){
+    npc.walkTimer -= dt;
+    return;
+  }
+  if(!npc.walking){
+    chooseNPCWalkTarget(npc);
+    return;
+  }
+  const dx=npc.targetX-npc.mesh.position.x;
+  const dz=npc.targetZ-npc.mesh.position.z;
+  const dist=Math.hypot(dx,dz);
+  if(dist < 0.08){
+    npc.walking=false;
+    npc.walkTimer=0.8+Math.random()*2.0;
+    return;
+  }
+  const step=Math.min(dist,npc.walkSpeed*dt);
+  npc.mesh.position.x += dx/dist*step;
+  npc.mesh.position.z += dz/dist*step;
+  npc.mesh.rotation.y = Math.atan2(dx,dz);
+}
+
 // Direct click/tap on the 3D NPCs.
 const npcRaycaster = new THREE.Raycaster();
 const npcPointer = new THREE.Vector2();
@@ -360,32 +409,28 @@ function handleNPCPointer(clientX, clientY){
     obj=obj.parent;
   }
   if(!npc) return;
-  selectNPCAndStart(npc);
+  // Clicking an NPC only selects/focuses them. It must NOT start Gemini Live.
+  selectNPC(npc);
 }
-async function selectNPCAndStart(npc){
-  if(!npc || isConnecting) return;
-  if(session) return;
-
+function selectNPC(npc){
+  if(!npc) return;
   nearbyNPC=npc;
-  activeNPC=npc;
-  player.position.x=npc.mesh.position.x;
-  player.position.z=npc.mesh.position.z+2.4;
   npcName.textContent=`${npc.name} · ${npc.icon} ${npc.topic}`;
   npcBox.style.display='flex';
-
-  // A previous generic Live session must not block starting the NPC session.
-  if(session){
-    try{ session.close?.(); }catch{}
-    session=null;
-    await stopMicrophone();
-  }
-
+  subtitle.textContent=`${npc.icon} ${npc.topic}: ${npc.description} Press TALK to start.`;
+}
+async function startNPCConversation(npc){
+  if(!npc || isConnecting || session) return;
+  selectNPC(npc);
+  activeNPC=npc;
+  npc.conversationPaused=true;
   try{
     await ensurePlaybackAudio();
     await startConversation(npc);
   }catch(err){
     console.error('NPC conversation start failed:',err);
     subtitle.textContent='ERROR: '+(err?.message||String(err));
+    npc.conversationPaused=false;
   }
 }
 
@@ -420,7 +465,7 @@ npcs.forEach(r=>{
     topicsOpen=false;
     topicsPanel.classList.remove("open");
     topicsToggle.textContent="📚 TOPICS";
-    await selectNPCAndStart(r);
+    selectNPC(r);
   };
   topicsPanel.appendChild(card);
 });
@@ -847,6 +892,11 @@ Do not describe your internal reasoning. Do not say you are an AI unless directl
             if(sc?.inputTranscription?.text){
               userTurnBuffer += sc.inputTranscription.text;
               subtitle.textContent="You: "+userTurnBuffer;
+              // The NPC keeps walking until the learner actually speaks.
+              if(activeNPC){
+                activeNPC.conversationPaused=true;
+                activeNPC.walking=false;
+              }
             }
             if(sc?.outputTranscription?.text){
               npcTurnBuffer += sc.outputTranscription.text;
@@ -948,7 +998,7 @@ start.onclick=async()=>{
   else await startConversation(null);
 };
 talk.onclick=async()=>{
-  if(nearbyNPC) await selectNPCAndStart(nearbyNPC);
+  if(nearbyNPC) await startNPCConversation(nearbyNPC);
   else await startConversation(null);
 };
 
@@ -960,6 +1010,8 @@ stop.onclick=async()=>{
   try{session?.close?.();}catch{}
   session=null;
   await pauseMicrophone();
+  if(activeNPC) activeNPC.conversationPaused=false;
+  activeNPC=null;
   status.textContent="OFFLINE";
   start.disabled=false;
   stop.disabled=true;
@@ -985,7 +1037,8 @@ function loop(now){
   const dt=Math.min((now-last)/1000,.05); last=now;
   move(dt);
   npcs.forEach((n,i)=>{
-    n.mesh.rotation.y=Math.sin(now*.0006+i)*.08;
+    updateNPCMovement(n,dt);
+    if(!n.conversationPaused && !n.walking) n.mesh.rotation.y=Math.sin(now*.0006+i)*.08;
     const v=n.mesh.position.clone();
     v.y+=2.5;
     v.project(camera);
