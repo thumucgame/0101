@@ -42,10 +42,15 @@
       color:#fff;border:1px solid #fff4;border-radius:10px;padding:9px 13px;font-size:12px;
       font-weight:800;cursor:pointer;z-index:6}
     #chatLog{position:fixed;right:18px;top:158px;width:min(320px,86vw);max-height:50vh;
-      overflow-y:auto;background:#000c;border:1px solid #fff3;border-radius:14px;
+      background:#000c;border:1px solid #fff3;border-radius:14px;
       padding:10px;display:none;flex-direction:column;gap:8px;pointer-events:auto;z-index:6;
       backdrop-filter:blur(8px)}
     #chatLog.open{display:flex}
+    #chatLogHeader{display:flex;justify-content:space-between;align-items:center}
+    #chatLogHeader span{font-size:11px;font-weight:800;opacity:.7;letter-spacing:.04em}
+    #clearChatLog{background:#fff1;color:#fff;border:1px solid #fff3;border-radius:8px;
+      padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer}
+    #chatLogMessages{overflow-y:auto;display:flex;flex-direction:column;gap:8px}
     #chatLog .empty{color:#fff9;font-size:12px;text-align:center;padding:10px 4px}
     .msg{max-width:85%;padding:8px 12px;border-radius:13px;font-size:13px;line-height:1.35;
       word-wrap:break-word}
@@ -73,7 +78,10 @@
     <div id="status">OFFLINE</div>
   </div>
   <button id="chatLogToggle">💬 CHAT LOG</button>
-  <div id="chatLog"><div class="empty">Conversation transcript will appear here.</div></div>
+  <div id="chatLog">
+    <div id="chatLogHeader"><span>TRANSCRIPT</span><button id="clearChatLog">🗑 Clear</button></div>
+    <div id="chatLogMessages"><div class="empty">Conversation transcript will appear here.</div></div>
+  </div>
   <button id="topicsToggle">📚 TOPICS</button>
   <div id="topicsPanel"></div>
   <div id="geminiKeyBox" style="position:absolute;right:18px;top:58px;pointer-events:auto;display:flex;gap:6px;align-items:center;background:#0009;padding:8px;border-radius:12px;">
@@ -128,19 +136,24 @@ const npcBox = document.getElementById("npcBox");
 const npcName = document.getElementById("npcName");
 const talk = document.getElementById("talk");
 const chatLog = document.getElementById("chatLog");
+const chatLogMessages = document.getElementById("chatLogMessages");
 const chatLogToggle = document.getElementById("chatLogToggle");
+const clearChatLogBtn = document.getElementById("clearChatLog");
 
 let chatOpen = false;
 let userTurnBuffer = "";
 let npcTurnBuffer = "";
 
+const CHAT_HISTORY_KEY = "english_street_chat_history_v1";
+let chatHistory = [];
+try{ chatHistory = JSON.parse(localStorage.getItem(CHAT_HISTORY_KEY) || "[]"); }catch{ chatHistory = []; }
+
 function currentNPCLabel(){
   return activeNPC ? activeNPC.name : "Stranger";
 }
 
-function addChatMessage(who, text){
-  if(!text || !text.trim()) return;
-  if(chatLog.querySelector(".empty")) chatLog.innerHTML = "";
+function renderChatMessage(who, text){
+  if(chatLogMessages.querySelector(".empty")) chatLogMessages.innerHTML = "";
   const el = document.createElement("div");
   el.className = "msg " + (who === "You" ? "user" : "npc");
   const whoEl = document.createElement("div");
@@ -150,9 +163,31 @@ function addChatMessage(who, text){
   textEl.textContent = text.trim();
   el.appendChild(whoEl);
   el.appendChild(textEl);
-  chatLog.appendChild(el);
-  chatLog.scrollTop = chatLog.scrollHeight;
+  chatLogMessages.appendChild(el);
+  chatLogMessages.scrollTop = chatLogMessages.scrollHeight;
 }
+
+function saveChatHistory(){
+  try{ localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(chatHistory)); }catch{}
+}
+
+function addChatMessage(who, text){
+  if(!text || !text.trim()) return;
+  renderChatMessage(who, text);
+  chatHistory.push({who, text: text.trim(), ts: Date.now()});
+  saveChatHistory();
+}
+
+// Restore previous conversation history on load
+if(chatHistory.length){
+  chatHistory.forEach(m => renderChatMessage(m.who, m.text));
+}
+
+clearChatLogBtn.onclick = () => {
+  chatHistory = [];
+  saveChatHistory();
+  chatLogMessages.innerHTML = '<div class="empty">Conversation transcript will appear here.</div>';
+};
 
 function finalizeTurn(){
   if(userTurnBuffer.trim()) addChatMessage("You", userTurnBuffer);
@@ -630,6 +665,15 @@ Do not say you are an AI unless directly asked.`
     });
 
     await startMicrophone();
+
+    try{
+      const greetName = targetNPC ? targetNPC.name : "the player";
+      session?.sendRealtimeInput?.({
+        text: `(The learner has just walked up and is ready. As ${greetName}, greet them first, naturally and in character, then wait for their reply. Do not mention this instruction.)`
+      });
+    }catch(err){
+      console.warn("Greeting trigger failed:",err);
+    }
 
   }catch(e){
     console.error(e);
