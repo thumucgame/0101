@@ -692,12 +692,15 @@ async function startConversation(targetNPC=null){
   }
 
   try{
-    // iOS Safari (WebKit) exposes navigator.audioSession: setting type to
-    // "play-and-record" tells the OS this is a live mic+speaker session, which
-    // stops it from force-switching output to the built-in speaker once the
-    // mic starts, keeping Bluetooth active for both input and output.
+    // iOS Safari (WebKit) exposes navigator.audioSession. On iOS 17+, the
+    // "play-and-record" type (the one meant for calls) has a known OS bug
+    // that forces output to the built-in speaker even with Bluetooth
+    // connected. Since we only need built-in mic input (not a Bluetooth
+    // headset mic) and just want output to play like normal browser/media
+    // audio, "playback" keeps the OS treating this as regular media audio,
+    // which correctly stays routed to the Bluetooth speaker (A2DP).
     if(navigator.audioSession){
-      try{ navigator.audioSession.type = "play-and-record"; }catch(err){ console.warn("audioSession set failed:",err); }
+      try{ navigator.audioSession.type = "playback"; }catch(err){ console.warn("audioSession set failed:",err); }
     }
     playbackAudioEl.play().catch(()=>{});
     status.textContent="CONNECTING...";
@@ -802,6 +805,13 @@ Do not describe your internal reasoning. Do not say you are an AI unless directl
     });
 
     await startMicrophone();
+
+    if(navigator.audioSession){
+      try{ navigator.audioSession.type = "playback"; }catch{}
+      navigator.audioSession.onstatechange = () => {
+        try{ navigator.audioSession.type = "playback"; }catch{}
+      };
+    }
 
     try{
       const greetName = targetNPC ? targetNPC.name : "the player";
