@@ -98,6 +98,7 @@
   </div>
   <div id="subtitle">Walk toward someone on the street.</div>
   <div id="joystick"><div id="joystickKnob"></div></div>
+  <audio id="playbackAudio" autoplay playsinline style="display:none"></audio>
   <div class="controls">
     <button id="start">🎤 START GEMINI LIVE</button>
     <button id="stop" disabled>STOP</button>
@@ -362,9 +363,16 @@ const geminiKeyInput = document.getElementById("geminiKey");
 const saveKeyBtn = document.getElementById("saveKey");
 const outputBox = document.getElementById("outputBox");
 const outputSelect = document.getElementById("outputSelect");
+const playbackAudioEl = document.getElementById("playbackAudio");
 let selectedOutputId = localStorage.getItem("preferred_output_device") || "";
 
-const supportsSinkId = typeof AudioContext !== "undefined" && "setSinkId" in AudioContext.prototype;
+const supportsSinkId = typeof HTMLMediaElement !== "undefined" && "setSinkId" in HTMLMediaElement.prototype;
+
+async function applySinkId(){
+  if(!supportsSinkId || !selectedOutputId) return;
+  try{ await playbackAudioEl.setSinkId(selectedOutputId); }
+  catch(err){ console.warn("setSinkId failed:", err); }
+}
 
 async function refreshOutputDevices(){
   if(!supportsSinkId) return;
@@ -393,10 +401,7 @@ async function refreshOutputDevices(){
 outputSelect?.addEventListener("change", async () => {
   selectedOutputId = outputSelect.value;
   localStorage.setItem("preferred_output_device", selectedOutputId);
-  if(playbackContext && selectedOutputId){
-    try{ await playbackContext.setSinkId(selectedOutputId); }
-    catch(err){ console.warn("setSinkId failed:", err); }
-  }
+  await applySinkId();
 });
 
 if(navigator.mediaDevices?.addEventListener){
@@ -532,21 +537,24 @@ function base64ToBytes(base64){
   return bytes;
 }
 
+let playbackDestination = null;
+
 function playPCM24k(base64){
   const bytes=base64ToBytes(base64);
   const samples=new Int16Array(bytes.buffer, bytes.byteOffset, Math.floor(bytes.byteLength/2));
   if(!playbackContext){
     playbackContext=new AudioContext({sampleRate:24000});
-    if(supportsSinkId && selectedOutputId){
-      playbackContext.setSinkId(selectedOutputId).catch(err=>console.warn("setSinkId failed:",err));
-    }
+    playbackDestination=playbackContext.createMediaStreamDestination();
+    playbackAudioEl.srcObject=playbackDestination.stream;
+    playbackAudioEl.play().catch(err=>console.warn("Playback audio element play() failed:",err));
+    applySinkId();
   }
   const buffer=playbackContext.createBuffer(1,samples.length,24000);
   const channel=buffer.getChannelData(0);
   for(let i=0;i<samples.length;i++) channel[i]=samples[i]/32768;
   const source=playbackContext.createBufferSource();
   source.buffer=buffer;
-  source.connect(playbackContext.destination);
+  source.connect(playbackDestination);
   const now=playbackContext.currentTime;
   nextPlayTime=Math.max(nextPlayTime,now);
   source.start(nextPlayTime);
@@ -621,6 +629,7 @@ async function startConversation(targetNPC=null){
   }
 
   try{
+    playbackAudioEl.play().catch(()=>{});
     status.textContent="CONNECTING...";
     subtitle.textContent=targetNPC
       ? `Connecting to ${targetNPC.name}...`
