@@ -1,0 +1,1235 @@
+
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Language Coach — Phòng Luyện Phát Âm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Manrope:wght@500;600;700;800&family=Space+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #12201a;
+    --bg-deep: #0b1510;
+    --card: #1a2b22;
+    --card-line: #22392c;
+    --chalk: #f4efe1;
+    --chalk-dim: #b9c9bd;
+    --gold: #e3c16f;
+    --gold-soft: rgba(227,193,111,.28);
+    --coral: #ee7a67;
+    --coral-soft: rgba(238,122,103,.25);
+    --sage: #7fae8f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Manrope', system-ui, sans-serif;
+    color: var(--chalk);
+    min-height: 100vh;
+    display: flex; justify-content: center; align-items: flex-start;
+    padding: 20px;
+    background:
+      radial-gradient(circle at 15% 10%, rgba(227,193,111,0.06), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(127,174,143,0.08), transparent 45%),
+      var(--bg-deep);
+    background-attachment: fixed;
+  }
+
+  /* --- LAYOUT TỔNG (SIDEBAR + APP) --- */
+  .app-shell {
+    display: flex;
+    gap: 20px;
+    width: 100%;
+    max-width: 1180px;
+    align-items: flex-start;
+    margin: 0 auto;
+  }
+
+  /* --- SIDEBAR LỊCH SỬ BÀI HỌC --- */
+  .sidebar {
+    width: 300px; flex-shrink: 0;
+    background: var(--bg);
+    border: 1px solid var(--card-line);
+    border-radius: 20px;
+    padding: 18px;
+    display: flex; flex-direction: column; gap: 14px;
+    max-height: 88vh;
+    box-shadow: 0 30px 60px -25px rgba(0,0,0,.7);
+  }
+  .sidebar-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .sidebar-header h2 { font-family: 'Caveat', cursive; font-size: 24px; font-weight: 700; color: var(--gold); }
+  .sidebar-header-actions { display: flex; gap: 6px; }
+  .icon-btn-wrap { position: relative; display: inline-flex; }
+  .count-badge {
+    position: absolute; top: -4px; right: -4px; background: var(--coral); color: #fff;
+    font-size: 9px; font-weight: 800; min-width: 15px; height: 15px; border-radius: 999px;
+    display: none; align-items: center; justify-content: center; padding: 0 3px; line-height: 1;
+    border: 1.5px solid var(--bg);
+  }
+  .mistake-item {
+    background: var(--card); border: 1px solid var(--card-line); border-left: 3px solid var(--coral);
+    border-radius: 10px; padding: 10px 12px; font-size: 13px; line-height: 1.55;
+  }
+  .mistake-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--chalk-dim); margin-bottom: 5px; }
+  .mistake-select-label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .mistake-progress { font-size: 10.5px; color: var(--sage); margin-top: 6px; font-weight: 700; }
+  .mistake-toolbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    font-size: 12px; color: var(--chalk-dim);
+  }
+  .select-all-wrap { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .icon-btn {
+    background: transparent; border: 1px solid var(--card-line); color: var(--chalk-dim);
+    width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; justify-content: center; flex: none;
+  }
+  .icon-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .lesson-list { overflow-y: auto; display: flex; flex-direction: column; gap: 10px; flex: 1; padding-right: 2px; }
+  .lesson-list::-webkit-scrollbar, .modal-transcript::-webkit-scrollbar { width: 6px; }
+  .lesson-list::-webkit-scrollbar-thumb, .modal-transcript::-webkit-scrollbar-thumb { background: var(--card-line); border-radius: 4px; }
+  .empty-hint { font-size: 12.5px; color: var(--chalk-dim); text-align: center; padding: 30px 10px; line-height: 1.6; }
+  .lesson-card {
+    background: var(--card); border: 1px solid var(--card-line); border-radius: 12px;
+    padding: 10px 12px; transition: border-color .15s, transform .15s;
+  }
+  .lesson-card.active { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold-soft); }
+  .lesson-top { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--chalk-dim); }
+  .lesson-status { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .status-ongoing { background: var(--gold); box-shadow: 0 0 6px var(--gold); animation: pulse-dot 1.4s infinite ease-in-out; }
+  .status-completed { background: var(--sage); }
+  .status-interrupted { background: var(--coral); box-shadow: 0 0 6px var(--coral-soft); }
+  .lesson-title { font-weight: 800; font-size: 13.5px; margin-top: 3px; }
+  .lesson-sub { font-size: 11px; color: var(--chalk-dim); margin-top: 2px; }
+  .lesson-actions { display: flex; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
+  .mini-btn {
+    font-size: 11px; padding: 6px 9px; border-radius: 8px; border: 1px solid var(--card-line);
+    background: transparent; color: var(--chalk-dim); cursor: pointer; text-transform: none;
+    font-weight: 700; flex: none;
+  }
+  .mini-btn:hover { filter: brightness(1.2); }
+  .mini-btn.primary { border-color: var(--gold-soft); color: var(--gold); }
+  .mini-btn.danger { border-color: var(--coral-soft); color: var(--coral); }
+
+  .sidebar-toggle { display: none; }
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.55);
+    opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 55;
+  }
+  .overlay.show { opacity: 1; pointer-events: auto; }
+
+  .app-container {
+    position: relative;
+    background: var(--bg);
+    width: 100%;
+    max-width: 860px;
+    border-radius: 20px;
+    padding: 24px 28px;
+    border: 1px solid var(--card-line);
+    box-shadow: 0 30px 60px -25px rgba(0,0,0,.7);
+    display: flex; flex-direction: column; gap: 18px;
+  }
+
+  .header {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    border-bottom: 2px dashed var(--card-line);
+    padding-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .header .title-block h1 {
+    font-family: 'Caveat', cursive;
+    font-size: 32px; font-weight: 700; color: var(--gold); line-height: 1;
+  }
+  .session-meta { font-size: 11px; color: var(--chalk-dim); margin-top: 2px; font-family: 'Space Mono', monospace; }
+  .header-right { display: flex; align-items: center; gap: 8px; }
+  .status-badge {
+    display: flex; align-items: center; gap: 7px;
+    padding: 6px 12px; border-radius: 999px; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px; border: 1px solid;
+  }
+  .status-badge .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .status-offline { background: rgba(238,122,103,.1); color: var(--coral); border-color: rgba(238,122,103,.35); }
+  .status-offline .dot { background: var(--coral); }
+  .status-online { background: rgba(127,174,143,.12); color: #a9d6b8; border-color: rgba(127,174,143,.45); }
+  .status-online .dot { background: #6fe39a; box-shadow: 0 0 8px #6fe39a; animation: pulse-dot 1.4s infinite ease-in-out; }
+  @keyframes pulse-dot { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+
+  /* --- BANNER TIẾP TỤC BÀI HỌC --- */
+  .resume-banner {
+    display: none; align-items: center; justify-content: space-between; gap: 10px;
+    background: rgba(227,193,111,.1); border: 1px solid var(--gold-soft);
+    border-radius: 12px; padding: 10px 14px; font-size: 12.5px; line-height: 1.5;
+  }
+  .resume-banner.show { display: flex; }
+  .resume-banner b { color: var(--gold); }
+  .resume-banner .rb-actions { display: flex; gap: 6px; flex: none; }
+  .resume-banner button { flex: none; width: auto; padding: 7px 11px; font-size: 11px; }
+
+  /* --- CÔ GIÁO NHỎ LẠI --- */
+  .stage-wrapper {
+    position: relative;
+    width: 100%; height: 140px;
+    border-radius: 14px;
+    display: flex; justify-content: center; align-items: center;
+    background: radial-gradient(ellipse at center, rgba(227,193,111,.08) 0%, transparent 70%), #10201a;
+    border: 1px solid var(--card-line);
+    overflow: hidden;
+  }
+  #avatarCanvas { width: 130px; height: 130px; }
+  .teacher-tag {
+    position: absolute; bottom: 8px; right: 14px;
+    background: var(--gold); color: #1a2b22;
+    font-family: 'Caveat', cursive; font-size: 15px; font-weight: 700;
+    padding: 2px 10px; border-radius: 4px;
+  }
+
+  /* --- KHUNG VĂN BẢN --- */
+  .box-container { display: flex; flex-direction: column; gap: 14px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  label {
+    font-size: 12px; font-weight: 800; color: var(--gold);
+    text-transform: uppercase; letter-spacing: 1.2px;
+  }
+  .box {
+    background: var(--card);
+    border: 2px solid var(--card-line);
+    border-radius: 14px;
+    padding: 16px 20px;
+    min-height: 110px; max-height: 220px; overflow-y: auto;
+    font-family: 'Space Mono', monospace;
+    font-size: 20px;
+    line-height: 1.5; color: var(--chalk);
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.3);
+  }
+  .box.you { border-left: 6px solid var(--sage); color: #e2f2e6; }
+  .box.teacher { border-left: 6px solid var(--gold); color: #fff8e7; }
+
+  /* --- INPUT CONTROLS --- */
+  .grid-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field-full { grid-column: span 2; }
+  input, select {
+    background: var(--card);
+    border: 1.5px solid var(--card-line);
+    color: var(--chalk);
+    padding: 10px 12px;
+    border-radius: 10px;
+    outline: none; font-size: 13px;
+  }
+  input:focus, select:focus { border-color: var(--gold); }
+
+  .controls { display: flex; gap: 12px; }
+  button {
+    flex: 1; padding: 14px; border-radius: 12px; font-weight: 800; cursor: pointer;
+    font-size: 14px; text-transform: uppercase; border: none;
+  }
+  #btnConnect { background: var(--gold); color: #1a2b22; }
+  #btnConnect:disabled { opacity: .4; cursor: not-allowed; }
+  #btnDisconnect { background: transparent; color: var(--coral); border: 1.5px solid var(--coral); }
+  #btnDisconnect:disabled { opacity: .3; cursor: not-allowed; }
+
+  /* --- TOAST --- */
+  .toast {
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(16px);
+    background: var(--card); border: 1px solid var(--gold-soft); color: var(--chalk);
+    padding: 10px 20px; border-radius: 999px; font-size: 12.5px; font-weight: 700;
+    opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; z-index: 90;
+    box-shadow: 0 12px 30px rgba(0,0,0,.45);
+  }
+  .toast.warn { border-color: var(--coral-soft); }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* --- MODAL XEM LẠI BÀI HỌC --- */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.6);
+    display: none; align-items: center; justify-content: center; z-index: 80; padding: 20px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: var(--bg); border: 1px solid var(--card-line); border-radius: 16px;
+    padding: 20px; width: 100%; max-width: 560px; max-height: 82vh;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .modal-head h3 { font-family: 'Caveat', cursive; color: var(--gold); font-size: 24px; }
+  .modal-head p { font-size: 11.5px; color: var(--chalk-dim); margin-top: 2px; }
+  .modal-transcript { overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; }
+  .transcript-line { padding: 9px 12px; border-radius: 10px; font-size: 13px; line-height: 1.5; }
+  .transcript-line.user { background: rgba(127,174,143,.1); border-left: 3px solid var(--sage); }
+  .transcript-line.teacher { background: rgba(227,193,111,.08); border-left: 3px solid var(--gold); }
+  .transcript-line b { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; opacity: .65; }
+
+  @media (max-width: 900px) {
+    .app-shell { flex-direction: column; }
+    .sidebar {
+      position: fixed; top: 0; left: 0; height: 100vh; max-height: 100vh;
+      width: 84%; max-width: 320px; transform: translateX(-105%);
+      transition: transform .3s; z-index: 60; border-radius: 0 20px 20px 0;
+    }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar-toggle { display: inline-flex; }
+    .app-container { max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- SIDEBAR LỊCH SỬ BÀI HỌC -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h2>📚 Bài học đã lưu</h2>
+      <div class="sidebar-header-actions">
+        <div class="icon-btn-wrap">
+          <button class="icon-btn" id="btnOpenMistakes" title="Sổ tay lỗi sai hay gặp">📕</button>
+          <span class="count-badge" id="mistakeCount">0</span>
+        </div>
+        <button class="icon-btn" id="btnClearAll" title="Xóa toàn bộ lịch sử">🗑</button>
+        <button class="icon-btn" id="btnCloseSidebar" title="Đóng">✕</button>
+      </div>
+    </div>
+    <div class="lesson-list" id="lessonList"></div>
+  </aside>
+  <div class="overlay" id="overlay"></div>
+
+  <!-- APP CHÍNH -->
+  <div class="app-container">
+    <div class="header">
+      <div class="header-left">
+        <button class="icon-btn sidebar-toggle" id="btnOpenSidebar" title="Lịch sử bài học">☰</button>
+        <div class="title-block">
+          <h1>AI Language Coach</h1>
+          <div class="session-meta" id="sessionMeta"></div>
+        </div>
+      </div>
+      <div class="header-right">
+        <div id="statusBadge" class="status-badge status-offline"><span class="dot"></span>Offline</div>
+      </div>
+    </div>
+
+    <div class="resume-banner" id="resumeBanner">
+      <span id="resumeText"></span>
+      <div class="rb-actions">
+        <button class="mini-btn" id="btnCancelResume">Hủy</button>
+      </div>
+    </div>
+
+    <!-- CÔ GIÁO THU NHỎ -->
+    <div class="stage-wrapper">
+      <canvas id="avatarCanvas" width="130" height="130"></canvas>
+      <div class="teacher-tag">Cô giáo AI</div>
+    </div>
+
+    <!-- CHỖ HỌC VỚI PHÔNG CHỮ LỚN -->
+    <div class="box-container">
+      <div class="field">
+        <label>🗣️ Bạn vừa nói:</label>
+        <div id="sttOutput" class="box you">Chưa có dữ liệu...</div>
+      </div>
+      <div class="field">
+        <label>👩‍🏫 Giáo viên nhận xét &amp; Hướng dẫn:</label>
+        <div id="geminiOutput" class="box teacher">Sẵn sàng học... Hãy bấm kết nối!</div>
+      </div>
+    </div>
+
+    <div class="grid-fields">
+      <div class="field">
+        <label>Gemini API Key</label>
+        <input type="password" id="apiKey" placeholder="Dán API Key...">
+      </div>
+      <div class="field">
+        <label>Ngôn ngữ</label>
+        <select id="langSelect">
+          <option value="English">🇺🇸 Tiếng Anh (English)</option>
+          <option value="Japanese">🇯🇵 Tiếng Nhật (日本語)</option>
+          <option value="Korean">🇰🇷 Tiếng Hàn (한국어)</option>
+          <option value="Chinese">🇨🇳 Tiếng Trung (中文)</option>
+          <option value="French">🇫🇷 Tiếng Pháp (Français)</option>
+          <option value="German">🇩🇪 Tiếng Đức (Deutsch)</option>
+        </select>
+      </div>
+      <div class="field field-full">
+        <label>Chủ đề luyện tập</label>
+        <select id="topicSelect">
+          <option value="daily">💬 Giao tiếp hằng ngày</option>
+          <option value="restaurant">🍽️ Nhà hàng &amp; Ẩm thực</option>
+          <option value="travel">✈️ Du lịch &amp; Sân bay</option>
+          <option value="work">💼 Công sở &amp; Phỏng vấn</option>
+          <option value="shopping">🛍️ Mua sắm</option>
+          <option value="school">🎓 Trường học</option>
+          <option value="health">🏥 Sức khỏe &amp; Bác sĩ</option>
+          <option value="free">🎲 Để cô tự chọn theo trình độ</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="btnConnect">🎤 Bắt đầu luyện nói</button>
+      <button id="btnDisconnect" disabled>⏹ Bảo cô dừng</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL XEM LẠI BÀI HỌC -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div>
+        <h3 id="modalTitle">Bài học</h3>
+        <p id="modalSub"></p>
+      </div>
+      <button class="icon-btn" id="btnCloseModal">✕</button>
+    </div>
+    <div class="modal-transcript" id="modalTranscript"></div>
+  </div>
+</div>
+
+<!-- MODAL SỔ TAY LỖI SAI -->
+<div class="modal-overlay" id="mistakeModalOverlay">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div>
+        <h3>📕 Sổ tay lỗi sai hay gặp</h3>
+        <p>Cô giáo tự động ghi lại mỗi khi sửa phát âm cho bạn. Chọn lỗi rồi bấm "Luyện tập" để AI dẫn bạn luyện lại từng lỗi bằng giọng nói — không chỉ đọc lại suông.</p>
+      </div>
+      <button class="icon-btn" id="btnCloseMistakeModal">✕</button>
+    </div>
+    <select id="mistakeCategoryFilter">
+      <option value="">Tất cả nhóm lỗi</option>
+      <option value="Trọng âm">Trọng âm</option>
+      <option value="Âm cuối">Âm cuối</option>
+      <option value="Nguyên âm">Nguyên âm</option>
+      <option value="Phụ âm">Phụ âm</option>
+      <option value="Ngữ điệu">Ngữ điệu</option>
+      <option value="Từ vựng / Ngữ pháp">Từ vựng / Ngữ pháp</option>
+      <option value="Khác">Khác</option>
+    </select>
+    <div class="mistake-toolbar">
+      <label class="select-all-wrap"><input type="checkbox" id="mistakeSelectAll"> Chọn tất cả</label>
+      <button class="mini-btn primary" id="btnPracticeSelected">🎯 Luyện tập đã chọn (<span id="practiceSelCount">0</span>)</button>
+    </div>
+    <div class="modal-transcript" id="mistakeList"></div>
+    <button class="mini-btn danger" id="btnClearMistakes" style="align-self:flex-end;">🗑 Xóa toàn bộ sổ tay</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://esm.sh/@google/genai@1.17.0"
+  }
+}
+</script>
+
+<script type="module">
+import { GoogleGenAI, Modality } from "@google/genai";
+
+const apiKeyInput = document.getElementById('apiKey');
+const topicSelect = document.getElementById('topicSelect');
+const langSelect = document.getElementById('langSelect');
+
+const TOPICS = {
+  daily:      { label: "Giao tiếp hằng ngày",     desc: "chào hỏi, làm quen, trò chuyện thường ngày" },
+  restaurant: { label: "Nhà hàng & Ẩm thực",       desc: "gọi món, đặt bàn, hỏi về món ăn" },
+  travel:     { label: "Du lịch & Sân bay",        desc: "làm thủ tục bay, hỏi đường, đặt phòng" },
+  work:       { label: "Công sở & Phỏng vấn",      desc: "phỏng vấn xin việc, họp hành" },
+  shopping:   { label: "Mua sắm",                  desc: "hỏi giá, mặc cả, đổi trả hàng" },
+  school:     { label: "Trường học",               desc: "giao tiếp trong lớp, hỏi bài" },
+  health:     { label: "Sức khỏe & Bác sĩ",        desc: "mô tả triệu chứng, khám bệnh" },
+  free:       { label: "Tự do",                    desc: "cô giáo tự chọn chủ đề" },
+};
+
+const btnConnect = document.getElementById('btnConnect');
+const btnDisconnect = document.getElementById('btnDisconnect');
+const sttOutput = document.getElementById('sttOutput');
+const geminiOutput = document.getElementById('geminiOutput');
+const statusBadge = document.getElementById('statusBadge');
+const sessionMeta = document.getElementById('sessionMeta');
+const canvas = document.getElementById('avatarCanvas');
+const ctx = canvas.getContext('2d');
+
+// ===== Sidebar / lịch sử bài học =====
+const sidebar = document.getElementById('sidebar');
+const overlay = document.getElementById('overlay');
+const lessonListEl = document.getElementById('lessonList');
+const btnOpenSidebar = document.getElementById('btnOpenSidebar');
+const btnCloseSidebar = document.getElementById('btnCloseSidebar');
+const btnClearAll = document.getElementById('btnClearAll');
+const resumeBanner = document.getElementById('resumeBanner');
+const resumeText = document.getElementById('resumeText');
+const btnCancelResume = document.getElementById('btnCancelResume');
+const toastEl = document.getElementById('toast');
+const modalOverlay = document.getElementById('modalOverlay');
+const modalTitle = document.getElementById('modalTitle');
+const modalSub = document.getElementById('modalSub');
+const modalTranscript = document.getElementById('modalTranscript');
+const btnCloseModal = document.getElementById('btnCloseModal');
+const btnOpenMistakes = document.getElementById('btnOpenMistakes');
+const mistakeCountEl = document.getElementById('mistakeCount');
+const mistakeModalOverlay = document.getElementById('mistakeModalOverlay');
+const mistakeListEl = document.getElementById('mistakeList');
+const btnCloseMistakeModal = document.getElementById('btnCloseMistakeModal');
+const btnClearMistakes = document.getElementById('btnClearMistakes');
+const mistakeCategoryFilterEl = document.getElementById('mistakeCategoryFilter');
+
+const LESSON_KEY = 'ai_coach_lessons_v1';
+let lessons = loadLessons();
+let currentLessonId = null;
+let resumeLessonId = null;
+let sessionStartTime = null;
+let timerInterval = null;
+
+function loadLessons() {
+  try { return JSON.parse(localStorage.getItem(LESSON_KEY)) || []; } catch { return []; }
+}
+function saveLessons() {
+  try { localStorage.setItem(LESSON_KEY, JSON.stringify(lessons)); } catch {}
+}
+function getLesson(id) { return lessons.find(l => l.id === id); }
+
+function createLesson(lang, langLabel, topicKey, topicLabel) {
+  const lesson = {
+    id: 'L' + Date.now() + Math.random().toString(36).slice(2, 7),
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    lang, langLabel, topicKey, topicLabel,
+    status: 'ongoing',
+    turns: []
+  };
+  lessons.unshift(lesson);
+  saveLessons();
+  return lesson;
+}
+function addTurn(lessonId, role, text) {
+  const lesson = getLesson(lessonId);
+  if (!lesson || !text || !text.trim()) return;
+  lesson.turns.push({ role, text: text.trim(), ts: Date.now() });
+  lesson.updatedAt = Date.now();
+  saveLessons();
+}
+function setLessonStatus(lessonId, status) {
+  const lesson = getLesson(lessonId);
+  if (!lesson) return;
+  lesson.status = status;
+  lesson.updatedAt = Date.now();
+  saveLessons();
+}
+function deleteLesson(id) {
+  lessons = lessons.filter(l => l.id !== id);
+  saveLessons();
+  if (resumeLessonId === id) cancelResume();
+  renderLessonList();
+}
+
+// ===== Sổ tay lỗi sai hay gặp (phân tích bằng AI, có phân loại nhóm) =====
+const MISTAKE_KEY = 'ai_coach_mistakes_v1';
+let mistakes = loadMistakes();
+let mistakeCategoryFilter = '';
+let practicingMistakeIds = [];
+
+function loadMistakes() {
+  try { return JSON.parse(localStorage.getItem(MISTAKE_KEY)) || []; } catch { return []; }
+}
+function saveMistakes() {
+  try { localStorage.setItem(MISTAKE_KEY, JSON.stringify(mistakes)); } catch {}
+}
+
+const MISTAKE_CATEGORIES = ['Trọng âm', 'Âm cuối', 'Nguyên âm', 'Phụ âm', 'Ngữ điệu', 'Từ vựng / Ngữ pháp', 'Khác'];
+
+// Gọi model text riêng (không ảnh hưởng phiên hội thoại đang nói) để phân tích
+// xem lượt vừa rồi có phải một lỗi phát âm/ngữ pháp thật sự hay không, và xếp nhóm.
+async function classifyMistake(lessonId, userText, teacherText) {
+  if (!aiClient || !teacherText.trim()) return;
+  try {
+    const prompt = `Bạn là trợ lý phân tích buổi học phát âm ngoại ngữ.
+Học viên vừa nói: "${(userText || '').trim() || '(không có bản ghi giọng nói)'}"
+Giáo viên AI phản hồi: "${teacherText.trim()}"
+
+Xác định giáo viên có đang chỉ ra MỘT LỖI PHÁT ÂM, NGỮ PHÁP hoặc TỪ VỰNG cụ thể mà học viên cần sửa hay không.
+Không tính: lời chào, khen ngợi chung chung, câu hỏi mở đầu bài học, hoặc câu mẫu đưa ra trước khi học viên nói.
+Nếu có lỗi thật sự, tóm tắt lỗi đó trong đúng 1 câu ngắn gọn bằng tiếng Việt (nêu rõ học viên sai gì và nên sửa thành gì), và xếp vào đúng một nhóm phù hợp nhất.`;
+
+    const response = await aiClient.models.generateContent({
+      model: 'gemini-3.1-flash-lite',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'OBJECT',
+          properties: {
+            hasMistake: { type: 'BOOLEAN' },
+            category: { type: 'STRING', enum: MISTAKE_CATEGORIES },
+            summary: { type: 'STRING' }
+          },
+          required: ['hasMistake']
+        }
+      }
+    });
+    const result = JSON.parse(response.text);
+    if (result.hasMistake && result.summary && result.summary.trim()) {
+      const lesson = getLesson(lessonId);
+      mistakes.unshift({
+        id: 'M' + Date.now() + Math.random().toString(36).slice(2, 6),
+        lessonId,
+        lang: lesson?.lang || '',
+        langLabel: lesson?.langLabel || lesson?.lang || '',
+        topicLabel: lesson?.topicLabel || '',
+        category: MISTAKE_CATEGORIES.includes(result.category) ? result.category : 'Khác',
+        text: result.summary.trim(),
+        ts: Date.now(),
+        practiceCount: 0,
+        lastPracticedAt: null
+      });
+      saveMistakes();
+      updateMistakeBadge();
+      if (mistakeModalOverlay.classList.contains('show')) renderMistakeList();
+      showToast('📕 +1 lỗi mới trong sổ tay ôn tập');
+    }
+  } catch (err) {
+    // Phân tích thất bại (vd. lỗi mạng tạm thời) thì bỏ qua âm thầm, không làm gián đoạn buổi học
+    console.warn('Không thể phân tích lỗi:', err);
+  }
+}
+function updateMistakeBadge() {
+  if (mistakes.length > 0) {
+    mistakeCountEl.style.display = 'flex';
+    mistakeCountEl.textContent = mistakes.length > 99 ? '99+' : String(mistakes.length);
+  } else {
+    mistakeCountEl.style.display = 'none';
+  }
+}
+function renderMistakeList() {
+  mistakeListEl.innerHTML = '';
+  document.getElementById('mistakeSelectAll').checked = false;
+  updatePracticeSelCount();
+  const filtered = mistakeCategoryFilter ? mistakes.filter(m => (m.category || 'Khác') === mistakeCategoryFilter) : mistakes;
+  if (mistakes.length === 0) {
+    mistakeListEl.innerHTML = '<div class="empty-hint">Chưa ghi nhận lỗi nào.<br>Khi cô giáo sửa phát âm cho bạn trong lúc học, AI sẽ tự phân tích và lưu lại đây để bạn ôn tập.</div>';
+    return;
+  }
+  if (filtered.length === 0) {
+    mistakeListEl.innerHTML = '<div class="empty-hint">Không có lỗi nào thuộc nhóm này.</div>';
+    return;
+  }
+  filtered.forEach(m => {
+    const item = document.createElement('div');
+    item.className = 'mistake-item';
+    const progressText = m.practiceCount
+      ? `✅ Đã luyện ${m.practiceCount} lần · gần nhất ${fmtTime(m.lastPracticedAt)}`
+      : '⏳ Chưa luyện lần nào';
+    item.innerHTML = `
+      <div class="mistake-meta">
+        <label class="mistake-select-label">
+          <input type="checkbox" class="mistake-select" data-mid="${m.id}">
+          <b style="color:var(--coral);">${m.category || 'Khác'}</b> · ${m.topicLabel || 'Chủ đề'} · ${m.langLabel || m.lang || ''}
+        </label>
+        <span>${fmtTime(m.ts)}</span>
+      </div>
+      <div>${escapeHtml(m.text)}</div>
+      <div class="mistake-progress">${progressText}</div>
+      <div class="lesson-actions">
+        <button class="mini-btn primary" data-practice="${m.id}">🎯 Luyện ngay</button>
+        <button class="mini-btn danger" data-mid="${m.id}">🗑 Xóa</button>
+      </div>`;
+    mistakeListEl.appendChild(item);
+  });
+}
+function updatePracticeSelCount() {
+  const n = mistakeListEl.querySelectorAll('.mistake-select:checked').length;
+  document.getElementById('practiceSelCount').textContent = n;
+}
+mistakeListEl.addEventListener('change', (e) => {
+  if (e.target.classList.contains('mistake-select')) updatePracticeSelCount();
+});
+mistakeListEl.addEventListener('click', (e) => {
+  const delBtn = e.target.closest('button[data-mid]');
+  if (delBtn) {
+    mistakes = mistakes.filter(m => m.id !== delBtn.dataset.mid);
+    saveMistakes();
+    updateMistakeBadge();
+    renderMistakeList();
+    return;
+  }
+  const pracBtn = e.target.closest('button[data-practice]');
+  if (pracBtn) {
+    const m = mistakes.find(x => x.id === pracBtn.dataset.practice);
+    if (m) startMistakePractice([m]);
+  }
+});
+document.getElementById('mistakeSelectAll').onchange = (e) => {
+  mistakeListEl.querySelectorAll('.mistake-select').forEach(cb => cb.checked = e.target.checked);
+  updatePracticeSelCount();
+};
+document.getElementById('btnPracticeSelected').onclick = () => {
+  const ids = [...mistakeListEl.querySelectorAll('.mistake-select:checked')].map(cb => cb.dataset.mid);
+  const selected = ids.length
+    ? mistakes.filter(m => ids.includes(m.id))
+    : (mistakeCategoryFilter ? mistakes.filter(m => (m.category || 'Khác') === mistakeCategoryFilter) : mistakes);
+  if (!selected.length) { showToast('⚠️ Chưa có lỗi nào để luyện tập', true); return; }
+  startMistakePractice(selected);
+};
+btnOpenMistakes.onclick = () => { renderMistakeList(); mistakeModalOverlay.classList.add('show'); closeSidebarMobile(); };
+mistakeCategoryFilterEl.onchange = () => { mistakeCategoryFilter = mistakeCategoryFilterEl.value; renderMistakeList(); };
+btnCloseMistakeModal.onclick = () => mistakeModalOverlay.classList.remove('show');
+mistakeModalOverlay.addEventListener('click', (e) => { if (e.target === mistakeModalOverlay) mistakeModalOverlay.classList.remove('show'); });
+btnClearMistakes.onclick = () => {
+  if (mistakes.length === 0) return;
+  if (confirm('Xóa toàn bộ sổ tay lỗi sai? Không thể hoàn tác.')) {
+    mistakes = [];
+    saveMistakes();
+    updateMistakeBadge();
+    renderMistakeList();
+  }
+};
+
+function fmtTime(ts) {
+  return new Date(ts).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+function statusLabel(s) {
+  return s === 'ongoing' ? 'Đang học' : s === 'interrupted' ? 'Bị gián đoạn' : 'Hoàn thành';
+}
+function showToast(msg, warn) {
+  toastEl.textContent = msg;
+  toastEl.className = 'toast show' + (warn ? ' warn' : '');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => { toastEl.className = 'toast'; }, 2600);
+}
+
+function renderLessonList() {
+  lessonListEl.innerHTML = '';
+  if (lessons.length === 0) {
+    lessonListEl.innerHTML = '<div class="empty-hint">Chưa có bài học nào được lưu.<br>Bấm "Bắt đầu luyện nói" — mọi tiến trình sẽ tự động lưu lại tại đây, kể cả khi mất kết nối giữa chừng.</div>';
+    return;
+  }
+  lessons.forEach(lesson => {
+    const card = document.createElement('div');
+    card.className = 'lesson-card' + (lesson.id === currentLessonId ? ' active' : '');
+    const topicLabel = lesson.topicLabel || (TOPICS[lesson.topicKey] && TOPICS[lesson.topicKey].label) || 'Chủ đề';
+    card.innerHTML = `
+      <div class="lesson-top">
+        <span>${fmtTime(lesson.updatedAt)}</span>
+        <span class="lesson-status status-${lesson.status}" title="${statusLabel(lesson.status)}"></span>
+      </div>
+      <div class="lesson-title">${topicLabel}</div>
+      <div class="lesson-sub">${lesson.langLabel || lesson.lang} · ${lesson.turns.length} lượt · ${statusLabel(lesson.status)}</div>
+      <div class="lesson-actions">
+        <button class="mini-btn" data-act="view" data-id="${lesson.id}">👁 Xem lại</button>
+        <button class="mini-btn primary" data-act="resume" data-id="${lesson.id}">▶ ${lesson.status === 'completed' ? 'Học lại' : 'Tiếp tục'}</button>
+        <button class="mini-btn danger" data-act="delete" data-id="${lesson.id}">🗑 Xóa</button>
+      </div>`;
+    lessonListEl.appendChild(card);
+  });
+}
+
+lessonListEl.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-act]');
+  if (!btn) return;
+  const id = btn.dataset.id;
+  const act = btn.dataset.act;
+  if (act === 'view') openTranscriptModal(id);
+  if (act === 'delete') {
+    if (confirm('Xóa bài học này? Không thể hoàn tác.')) deleteLesson(id);
+  }
+  if (act === 'resume') selectResume(id);
+});
+
+btnClearAll.onclick = () => {
+  if (lessons.length === 0) return;
+  if (confirm('Xóa toàn bộ lịch sử bài học? Không thể hoàn tác.')) {
+    lessons = [];
+    saveLessons();
+    cancelResume();
+    renderLessonList();
+  }
+};
+
+function openTranscriptModal(id) {
+  const lesson = getLesson(id);
+  if (!lesson) return;
+  const topicLabel = lesson.topicLabel || (TOPICS[lesson.topicKey] && TOPICS[lesson.topicKey].label) || 'Chủ đề';
+  modalTitle.textContent = topicLabel;
+  modalSub.textContent = `${lesson.langLabel || lesson.lang} · ${fmtTime(lesson.createdAt)} · ${statusLabel(lesson.status)}`;
+  modalTranscript.innerHTML = '';
+  if (lesson.turns.length === 0) {
+    modalTranscript.innerHTML = '<div class="empty-hint">Chưa có nội dung nào được ghi lại cho bài học này.</div>';
+  } else {
+    lesson.turns.forEach(t => {
+      const line = document.createElement('div');
+      line.className = 'transcript-line ' + t.role;
+      line.innerHTML = `<b>${t.role === 'user' ? '🗣️ Bạn' : '👩‍🏫 Cô giáo'}</b>${escapeHtml(t.text)}`;
+      modalTranscript.appendChild(line);
+    });
+  }
+  modalOverlay.classList.add('show');
+}
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+btnCloseModal.onclick = () => modalOverlay.classList.remove('show');
+modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) modalOverlay.classList.remove('show'); });
+
+function selectResume(id) {
+  const lesson = getLesson(id);
+  if (!lesson) return;
+  resumeLessonId = id;
+  if (lesson.lang) langSelect.value = lesson.lang;
+  if (lesson.topicKey) topicSelect.value = lesson.topicKey;
+  const topicLabel = lesson.topicLabel || (TOPICS[lesson.topicKey] && TOPICS[lesson.topicKey].label) || 'Chủ đề';
+  resumeText.innerHTML = `Sẽ tiếp tục: <b>${topicLabel}</b> · ${lesson.langLabel || lesson.lang} (${lesson.turns.length} lượt đã học)`;
+  resumeBanner.classList.add('show');
+  renderLessonList();
+  closeSidebarMobile();
+  showToast('Đã chọn bài học để tiếp tục — bấm "Bắt đầu luyện nói"');
+}
+function cancelResume() {
+  resumeLessonId = null;
+  resumeBanner.classList.remove('show');
+  renderLessonList();
+}
+btnCancelResume.onclick = cancelResume;
+
+function openSidebarMobile() { sidebar.classList.add('open'); overlay.classList.add('show'); }
+function closeSidebarMobile() { sidebar.classList.remove('open'); overlay.classList.remove('show'); }
+btnOpenSidebar.onclick = openSidebarMobile;
+btnCloseSidebar.onclick = closeSidebarMobile;
+overlay.onclick = closeSidebarMobile;
+
+function buildResumeContext(lesson) {
+  if (!lesson || lesson.turns.length === 0) return '';
+  const recent = lesson.turns.slice(-16);
+  return recent.map(t => (t.role === 'user' ? 'Học viên: ' : 'Giáo viên: ') + t.text).join('\n');
+}
+
+function fmtDuration(ms) {
+  const s = Math.floor(ms / 1000);
+  const mm = String(Math.floor(s / 60)).padStart(2, '0');
+  const ss = String(s % 60).padStart(2, '0');
+  return `${mm}:${ss}`;
+}
+function startTimer() {
+  sessionStartTime = Date.now();
+  updateSessionMeta();
+  timerInterval = setInterval(updateSessionMeta, 1000);
+}
+function stopTimer() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+  sessionMeta.textContent = '';
+}
+function updateSessionMeta() {
+  const lesson = currentLessonId ? getLesson(currentLessonId) : null;
+  const turns = lesson ? lesson.turns.length : 0;
+  sessionMeta.textContent = `⏱ ${fmtDuration(Date.now() - sessionStartTime)} · ${turns} lượt`;
+}
+
+window.addEventListener('offline', () => {
+  if (currentLessonId) {
+    setLessonStatus(currentLessonId, 'interrupted');
+    renderLessonList();
+    showToast('⚠️ Mất kết nối mạng — bài học đã được lưu, bạn có thể tiếp tục sau', true);
+  }
+});
+window.addEventListener('beforeunload', () => { saveLessons(); });
+
+// ===== Avatar & audio (giữ nguyên như bản gốc) =====
+apiKeyInput.value = localStorage.getItem('gemini_api_key') || '';
+apiKeyInput.onchange = () => localStorage.setItem('gemini_api_key', apiKeyInput.value.trim());
+
+const GEMINI_MODEL = "gemini-3.1-flash-live-preview";
+let session = null, aiClient = null, micStream = null, audioContext = null, micSource = null, processor = null;
+let playbackContext = null, analyser = null, animFrameId = null;
+let nextPlayTime = 0, isAiSpeaking = false, userBuffer = "", aiBuffer = "";
+
+const anim = { mouthCurrent: 0, mouthTarget: 0, blinking: false, blinkStart: 0, blinkTimer: 2, eyeOpen: 1, lastTime: performance.now() };
+
+function drawHumanAvatar() {
+  const t = performance.now() / 1000;
+  const cx = 65, cyBase = 65;
+  const breathe = Math.sin(t * 1.1) * 1;
+  const cy = cyBase + breathe;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.save();
+  ctx.scale(0.55, 0.55);
+  ctx.translate(52, 52);
+
+  ctx.fillStyle = "#3a2418";
+  ctx.beginPath(); ctx.arc(cx, cy - 8, 76, 0, Math.PI * 2); ctx.fill();
+
+  ctx.fillStyle = "#e7b088"; ctx.fillRect(cx - 16, cy + 50, 32, 42);
+  ctx.fillStyle = "#e3c16f";
+  ctx.beginPath(); ctx.ellipse(cx, cy + 108, 62, 32, 0, 0, Math.PI * 2); ctx.fill();
+
+  ctx.fillStyle = "#ffe3c2";
+  ctx.beginPath(); ctx.ellipse(cx, cy, 53, 65, 0, 0, Math.PI * 2); ctx.fill();
+
+  ctx.fillStyle = "#3a2418";
+  ctx.beginPath(); ctx.arc(cx, cy - 24, 55, Math.PI * 0.85, Math.PI * 2.15); ctx.fill();
+
+  const eo = Math.max(0.06, anim.eyeOpen);
+  ctx.fillStyle = "#fff9f0";
+  ctx.beginPath();
+  ctx.ellipse(cx - 22, cy - 8, 10, 7 * eo, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx + 22, cy - 8, 10, 7 * eo, 0, 0, Math.PI * 2);
+  ctx.fill();
+  if (eo > 0.25) {
+    ctx.fillStyle = "#2c1b3d";
+    ctx.beginPath(); ctx.arc(cx - 22, cy - 8, 4.6 * eo, 0, Math.PI * 2); ctx.arc(cx + 22, cy - 8, 4.6 * eo, 0, Math.PI * 2); ctx.fill();
+  }
+
+  const mouthY = cy + 33;
+  const openness = anim.mouthCurrent;
+  const openPx = 3 + openness * 24;
+  ctx.fillStyle = "#6b1724";
+  ctx.beginPath();
+  ctx.ellipse(cx, mouthY, 15, openPx / 2, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function updateLipSync() {
+  const now = performance.now();
+  const dt = Math.min(0.1, (now - anim.lastTime) / 1000);
+  anim.lastTime = now;
+
+  if (analyser && isAiSpeaking) {
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(dataArray);
+    let sum = 0;
+    for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+    anim.mouthTarget = Math.min(1, (sum / dataArray.length) / 70);
+  } else {
+    anim.mouthTarget = 0;
+  }
+  anim.mouthCurrent += (anim.mouthTarget - anim.mouthCurrent) * 0.3;
+
+  drawHumanAvatar();
+  animFrameId = requestAnimationFrame(updateLipSync);
+}
+
+function bytesToBase64(bytes){
+  let binary=""; const chunkSize=0x8000;
+  for(let i=0;i<bytes.length;i+=chunkSize){ binary += String.fromCharCode(...bytes.subarray(i, Math.min(i+chunkSize, bytes.length))); }
+  return btoa(binary);
+}
+function floatTo16BitPCM(float32){
+  const out = new Int16Array(float32.length);
+  for(let i=0;i<float32.length;i++){ const s=Math.max(-1,Math.min(1,float32[i])); out[i]=s<0?s*0x8000:s*0x7fff; }
+  return new Uint8Array(out.buffer);
+}
+function base64ToBytes(base64){
+  const binary=atob(base64); const bytes=new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+  return bytes;
+}
+
+function initPlaybackAudio() {
+  if (!playbackContext) {
+    playbackContext = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = playbackContext.createAnalyser();
+    analyser.fftSize = 64;
+    analyser.connect(playbackContext.destination);
+  }
+  if (playbackContext.state === "suspended") playbackContext.resume();
+}
+
+function playPCM24k(base64){
+  initPlaybackAudio();
+  isAiSpeaking = true;
+  const bytes = base64ToBytes(base64);
+  const samples = new Int16Array(bytes.buffer, bytes.byteOffset, Math.floor(bytes.byteLength / 2));
+  const buffer = playbackContext.createBuffer(1, samples.length, 24000);
+  const channel = buffer.getChannelData(0);
+  for(let i = 0; i < samples.length; i++){ channel[i] = samples[i] / 32768; }
+
+  const source = playbackContext.createBufferSource();
+  source.buffer = buffer;
+  source.connect(analyser);
+
+  const now = playbackContext.currentTime;
+  nextPlayTime = Math.max(nextPlayTime, now);
+  source.start(nextPlayTime);
+  nextPlayTime += buffer.duration;
+
+  setTimeout(() => {
+    if (playbackContext && playbackContext.currentTime >= nextPlayTime) isAiSpeaking = false;
+  }, buffer.duration * 1000);
+}
+
+async function startMicrophone(){
+  micStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true } });
+  audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  await audioContext.resume();
+  micSource = audioContext.createMediaStreamSource(micStream);
+  processor = audioContext.createScriptProcessor(4096, 1, 1);
+  processor.onaudioprocess = (e) => {
+    if (!session || isAiSpeaking) return;
+    const pcm = floatTo16BitPCM(e.inputBuffer.getChannelData(0));
+    session.sendRealtimeInput({ audio: { data: bytesToBase64(pcm), mimeType: `audio/pcm;rate=${audioContext.sampleRate}` } });
+  };
+  micSource.connect(processor); processor.connect(audioContext.destination);
+}
+
+async function stopMicrophone(){
+  try{ processor?.disconnect(); micSource?.disconnect(); }catch{}
+  processor = null; micSource = null;
+  if(micStream) micStream.getTracks().forEach(t => t.stop());
+  if(audioContext) await audioContext.close().catch(()=>{});
+}
+
+async function startLiveSession() {
+  const key = apiKeyInput.value.trim();
+  if (!key) return alert("Vui lòng nhập API Key!");
+
+  try {
+    statusBadge.innerHTML = '<span class="dot"></span>Connecting...';
+    statusBadge.className = "status-badge status-offline";
+    btnConnect.disabled = true;
+    userBuffer = ""; aiBuffer = ""; sttOutput.textContent = "";
+
+    const selectedLang = langSelect.value;
+    const selectedLangLabel = langSelect.selectedOptions[0].textContent.trim();
+    const selectedTopicKey = topicSelect.value;
+    const selectedTopicLabel = topicSelect.selectedOptions[0].textContent.trim();
+    const topicObj = TOPICS[selectedTopicKey] || TOPICS.daily;
+
+    // Thiết lập bài học: tiếp tục bài cũ hoặc tạo bài mới
+    let resumingLesson = null;
+    if (resumeLessonId) {
+      resumingLesson = getLesson(resumeLessonId);
+    }
+    if (resumingLesson) {
+      currentLessonId = resumingLesson.id;
+      setLessonStatus(currentLessonId, 'ongoing');
+    } else {
+      const lesson = createLesson(selectedLang, selectedLangLabel, selectedTopicKey, selectedTopicLabel);
+      currentLessonId = lesson.id;
+    }
+    resumeLessonId = null;
+    resumeBanner.classList.remove('show');
+    renderLessonList();
+    startTimer();
+
+    const resumeContext = resumingLesson ? buildResumeContext(resumingLesson) : '';
+    const instructionText = resumeContext
+      ? `Bạn là giáo viên dạy phát âm chuẩn chuyên dạy ngôn ngữ: ${selectedLang}.
+         Chủ đề: "${topicObj.label}" (${topicObj.desc}).
+         Đây là buổi học TIẾP NỐI một buổi học trước đó. Dưới đây là tóm tắt hội thoại gần nhất:
+         ---
+         ${resumeContext}
+         ---
+         Nhiệm vụ:
+         1. Chào ngắn gọn, nhắc lại thật nhanh (1 câu) nội dung đang học rồi tiếp tục ngay, KHÔNG lặp lại phần đã dạy.
+         2. Nghe học viên đọc, sửa lỗi phát âm và khẩu hình chi tiết BẰNG TIẾNG VIỆT.
+         3. Giữ câu trả lời súc tích để phản hồi nhanh.`
+      : `Bạn là giáo viên dạy phát âm chuẩn chuyên dạy ngôn ngữ: ${selectedLang}.
+         Chủ đề hôm nay: "${topicObj.label}" (${topicObj.desc}).
+         Nhiệm vụ:
+         1. Bắt đầu bằng việc chào và đưa ra 1 câu mẫu ngắn bằng ${selectedLang} theo chủ đề.
+         2. Nghe học viên đọc, sửa lỗi phát âm và khẩu hình chi tiết BẰNG TIẾNG VIỆT.
+         3. Giữ câu trả lời súc tích để phản hồi nhanh.`;
+
+    aiClient = new GoogleGenAI({ apiKey: key });
+
+    session = await aiClient.live.connect({
+      model: GEMINI_MODEL,
+      config: {
+        responseModalities: [Modality.AUDIO],
+        inputAudioTranscription: {},
+        outputAudioTranscription: {},
+        systemInstruction: { parts: [{ text: instructionText }] }
+      },
+      callbacks: {
+        onopen() {
+          statusBadge.innerHTML = '<span class="dot"></span>Online (Live)';
+          statusBadge.className = "status-badge status-online";
+          btnDisconnect.disabled = false;
+          geminiOutput.textContent = resumingLesson
+            ? `🟢 Đang tiếp tục bài học "${topicObj.label}"...`
+            : `🟢 Sẵn sàng! Đang tải bài học chủ đề ${topicObj.label}...`;
+        },
+        onmessage(message) {
+          const sc = message.serverContent;
+          if (sc?.inputTranscription?.text) { userBuffer += sc.inputTranscription.text; sttOutput.textContent = userBuffer; }
+          if (sc?.outputTranscription?.text) { aiBuffer += sc.outputTranscription.text; geminiOutput.textContent = aiBuffer; }
+          const parts = sc?.modelTurn?.parts || [];
+          for (const part of parts) {
+            const data = part?.inlineData?.data || part?.inline_data?.data;
+            const mime = part?.inlineData?.mimeType || part?.inline_data?.mimeType || "";
+            if (data && mime.startsWith("audio/")) playPCM24k(data);
+          }
+          if (sc?.turnComplete || sc?.interrupted) {
+            if (currentLessonId && (userBuffer.trim() || aiBuffer.trim())) {
+              const finishedUserText = userBuffer;
+              const finishedTeacherText = aiBuffer;
+              if (finishedUserText.trim()) addTurn(currentLessonId, 'user', finishedUserText);
+              if (finishedTeacherText.trim()) addTurn(currentLessonId, 'teacher', finishedTeacherText);
+              renderLessonList();
+              showToast('💾 Đã lưu tiến trình bài học');
+              if (finishedTeacherText.trim()) classifyMistake(currentLessonId, finishedUserText, finishedTeacherText);
+            }
+            isAiSpeaking = false; userBuffer = ""; aiBuffer = "";
+          }
+        },
+        onerror(e) {
+          geminiOutput.textContent = "❌ Lỗi: " + e.message;
+          showToast('⚠️ Mất kết nối — bài học đã được lưu, bạn có thể tiếp tục sau', true);
+          stopSession(false);
+        },
+        onclose() { stopSession(false); }
+      }
+    });
+
+    await startMicrophone();
+  } catch (err) {
+    geminiOutput.textContent = "❌ Lỗi khởi tạo: " + err.message;
+    stopSession(false);
+  }
+}
+
+async function startMistakePractice(mistakeList) {
+  const key = apiKeyInput.value.trim();
+  if (!key) { mistakeModalOverlay.classList.remove('show'); return alert("Vui lòng nhập API Key!"); }
+  if (session) { showToast('⚠️ Đang có buổi học khác, hãy dừng trước khi luyện tập', true); return; }
+
+  mistakeModalOverlay.classList.remove('show');
+
+  try {
+    statusBadge.innerHTML = '<span class="dot"></span>Connecting...';
+    statusBadge.className = "status-badge status-offline";
+    btnConnect.disabled = true;
+    userBuffer = ""; aiBuffer = ""; sttOutput.textContent = "";
+
+    // Chọn ngôn ngữ đại diện: ưu tiên ngôn ngữ xuất hiện nhiều nhất trong nhóm lỗi được chọn
+    const langCount = {};
+    mistakeList.forEach(m => { const k = m.lang || 'unknown'; langCount[k] = (langCount[k] || 0) + 1; });
+    const topLang = Object.keys(langCount).sort((a, b) => langCount[b] - langCount[a])[0];
+    const rep = mistakeList.find(m => m.lang === topLang) || mistakeList[0];
+    const practiceLang = rep.lang || langSelect.value;
+    const practiceLangLabel = rep.langLabel || practiceLang;
+    if ([...langSelect.options].some(o => o.value === practiceLang)) langSelect.value = practiceLang;
+
+    const lesson = createLesson(practiceLang, practiceLangLabel, 'review', 'Ôn tập lỗi sai');
+    currentLessonId = lesson.id;
+    practicingMistakeIds = mistakeList.map(m => m.id);
+    renderLessonList();
+    startTimer();
+
+    const mistakeListText = mistakeList.map((m, i) => `${i + 1}. [${m.category || 'Khác'}] ${m.text}`).join('\n');
+    const instructionText = `Bạn là giáo viên dạy phát âm chuẩn chuyên dạy ngôn ngữ: ${practiceLangLabel}.
+Đây là buổi ÔN TẬP LỖI SAI, không phải bài học mới. Học viên muốn LUYỆN TẬP LẠI các lỗi đã từng mắc, không chỉ xem lại suông.
+Danh sách lỗi cần ôn (đã ghi nhận từ các buổi học trước):
+---
+${mistakeListText}
+---
+Nhiệm vụ:
+1. Chào ngắn gọn, nói rõ hôm nay sẽ ôn lại từng lỗi một, lần lượt theo danh sách.
+2. Với MỖI lỗi: đưa ra một câu mẫu ngắn có chứa đúng điểm đó bằng ${practiceLangLabel}, yêu cầu học viên đọc/lặp lại.
+3. Nghe học viên đọc, nhận xét NGAY và CHI TIẾT bằng TIẾNG VIỆT xem đã đúng chưa; nếu chưa đúng, cho học viên thử lại tối đa 2-3 lần trước khi chuyển sang lỗi tiếp theo.
+4. Sau khi đi hết danh sách, tổng kết ngắn gọn tiến bộ của học viên.
+5. Giữ câu trả lời súc tích, tập trung vào luyện tập thực hành chứ không giảng lý thuyết dài dòng.`;
+
+    aiClient = new GoogleGenAI({ apiKey: key });
+
+    session = await aiClient.live.connect({
+      model: GEMINI_MODEL,
+      config: {
+        responseModalities: [Modality.AUDIO],
+        inputAudioTranscription: {},
+        outputAudioTranscription: {},
+        systemInstruction: { parts: [{ text: instructionText }] }
+      },
+      callbacks: {
+        onopen() {
+          statusBadge.innerHTML = '<span class="dot"></span>Online (Live)';
+          statusBadge.className = "status-badge status-online";
+          btnDisconnect.disabled = false;
+          geminiOutput.textContent = `🎯 Đang ôn tập ${mistakeList.length} lỗi đã ghi nhận...`;
+        },
+        onmessage(message) {
+          const sc = message.serverContent;
+          if (sc?.inputTranscription?.text) { userBuffer += sc.inputTranscription.text; sttOutput.textContent = userBuffer; }
+          if (sc?.outputTranscription?.text) { aiBuffer += sc.outputTranscription.text; geminiOutput.textContent = aiBuffer; }
+          const parts = sc?.modelTurn?.parts || [];
+          for (const part of parts) {
+            const data = part?.inlineData?.data || part?.inline_data?.data;
+            const mime = part?.inlineData?.mimeType || part?.inline_data?.mimeType || "";
+            if (data && mime.startsWith("audio/")) playPCM24k(data);
+          }
+          if (sc?.turnComplete || sc?.interrupted) {
+            if (currentLessonId && (userBuffer.trim() || aiBuffer.trim())) {
+              const finishedUserText = userBuffer;
+              const finishedTeacherText = aiBuffer;
+              if (finishedUserText.trim()) addTurn(currentLessonId, 'user', finishedUserText);
+              if (finishedTeacherText.trim()) addTurn(currentLessonId, 'teacher', finishedTeacherText);
+              renderLessonList();
+              showToast('💾 Đã lưu tiến trình ôn tập');
+            }
+            isAiSpeaking = false; userBuffer = ""; aiBuffer = "";
+          }
+        },
+        onerror(e) {
+          geminiOutput.textContent = "❌ Lỗi: " + e.message;
+          showToast('⚠️ Mất kết nối — tiến trình ôn tập đã được lưu', true);
+          stopSession(false);
+        },
+        onclose() { stopSession(false); }
+      }
+    });
+
+    await startMicrophone();
+  } catch (err) {
+    geminiOutput.textContent = "❌ Lỗi khởi tạo: " + err.message;
+    stopSession(false);
+  }
+}
+
+async function stopSession(manual) {
+  try { session?.sendRealtimeInput?.({ audioStreamEnd: true }); session?.close?.(); } catch {}
+  session = null; await stopMicrophone();
+  isAiSpeaking = false;
+
+  if (currentLessonId) {
+    setLessonStatus(currentLessonId, manual ? 'completed' : 'interrupted');
+    renderLessonList();
+  }
+
+  if (practicingMistakeIds.length) {
+    const now = Date.now();
+    mistakes.forEach(m => {
+      if (practicingMistakeIds.includes(m.id)) {
+        m.practiceCount = (m.practiceCount || 0) + 1;
+        m.lastPracticedAt = now;
+      }
+    });
+    saveMistakes();
+    updateMistakeBadge();
+    if (mistakeModalOverlay.classList.contains('show')) renderMistakeList();
+    showToast('🎯 Đã cập nhật tiến độ luyện tập lỗi sai');
+    practicingMistakeIds = [];
+  }
+
+  stopTimer();
+  currentLessonId = null;
+
+  statusBadge.innerHTML = '<span class="dot"></span>Offline';
+  statusBadge.className = "status-badge status-offline";
+  btnConnect.disabled = false; btnDisconnect.disabled = true;
+}
+
+btnConnect.onclick = startLiveSession;
+btnDisconnect.onclick = () => stopSession(true);
+
+renderLessonList();
+updateMistakeBadge();
+updateLipSync();
+</script>
+</body>
+</html>
