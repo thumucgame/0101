@@ -10,17 +10,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Manrope:wght@500;600;700;800&family=Space+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #12201a;
-    --bg-deep: #0b1510;
-    --card: #1a2b22;
-    --card-line: #22392c;
-    --chalk: #f4efe1;
-    --chalk-dim: #b9c9bd;
-    --gold: #e3c16f;
-    --gold-soft: rgba(227,193,111,.28);
-    --coral: #ee7a67;
-    --coral-soft: rgba(238,122,103,.25);
-    --sage: #7fae8f;
+    --bg: #ffffff;
+    --bg-deep: #f6f1e4;
+    --card: #fffdf8;
+    --card-line: #e5dcc6;
+    --chalk: #2e2a20;
+    --chalk-dim: #736c5b;
+    --gold: #b8860b;
+    --gold-soft: rgba(184,134,11,.14);
+    --coral: #d9604a;
+    --coral-soft: rgba(217,96,74,.15);
+    --sage: #3f8a5c;
+    --sage-soft: rgba(63,138,92,.14);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -30,8 +31,8 @@
     display: flex; justify-content: center; align-items: flex-start;
     padding: 20px;
     background:
-      radial-gradient(circle at 15% 10%, rgba(227,193,111,0.06), transparent 40%),
-      radial-gradient(circle at 85% 90%, rgba(127,174,143,0.08), transparent 45%),
+      radial-gradient(circle at 15% 10%, rgba(184,134,11,0.06), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(63,138,92,0.07), transparent 45%),
       var(--bg-deep);
     background-attachment: fixed;
   }
@@ -55,7 +56,7 @@
     padding: 18px;
     display: flex; flex-direction: column; gap: 14px;
     max-height: 88vh;
-    box-shadow: 0 30px 60px -25px rgba(0,0,0,.7);
+    box-shadow: 0 20px 45px -30px rgba(60,50,20,.25);
   }
   .sidebar-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
   .sidebar-header h2 { font-family: 'Caveat', cursive; font-size: 24px; font-weight: 700; color: var(--gold); }
@@ -126,7 +127,7 @@
     border-radius: 20px;
     padding: 24px 28px;
     border: 1px solid var(--card-line);
-    box-shadow: 0 30px 60px -25px rgba(0,0,0,.7);
+    box-shadow: 0 20px 45px -30px rgba(60,50,20,.25);
     display: flex; flex-direction: column; gap: 18px;
   }
 
@@ -149,23 +150,23 @@
     text-transform: uppercase; letter-spacing: 1px; border: 1px solid;
   }
   .status-badge .dot { width: 7px; height: 7px; border-radius: 50%; }
-  .status-offline { background: rgba(238,122,103,.1); color: var(--coral); border-color: rgba(238,122,103,.35); }
+  .status-offline { background: rgba(217,96,74,.1); color: var(--coral); border-color: rgba(217,96,74,.3); }
   .status-offline .dot { background: var(--coral); }
-  .status-online { background: rgba(127,174,143,.12); color: #a9d6b8; border-color: rgba(127,174,143,.45); }
-  .status-online .dot { background: #6fe39a; box-shadow: 0 0 8px #6fe39a; animation: pulse-dot 1.4s infinite ease-in-out; }
+  .status-online { background: rgba(63,138,92,.12); color: #2f7449; border-color: rgba(63,138,92,.4); }
+  .status-online .dot { background: #2f9e5c; box-shadow: 0 0 8px rgba(47,158,92,.6); animation: pulse-dot 1.4s infinite ease-in-out; }
   @keyframes pulse-dot { 0%,100%{opacity:1;} 50%{opacity:.4;} }
 
   /* --- BANNER TIẾP TỤC BÀI HỌC --- */
   .resume-banner {
     display: none; align-items: center; justify-content: space-between; gap: 10px;
-    background: rgba(227,193,111,.1); border: 1px solid var(--gold-soft);
+    background: rgba(184,134,11,.08); border: 1px solid var(--gold-soft);
     border-radius: 12px; padding: 10px 14px; font-size: 12.5px; line-height: 1.5;
   }
   .resume-banner.show { display: flex; }
   .resume-banner b { color: var(--gold); }
   .resume-banner .rb-actions { display: flex; gap: 6px; flex: none; }
   .resume-banner button { flex: none; width: auto; padding: 7px 11px; font-size: 11px; }
-  .resume-banner.reminder { background: rgba(224,122,95,.1); border-color: var(--coral-soft); }
+  .resume-banner.reminder { background: rgba(217,96,74,.08); border-color: var(--coral-soft); }
 
   /* --- DASHBOARD THỐNG KÊ --- */
   .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 4px; }
@@ -184,12 +185,12 @@
   /* --- ƯU TIÊN ÔN TẬP (SỔ TAY) --- */
   .priority-tag {
     display: inline-block; font-size: 9.5px; font-weight: 800; padding: 2px 7px;
-    border-radius: 999px; background: rgba(224,122,95,.15); color: var(--coral);
+    border-radius: 999px; background: rgba(217,96,74,.12); color: var(--coral);
     margin-left: 6px; vertical-align: middle;
   }
   .occurrence-tag {
     display: inline-block; font-size: 9.5px; font-weight: 700; padding: 2px 7px;
-    border-radius: 999px; background: rgba(227,193,111,.15); color: var(--gold);
+    border-radius: 999px; background: rgba(184,134,11,.12); color: var(--gold);
     margin-left: 6px; vertical-align: middle;
   }
 
@@ -199,38 +200,99 @@
     width: 100%; height: 140px;
     border-radius: 14px;
     display: flex; justify-content: center; align-items: center;
-    background: radial-gradient(ellipse at center, rgba(227,193,111,.08) 0%, transparent 70%), #10201a;
+    background: radial-gradient(ellipse at center, rgba(184,134,11,.09) 0%, transparent 70%), #fbf6ea;
     border: 1px solid var(--card-line);
     overflow: hidden;
   }
   #avatarCanvas { width: 130px; height: 130px; }
   .teacher-tag {
     position: absolute; bottom: 8px; right: 14px;
-    background: var(--gold); color: #1a2b22;
+    background: var(--gold); color: #fffdf8;
     font-family: 'Caveat', cursive; font-size: 15px; font-weight: 700;
     padding: 2px 10px; border-radius: 4px;
   }
 
-  /* --- KHUNG VĂN BẢN --- */
+  /* --- KHUNG HỘI THOẠI DẠNG CHAT --- */
   .box-container { display: flex; flex-direction: column; gap: 14px; }
   .field { display: flex; flex-direction: column; gap: 6px; }
   label {
     font-size: 12px; font-weight: 800; color: var(--gold);
     text-transform: uppercase; letter-spacing: 1.2px;
   }
-  .box {
-    background: var(--card);
-    border: 2px solid var(--card-line);
-    border-radius: 14px;
-    padding: 16px 20px;
-    min-height: 110px; max-height: 220px; overflow-y: auto;
-    font-family: 'Space Mono', monospace;
-    font-size: 20px;
-    line-height: 1.5; color: var(--chalk);
-    box-shadow: inset 0 2px 6px rgba(0,0,0,0.3);
+  .chat-bubble-row { display: flex; gap: 12px; align-items: flex-start; }
+  .chat-avatar {
+    width: 38px; height: 38px; border-radius: 50%; flex: none;
+    display: flex; align-items: center; justify-content: center; font-size: 17px;
+    box-shadow: 0 4px 10px rgba(60,50,20,.18);
   }
-  .box.you { border-left: 6px solid var(--sage); color: #e2f2e6; }
-  .box.teacher { border-left: 6px solid var(--gold); color: #fff8e7; }
+  .you-avatar { background: linear-gradient(135deg, var(--sage), #4f7a61); }
+  .teacher-avatar { background: linear-gradient(135deg, var(--gold), #b98f3c); }
+  .chat-bubble-wrap { flex: 1; min-width: 0; }
+  .chat-name {
+    font-size: 10.5px; font-weight: 800; color: var(--chalk-dim);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; padding-left: 2px;
+  }
+  .chat-bubble {
+    background: var(--card);
+    border: 1px solid var(--card-line);
+    border-radius: 4px 16px 16px 16px;
+    padding: 15px 18px;
+    min-height: 60px; max-height: 220px; overflow-y: auto;
+    font-family: 'Space Mono', monospace;
+    font-size: 18px;
+    line-height: 1.55; color: var(--chalk);
+    box-shadow: 0 6px 18px -12px rgba(60,50,20,.25);
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .chat-bubble.you { border-left: 4px solid var(--sage); }
+  .chat-bubble.teacher { border-left: 4px solid var(--gold); }
+  .chat-bubble.speaking { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-soft), 0 6px 18px -12px rgba(60,50,20,.25); }
+
+  /* --- THẺ THIẾT LẬP BUỔI HỌC --- */
+  .setup-card {
+    background: var(--card); border: 1px solid var(--card-line);
+    border-radius: 18px; padding: 18px 20px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .setup-step { display: flex; flex-direction: column; gap: 10px; }
+  .setup-divider { height: 1px; background: var(--card-line); margin: 0 -20px; }
+  .step-label {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 800; color: var(--gold);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .step-num {
+    width: 20px; height: 20px; border-radius: 50%; background: var(--gold); color: #1a2b22;
+    font-size: 11px; display: flex; align-items: center; justify-content: center; flex: none;
+    font-family: 'Space Mono', monospace;
+  }
+  .step-optional { color: var(--chalk-dim); font-weight: 600; text-transform: none; letter-spacing: 0; font-size: 11px; }
+  .step-hint { font-size: 11.5px; color: var(--chalk-dim); line-height: 1.5; margin-top: -4px; }
+
+  /* --- NHÓM CHA-CON: CHỦ ĐỀ (2a) > TÌNH HUỐNG (2b) --- */
+  .sub-step {
+    display: flex; flex-direction: column; gap: 8px;
+    margin-left: 14px; padding: 12px 0 2px 14px;
+    border-left: 2px solid var(--card-line);
+  }
+  .sub-step-label {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 800; color: var(--chalk-dim);
+    text-transform: uppercase; letter-spacing: .8px;
+  }
+  .sub-step-tag {
+    background: var(--card-line); color: var(--chalk-dim);
+    font-size: 9.5px; font-weight: 800; letter-spacing: .5px;
+    padding: 1px 6px; border-radius: 5px; flex: none;
+  }
+  .scenario-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .scenario-toggle { display: flex; gap: 6px; }
+  .toggle-chip {
+    flex: none; width: auto; padding: 6px 12px; font-size: 11px; font-weight: 700;
+    text-transform: none; border-radius: 999px; border: 1.5px solid var(--card-line);
+    background: transparent; color: var(--chalk-dim); cursor: pointer;
+  }
+  .toggle-chip.active { background: var(--gold-soft); border-color: var(--gold); color: var(--gold); }
 
   /* --- INPUT CONTROLS --- */
   .grid-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -268,7 +330,7 @@
     background: var(--card); border: 1px solid var(--gold-soft); color: var(--chalk);
     padding: 10px 20px; border-radius: 999px; font-size: 12.5px; font-weight: 700;
     opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; z-index: 90;
-    box-shadow: 0 12px 30px rgba(0,0,0,.45);
+    box-shadow: 0 12px 30px rgba(60,50,20,.2);
   }
   .toast.warn { border-color: var(--coral-soft); }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -289,6 +351,11 @@
   .modal-head p { font-size: 11.5px; color: var(--chalk-dim); margin-top: 2px; }
   .modal-transcript { overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; }
   .transcript-line { padding: 9px 12px; border-radius: 10px; font-size: 13px; line-height: 1.5; }
+  .lesson-summary-box {
+    background: var(--gold-soft); border: 1px solid var(--gold-soft); border-radius: 10px;
+    padding: 10px 12px; font-size: 12.5px; line-height: 1.6; color: var(--chalk);
+  }
+  .lesson-summary-box b { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; color: var(--gold); }
   .transcript-line.user { background: rgba(127,174,143,.1); border-left: 3px solid var(--sage); }
   .transcript-line.teacher { background: rgba(227,193,111,.08); border-left: 3px solid var(--gold); }
   .transcript-line b { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; opacity: .65; }
@@ -365,46 +432,61 @@
       <div class="teacher-tag">Cô giáo AI</div>
     </div>
 
-    <!-- CHỖ HỌC VỚI PHÔNG CHỮ LỚN -->
+    <!-- CHỖ HỌC DẠNG HỘI THOẠI -->
     <div class="box-container">
-      <div class="field">
-        <label>🗣️ Bạn vừa nói:</label>
-        <div id="sttOutput" class="box you">Chưa có dữ liệu...</div>
+      <div class="chat-bubble-row">
+        <div class="chat-avatar you-avatar">🗣️</div>
+        <div class="chat-bubble-wrap">
+          <div class="chat-name">Bạn vừa nói</div>
+          <div id="sttOutput" class="chat-bubble you">Chưa có dữ liệu...</div>
+        </div>
       </div>
-      <div class="field">
-        <label>👩‍🏫 Giáo viên nhận xét &amp; Hướng dẫn:</label>
-        <div id="geminiOutput" class="box teacher">Sẵn sàng học... Hãy bấm kết nối!</div>
+      <div class="chat-bubble-row">
+        <div class="chat-avatar teacher-avatar">👩‍🏫</div>
+        <div class="chat-bubble-wrap">
+          <div class="chat-name">Giáo viên nhận xét &amp; hướng dẫn</div>
+          <div id="geminiOutput" class="chat-bubble teacher">Sẵn sàng học... Hãy bấm kết nối!</div>
+        </div>
       </div>
     </div>
 
-    <div class="grid-fields">
-      <div class="field">
-        <label>Gemini API Key</label>
-        <input type="password" id="apiKey" placeholder="Dán API Key...">
+    <div class="setup-card">
+      <div class="setup-step">
+        <div class="step-label"><span class="step-num">1</span> Kết nối &amp; giọng đọc</div>
+        <div class="field">
+          <label>Gemini API Key</label>
+          <input type="password" id="apiKey" placeholder="Dán API Key...">
+        </div>
+        <div class="grid-fields">
+          <div class="field">
+            <label>Ngôn ngữ</label>
+            <select id="langSelect">
+              <option value="English">🇺🇸 Tiếng Anh (English)</option>
+              <option value="Japanese">🇯🇵 Tiếng Nhật (日本語)</option>
+              <option value="Korean">🇰🇷 Tiếng Hàn (한국어)</option>
+              <option value="Chinese">🇨🇳 Tiếng Trung (中文)</option>
+              <option value="French">🇫🇷 Tiếng Pháp (Français)</option>
+              <option value="German">🇩🇪 Tiếng Đức (Deutsch)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Giọng đọc AI</label>
+            <select id="voiceSelect">
+              <option value="Kore">👩 Kore (nữ, ấm)</option>
+              <option value="Puck">🧑 Puck (nam, trẻ)</option>
+              <option value="Charon">🧑 Charon (nam, trầm)</option>
+              <option value="Fenrir">🧑 Fenrir (nam, mạnh)</option>
+              <option value="Aoede">👩 Aoede (nữ, nhẹ nhàng)</option>
+            </select>
+          </div>
+        </div>
       </div>
-      <div class="field">
-        <label>Ngôn ngữ</label>
-        <select id="langSelect">
-          <option value="English">🇺🇸 Tiếng Anh (English)</option>
-          <option value="Japanese">🇯🇵 Tiếng Nhật (日本語)</option>
-          <option value="Korean">🇰🇷 Tiếng Hàn (한국어)</option>
-          <option value="Chinese">🇨🇳 Tiếng Trung (中文)</option>
-          <option value="French">🇫🇷 Tiếng Pháp (Français)</option>
-          <option value="German">🇩🇪 Tiếng Đức (Deutsch)</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Giọng đọc AI</label>
-        <select id="voiceSelect">
-          <option value="Kore">👩 Kore (nữ, ấm)</option>
-          <option value="Puck">🧑 Puck (nam, trẻ)</option>
-          <option value="Charon">🧑 Charon (nam, trầm)</option>
-          <option value="Fenrir">🧑 Fenrir (nam, mạnh)</option>
-          <option value="Aoede">👩 Aoede (nữ, nhẹ nhàng)</option>
-        </select>
-      </div>
-      <div class="field field-full">
-        <label>Chủ đề luyện tập</label>
+
+      <div class="setup-divider"></div>
+
+      <div class="setup-step">
+        <div class="step-label"><span class="step-num">2</span> Chủ đề &amp; tình huống luyện tập</div>
+        <p class="step-hint">Chọn một <b>chủ đề</b> lớn, sau đó bên dưới là <b>tình huống cụ thể</b> nằm trong chủ đề đó — hai lựa chọn này luôn đi cùng nhau.</p>
         <select id="topicSelect">
           <option value="daily">💬 Giao tiếp hằng ngày</option>
           <option value="restaurant">🍽️ Nhà hàng &amp; Ẩm thực</option>
@@ -414,28 +496,35 @@
           <option value="school">🎓 Trường học</option>
           <option value="health">🏥 Sức khỏe &amp; Bác sĩ</option>
           <option value="free">🎲 Để cô tự chọn theo trình độ</option>
-          <option value="custom">✏️ Tự nhập tình huống</option>
         </select>
-      </div>
-      <div class="field field-full" id="scenarioField">
-        <label>Tình huống hôm nay</label>
-        <div class="scenario-row">
-          <div class="scenario-box" id="scenarioPreview">—</div>
-          <button type="button" class="icon-btn" id="btnRerollScenario" title="Đổi sang tình huống khác">🔀</button>
+
+        <div class="sub-step" id="scenarioField">
+          <div class="sub-step-label"><span class="sub-step-tag">TÌNH HUỐNG</span> Cụ thể trong chủ đề vừa chọn</div>
+          <div class="scenario-head">
+            <div class="scenario-toggle">
+              <button type="button" class="toggle-chip active" id="btnScenarioAuto">🎲 Ngẫu nhiên</button>
+              <button type="button" class="toggle-chip" id="btnScenarioCustom">✏️ Tự viết</button>
+            </div>
+          </div>
+          <div class="scenario-row" id="scenarioAutoRow">
+            <div class="scenario-box" id="scenarioPreview">—</div>
+            <button type="button" class="icon-btn" id="btnRerollScenario" title="Đổi sang tình huống khác trong cùng chủ đề">🔀</button>
+          </div>
+          <input type="text" id="customScenarioInput" style="display:none;" placeholder="VD: Phỏng vấn xin visa du học, khiếu nại dịch vụ khách sạn...">
         </div>
-        <input type="text" id="customScenarioInput" style="display:none;" placeholder="VD: Phỏng vấn xin visa du học, khiếu nại dịch vụ khách sạn...">
       </div>
-      <div class="field field-full">
-        <label>Vai AI đóng (tùy chọn — luyện phản xạ thực tế)</label>
+
+      <div class="setup-divider"></div>
+
+      <div class="setup-step">
+        <div class="step-label"><span class="step-num">3</span> Vai AI đóng <span class="step-optional">(tùy chọn — luyện phản xạ thực tế)</span></div>
+        <p class="step-hint">Danh sách vai bên dưới tự đổi theo <b>chủ đề</b> bạn chọn ở mục 2 (mua sắm sẽ ra vai người bán/nhân viên cửa hàng, công sở sẽ ra vai sếp/nhà tuyển dụng...). Không ảnh hưởng đến tình huống cụ thể.</p>
         <select id="personaSelect">
           <option value="">👩‍🏫 Cô giáo hướng dẫn (mặc định)</option>
-          <option value="waiter">🍽️ Nhân viên phục vụ khó tính</option>
-          <option value="customer">😠 Khách hàng đang phàn nàn</option>
-          <option value="interviewer">💼 Nhà tuyển dụng nghiêm khắc</option>
-          <option value="stranger">🚶 Người lạ tình cờ gặp</option>
         </select>
       </div>
     </div>
+
 
     <div class="controls">
       <button id="btnConnect">🎤 Bắt đầu luyện nói</button>
@@ -526,29 +615,43 @@ import { GoogleGenAI, Modality } from "@google/genai";
 const apiKeyInput = document.getElementById('apiKey');
 const topicSelect = document.getElementById('topicSelect');
 const langSelect = document.getElementById('langSelect');
+const scenarioField = document.getElementById('scenarioField');
 const scenarioPreview = document.getElementById('scenarioPreview');
 const btnRerollScenario = document.getElementById('btnRerollScenario');
+const scenarioAutoRow = document.getElementById('scenarioAutoRow');
+const btnScenarioAuto = document.getElementById('btnScenarioAuto');
+const btnScenarioCustom = document.getElementById('btnScenarioCustom');
 let currentPreviewScenario = null;
+let scenarioMode = 'auto'; // 'auto' = tự động chọn tình huống | 'custom' = học viên tự nhập
+
+function setScenarioMode(mode) {
+  scenarioMode = mode;
+  btnScenarioAuto.classList.toggle('active', mode === 'auto');
+  btnScenarioCustom.classList.toggle('active', mode === 'custom');
+  scenarioAutoRow.style.display = mode === 'auto' ? 'flex' : 'none';
+  customScenarioInput.style.display = mode === 'custom' ? 'block' : 'none';
+  if (mode === 'auto') updateScenarioPreview();
+  else customScenarioInput.focus();
+}
+btnScenarioAuto.addEventListener('click', () => setScenarioMode('auto'));
+btnScenarioCustom.addEventListener('click', () => setScenarioMode('custom'));
 
 function updateScenarioPreview() {
   const topicKey = topicSelect.value;
   const lang = langSelect.value;
-  if (topicKey === 'custom') {
-    scenarioPreview.style.display = 'none';
-    btnRerollScenario.style.display = 'none';
-    customScenarioInput.style.display = 'block';
-    currentPreviewScenario = null;
-    return;
-  }
-  scenarioPreview.style.display = 'flex';
-  btnRerollScenario.style.display = 'block';
-  customScenarioInput.style.display = 'none';
   const pool = SCENARIOS[topicKey];
-  if (!pool || !pool.length) {
+
+  // Chủ đề "Tự do" đã tự bao hàm việc cô giáo chọn mọi thứ —
+  // ẩn hẳn khối "Tình huống" bên dưới để khỏi lặp nghĩa và gây rối.
+  const isFreeTopic = !pool || !pool.length;
+  scenarioField.style.display = isFreeTopic ? 'none' : 'flex';
+  if (isFreeTopic) {
     currentPreviewScenario = null;
-    scenarioPreview.innerHTML = '<b>🎲 Tự do</b> — cô giáo sẽ tự chọn tình huống phù hợp trình độ của bạn.';
+    if (scenarioMode === 'custom') setScenarioMode('auto');
     return;
   }
+
+  if (scenarioMode === 'custom') return;
   currentPreviewScenario = pickScenario(topicKey, lang);
   scenarioPreview.innerHTML = `<b>🎬</b>&nbsp; ${currentPreviewScenario}`;
 }
@@ -566,6 +669,58 @@ const TOPICS = {
   health:     { label: "Sức khỏe & Bác sĩ",        desc: "mô tả triệu chứng, khám bệnh" },
   free:       { label: "Tự do",                    desc: "cô giáo tự chọn chủ đề" },
 };
+
+// Vai AI có thể đóng, chia theo từng chủ đề — mỗi chủ đề có bộ vai riêng phù hợp bối cảnh.
+const PERSONA_LIBRARY = {
+  neighbor:       { label: "🏠 Hàng xóm mới quen",              prompt: "Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một người hàng xóm mới chuyển đến, thân thiện, thích bắt chuyện làm quen. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT." },
+  old_friend:     { label: "😊 Bạn lâu ngày không gặp",          prompt: "Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một người bạn lâu ngày không gặp, vui mừng khi gặp lại, hay hỏi thăm cuộc sống. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT." },
+  stranger:       { label: "🚶 Người lạ tình cờ gặp",            prompt: "Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một người lạ tình cờ gặp trên đường, nói chuyện tự nhiên. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT." },
+
+  waiter:         { label: "🍽️ Nhân viên phục vụ khó tính",      prompt: "Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một nhân viên phục vụ nhà hàng hơi khó tính, thiếu kiên nhẫn, để học viên luyện phản xạ thực tế. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT." },
+  chef:           { label: "👨‍🍳 Đầu bếp giới thiệu món",         prompt: "Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một đầu bếp nhiệt tình giới thiệu món đặc sản, giải thích nguyên liệu. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT." },
+  diner_complain: { label: "😠 Khách phàn nàn với bạn",          prompt: "Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một thực khách đang khó chịu, phàn nàn về món ăn hoặc dịch vụ, để học viên (đóng vai nhân viên) luyện xử lý tình huống. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT." },
+
+  customs:        { label: "🛃 Nhân viên hải quan nghiêm khắc",   prompt: "Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một nhân viên hải quan/an ninh sân bay nghiêm khắc, hỏi nhiều câu kiểm tra. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT." },
+  local_guide:    { label: "🧭 Người dân địa phương chỉ đường",   prompt: "Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một người dân địa phương thân thiện, nhiệt tình chỉ đường và gợi ý địa điểm. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT." },
+  hotel_staff:    { label: "🏨 Lễ tân khách sạn",                 prompt: "Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một lễ tân khách sạn lịch sự nhưng nguyên tắc, xử lý thủ tục nhận/trả phòng. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT." },
+
+  interviewer:    { label: "💼 Nhà tuyển dụng nghiêm khắc",       prompt: "Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một nhà tuyển dụng nghiêm khắc đang phỏng vấn học viên. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT." },
+  boss:           { label: "😤 Sếp khó tính",                    prompt: "Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một người sếp khó tính, hay hỏi dồn và yêu cầu giải trình rõ ràng. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT." },
+  new_colleague:  { label: "🙂 Đồng nghiệp mới",                 prompt: "Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một đồng nghiệp mới thân thiện, tò mò hỏi han trong ngày đầu làm việc. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT." },
+
+  market_seller:  { label: "🛍️ Người bán ở chợ (hay mặc cả)",    prompt: "Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một người bán hàng ở chợ, thích mặc cả qua lại, hơi lanh lợi. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT." },
+  shop_staff:     { label: "🧾 Nhân viên cửa hàng",              prompt: "Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một nhân viên cửa hàng lịch sự, tư vấn sản phẩm và trả lời câu hỏi về giá/size. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT." },
+  picky_customer: { label: "🙄 Khách hàng khó tính (đổi trả)",   prompt: "Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một khách hàng khó tính đang yêu cầu đổi trả hàng, để học viên (đóng vai nhân viên) luyện xử lý khiếu nại. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT." },
+
+  strict_teacher: { label: "👩‍🏫 Giáo viên nghiêm khắc",         prompt: "Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một giáo viên bộ môn nghiêm khắc, hay truy vấn học viên về bài tập. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT." },
+  classmate:      { label: "🧑‍🎓 Bạn cùng lớp",                  prompt: "Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một bạn cùng lớp thân thiện, rủ rê học nhóm hoặc hỏi bài. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT." },
+  librarian:      { label: "📚 Thủ thư",                         prompt: "Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một thủ thư điềm đạm, hướng dẫn cách mượn/trả sách. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT." },
+
+  doctor:         { label: "🩺 Bác sĩ ân cần",                   prompt: "Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một bác sĩ ân cần, hỏi kỹ về triệu chứng và đưa lời khuyên. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT." },
+  pharmacist:     { label: "💊 Dược sĩ",                         prompt: "Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một dược sĩ tận tâm, giải thích cách dùng thuốc. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT." },
+  receptionist:   { label: "🏥 Lễ tân bệnh viện",                prompt: "Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một lễ tân bệnh viện làm thủ tục hành chính, hỏi thông tin cần thiết. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT." },
+};
+
+const PERSONAS_BY_TOPIC = {
+  daily:      ['stranger', 'neighbor', 'old_friend'],
+  restaurant: ['waiter', 'chef', 'diner_complain'],
+  travel:     ['customs', 'local_guide', 'hotel_staff'],
+  work:       ['interviewer', 'boss', 'new_colleague'],
+  shopping:   ['market_seller', 'shop_staff', 'picky_customer'],
+  school:     ['strict_teacher', 'classmate', 'librarian'],
+  health:     ['doctor', 'pharmacist', 'receptionist'],
+  free:       ['stranger', 'waiter', 'interviewer', 'market_seller'], // chủ đề tự do -> gộp vài vai tiêu biểu
+};
+
+function updatePersonaOptions(topicKey) {
+  const ids = PERSONAS_BY_TOPIC[topicKey] || [];
+  const prevValue = personaSelect.value;
+  personaSelect.innerHTML = '<option value="">👩‍🏫 Cô giáo hướng dẫn (mặc định)</option>' +
+    ids.map(id => `<option value="${id}">${PERSONA_LIBRARY[id].label}</option>`).join('');
+  // Giữ lại lựa chọn cũ nếu vai đó vẫn còn hợp lệ với chủ đề mới, ngược lại quay về mặc định.
+  personaSelect.value = ids.includes(prevValue) ? prevValue : '';
+}
+topicSelect.addEventListener('change', () => updatePersonaOptions(topicSelect.value));
 
 // Mỗi chủ đề có nhiều tình huống cụ thể khác nhau, để bài học không lặp lại y hệt mỗi lần.
 // Chủ đề "free" không có danh sách cố định — cô giáo sẽ tự nghĩ ra tình huống.
@@ -719,6 +874,8 @@ function createLesson(lang, langLabel, topicKey, topicLabel, scenario) {
     scenario: scenario || null,
     status: 'ongoing',
     durationMs: 0,
+    summary: '',
+    summarizedUpTo: 0,
     turns: []
   };
   lessons.unshift(lesson);
@@ -731,6 +888,41 @@ function addTurn(lessonId, role, text) {
   lesson.turns.push({ role, text: text.trim(), ts: Date.now() });
   lesson.updatedAt = Date.now();
   saveLessons();
+  // Hội thoại dài ra thì tự tóm tắt gộp dần, để AI không "quên" phần đầu buổi học
+  const unsummarized = lesson.turns.length - (lesson.summarizedUpTo || 0);
+  if (unsummarized >= 12) updateLessonSummary(lessonId);
+}
+
+// Gộp dần các đoạn hội thoại thành MỘT bản tóm tắt duy nhất (không phải lưu nguyên văn),
+// để khi tiếp tục bài học hoặc lịch sử quá dài, AI vẫn nắm được toàn bộ tiến trình đã học.
+async function updateLessonSummary(lessonId, force) {
+  const lesson = getLesson(lessonId);
+  if (!lesson || !aiClient) return;
+  const from = lesson.summarizedUpTo || 0;
+  const newTurns = lesson.turns.slice(from);
+  if (!newTurns.length) return;
+  if (!force && newTurns.length < 12) return;
+  try {
+    const newText = newTurns.map(t => (t.role === 'user' ? 'Học viên: ' : 'Giáo viên: ') + t.text).join('\n');
+    const prompt = `Bạn là trợ lý tóm tắt buổi học phát âm ngoại ngữ.
+${lesson.summary ? `Tóm tắt các phần TRƯỚC ĐÓ của buổi học này:\n${lesson.summary}\n\n` : ''}Đoạn hội thoại TIẾP THEO cần gộp vào bản tóm tắt:
+---
+${newText}
+---
+Viết lại thành MỘT bản tóm tắt DUY NHẤT (gộp cả phần cũ lẫn phần mới, không tách 2 đoạn), súc tích tối đa 6-8 câu, bằng tiếng Việt. Nêu rõ: tình huống/nội dung đã luyện, các lỗi phát âm hoặc ngữ pháp chính đã được sửa (nêu cụ thể), trình độ hiện tại của học viên. Chỉ trả về đúng bản tóm tắt, không thêm lời dẫn hay tiêu đề.`;
+    const response = await aiClient.models.generateContent({
+      model: 'gemini-3.1-flash-lite',
+      contents: prompt
+    });
+    const summaryText = (response.text || '').trim();
+    if (summaryText) {
+      lesson.summary = summaryText;
+      lesson.summarizedUpTo = lesson.turns.length;
+      saveLessons();
+    }
+  } catch (err) {
+    console.warn('Không thể tóm tắt bài học:', err);
+  }
 }
 function setLessonStatus(lessonId, status) {
   const lesson = getLesson(lessonId);
@@ -979,7 +1171,7 @@ function renderLessonList() {
         <span class="lesson-status status-${lesson.status}" title="${statusLabel(lesson.status)}"></span>
       </div>
       <div class="lesson-title">${topicLabel}</div>
-      <div class="lesson-sub">${lesson.langLabel || lesson.lang} · ${lesson.turns.length} lượt · ${statusLabel(lesson.status)}</div>
+      <div class="lesson-sub">${lesson.langLabel || lesson.lang} · ${lesson.turns.length} lượt · ${statusLabel(lesson.status)} ${lesson.summary ? '<span title="Đã có tóm tắt tiến trình">📋</span>' : ''}</div>
       ${lesson.scenario ? `<div class="lesson-sub" style="color:var(--chalk-dim);font-style:italic;">🎬 ${escapeHtml(lesson.scenario)}</div>` : ''}
       <div class="lesson-actions">
         <button class="mini-btn" data-act="view" data-id="${lesson.id}">👁 Xem lại</button>
@@ -1019,8 +1211,14 @@ function openTranscriptModal(id) {
   modalTitle.textContent = topicLabel;
   modalSub.textContent = `${lesson.langLabel || lesson.lang} · ${fmtTime(lesson.createdAt)} · ${statusLabel(lesson.status)}`;
   modalTranscript.innerHTML = '';
+  if (lesson.summary) {
+    const summaryBox = document.createElement('div');
+    summaryBox.className = 'lesson-summary-box';
+    summaryBox.innerHTML = `<b>📋 Tóm tắt tiến trình</b>${escapeHtml(lesson.summary)}`;
+    modalTranscript.appendChild(summaryBox);
+  }
   if (lesson.turns.length === 0) {
-    modalTranscript.innerHTML = '<div class="empty-hint">Chưa có nội dung nào được ghi lại cho bài học này.</div>';
+    modalTranscript.innerHTML += '<div class="empty-hint">Chưa có nội dung nào được ghi lại cho bài học này.</div>';
   } else {
     lesson.turns.forEach(t => {
       const line = document.createElement('div');
@@ -1045,8 +1243,12 @@ function selectResume(id) {
   resumeLessonId = id;
   if (lesson.lang) langSelect.value = lesson.lang;
   if (lesson.topicKey) topicSelect.value = lesson.topicKey;
+  setScenarioMode('auto');
   const topicLabel = lesson.topicLabel || (TOPICS[lesson.topicKey] && TOPICS[lesson.topicKey].label) || 'Chủ đề';
-  resumeText.innerHTML = `Sẽ tiếp tục: <b>${topicLabel}</b> · ${lesson.langLabel || lesson.lang} (${lesson.turns.length} lượt đã học)`;
+  const summarySnippet = lesson.summary
+    ? `<br><span style="color:var(--chalk-dim); font-weight:400;">📋 ${escapeHtml(lesson.summary.slice(0, 140))}${lesson.summary.length > 140 ? '…' : ''}</span>`
+    : '';
+  resumeText.innerHTML = `Sẽ tiếp tục: <b>${topicLabel}</b> · ${lesson.langLabel || lesson.lang} (${lesson.turns.length} lượt đã học)${summarySnippet}`;
   resumeBanner.classList.add('show');
   renderLessonList();
   closeSidebarMobile();
@@ -1067,8 +1269,14 @@ overlay.onclick = closeSidebarMobile;
 
 function buildResumeContext(lesson) {
   if (!lesson || lesson.turns.length === 0) return '';
-  const recent = lesson.turns.slice(-16);
-  return recent.map(t => (t.role === 'user' ? 'Học viên: ' : 'Giáo viên: ') + t.text).join('\n');
+  // Nếu buổi học dài và đã có tóm tắt, dùng tóm tắt gộp + đoạn hội thoại gần nhất
+  // thay vì chỉ lấy vài lượt cuối, để AI không bị "quên" phần đầu buổi học.
+  const recent = lesson.turns.slice(-12);
+  const recentText = recent.map(t => (t.role === 'user' ? 'Học viên: ' : 'Giáo viên: ') + t.text).join('\n');
+  if (lesson.summary) {
+    return `📋 TÓM TẮT TIẾN TRÌNH ĐÃ HỌC (toàn bộ buổi trước):\n${lesson.summary}\n\n💬 ĐOẠN HỘI THOẠI GẦN NHẤT:\n${recentText}`;
+  }
+  return recentText;
 }
 
 function fmtDuration(ms) {
@@ -1241,6 +1449,17 @@ let nextPlayTime = 0, isAiSpeaking = false, userBuffer = "", aiBuffer = "";
 
 const anim = { mouthCurrent: 0, mouthTarget: 0, blinking: false, blinkStart: 0, blinkTimer: 2, eyeOpen: 1, lastTime: performance.now() };
 
+function drawBow(x, y, color) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-10, -8); ctx.lineTo(-10, 8); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(10, -8); ctx.lineTo(10, 8); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#c65a72";
+  ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
 function drawHumanAvatar() {
   const t = performance.now() / 1000;
   const cx = 65, cyBase = 65;
@@ -1253,37 +1472,85 @@ function drawHumanAvatar() {
   ctx.scale(0.55, 0.55);
   ctx.translate(52, 52);
 
-  ctx.fillStyle = "#3a2418";
+  // Áo blouse pastel hồng nhạt + nơ cổ áo nhỏ xinh
+  ctx.fillStyle = "#ffb8c6";
+  ctx.beginPath(); ctx.ellipse(cx, cy + 108, 62, 32, 0, 0, Math.PI * 2); ctx.fill();
+  drawBow(cx, cy + 88, "#ff7a95");
+
+  // Cổ
+  ctx.fillStyle = "#ffdfc4"; ctx.fillRect(cx - 16, cy + 50, 32, 42);
+
+  // Tóc đuôi gà hai bên (twin-tails) + nơ buộc tóc — nét dễ thương đặc trưng
+  ctx.fillStyle = "#7a4a28";
+  ctx.beginPath(); ctx.ellipse(cx - 68, cy + 20, 19, 34, -0.22, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + 68, cy + 20, 19, 34, 0.22, 0, Math.PI * 2); ctx.fill();
+  drawBow(cx - 66, cy - 8, "#ff7a95");
+  drawBow(cx + 66, cy - 8, "#ff7a95");
+
+  // Khối tóc sau đầu
+  ctx.fillStyle = "#7a4a28";
   ctx.beginPath(); ctx.arc(cx, cy - 8, 76, 0, Math.PI * 2); ctx.fill();
 
-  ctx.fillStyle = "#e7b088"; ctx.fillRect(cx - 16, cy + 50, 32, 42);
-  ctx.fillStyle = "#e3c16f";
-  ctx.beginPath(); ctx.ellipse(cx, cy + 108, 62, 32, 0, 0, Math.PI * 2); ctx.fill();
-
-  ctx.fillStyle = "#ffe3c2";
+  // Mặt (tông da ấm, hồng hào hơn)
+  ctx.fillStyle = "#ffe3c9";
   ctx.beginPath(); ctx.ellipse(cx, cy, 53, 65, 0, 0, Math.PI * 2); ctx.fill();
 
-  ctx.fillStyle = "#3a2418";
-  ctx.beginPath(); ctx.arc(cx, cy - 24, 55, Math.PI * 0.85, Math.PI * 2.15); ctx.fill();
+  // Tóc mái cong mềm mại
+  ctx.fillStyle = "#8a5a36";
+  ctx.beginPath();
+  ctx.moveTo(cx - 55, cy - 18);
+  ctx.quadraticCurveTo(cx - 30, cy - 62, cx, cy - 58);
+  ctx.quadraticCurveTo(cx + 30, cy - 62, cx + 55, cy - 18);
+  ctx.quadraticCurveTo(cx + 38, cy - 38, cx + 18, cy - 30);
+  ctx.quadraticCurveTo(cx, cy - 40, cx - 18, cy - 30);
+  ctx.quadraticCurveTo(cx - 38, cy - 38, cx - 55, cy - 18);
+  ctx.closePath(); ctx.fill();
 
+  // Má hồng
+  ctx.fillStyle = "rgba(255,140,160,0.45)";
+  ctx.beginPath(); ctx.ellipse(cx - 34, cy + 16, 11, 7, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + 34, cy + 16, 11, 7, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Mắt to tròn, long lanh, có lông mi + ánh sáng lấp lánh
   const eo = Math.max(0.06, anim.eyeOpen);
-  ctx.fillStyle = "#fff9f0";
-  ctx.beginPath();
-  ctx.ellipse(cx - 22, cy - 8, 10, 7 * eo, 0, 0, Math.PI * 2);
-  ctx.ellipse(cx + 22, cy - 8, 10, 7 * eo, 0, 0, Math.PI * 2);
-  ctx.fill();
-  if (eo > 0.25) {
-    ctx.fillStyle = "#2c1b3d";
-    ctx.beginPath(); ctx.arc(cx - 22, cy - 8, 4.6 * eo, 0, Math.PI * 2); ctx.arc(cx + 22, cy - 8, 4.6 * eo, 0, Math.PI * 2); ctx.fill();
-  }
+  const eyeY = cy - 6;
+  [-1, 1].forEach(s => {
+    const ex = cx + s * 23;
+    ctx.save();
+    ctx.translate(ex, eyeY);
+    ctx.strokeStyle = "#3a2418"; ctx.lineWidth = 2.2; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(-9 * eo, -8 * eo); ctx.lineTo(-12 * eo, -13 * eo); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(9 * eo, -8 * eo); ctx.lineTo(12 * eo, -13 * eo); ctx.stroke();
+    ctx.fillStyle = "#fff9f0";
+    ctx.beginPath(); ctx.ellipse(0, 0, 11, 12 * eo, 0, 0, Math.PI * 2); ctx.fill();
+    if (eo > 0.2) {
+      ctx.fillStyle = "#4a2f6b";
+      ctx.beginPath(); ctx.ellipse(0, 1, 6.5 * eo, 7 * eo, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#2c1b3d";
+      ctx.beginPath(); ctx.arc(0, 1, 3.2 * eo, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath(); ctx.arc(-2.6, -2.2, 1.8 * eo, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(1.6, 2.4, 1 * eo, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  });
 
-  const mouthY = cy + 33;
+  // Miệng — cười mỉm khi im lặng, mở tròn dễ thương khi đang nói
+  const mouthY = cy + 34;
   const openness = anim.mouthCurrent;
-  const openPx = 3 + openness * 24;
-  ctx.fillStyle = "#6b1724";
-  ctx.beginPath();
-  ctx.ellipse(cx, mouthY, 15, openPx / 2, 0, 0, Math.PI * 2);
-  ctx.fill();
+  if (openness < 0.08) {
+    ctx.strokeStyle = "#e8707f"; ctx.lineWidth = 3.2; ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(cx - 11, mouthY - 1);
+    ctx.quadraticCurveTo(cx, mouthY + 8, cx + 11, mouthY - 1);
+    ctx.stroke();
+  } else {
+    const openPx = 4 + openness * 22;
+    ctx.fillStyle = "#e8707f";
+    ctx.beginPath();
+    ctx.ellipse(cx, mouthY, 13, openPx / 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   ctx.restore();
 }
@@ -1337,6 +1604,7 @@ function initPlaybackAudio() {
 function playPCM24k(base64){
   initPlaybackAudio();
   isAiSpeaking = true;
+  geminiOutput.classList.add('speaking');
   const bytes = base64ToBytes(base64);
   const samples = new Int16Array(bytes.buffer, bytes.byteOffset, Math.floor(bytes.byteLength / 2));
   const buffer = playbackContext.createBuffer(1, samples.length, 24000);
@@ -1353,7 +1621,10 @@ function playPCM24k(base64){
   nextPlayTime += buffer.duration;
 
   setTimeout(() => {
-    if (playbackContext && playbackContext.currentTime >= nextPlayTime) isAiSpeaking = false;
+    if (playbackContext && playbackContext.currentTime >= nextPlayTime) {
+      isAiSpeaking = false;
+      geminiOutput.classList.remove('speaking');
+    }
   }, buffer.duration * 1000);
 }
 
@@ -1391,28 +1662,18 @@ async function startLiveSession() {
     const selectedLang = langSelect.value;
     const selectedLangLabel = langSelect.selectedOptions[0].textContent.trim();
     const selectedTopicKey = topicSelect.value;
-    let selectedTopicLabel = topicSelect.selectedOptions[0].textContent.trim();
-    let topicObj = TOPICS[selectedTopicKey] || TOPICS.daily;
+    const selectedTopicLabel = topicSelect.selectedOptions[0].textContent.trim();
+    const topicObj = TOPICS[selectedTopicKey] || TOPICS.daily;
 
-    if (selectedTopicKey === 'custom') {
-      const customText = customScenarioInput.value.trim();
-      if (!customText) {
-        btnConnect.disabled = false;
-        statusBadge.innerHTML = '<span class="dot"></span>Offline';
-        statusBadge.className = "status-badge status-offline";
-        return alert("Vui lòng nhập tình huống bạn muốn luyện tập!");
-      }
-      topicObj = { label: 'Tự nhập', desc: customText };
-      selectedTopicLabel = 'Tự nhập: ' + customText;
+    if (scenarioMode === 'custom' && !resumeLessonId && !customScenarioInput.value.trim()) {
+      btnConnect.disabled = false;
+      statusBadge.innerHTML = '<span class="dot"></span>Offline';
+      statusBadge.className = "status-badge status-offline";
+      customScenarioInput.focus();
+      return alert("Vui lòng nhập tình huống bạn muốn luyện tập!");
     }
 
-    const PERSONAS = {
-      waiter: 'Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một nhân viên phục vụ nhà hàng hơi khó tính, thiếu kiên nhẫn, để học viên luyện phản xạ thực tế. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT.',
-      customer: 'Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một khách hàng đang khó chịu, phàn nàn, để học viên luyện xử lý tình huống. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT.',
-      interviewer: 'Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một nhà tuyển dụng nghiêm khắc đang phỏng vấn học viên. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT.',
-      stranger: 'Ngoài vai trò giáo viên sửa lỗi, hãy NHẬP VAI một người lạ tình cờ gặp trên đường, nói chuyện tự nhiên. Nói chuyện đúng vai trước, sau đó vẫn chêm nhận xét sửa lỗi phát âm bằng TIẾNG VIỆT.'
-    };
-    const personaLine = PERSONAS[personaSelect.value] || '';
+    const personaLine = PERSONA_LIBRARY[personaSelect.value]?.prompt || '';
 
     // Thiết lập bài học: tiếp tục bài cũ hoặc tạo bài mới
     let resumingLesson = null;
@@ -1424,8 +1685,8 @@ async function startLiveSession() {
       currentLessonId = resumingLesson.id;
       setLessonStatus(currentLessonId, 'ongoing');
     } else {
-      newScenario = selectedTopicKey === 'custom'
-        ? topicObj.desc
+      newScenario = scenarioMode === 'custom'
+        ? customScenarioInput.value.trim()
         : (SCENARIOS[selectedTopicKey] ? currentPreviewScenario : null);
       const lesson = createLesson(selectedLang, selectedLangLabel, selectedTopicKey, selectedTopicLabel, newScenario);
       currentLessonId = lesson.id;
@@ -1629,6 +1890,8 @@ async function stopSession(manual) {
       saveLessons();
     }
     renderLessonList();
+    // Buộc tóm tắt lần cuối khi kết thúc buổi học, để lần "tiếp tục" sau luôn có bản tóm tắt mới nhất
+    updateLessonSummary(currentLessonId, true);
   }
 
   if (practicingMistakeIds.length) {
@@ -1661,6 +1924,7 @@ renderLessonList();
 updateMistakeBadge();
 updateLipSync();
 updateScenarioPreview();
+updatePersonaOptions(topicSelect.value);
 checkDailyReminder();
 </script>
 </body>
