@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -2239,7 +2237,11 @@ async function startLiveSession() {
               if (finishedTeacherText.trim()) classifyVocab(currentLessonId, finishedUserText, finishedTeacherText);
             }
             finalizeTurnAudio();
-            isAiSpeaking = false; userBuffer = ""; aiBuffer = "";
+            // Chỉ nhường mic ngay lập tức khi bị NGẮT LỜI (interrupted) — còn turnComplete bình thường thì
+            // để playPCM24k() tự tắt isAiSpeaking đúng lúc giọng cô giáo phát THẬT SỰ xong qua loa,
+            // tránh mic ghi đè lên khi audio cũ vẫn còn đang phát dở (gây lẫn/kẹt thứ tự khi nghe lại).
+            if (sc?.interrupted) isAiSpeaking = false;
+            userBuffer = ""; aiBuffer = "";
           }
         },
         onerror(e) {
@@ -2340,7 +2342,11 @@ Nhiệm vụ:
               showToast('💾 Đã lưu tiến trình ôn tập');
             }
             finalizeTurnAudio();
-            isAiSpeaking = false; userBuffer = ""; aiBuffer = "";
+            // Chỉ nhường mic ngay lập tức khi bị NGẮT LỜI (interrupted) — còn turnComplete bình thường thì
+            // để playPCM24k() tự tắt isAiSpeaking đúng lúc giọng cô giáo phát THẬT SỰ xong qua loa,
+            // tránh mic ghi đè lên khi audio cũ vẫn còn đang phát dở (gây lẫn/kẹt thứ tự khi nghe lại).
+            if (sc?.interrupted) isAiSpeaking = false;
+            userBuffer = ""; aiBuffer = "";
           }
         },
         onerror(e) {
