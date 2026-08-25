@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -87,6 +89,21 @@
   .primer-meaning { font-size: 12px; }
   .primer-example { font-size: 11px; color: var(--chalk-dim); font-style: italic; }
   .primer-chip .mini-btn { align-self: flex-start; margin-top: 2px; }
+
+  .srs-banner {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: var(--gold-soft, rgba(200,150,50,.12)); border: 1px solid var(--gold); border-radius: 10px;
+    padding: 10px 12px; font-size: 13px;
+  }
+  .review-progress-row { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: var(--chalk-dim); font-weight: 700; }
+  .review-card {
+    background: var(--card); border: 1px solid var(--card-line); border-radius: 14px;
+    padding: 28px 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; min-height: 120px; justify-content: center;
+  }
+  .review-topic-tag { font-size: 10.5px; font-weight: 800; color: var(--chalk-dim); text-transform: uppercase; letter-spacing: .6px; }
+  .review-word { font-size: 24px; font-weight: 800; color: var(--gold); }
+  .review-grade-row { display: flex; gap: 10px; justify-content: center; }
+  .review-grade-row .mini-btn { flex: 1; max-width: 180px; padding: 10px; font-size: 13px; }
   .mistake-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--chalk-dim); margin-bottom: 5px; }
   .mistake-select-label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
   .mistake-progress { font-size: 10.5px; color: var(--sage); margin-top: 6px; font-weight: 700; }
@@ -516,6 +533,14 @@
             </select>
           </div>
         </div>
+        <div class="field" style="margin-top:10px;">
+          <label>Tốc độ giọng đọc AI</label>
+          <div class="scenario-toggle" id="speedToggle">
+            <button type="button" class="toggle-chip" data-speed="0.75">🐢 Chậm</button>
+            <button type="button" class="toggle-chip active" data-speed="1">🚶 Vừa</button>
+            <button type="button" class="toggle-chip" data-speed="1.3">🐇 Nhanh</button>
+          </div>
+        </div>
       </div>
 
       <div class="setup-divider"></div>
@@ -567,12 +592,23 @@
 
       <div class="setup-divider"></div>
 
-      <div class="setup-step">
+      <div class="setup-step" id="personaStep">
         <div class="step-label"><span class="step-num">3</span> Vai AI đóng <span class="step-optional">(tùy chọn — luyện phản xạ thực tế)</span></div>
         <p class="step-hint">Danh sách vai bên dưới tự đổi theo <b>chủ đề</b> bạn chọn ở mục 2 (mua sắm sẽ ra vai người bán/nhân viên cửa hàng, công sở sẽ ra vai sếp/nhà tuyển dụng...). Không ảnh hưởng đến tình huống cụ thể.</p>
         <select id="personaSelect">
           <option value="">👩‍🏫 Cô giáo hướng dẫn (mặc định)</option>
         </select>
+      </div>
+
+      <div class="setup-divider"></div>
+
+      <div class="setup-step" id="practiceModeStep">
+        <div class="step-label"><span class="step-num">4</span> Chế độ luyện tập</div>
+        <p class="step-hint" id="practiceModeHint">Hội thoại tự do theo tình huống đã chọn ở mục 2 — cô giáo trò chuyện qua lại và sửa lỗi khi cần.</p>
+        <div class="scenario-toggle" id="practiceModeToggle">
+          <button type="button" class="toggle-chip active" data-mode="conversation">💬 Hội thoại tự do</button>
+          <button type="button" class="toggle-chip" data-mode="shadowing">🎯 Shadowing (nghe &amp; nhắc lại)</button>
+        </div>
       </div>
     </div>
 
@@ -637,23 +673,50 @@
       </div>
       <button class="icon-btn" id="btnCloseVocabModal">✕</button>
     </div>
-    <select id="vocabTopicFilter">
-      <option value="">Tất cả chủ đề</option>
-      <option value="Giao tiếp hằng ngày">Giao tiếp hằng ngày</option>
-      <option value="Nhà hàng & Ẩm thực">Nhà hàng &amp; Ẩm thực</option>
-      <option value="Du lịch & Sân bay">Du lịch &amp; Sân bay</option>
-      <option value="Công sở & Phỏng vấn">Công sở &amp; Phỏng vấn</option>
-      <option value="Mua sắm">Mua sắm</option>
-      <option value="Trường học">Trường học</option>
-      <option value="Sức khỏe & Bác sĩ">Sức khỏe &amp; Bác sĩ</option>
-      <option value="Tự do">Tự do</option>
-    </select>
-    <div class="mistake-toolbar">
-      <label class="select-all-wrap"><input type="checkbox" id="vocabSelectAll"> Chọn tất cả</label>
-      <button class="mini-btn danger" id="btnDeleteSelectedVocab">🗑 Xóa đã chọn (<span id="vocabSelCount">0</span>)</button>
+
+    <div id="vocabListView" style="display:flex; flex-direction:column; gap:10px;">
+      <div class="srs-banner" id="vocabReviewBanner" style="display:none;">
+        <span>🎯 <b><span id="vocabDueCount">0</span> từ</b> đến hạn ôn hôm nay</span>
+        <button type="button" class="mini-btn primary" id="btnStartVocabReview">Bắt đầu ôn tập</button>
+      </div>
+      <select id="vocabTopicFilter">
+        <option value="">Tất cả chủ đề</option>
+        <option value="Giao tiếp hằng ngày">Giao tiếp hằng ngày</option>
+        <option value="Nhà hàng & Ẩm thực">Nhà hàng &amp; Ẩm thực</option>
+        <option value="Du lịch & Sân bay">Du lịch &amp; Sân bay</option>
+        <option value="Công sở & Phỏng vấn">Công sở &amp; Phỏng vấn</option>
+        <option value="Mua sắm">Mua sắm</option>
+        <option value="Trường học">Trường học</option>
+        <option value="Sức khỏe & Bác sĩ">Sức khỏe &amp; Bác sĩ</option>
+        <option value="Tự do">Tự do</option>
+      </select>
+      <div class="mistake-toolbar">
+        <label class="select-all-wrap"><input type="checkbox" id="vocabSelectAll"> Chọn tất cả</label>
+        <button class="mini-btn danger" id="btnDeleteSelectedVocab">🗑 Xóa đã chọn (<span id="vocabSelCount">0</span>)</button>
+      </div>
+      <div class="modal-transcript" id="vocabList"></div>
+      <button class="mini-btn danger" id="btnClearVocab" style="align-self:flex-end;">🗑 Xóa toàn bộ sổ tay</button>
     </div>
-    <div class="modal-transcript" id="vocabList"></div>
-    <button class="mini-btn danger" id="btnClearVocab" style="align-self:flex-end;">🗑 Xóa toàn bộ sổ tay</button>
+
+    <div id="vocabReviewView" style="display:none; flex-direction:column; gap:12px;">
+      <div class="review-progress-row">
+        <span id="reviewProgress">1/1</span>
+        <button type="button" class="mini-btn" id="btnCloseReview">✕ Dừng ôn tập</button>
+      </div>
+      <div class="review-card">
+        <div class="review-topic-tag" id="reviewTopicTag"></div>
+        <div class="review-word" id="reviewWord">word</div>
+        <div id="reviewMeaning" style="display:none;">
+          <div class="vocab-meaning" id="reviewMeaningText"></div>
+          <div class="vocab-example" id="reviewExampleText"></div>
+        </div>
+      </div>
+      <button type="button" class="mini-btn primary" id="btnRevealReview" style="align-self:center;">👁 Xem nghĩa</button>
+      <div class="review-grade-row" id="reviewGradeButtons" style="display:none;">
+        <button type="button" class="mini-btn danger" id="btnGradeForgot">😵 Quên rồi</button>
+        <button type="button" class="mini-btn primary" id="btnGradeRemember">✅ Nhớ chắc</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -888,6 +951,23 @@ function pickScenario(topicKey, lang) {
 }
 
 const btnConnect = document.getElementById('btnConnect');
+const practiceModeToggle = document.getElementById('practiceModeToggle');
+const practiceModeHint = document.getElementById('practiceModeHint');
+let practiceMode = 'conversation'; // 'conversation' = hội thoại tự do | 'shadowing' = nghe & nhắc lại
+const PRACTICE_MODE_HINTS = {
+  conversation: 'Hội thoại tự do theo tình huống đã chọn ở mục 2 — cô giáo trò chuyện qua lại và sửa lỗi khi cần.',
+  shadowing: 'Cô giáo đọc từng câu mẫu ngắn theo chủ đề đã chọn, bạn nghe rồi lặp lại y hệt — cô chấm độ khớp và chỉ ra chỗ phát âm chưa chuẩn, rồi tự chuyển câu tiếp theo.'
+};
+practiceModeToggle.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-mode]');
+  if (!btn) return;
+  practiceMode = btn.dataset.mode;
+  document.querySelectorAll('#practiceModeToggle .toggle-chip').forEach(b => b.classList.toggle('active', b === btn));
+  practiceModeHint.textContent = PRACTICE_MODE_HINTS[practiceMode];
+  btnConnect.innerHTML = practiceMode === 'shadowing' ? '🎯 Bắt đầu Shadowing' : '🎤 Bắt đầu luyện nói';
+  // Shadowing không dùng "vai AI đóng" (cô luôn đọc mẫu, không nhập vai) -> ẩn cho đỡ rối
+  document.getElementById('personaStep').style.display = practiceMode === 'shadowing' ? 'none' : 'flex';
+});
 const btnDisconnect = document.getElementById('btnDisconnect');
 const sttOutput = document.getElementById('sttOutput');
 const geminiOutput = document.getElementById('geminiOutput');
@@ -1259,6 +1339,7 @@ function updateVocabBadge() {
   }
 }
 // Thêm 1 từ vào sổ tay, tự bỏ qua nếu từ đó (cùng ngôn ngữ) đã có sẵn — trả về true nếu thêm thành công
+const SRS_INTERVALS_DAYS = [0, 1, 3, 7, 16, 35, 90]; // lịch ôn kiểu Leitner: index = mức độ thuộc (srsStage)
 function addVocabItem({ word, meaning, example, lang, langLabel, topicLabel, lessonId, source }) {
   if (!word || !word.trim()) return false;
   const w = word.trim();
@@ -1269,7 +1350,8 @@ function addVocabItem({ word, meaning, example, lang, langLabel, topicLabel, les
     lessonId: lessonId || null,
     lang, langLabel: langLabel || lang, topicLabel: topicLabel || '',
     word: w, meaning: (meaning || '').trim(), example: (example || '').trim(),
-    ts: Date.now(), source: source || 'auto'
+    ts: Date.now(), source: source || 'auto',
+    srsStage: 0, dueAt: Date.now(), reviewCount: 0, lastReviewedAt: null // từ mới -> đến hạn ôn ngay
   });
   saveVocab();
   updateVocabBadge();
@@ -1330,7 +1412,21 @@ Không tính: lời chào, khen ngợi chung chung, hoặc chỉ sửa lỗi ph�
   }
 }
 
+function isVocabDue(v) { return v.dueAt == null || v.dueAt <= Date.now(); }
+function getDueVocab() { return vocabItems.filter(isVocabDue); }
+function updateVocabDueBanner() {
+  const due = getDueVocab();
+  const banner = document.getElementById('vocabReviewBanner');
+  if (due.length > 0) {
+    banner.style.display = 'flex';
+    document.getElementById('vocabDueCount').textContent = due.length;
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
 function renderVocabList() {
+  updateVocabDueBanner();
   vocabListEl.innerHTML = '';
   document.getElementById('vocabSelectAll').checked = false;
   updateVocabSelCount();
@@ -1348,11 +1444,12 @@ function renderVocabList() {
     const item = document.createElement('div');
     item.className = 'vocab-item';
     const srcTag = v.source === 'primer' ? '<span class="vocab-src-tag">GỢI Ý</span>' : '<span class="vocab-src-tag">TỰ ĐỘNG</span>';
+    const dueTag = isVocabDue(v) ? '<span class="vocab-src-tag" style="background:rgba(217,120,90,.18);color:var(--coral);">ĐẾN HẠN ÔN</span>' : '';
     item.innerHTML = `
       <div class="mistake-meta">
         <label class="mistake-select-label">
           <input type="checkbox" class="vocab-select" data-vid="${v.id}">
-          <span>${srcTag} ${v.topicLabel || 'Chủ đề'} · ${v.langLabel || v.lang || ''}</span>
+          <span>${srcTag}${dueTag} ${v.topicLabel || 'Chủ đề'} · ${v.langLabel || v.lang || ''}</span>
         </label>
         <span>${fmtTime(v.ts)}</span>
       </div>
@@ -1414,6 +1511,82 @@ btnClearVocab.onclick = () => {
     updateVocabBadge();
     renderVocabList();
   }
+};
+
+// ----- Ôn tập kiểu Leitner (spaced repetition) — chỉ ôn những từ đã đến hạn -----
+const vocabListView = document.getElementById('vocabListView');
+const vocabReviewView = document.getElementById('vocabReviewView');
+let reviewQueue = [];
+let reviewIndex = 0;
+
+function shuffleArr(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startVocabReview() {
+  reviewQueue = shuffleArr(getDueVocab());
+  reviewIndex = 0;
+  if (!reviewQueue.length) { showToast('🎉 Không còn từ nào đến hạn ôn hôm nay!'); return; }
+  vocabListView.style.display = 'none';
+  vocabReviewView.style.display = 'flex';
+  renderReviewCard();
+}
+
+function renderReviewCard() {
+  const v = reviewQueue[reviewIndex];
+  document.getElementById('reviewProgress').textContent = `${reviewIndex + 1}/${reviewQueue.length}`;
+  document.getElementById('reviewTopicTag').textContent = `${v.topicLabel || 'Chủ đề'} · ${v.langLabel || v.lang || ''}`;
+  document.getElementById('reviewWord').textContent = v.word;
+  document.getElementById('reviewMeaningText').textContent = v.meaning || '';
+  document.getElementById('reviewExampleText').textContent = v.example ? `🎬 ${v.example}` : '';
+  document.getElementById('reviewMeaning').style.display = 'none';
+  document.getElementById('reviewGradeButtons').style.display = 'none';
+  document.getElementById('btnRevealReview').style.display = 'block';
+}
+
+function gradeCurrentCard(remembered) {
+  const cur = reviewQueue[reviewIndex];
+  const item = vocabItems.find(x => x.id === cur.id);
+  if (item) {
+    item.reviewCount = (item.reviewCount || 0) + 1;
+    item.lastReviewedAt = Date.now();
+    if (remembered) {
+      item.srsStage = Math.min(SRS_INTERVALS_DAYS.length - 1, (item.srsStage || 0) + 1);
+      item.dueAt = Date.now() + SRS_INTERVALS_DAYS[item.srsStage] * 86400000;
+    } else {
+      item.srsStage = 0;
+      item.dueAt = Date.now(); // quên thì đưa về ôn lại sớm, không đợi lâu
+    }
+    saveVocab();
+  }
+  reviewIndex++;
+  if (reviewIndex >= reviewQueue.length) {
+    showToast('🎉 Đã ôn xong hết lượt này, hẹn lần sau nhé!');
+    vocabReviewView.style.display = 'none';
+    vocabListView.style.display = 'flex';
+    renderVocabList();
+  } else {
+    renderReviewCard();
+  }
+}
+
+document.getElementById('btnStartVocabReview').onclick = startVocabReview;
+document.getElementById('btnRevealReview').onclick = () => {
+  document.getElementById('reviewMeaning').style.display = 'block';
+  document.getElementById('reviewGradeButtons').style.display = 'flex';
+  document.getElementById('btnRevealReview').style.display = 'none';
+};
+document.getElementById('btnGradeForgot').onclick = () => gradeCurrentCard(false);
+document.getElementById('btnGradeRemember').onclick = () => gradeCurrentCard(true);
+document.getElementById('btnCloseReview').onclick = () => {
+  vocabReviewView.style.display = 'none';
+  vocabListView.style.display = 'flex';
+  renderVocabList();
 };
 
 // ----- Gợi ý từ vựng trước khi luyện nói (mục 2) -----
@@ -1837,6 +2010,8 @@ const GEMINI_MODEL = "gemini-3.1-flash-live-preview";
 let session = null, aiClient = null, micStream = null, audioContext = null, micSource = null, processor = null;
 let playbackContext = null, analyser = null, animFrameId = null;
 let nextPlayTime = 0, isAiSpeaking = false, userBuffer = "", aiBuffer = "";
+let aiSpeakEndTimer = null; // hẹn giờ tắt isAiSpeaking đúng lúc audio thật sự phát xong
+let aiSpeechRate = 1; // tốc độ phát giọng AI: 0.75 chậm / 1 vừa / 1.3 nhanh
 
 // Đệm âm thanh của lượt hội thoại hiện tại, để bấm 🔊 nghe lại đúng câu vừa nói/vừa nghe
 let userAudioChunks = [];       // các đoạn PCM16 micro ghi được trong lượt hiện tại
@@ -2045,12 +2220,13 @@ function finalizeTurnAudio() {
   }
 }
 // Phát lại một bản ghi đã chốt (giọng bạn hoặc giọng cô giáo)
-function replayRecording(rec, btn) {
+function replayRecording(rec, btn, applySpeed) {
   if (!rec || !rec.samples || !rec.samples.length) { showToast('⚠️ Chưa có bản ghi để nghe lại', true); return; }
   initPlaybackAudio();
   const buffer = int16ArrayToAudioBuffer(rec.samples, rec.sampleRate, playbackContext);
   const source = playbackContext.createBufferSource();
   source.buffer = buffer;
+  if (applySpeed) source.playbackRate.value = aiSpeechRate; // đồng bộ với tốc độ đã chọn ở mục 1
   source.connect(playbackContext.destination);
   if (btn) {
     btn.classList.add('playing');
@@ -2058,8 +2234,15 @@ function replayRecording(rec, btn) {
   }
   source.start();
 }
-btnReplayUser.onclick = () => replayRecording(lastUserAudioRec, btnReplayUser);
-btnReplayTeacher.onclick = () => replayRecording(lastTeacherAudioRec, btnReplayTeacher);
+btnReplayUser.onclick = () => replayRecording(lastUserAudioRec, btnReplayUser, false);
+btnReplayTeacher.onclick = () => replayRecording(lastTeacherAudioRec, btnReplayTeacher, true);
+
+document.getElementById('speedToggle').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-speed]');
+  if (!btn) return;
+  aiSpeechRate = parseFloat(btn.dataset.speed);
+  document.querySelectorAll('#speedToggle .toggle-chip').forEach(b => b.classList.toggle('active', b === btn));
+});
 
 function initPlaybackAudio() {
   if (!playbackContext) {
@@ -2084,19 +2267,27 @@ function playPCM24k(base64){
 
   const source = playbackContext.createBufferSource();
   source.buffer = buffer;
+  source.playbackRate.value = aiSpeechRate;
   source.connect(analyser);
 
   const now = playbackContext.currentTime;
   nextPlayTime = Math.max(nextPlayTime, now);
   source.start(nextPlayTime);
-  nextPlayTime += buffer.duration;
+  const playedDuration = buffer.duration / aiSpeechRate; // tốc độ chậm hơn thì phát lâu hơn thực tế
+  nextPlayTime += playedDuration;
 
-  setTimeout(() => {
-    if (playbackContext && playbackContext.currentTime >= nextPlayTime) {
-      isAiSpeaking = false;
-      geminiOutput.classList.remove('speaking');
-    }
-  }, buffer.duration * 1000);
+  // QUAN TRỌNG: mỗi khi có thêm 1 đoạn audio mới, hủy hẹn giờ cũ và đặt lại hẹn giờ MỚI
+  // tính theo mốc kết thúc audio tổng (nextPlayTime) hiện tại — thay vì hẹn theo thời lượng
+  // riêng lẻ của từng đoạn. Cách cũ khiến khi AI nói nhiều đoạn liên tiếp, không hẹn giờ nào
+  // rơi đúng lúc audio thật sự phát xong -> isAiSpeaking bị kẹt mãi ở true -> mic không bao giờ
+  // mở lại được -> AI nói xong 1 câu là "im luôn" vì không nghe được người dùng nói tiếp nữa.
+  if (aiSpeakEndTimer) clearTimeout(aiSpeakEndTimer);
+  const msUntilDone = Math.max(0, (nextPlayTime - playbackContext.currentTime) * 1000) + 60;
+  aiSpeakEndTimer = setTimeout(() => {
+    isAiSpeaking = false;
+    geminiOutput.classList.remove('speaking');
+    aiSpeakEndTimer = null;
+  }, msUntilDone);
 }
 
 async function startMicrophone(){
@@ -2173,7 +2364,15 @@ async function startLiveSession() {
 
     const resumeContext = resumingLesson ? buildResumeContext(resumingLesson) : '';
     const scenarioLine = newScenario ? `Tình huống cụ thể hôm nay: "${newScenario}". Hãy dựng bối cảnh hội thoại và câu mẫu xoay quanh đúng tình huống này, đừng dùng tình huống chung chung.` : '';
-    const instructionText = resumeContext
+    const shadowingInstructionText = `Bạn là huấn luyện viên phát âm ngoại ngữ, dạy ngôn ngữ: ${selectedLang}, cho học viên trình độ mới bắt đầu đến trung cấp.
+         Chủ đề: "${topicObj.label}" (${topicObj.desc}). ${scenarioLine}
+         Bạn đang dẫn một bài luyện SHADOWING (nghe & nhắc lại), KHÔNG phải hội thoại tự do. Lặp lại đúng quy trình sau nhiều vòng liên tiếp:
+         1. Đọc CHẬM, RÕ một câu mẫu NGẮN (5-10 từ) bằng ${selectedLang}, đúng chủ đề/tình huống trên. Câu đầu dễ, các câu sau khó dần.
+         2. Dừng lại, chờ học viên lặp lại y hệt câu vừa nghe.
+         3. Chấm điểm mức độ khớp từ 1-10, chỉ ra CỤ THỂ từ hoặc âm nào phát âm chưa chuẩn và cách sửa — BẰNG TIẾNG VIỆT, ngắn gọn, đi thẳng vào trọng tâm.
+         4. Ngay sau khi chấm xong, tự động đọc câu mẫu TIẾP THEO mà không cần học viên yêu cầu.
+         Không trò chuyện lan man ngoài đúng chu trình đọc mẫu → chờ nhắc lại → chấm điểm → câu tiếp theo này.`;
+    const instructionText = practiceMode === 'shadowing' ? shadowingInstructionText : (resumeContext
       ? `Bạn là giáo viên dạy phát âm chuẩn chuyên dạy ngôn ngữ: ${selectedLang}.
          Chủ đề: "${topicObj.label}" (${topicObj.desc}).
          ${personaLine}
@@ -2192,7 +2391,7 @@ async function startLiveSession() {
          Nhiệm vụ:
          1. Bắt đầu bằng việc chào và đưa ra 1 câu mẫu ngắn bằng ${selectedLang} theo đúng tình huống nêu trên.
          2. Nghe học viên đọc, sửa lỗi phát âm và khẩu hình chi tiết BẰNG TIẾNG VIỆT.
-         3. Giữ câu trả lời súc tích để phản hồi nhanh.`;
+         3. Giữ câu trả lời súc tích để phản hồi nhanh.`);
 
     aiClient = new GoogleGenAI({ apiKey: key });
 
@@ -2240,7 +2439,11 @@ async function startLiveSession() {
             // Chỉ nhường mic ngay lập tức khi bị NGẮT LỜI (interrupted) — còn turnComplete bình thường thì
             // để playPCM24k() tự tắt isAiSpeaking đúng lúc giọng cô giáo phát THẬT SỰ xong qua loa,
             // tránh mic ghi đè lên khi audio cũ vẫn còn đang phát dở (gây lẫn/kẹt thứ tự khi nghe lại).
-            if (sc?.interrupted) isAiSpeaking = false;
+            if (sc?.interrupted) {
+              if (aiSpeakEndTimer) { clearTimeout(aiSpeakEndTimer); aiSpeakEndTimer = null; }
+              isAiSpeaking = false;
+              geminiOutput.classList.remove('speaking');
+            }
             userBuffer = ""; aiBuffer = "";
           }
         },
@@ -2345,7 +2548,11 @@ Nhiệm vụ:
             // Chỉ nhường mic ngay lập tức khi bị NGẮT LỜI (interrupted) — còn turnComplete bình thường thì
             // để playPCM24k() tự tắt isAiSpeaking đúng lúc giọng cô giáo phát THẬT SỰ xong qua loa,
             // tránh mic ghi đè lên khi audio cũ vẫn còn đang phát dở (gây lẫn/kẹt thứ tự khi nghe lại).
-            if (sc?.interrupted) isAiSpeaking = false;
+            if (sc?.interrupted) {
+              if (aiSpeakEndTimer) { clearTimeout(aiSpeakEndTimer); aiSpeakEndTimer = null; }
+              isAiSpeaking = false;
+              geminiOutput.classList.remove('speaking');
+            }
             userBuffer = ""; aiBuffer = "";
           }
         },
@@ -2368,6 +2575,7 @@ Nhiệm vụ:
 async function stopSession(manual) {
   try { session?.sendRealtimeInput?.({ audioStreamEnd: true }); session?.close?.(); } catch {}
   session = null; await stopMicrophone();
+  if (aiSpeakEndTimer) { clearTimeout(aiSpeakEndTimer); aiSpeakEndTimer = null; }
   isAiSpeaking = false;
 
   if (currentLessonId) {
