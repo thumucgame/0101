@@ -4442,6 +4442,7 @@ function handleAction(playerId, action, isAuto=false){
       });
       // Chỉ tạo hiệu ứng trực quan cho từng mắt xích; KHÔNG thanh toán từng mắt xích.
       broadcastStakeTransfer(prevLeader, playerId, chopReward, gameState.stakeUnit);
+      const chopUnit = (gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA') ? 'điểm' : 'Nước';
       gameState.log = `⚡ ${pName} CHẶT NGANG thành công! Bom chồng hiện tại: ${totalChain} Nước — chưa thanh toán; người bị chặt ở mắt xích cuối sẽ chịu toàn bộ.`;
       if(!gameState.roundLog) gameState.roundLog = [];
       gameState.roundLog.push({ icon:'⚡', text: `${pName} CHẶT NGANG ${choppedDesc} của ${prevLeaderName} bằng ${describeCombo(combo)} → dồn bom ${totalChain} ${chopUnit}.${chainTag}` });
