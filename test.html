@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -1159,6 +1157,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
       <select class="sel" id="gameModeSelect">
         <option value="WATER" selected>[I] CHẾ ĐỘ ĐÁNH NƯỚC (Nhất +2, Nhì +1, Ba -1, Bét -2)</option>
         <option value="POINTS">[II] CHẾ ĐỘ TÍNH ĐIỂM (Nhất 3, Nhì 2, Ba 1, Bét 0 • Tới Trắng +3)</option>
+        <option value="NHATANCA">[III] CHẾ ĐỘ NHẤT ĂN CẢ (Về Nhất là hết ván • chỉ Nhất +3 + Thối từ 3 nhà kia)</option>
         <option value="KNEEL_A">[II] CHẾ ĐỘ QUỲ - Option A (Quỳ Chốt Ván)</option>
         <option value="KNEEL_B">[II] CHẾ ĐỘ QUỲ - Option B (Quỳ Tích Lũy)</option>
         <option value="KNEEL_C">[II] CHẾ ĐỘ QUỲ - Option C (Quỳ Thế Chân)</option>
@@ -1334,7 +1333,10 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     <h3>II. CHẾ ĐỘ TÍNH ĐIỂM</h3>
     <p>Tính xuyên suốt nhiều ván: <b>Nhất +3, Nhì +2, Ba +1, Bét 0</b>. <b>Tới Trắng: người Tới Trắng +3, tất cả người còn lại 0.</b> <b>Giết ngộp cả bàn: tính giống Tới Trắng.</b> <b>Cóng: mỗi người Cóng đền 1 điểm cho từng người còn lại trên bàn.</b> <b>Thối tính đúng theo cấu hình.</b> Chặt vẫn áp dụng theo cấu hình hiện tại. Tổng điểm được cộng dồn và xem ở <b>TỔNG KẾT TRẬN</b>.</p>
 
-    <h3>III. CHẾ ĐỘ QUỲ (TÁCH BIỆT HOÀN TOÀN)</h3>
+    <h3>III. CHẾ ĐỘ NHẤT ĂN CẢ</h3>
+    <p>Giống hệt cách tính điểm của <b>Chế Độ Tính Điểm</b> ở trên, nhưng <b>ván kết thúc ngay lập tức</b> khi có người đầu tiên về Nhất — 3 người còn lại KHÔNG được đánh tiếp. 3 nhà còn lại <b>không phân hạng Nhì/Ba/Bét</b>, chỉ bị xét <b>Thối bài</b> (Heo đen/đỏ, Tứ Quý, Đôi Thông...) trên tay hiện có tại thời điểm kết ván để đền thêm điểm cho người về Nhất (<b>+3 điểm</b>). Cóng và Chặt vẫn áp dụng bình thường như Chế Độ Tính Điểm.</p>
+
+    <h3>IV. CHẾ ĐỘ QUỲ (TÁCH BIỆT HOÀN TOÀN)</h3>
     <p>Chế độ dùng hình phạt tư thế thể chất tại bàn. KHÔNG áp dụng tính Nước hay tính tiền.</p>
     <ul>
       <li><b>Lựa chọn A — Quỳ Chốt Ván:</b> Bét/Cháy quỳ ngay ván tiếp theo.</li>
@@ -2678,7 +2680,7 @@ function onClientMessage(msg){
       return;
     } else if(msg.t==='state'){
       applyState(msg.state);
-      if(msg.state && msg.state.isEnded && msg.state.pendingRound && msg.state.gameMode==='POINTS') showResultOverlay(msg.state.pendingRound.results, msg.state.pendingRound.settlements||[]);
+      if(msg.state && msg.state.isEnded && msg.state.pendingRound && (msg.state.gameMode==='POINTS'||msg.state.gameMode==='NHATANCA')) showResultOverlay(msg.state.pendingRound.results, msg.state.pendingRound.settlements||[]);
     } else if(msg.t==='scoreRoundAck'){
       if(msg.ok && msg.state) applyState(msg.state);
     } else if(msg.t==='chat'){
@@ -3044,18 +3046,45 @@ function finalizeInstantWin(){
     broadcastState();
     broadcastInstantWinCelebration(winnerId, winnerName, label, reward, gameState.stakeUnit);
     setTimeout(() => broadcastResult(results, settlements), 3000);
-  } else if(mode === 'POINTS') {
+  } else if(mode === 'POINTS' || mode === 'NHATANCA') {
     // TỚI TRẮNG trong chế độ Tính Điểm: chỉ người Tới Trắng nhận +3.
     // Tất cả người còn lại = 0, không tính hạng Nhì/Ba/Bét.
+    // Ở chế độ Nhất Ăn Cả: xét thêm Thối bài (Heo/Tứ Quý/Đôi Thông...) từ 3 nhà còn lại
+    // (bài của họ vẫn còn nguyên vì chưa ai kịp đánh) → đền thêm cho người Tới Trắng.
+    let foulBonusTotal = 0;
+    const foulDetailsById = {};
+    if(mode === 'NHATANCA'){
+      gameState.order.forEach(id => {
+        if(id === winnerId) return;
+        const foulInfo = checkFoulPunishment(safeArray(gameState.hands[id]));
+        if(foulInfo.totalPenalty > 0){
+          foulBonusTotal += foulInfo.totalPenalty;
+          foulDetailsById[id] = foulInfo;
+          gameState.roundLog.push({ icon:'🐷', text:`${gameState.names[id]} bị Thối bài → đền ${foulInfo.totalPenalty} điểm cho ${winnerName} (${foulInfo.details.join(', ')}).` });
+        }
+      });
+    }
     gameState.order.forEach(id => {
       const rank = id === winnerId ? 1 : 0;
-      const base = id === winnerId ? 3 : 0;
+      let base = id === winnerId ? 3 : 0;
+      let note;
+      if(id === winnerId){
+        base += foulBonusTotal;
+        note = foulBonusTotal > 0
+          ? `🌟 Tới Trắng: ${label} → +3 điểm | Được đền Thối: +${foulBonusTotal}`
+          : `🌟 Tới Trắng: ${label} → +3 điểm`;
+      } else if(foulDetailsById[id]){
+        base -= foulDetailsById[id].totalPenalty;
+        note = `🌟 Tới Trắng: ${label} → 0 điểm | Thối: -${foulDetailsById[id].totalPenalty} (${foulDetailsById[id].details.join(', ')})`;
+      } else {
+        note = `🌟 Tới Trắng: ${label} → 0 điểm`;
+      }
       results[id] = {
         rank,
         score: base,
-        basePoints: base,
-        modifierPoints: 0,
-        note: id === winnerId ? `🌟 Tới Trắng: ${label} → +3 điểm` : `🌟 Tới Trắng: ${label} → 0 điểm`,
+        basePoints: id === winnerId ? 3 : 0,
+        modifierPoints: base - (id === winnerId ? 3 : 0),
+        note,
         name: gameState.names[id],
         playedCards: [],
         remainingCards: safeArray(gameState.hands[id])
@@ -3089,7 +3118,7 @@ function ensureMatchLedger(order){const ids=safeArray(order);const next={};ids.f
 function resetMatchLedger(){matchScores={};matchHistory=[];matchStartedAt=null;}
 function getPointsRankValue(rank){return ({1:3,2:2,3:1,4:0})[Number(rank)]??0;}
 function applyPointsRoundToMatch(results){
-  if(!gameState||gameState.gameMode!=='POINTS'||gameState.matchScoreApplied) return;
+  if(!gameState||(gameState.gameMode!=='POINTS'&&gameState.gameMode!=='NHATANCA')||gameState.matchScoreApplied) return;
   ensureMatchLedger(gameState.order);
   const stats={};
   safeArray(gameState.order).forEach(id=>{
@@ -3127,7 +3156,7 @@ function applyPointsRoundToMatch(results){
 }
 
 function applyPendingRoundWithoutEdit(){
-  if(!isHost || !gameState || gameState.gameMode!=='POINTS' || !gameState.isEnded) return false;
+  if(!isHost || !gameState || (gameState.gameMode!=='POINTS'&&gameState.gameMode!=='NHATANCA') || !gameState.isEnded) return false;
   const p=gameState.pendingRound;
   if(!p || p.scoreEditActive) return false;
 
@@ -3169,7 +3198,7 @@ function applyPendingRoundWithoutEdit(){
 }
 
 function handleScoreRoundEdit(fromId,msg){
-  if(!isHost || !gameState || gameState.gameMode!=='POINTS' || !gameState.isEnded || !gameState.pendingRound) return;
+  if(!isHost || !gameState || (gameState.gameMode!=='POINTS'&&gameState.gameMode!=='NHATANCA') || !gameState.isEnded || !gameState.pendingRound) return;
   const p=gameState.pendingRound;
   const next={...p.proposedScores};
   for(const id of gameState.order){ if(msg.scores && Object.prototype.hasOwnProperty.call(msg.scores,id)){ const v=Number(msg.scores[id]); if(Number.isFinite(v)) next[id]=Math.trunc(v); } }
@@ -3221,8 +3250,10 @@ function handleScoreRoundConfirm(fromId,msg){
     gameState.pendingRound=p; broadcastState();
   }
 }
-function renderMatchSummary(st=currentState){st=st||{};const scores=st.matchScores||{};const history=safeArray(st.matchHistory);const order=safeArray(st.order);const names=st.names||{};const body=$('matchSummaryBody'),sub=$('matchSummarySub'),box=$('matchHistoryBox'),actions=$('matchSummaryActions');if(!body||!sub||!box||!actions)return;const rows=order.map(id=>{const rs=history.filter(h=>h.players&&h.players[id]);const rk={1:0,2:0,3:0,4:0};rs.forEach(h=>{const r=Number(h.players[id]?.rank);if(rk[r]!==undefined)rk[r]++;});return{id,name:names[id]||id,total:Number(scores[id]||0),rounds:rs.length,rk};}).sort((a,b)=>b.total-a.total||a.name.localeCompare(b.name,'vi'));sub.textContent=`Chế độ Tính Điểm • ${history.length} ván • Nhất +3 • Nhì +2 • Ba +1 • Bét 0 • Tới Trắng/Giết ngộp +3 • Cóng 1 điểm/người • Thối/Chặt theo cấu hình.`;body.innerHTML=rows.map((r,i)=>{const cls=r.total>0?'match-total-plus':r.total<0?'match-total-minus':'';return `<tr><td><b>#${i+1} ${escapeHtml(r.name)}</b></td><td class="${cls}">${r.total>0?'+':''}${r.total}</td><td>${r.rounds}</td><td>${r.rk[1]}</td><td>${r.rk[2]}</td><td>${r.rk[3]}</td><td>${r.rk[4]}</td></tr>`;}).join('');box.innerHTML=history.length?`<h4 style="color:var(--gold);margin:0 0 6px;">📊 Chi tiết từng ván</h4><table><thead><tr><th>Ván</th>${order.map(id=>`<th>${escapeHtml(names[id]||id)}</th>`).join('')}</tr></thead><tbody>${history.map(h=>`<tr><td><b>${h.roundNo}</b></td>${order.map(id=>{const d=Number(h.players?.[id]?.delta||0);return `<td>${d>0?'+':''}${d}</td>`}).join('')}</tr>`).join('')}</tbody></table>`:'<div style="text-align:center;color:rgba(250,246,238,.5);padding:8px;">Chưa có ván nào được chốt điểm.</div>';actions.innerHTML='';
-if(isHost && st.gameMode==='POINTS'){
+function renderMatchSummary(st=currentState){st=st||{};const scores=st.matchScores||{};const history=safeArray(st.matchHistory);const order=safeArray(st.order);const names=st.names||{};const body=$('matchSummaryBody'),sub=$('matchSummarySub'),box=$('matchHistoryBox'),actions=$('matchSummaryActions');if(!body||!sub||!box||!actions)return;const rows=order.map(id=>{const rs=history.filter(h=>h.players&&h.players[id]);const rk={1:0,2:0,3:0,4:0};rs.forEach(h=>{const r=Number(h.players[id]?.rank);if(rk[r]!==undefined)rk[r]++;});return{id,name:names[id]||id,total:Number(scores[id]||0),rounds:rs.length,rk};}).sort((a,b)=>b.total-a.total||a.name.localeCompare(b.name,'vi'));sub.textContent = st.gameMode==='NHATANCA'
+  ? `Chế độ Nhất Ăn Cả • ${history.length} ván • Về Nhất là hết ván ngay: Nhất +3 • 3 nhà còn lại 0 điểm • Nhất được đền Thối từ 3 nhà kia • Cóng/Chặt theo cấu hình.`
+  : `Chế độ Tính Điểm • ${history.length} ván • Nhất +3 • Nhì +2 • Ba +1 • Bét 0 • Tới Trắng/Giết ngộp +3 • Cóng 1 điểm/người • Thối/Chặt theo cấu hình.`;body.innerHTML=rows.map((r,i)=>{const cls=r.total>0?'match-total-plus':r.total<0?'match-total-minus':'';return `<tr><td><b>#${i+1} ${escapeHtml(r.name)}</b></td><td class="${cls}">${r.total>0?'+':''}${r.total}</td><td>${r.rounds}</td><td>${r.rk[1]}</td><td>${r.rk[2]}</td><td>${r.rk[3]}</td><td>${r.rk[4]}</td></tr>`;}).join('');box.innerHTML=history.length?`<h4 style="color:var(--gold);margin:0 0 6px;">📊 Chi tiết từng ván</h4><table><thead><tr><th>Ván</th>${order.map(id=>`<th>${escapeHtml(names[id]||id)}</th>`).join('')}</tr></thead><tbody>${history.map(h=>`<tr><td><b>${h.roundNo}</b></td>${order.map(id=>{const d=Number(h.players?.[id]?.delta||0);return `<td>${d>0?'+':''}${d}</td>`}).join('')}</tr>`).join('')}</tbody></table>`:'<div style="text-align:center;color:rgba(250,246,238,.5);padding:8px;">Chưa có ván nào được chốt điểm.</div>';actions.innerHTML='';
+if(isHost && (st.gameMode==='POINTS'||st.gameMode==='NHATANCA')){
   const edit=document.createElement('button');
   edit.className='btn btn-outline';
   edit.textContent='✏️ Điều chỉnh điểm';
@@ -3301,14 +3332,14 @@ function dealNewGame(){
 
   // Nếu ván trước không chỉnh điểm, chốt proposedScores vào sổ điểm
   // trước khi chia ván mới. Nếu đã bấm Điều chỉnh, bắt buộc đi qua xác nhận.
-  if(isHost && gameState && gameState.gameMode==='POINTS' && gameState.pendingRound && !gameState.pendingRound.scoreEditActive){
+  if(isHost && gameState && (gameState.gameMode==='POINTS'||gameState.gameMode==='NHATANCA') && gameState.pendingRound && !gameState.pendingRound.scoreEditActive){
     applyPendingRoundWithoutEdit();
   }
 
   // SỔ ĐIỂM TRẬN là nguồn duy nhất cho ván kế tiếp.
   // Host giữ matchScores; gameState.matchScores chỉ là bản đồng bộ xuống client.
   // Trước khi chia ván mới, đảm bảo ledger không bị rơi về 0.
-  if(gameState && gameState.gameMode === 'POINTS' && gameState.matchScores){
+  if(gameState && (gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA') && gameState.matchScores){
     const persisted = {};
     safeArray(players).forEach(p=>{
       const v = Number(gameState.matchScores[p.id]);
@@ -3682,7 +3713,7 @@ function calculateCongSettlement(congIdsInput){
   //   Bàn 4, 1 Cóng -> người Cóng -3; mỗi người còn lại +1.
   //   Bàn 4, 3 Cóng -> mỗi người Cóng -1; người duy nhất còn lại +3.
   // - CHẾ ĐỘ ĐÁNH NƯỚC: giữ nguyên mức Cóng hiện tại (4 Nước/người nhận).
-  const congPerReceiver = gameState && gameState.gameMode === 'POINTS' ? 1 : 4;
+  const congPerReceiver = gameState && (gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA') ? 1 : 4;
   const debtByCong = {};
   const receiveByPlayer = {};
   let totalDebt = 0;
@@ -3803,7 +3834,7 @@ function foldColdPlayers(){
     }
   });
 
-  if(newlyCongIds.length === 0 || (gameState.gameMode !== 'WATER' && gameState.gameMode !== 'POINTS')) return;
+  if(newlyCongIds.length === 0 || (gameState.gameMode !== 'WATER' && gameState.gameMode !== 'POINTS' && gameState.gameMode !== 'NHATANCA')) return;
 
   // Chỉ tạo snapshot một lần. Không tính lại khi endGame().
   const settlement = getOrCreateCongSettlement();
@@ -3815,7 +3846,7 @@ function foldColdPlayers(){
     const debt = Number(settlement.debtByCong[congId] || 0);
     gameState.roundLog.push({
       icon: '🧊',
-      text: `${gameState.names[congId]} bị Cóng → trừ ${debt} ${gameState.gameMode==='POINTS'?'điểm':'Nước'}, đền ${settlement.congPerReceiver} ${gameState.gameMode==='POINTS'?'điểm':'Nước'} cho mỗi người không Cóng.`
+      text: `${gameState.names[congId]} bị Cóng → trừ ${debt} ${(gameState.gameMode==='POINTS'||gameState.gameMode==='NHATANCA')?'điểm':'Nước'}, đền ${settlement.congPerReceiver} ${(gameState.gameMode==='POINTS'||gameState.gameMode==='NHATANCA')?'điểm':'Nước'} cho mỗi người không Cóng.`
     });
   });
 
@@ -3867,7 +3898,7 @@ function isSpecialStackContinuation(prevCombo, nextCombo){
 }
 
 function settleChopChain(reason='') {
-  if(!gameState || (gameState.gameMode !== 'WATER' && gameState.gameMode !== 'POINTS')) {
+  if(!gameState || (gameState.gameMode !== 'WATER' && gameState.gameMode !== 'POINTS' && gameState.gameMode !== 'NHATANCA')) {
     if(gameState) {
       gameState.chopChainValue = 0;
       gameState.chopStackValue = 0;
@@ -3903,9 +3934,9 @@ function settleChopChain(reason='') {
     const chainDetail = history.length > 1 ? ` — ${history.length} mắt xích chặt chồng` : '';
     gameState.roundLog.push({
       icon:'💥',
-      text:`💥 CHẶT CHỒNG kết sổ: ${payerName} chịu TOÀN BỘ ${total} ${gameState.gameMode==='POINTS'?'điểm':'Nước'} → ${receiverName}${chainDetail}${tag}.`
+      text:`💥 CHẶT CHỒNG kết sổ: ${payerName} chịu TOÀN BỘ ${total} ${(gameState.gameMode==='POINTS'||gameState.gameMode==='NHATANCA')?'điểm':'Nước'} → ${receiverName}${chainDetail}${tag}.`
     });
-    gameState.log = `💥 CHẶT CHỒNG: ${payerName} chịu toàn bộ ${total} ${gameState.gameMode==='POINTS'?'điểm':'Nước'} → ${receiverName}.`;
+    gameState.log = `💥 CHẶT CHỒNG: ${payerName} chịu toàn bộ ${total} ${(gameState.gameMode==='POINTS'||gameState.gameMode==='NHATANCA')?'điểm':'Nước'} → ${receiverName}.`;
   }
 
   // Reset atomically after settlement: any later call in the same end-of-round
@@ -4461,6 +4492,16 @@ function handleAction(playerId, action, isAuto=false){
       awardLiveBaseScore(playerId, gameState.finished.length, chopWillEndGame);
       foldColdPlayers();
     }
+
+    // CHẾ ĐỘ NHẤT ĂN CẢ: người đầu tiên hết bài (về Nhất) là ván kết thúc NGAY,
+    // không chờ 3 người còn lại đánh tiếp. 3 nhà còn lại chỉ bị xét Thối bài trên
+    // tay hiện có, không phân hạng Nhì/Ba/Bét.
+    if(gameState.gameMode === 'NHATANCA' && gameState.finished.length === 1){
+      settleChopChain('ván kết thúc (Nhất Ăn Cả)');
+      acceptTrackedAction(playerId,action,{combo:debugComboText(combo),cards:debugCardText(cards),final:true});
+      endGame();
+      return;
+    }
     if(gameState.hands[playerId].length === 1){
       gameState.log += ` | 🔔 ${pName} chỉ còn 1 lá bài!`;
     }
@@ -4650,7 +4691,7 @@ function handleAction(playerId, action, isAuto=false){
       const prevLeaderName = gameState.names[gameState.leaderId];
       const choppedDesc = describeCombo(gameState.currentCombo);
       if(!gameState.roundLog) gameState.roundLog = [];
-      if(gameState.gameMode === 'WATER' || gameState.gameMode === 'POINTS'){
+      if(gameState.gameMode === 'WATER' || gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA'){
         // Ghi nhận mắt xích mới; chưa thanh toán. Người bị chặt cuối cùng sẽ gánh toàn bộ bom.
         gameState.chopChainPayer = gameState.leaderId;
         gameState.chopChainReceiver = playerId;
@@ -4664,7 +4705,7 @@ function handleAction(playerId, action, isAuto=false){
         });
         // Hiệu ứng chuyển cược chỉ để minh họa mắt xích; tiền/nước chỉ kết sổ MỘT LẦN ở cuối chuỗi.
         if(gameState.gameMode === 'WATER') broadcastStakeTransfer(gameState.leaderId, playerId, chopReward, gameState.stakeUnit);
-        const chopUnit = gameState.gameMode === 'POINTS' ? 'điểm' : 'Nước';
+        const chopUnit = (gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA') ? 'điểm' : 'Nước';
         gameState.log = `${prefix}${pName} chặt thành công! Bom chồng hiện tại: ${totalChain} ${chopUnit} — chưa thanh toán; người bị chặt ở mắt xích cuối sẽ chịu toàn bộ.`;
         gameState.roundLog.push({ icon:'⚡', text: `${pName} CHẶT ${choppedDesc} của ${prevLeaderName} bằng ${describeCombo(combo)} → dồn bom ${totalChain} Nước.${chainTag}` });
         shortMsg = `⚡ Chặt! Bom ${totalChain} Nước${chainTag ? ' 🔥' : ''}`;
@@ -4722,6 +4763,16 @@ function handleAction(playerId, action, isAuto=false){
       // LUẬT BÁO BÀI: tự động thông báo cho cả bàn khi còn đúng 1 lá
       gameState.log += ` | 🔔 BÁO BÀI: ${pName} chỉ còn 1 lá!`;
       gameState.lastCardWarning = playerId;
+    }
+
+    // CHẾ ĐỘ NHẤT ĂN CẢ: người đầu tiên hết bài (về Nhất) là ván kết thúc NGAY,
+    // không chờ 3 người còn lại đánh tiếp. 3 nhà còn lại chỉ bị xét Thối bài trên
+    // tay hiện có, không phân hạng Nhì/Ba/Bét.
+    if(gameState.gameMode === 'NHATANCA' && gameState.finished.length === 1){
+      settleChopChain('ván kết thúc (Nhất Ăn Cả)');
+      acceptTrackedAction(playerId,action,{combo:debugComboText(combo),final:true});
+      endGame();
+      return;
     }
 
     const activePlayers = gameState.order.filter(id => !gameState.finished.includes(id) && !gameState.coldFolded.has(id));
@@ -4821,7 +4872,7 @@ function awardLiveBaseScore(playerId, forcedRank, suppressFinishSound){
   if(!playerId) return;
   const finishRank = Number.isInteger(forcedRank) ? forcedRank : (gameState && gameState.finished.indexOf(playerId) + 1);
   playFinishSound(finishRank, suppressFinishSound);
-  if(!gameState || (gameState.gameMode !== 'WATER' && gameState.gameMode !== 'POINTS')) return;
+  if(!gameState || (gameState.gameMode !== 'WATER' && gameState.gameMode !== 'POINTS' && gameState.gameMode !== 'NHATANCA')) return;
 
   // Ưu tiên thứ hạng đã được chốt ngay lúc người chơi hết bài.
   // Không phụ thuộc vào việc foldColdPlayers() có thêm người vào finished sau đó.
@@ -4830,7 +4881,7 @@ function awardLiveBaseScore(playerId, forcedRank, suppressFinishSound){
 
   const activeCount = gameState.order.length;
   let baseAward = 0;
-  if(gameState.gameMode === 'POINTS') baseAward = getPointsRankValue(rank);
+  if(gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA') baseAward = getPointsRankValue(rank);
   else if(activeCount === 2){ if(rank === 1) baseAward = 1; else return; }
   else if(activeCount === 3){ baseAward = rank === 1 ? 2 : 0; }
   else { if(rank === 1) baseAward = 2; else if(rank === 2) baseAward = 1; }
@@ -4841,7 +4892,7 @@ function awardLiveBaseScore(playerId, forcedRank, suppressFinishSound){
   gameState.liveBaseAwards[playerId] = baseAward;
   if(!gameState.roundLog) gameState.roundLog = [];
   const title = rank === 1 ? '🏆 NHẤT' : (rank === 2 ? '🥈 NHÌ' : (rank === 3 ? '🥉 BA' : '🏁 BÉT'));
-  const unit = gameState.gameMode === 'POINTS' ? 'điểm' : 'Nước';
+  const unit = (gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA') ? 'điểm' : 'Nước';
   const awardText = baseAward > 0 ? `+${baseAward}` : `${baseAward}`;
   gameState.roundLog.push({icon:rank===1?'🏆':rank===2?'🥈':rank===3?'🥉':'🏁',text:`${gameState.names[playerId]} về hạng ${rank} → ${awardText} ${unit} ngay.`});
   bumpActor(playerId, `${title}! ${awardText} ${unit}`);
@@ -4853,7 +4904,7 @@ function endGame(){
   // Đặc biệt quan trọng khi ván kết thúc do mất mạng/đấu thủ cuối cùng bị loại,
   // vì các đường này có thể gọi endGame() trực tiếp mà không đi qua nhánh đánh bài.
   // settleChopChain() tự reset BOM sau khi chốt nên gọi ở đây là idempotent.
-  if(gameState && (gameState.gameMode === 'WATER' || gameState.gameMode === 'POINTS') && Number(gameState.chopChainValue || 0) > 0){
+  if(gameState && (gameState.gameMode === 'WATER' || gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA') && Number(gameState.chopChainValue || 0) > 0){
     settleChopChain('ván kết thúc (bảo đảm)');
   }
 
@@ -5110,6 +5161,84 @@ function endGame(){
     gameState.matchScores = {...matchScores};
     gameState.matchHistory = matchHistory.map(x => ({roundNo:x.roundNo,at:x.at,players:{...x.players}}));
     broadcastState();
+  } else if(mode === 'NHATANCA'){
+    // CHẾ ĐỘ NHẤT ĂN CẢ: ván đã bị kết thúc ngay khi có người đầu tiên về Nhất
+    // (xem nhánh chặn sớm ở handleAction). Chỉ người về Nhất được +3 điểm;
+    // 3 nhà còn lại KHÔNG phân hạng Nhì/Ba/Bét — đều tính ngang nhau là "chưa về",
+    // chỉ bị xét Thối bài (Heo/Tứ Quý/Đôi Thông...) trên tay hiện có để đền thêm
+    // cho người về Nhất. Cóng/Chặt vẫn áp dụng bình thường như chế độ Tính Điểm.
+    const cong = getOrCreateCongSettlement() || calculateCongSettlement([]);
+    const congIdSet = new Set(safeArray(cong.congIds));
+    if(congIdSet.size && cong.receivers.length){
+      applyCongSettlementLive(cong);
+    }
+
+    const foulDetailsMap = {};
+    let foulPenaltiesTotal = 0;
+
+    gameState.order.forEach(id => {
+      if(id === winnerId || congIdSet.has(id)) return;
+      const foulInfo = checkFoulPunishment(safeArray(gameState.hands[id]));
+      if(foulInfo.totalPenalty <= 0) return;
+      foulDetailsMap[id] = foulInfo;
+      foulPenaltiesTotal += foulInfo.totalPenalty;
+      gameState.roundLog.push({ icon:'🐷', text:`${gameState.names[id]} bị Thối bài → đền ${foulInfo.totalPenalty} điểm cho ${gameState.names[winnerId]} (${foulInfo.details.join(', ')}).` });
+    });
+
+    gameState.order.forEach(id => {
+      const isWinner = id === winnerId;
+      const rank = isWinner ? 1 : 2; // không phân biệt Nhì/Ba/Bét — cả 3 người thua ngang nhau
+      const isCong = congIdSet.has(id);
+      const congAward = isCong
+        ? -Number(cong.debtByCong[id] || 0)
+        : Number(cong.receiveByPlayer[id] || 0);
+      const chopAward = isCong ? 0 : Number((gameState.liveChopAwards || {})[id] || 0);
+
+      if(isCong){
+        const total = congAward;
+        results[id] = {
+          rank, score: total, basePoints: 0, modifierPoints: total,
+          note:`🧊 CÓNG: -${Math.abs(total)} điểm (${cong.congPerReceiver} điểm/người còn lại)`,
+          name:gameState.names[id],
+          playedCards:(finalHandsSnapshot[id] && finalHandsSnapshot[id].played) || [],
+          remainingCards:(finalHandsSnapshot[id] && finalHandsSnapshot[id].remaining) || [],
+          isCong:true
+        };
+        return;
+      }
+
+      const base = isWinner ? 3 : 0;
+      let foulScore = 0;
+      let foulText = '';
+      if(isWinner && foulPenaltiesTotal > 0){
+        foulScore += foulPenaltiesTotal;
+        foulText += ` | Được đền Thối: +${foulPenaltiesTotal}`;
+      }
+      if(foulDetailsMap[id]){
+        foulScore -= foulDetailsMap[id].totalPenalty;
+        foulText += ` | Thối: -${foulDetailsMap[id].totalPenalty} (${foulDetailsMap[id].details.join(', ')})`;
+      }
+
+      const total = base + chopAward + congAward + foulScore;
+      const baseText = base >= 0 ? `+${base}` : `${base}`;
+      const chopText = chopAward >= 0 ? `+${chopAward}` : `${chopAward}`;
+      const congText = congAward ? ` | Nhận Cóng: +${congAward}` : '';
+      results[id] = {
+        rank, score: total, basePoints: base, modifierPoints: total - base,
+        note:`${isWinner ? '🏆 Về Nhất - Ăn Cả' : 'Chưa về (Nhất Ăn Cả)'}: ${baseText} điểm | Chặt: ${chopText}${congText}${foulText}`,
+        name:gameState.names[id],
+        playedCards:(finalHandsSnapshot[id] && finalHandsSnapshot[id].played) || [],
+        remainingCards:(finalHandsSnapshot[id] && finalHandsSnapshot[id].remaining) || [],
+        isCong:false
+      };
+    });
+
+    applyPointsRoundToMatch(results);
+    gameState.lastResults = results;
+    gameState.liveScores = {...matchScores};
+    gameState.matchScores = {...matchScores};
+    gameState.matchHistory = matchHistory.map(x => ({roundNo:x.roundNo,at:x.at,players:{...x.players}}));
+    broadcastState();
   } else {
     gameState.order.forEach((id) => {
       let rank = gameState.finished.indexOf(id) + 1;
@@ -5182,7 +5311,7 @@ function endGame(){
     Object.keys(results).forEach(id => { gameState.liveScores[id] = Number(results[id].score) || 0; });
     broadcastState();
   }
-  if(mode==='POINTS'){ gameState.liveScores = Object.fromEntries(Object.keys(results).map(id=>[id,Number(results[id].score)||0])); broadcastState(); }
+  if(mode==='POINTS' || mode==='NHATANCA'){ gameState.liveScores = Object.fromEntries(Object.keys(results).map(id=>[id,Number(results[id].score)||0])); broadcastState(); }
   broadcastResult(results, settlements);
 }
 
@@ -5421,12 +5550,12 @@ function applyState(st){
   $('tableScreen').classList.remove('hidden');
   $('chatToggle').classList.remove('hidden');
   $('roomTag').textContent = 'Phòng: ' + roomCode;
-  $('modeTag').textContent = 'Chế độ: ' + (st.gameMode === 'WATER' ? 'Đánh Nước' : (st.gameMode === 'POINTS' ? 'Tính Điểm' : 'Quỳ'));
+  $('modeTag').textContent = 'Chế độ: ' + (st.gameMode === 'WATER' ? 'Đánh Nước' : (st.gameMode === 'POINTS' ? 'Tính Điểm' : (st.gameMode === 'NHATANCA' ? 'Nhất Ăn Cả' : 'Quỳ')));
   $('stakeTag').textContent = st.gameMode === 'WATER' ? 'Cược: ' + st.stakeUnit : 'Hình phạt: Quỳ';
 
   const myLiveVal = (st.liveScores && st.liveScores[myId] !== undefined) ? Number(st.liveScores[myId]) : 0;
   const myBaseTotal = Number((st.matchScores && st.matchScores[myId] !== undefined) ? st.matchScores[myId] : (matchScores[myId] || 0));
-  const myTotalVal = (st.gameMode === 'POINTS')
+  const myTotalVal = (st.gameMode === 'POINTS' || st.gameMode === 'NHATANCA')
     ? (st.matchScoreApplied ? myBaseTotal : myBaseTotal + myLiveVal)
     : myLiveVal;
   const myScoreBox = $('myLiveScoreBox');
@@ -5435,7 +5564,7 @@ function applyState(st){
       myScoreBox.style.display = '';
       myScoreBox.className = 'live-score-sticker ' + (myLiveVal > 0 ? 'plus' : (myLiveVal < 0 ? 'minus' : ''));
       myScoreBox.textContent = (myLiveVal > 0 ? `+${myLiveVal}` : myLiveVal) + ' Nước';
-    } else if(st.gameMode === 'POINTS'){
+    } else if(st.gameMode === 'POINTS' || st.gameMode === 'NHATANCA'){
       myScoreBox.style.display = '';
       myScoreBox.className = 'points-score-wrap';
       const totalEl = $('myTotalScore');
@@ -5525,7 +5654,7 @@ function renderOpponents(){
     if(currentState.gameMode === 'WATER'){
       const oppLiveVal = (currentState.liveScores && currentState.liveScores[pId] !== undefined) ? Number(currentState.liveScores[pId]) : 0;
       waterSticker = `<div class="live-score-sticker ${oppLiveVal>0?'plus':(oppLiveVal<0?'minus':'')}" style="position:relative;top:auto;right:auto;margin-top:2px;font-size:9px;padding:1px 4px;">${oppLiveVal>0?'+'+oppLiveVal:oppLiveVal} Nước</div>`;
-    } else if(currentState.gameMode === 'POINTS'){
+    } else if(currentState.gameMode === 'POINTS' || currentState.gameMode === 'NHATANCA'){
       const oppRoundVal = (currentState.liveScores && currentState.liveScores[pId] !== undefined) ? Number(currentState.liveScores[pId]) : 0;
       const oppBaseTotal = Number((currentState.matchScores && currentState.matchScores[pId] !== undefined) ? currentState.matchScores[pId] : (matchScores[pId] || 0));
       const oppTotalVal = currentState.matchScoreApplied ? oppBaseTotal : oppBaseTotal + oppRoundVal;
@@ -6463,14 +6592,14 @@ function showResultOverlay(results, settlements){
   const tbody = $('resultBody'); tbody.innerHTML = '';
   const isWater = currentState && currentState.gameMode === 'WATER';
 
-  $('resultHeaderUnit').textContent = isWater ? 'Số Nước' : (currentState && currentState.gameMode === 'POINTS' ? 'Điểm' : 'Hình Phạt Quỳ');
+  $('resultHeaderUnit').textContent = isWater ? 'Số Nước' : (currentState && (currentState.gameMode === 'POINTS' || currentState.gameMode === 'NHATANCA') ? 'Điểm' : 'Hình Phạt Quỳ');
 
   const sortedResults = Object.values(results).sort((a,b)=>a.rank-b.rank);
   const cardRevealQueue = []; // chỉ ngửa bài người Bét hoặc người Cóng
 
   sortedResults.forEach((r, idx) => {
     let cls = isWater ? (r.score > 0 ? 'plus' : (r.score < 0 ? 'minus' : '')) : '';
-    let scoreTxt = isWater ? (r.score > 0 ? `+${r.score} Nước` : `${r.score} Nước`) : (currentState && currentState.gameMode === 'POINTS' ? (r.score > 0 ? `+${r.score} Điểm` : `${r.score} Điểm`) : r.score);
+    let scoreTxt = isWater ? (r.score > 0 ? `+${r.score} Nước` : `${r.score} Nước`) : (currentState && (currentState.gameMode === 'POINTS' || currentState.gameMode === 'NHATANCA') ? (r.score > 0 ? `+${r.score} Điểm` : `${r.score} Điểm`) : r.score);
 
     const playedCards = safeArray(r.playedCards);
     const remainingCards = safeArray(r.remainingCards);
@@ -6548,7 +6677,7 @@ function showResultOverlay(results, settlements){
           <span style="color:var(--gold);font-weight:bold;">${s.amount} Nước</span>
         </div>`;
     });
-  } else if(currentState && currentState.gameMode === 'POINTS'){
+  } else if(currentState && (currentState.gameMode === 'POINTS' || currentState.gameMode === 'NHATANCA')){
     const totalMap = currentState.matchScores || {};
     const pointRows = Object.values(results).sort((a,b)=>a.rank-b.rank).map(r=>{
       const rid = currentState.order.find(id => currentState.names[id] === r.name);
@@ -6563,7 +6692,7 @@ function showResultOverlay(results, settlements){
   const editor=$('pendingScoreEditor');
   if(editor){
     editor.innerHTML='';
-    if(currentState && currentState.gameMode==='POINTS' && currentState.pendingRound && currentState.pendingRound.scoreEditActive){
+    if(currentState && (currentState.gameMode==='POINTS'||currentState.gameMode==='NHATANCA') && currentState.pendingRound && currentState.pendingRound.scoreEditActive){
       const p=currentState.pendingRound, names=currentState.names||{}, order=safeArray(currentState.order);
       const count=order.filter(id=>p.confirmations&&p.confirmations[id]).length;
       const confirmed=!!(p.confirmations&&p.confirmations[myId]);
@@ -6600,7 +6729,7 @@ function showResultOverlay(results, settlements){
     }
   }
   const actions = $('resultActions'); actions.innerHTML = '';
-  if(currentState && currentState.gameMode==='POINTS' && isHost){
+  if(currentState && (currentState.gameMode==='POINTS'||currentState.gameMode==='NHATANCA') && isHost){
     const pending = currentState.pendingRound;
     const order = safeArray(currentState.order);
     const editActive = !!pending?.scoreEditActive;
@@ -6636,7 +6765,7 @@ function showResultOverlay(results, settlements){
       next.textContent='▶️ Ván mới';
       next.style.cssText='width:100%;font-weight:900;';
       next.onclick=()=>{
-        if(currentState && currentState.gameMode==='POINTS' && currentState.pendingRound && !currentState.pendingRound.scoreEditActive){
+        if(currentState && (currentState.gameMode==='POINTS'||currentState.gameMode==='NHATANCA') && currentState.pendingRound && !currentState.pendingRound.scoreEditActive){
           if(!applyPendingRoundWithoutEdit()) return;
         }
         dealNewGame();
