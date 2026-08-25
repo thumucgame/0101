@@ -72,6 +72,23 @@
     background: var(--card); border: 1px solid var(--card-line); border-left: 3px solid var(--coral);
     border-radius: 10px; padding: 10px 12px; font-size: 13px; line-height: 1.55;
   }
+  .vocab-item {
+    background: var(--card); border: 1px solid var(--card-line); border-left: 3px solid var(--sage);
+    border-radius: 10px; padding: 10px 12px; font-size: 13px; line-height: 1.55;
+  }
+  .vocab-flip { cursor: pointer; margin: 6px 0; user-select: none; }
+  .vocab-word { font-weight: 800; font-size: 15px; color: var(--gold); }
+  .vocab-hint-tap { font-size: 10.5px; color: var(--chalk-dim); font-weight: 600; margin-left: 6px; }
+  .vocab-meaning { margin-top: 4px; }
+  .vocab-example { margin-top: 4px; font-style: italic; color: var(--chalk-dim); font-size: 12px; }
+  .vocab-src-tag { font-size: 9.5px; font-weight: 800; padding: 1px 6px; border-radius: 5px; background: var(--sage-soft, rgba(90,140,110,.15)); color: var(--sage); }
+
+  .primer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-top: 4px; }
+  .primer-chip { background: var(--card); border: 1px solid var(--card-line); border-radius: 10px; padding: 9px 10px; display: flex; flex-direction: column; gap: 4px; }
+  .primer-word { font-weight: 800; font-size: 13.5px; color: var(--gold); }
+  .primer-meaning { font-size: 12px; }
+  .primer-example { font-size: 11px; color: var(--chalk-dim); font-style: italic; }
+  .primer-chip .mini-btn { align-self: flex-start; margin-top: 2px; }
   .mistake-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--chalk-dim); margin-bottom: 5px; }
   .mistake-select-label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
   .mistake-progress { font-size: 10.5px; color: var(--sage); margin-top: 6px; font-weight: 700; }
@@ -231,7 +248,18 @@
   .chat-name {
     font-size: 10.5px; font-weight: 800; color: var(--chalk-dim);
     text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; padding-left: 2px;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
   }
+  .btn-replay {
+    background: transparent; border: 1px solid var(--card-line); color: var(--chalk-dim);
+    width: 24px; height: 24px; border-radius: 7px; cursor: pointer; font-size: 12px;
+    display: flex; align-items: center; justify-content: center; flex: none;
+    text-transform: none; letter-spacing: 0; transition: border-color .15s, color .15s, transform .1s;
+  }
+  .btn-replay:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+  .btn-replay:active:not(:disabled) { transform: scale(0.92); }
+  .btn-replay:disabled { opacity: .35; cursor: not-allowed; }
+  .btn-replay.playing { border-color: var(--gold); color: var(--gold); animation: pulse-dot 1s infinite ease-in-out; }
   .chat-bubble {
     background: var(--card);
     border: 1px solid var(--card-line);
@@ -386,6 +414,10 @@
           <button class="icon-btn" id="btnOpenMistakes" title="Sổ tay lỗi sai hay gặp">📕</button>
           <span class="count-badge" id="mistakeCount">0</span>
         </div>
+        <div class="icon-btn-wrap">
+          <button class="icon-btn" id="btnOpenVocab" title="Sổ tay từ vựng">📗</button>
+          <span class="count-badge" id="vocabCount">0</span>
+        </div>
         <button class="icon-btn" id="btnOpenDashboard" title="Thống kê tiến độ">📊</button>
         <button class="icon-btn" id="btnExportReport" title="Xuất báo cáo PDF">🖨</button>
         <button class="icon-btn" id="btnClearAll" title="Xóa toàn bộ lịch sử">🗑</button>
@@ -437,14 +469,20 @@
       <div class="chat-bubble-row">
         <div class="chat-avatar you-avatar">🗣️</div>
         <div class="chat-bubble-wrap">
-          <div class="chat-name">Bạn vừa nói</div>
+          <div class="chat-name">
+            <span>Bạn vừa nói</span>
+            <button type="button" class="btn-replay" id="btnReplayUser" title="Nghe lại câu bạn vừa nói" disabled>🔊</button>
+          </div>
           <div id="sttOutput" class="chat-bubble you">Chưa có dữ liệu...</div>
         </div>
       </div>
       <div class="chat-bubble-row">
         <div class="chat-avatar teacher-avatar">👩‍🏫</div>
         <div class="chat-bubble-wrap">
-          <div class="chat-name">Giáo viên nhận xét &amp; hướng dẫn</div>
+          <div class="chat-name">
+            <span>Giáo viên nhận xét &amp; hướng dẫn</span>
+            <button type="button" class="btn-replay" id="btnReplayTeacher" title="Nghe lại giọng cô giáo" disabled>🔊</button>
+          </div>
           <div id="geminiOutput" class="chat-bubble teacher">Sẵn sàng học... Hãy bấm kết nối!</div>
         </div>
       </div>
@@ -512,6 +550,21 @@
           </div>
           <input type="text" id="customScenarioInput" style="display:none;" placeholder="VD: Phỏng vấn xin visa du học, khiếu nại dịch vụ khách sạn...">
         </div>
+
+        <div class="sub-step" id="vocabPrimerField">
+          <div class="sub-step-label"><span class="sub-step-tag">TỪ VỰNG</span> Gợi ý học trước khi luyện nói <span class="step-optional">(tùy chọn)</span></div>
+          <div id="vocabPrimerIdle">
+            <button type="button" class="mini-btn primary" id="btnLoadVocabPrimer">📚 Gợi ý 7 từ cho chủ đề/tình huống này</button>
+          </div>
+          <div id="vocabPrimerLoading" style="display:none;font-size:12.5px;color:var(--chalk-dim);">⏳ Đang tạo gợi ý từ vựng...</div>
+          <div id="vocabPrimerResult" style="display:none;">
+            <div class="primer-grid" id="vocabPrimerGrid"></div>
+            <div class="lesson-actions" style="margin-top:8px;">
+              <button type="button" class="mini-btn" id="btnRerollVocabPrimer">🔀 Gợi ý khác</button>
+              <button type="button" class="mini-btn primary" id="btnSaveAllVocabPrimer">➕ Lưu tất cả vào sổ tay</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="setup-divider"></div>
@@ -573,6 +626,36 @@
     </div>
     <div class="modal-transcript" id="mistakeList"></div>
     <button class="mini-btn danger" id="btnClearMistakes" style="align-self:flex-end;">🗑 Xóa toàn bộ sổ tay</button>
+  </div>
+</div>
+
+<!-- MODAL SỔ TAY TỪ VỰNG -->
+<div class="modal-overlay" id="vocabModalOverlay">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div>
+        <h3>📗 Sổ tay từ vựng</h3>
+        <p>Từ được tự động ghi lại khi cô giáo dạy từ mới lúc luyện nói, hoặc bạn lưu từ mục "Từ vựng gợi ý" trước khi học. Bấm vào từ để lật xem nghĩa &amp; ví dụ.</p>
+      </div>
+      <button class="icon-btn" id="btnCloseVocabModal">✕</button>
+    </div>
+    <select id="vocabTopicFilter">
+      <option value="">Tất cả chủ đề</option>
+      <option value="Giao tiếp hằng ngày">Giao tiếp hằng ngày</option>
+      <option value="Nhà hàng & Ẩm thực">Nhà hàng &amp; Ẩm thực</option>
+      <option value="Du lịch & Sân bay">Du lịch &amp; Sân bay</option>
+      <option value="Công sở & Phỏng vấn">Công sở &amp; Phỏng vấn</option>
+      <option value="Mua sắm">Mua sắm</option>
+      <option value="Trường học">Trường học</option>
+      <option value="Sức khỏe & Bác sĩ">Sức khỏe &amp; Bác sĩ</option>
+      <option value="Tự do">Tự do</option>
+    </select>
+    <div class="mistake-toolbar">
+      <label class="select-all-wrap"><input type="checkbox" id="vocabSelectAll"> Chọn tất cả</label>
+      <button class="mini-btn danger" id="btnDeleteSelectedVocab">🗑 Xóa đã chọn (<span id="vocabSelCount">0</span>)</button>
+    </div>
+    <div class="modal-transcript" id="vocabList"></div>
+    <button class="mini-btn danger" id="btnClearVocab" style="align-self:flex-end;">🗑 Xóa toàn bộ sổ tay</button>
   </div>
 </div>
 
@@ -810,6 +893,8 @@ const btnConnect = document.getElementById('btnConnect');
 const btnDisconnect = document.getElementById('btnDisconnect');
 const sttOutput = document.getElementById('sttOutput');
 const geminiOutput = document.getElementById('geminiOutput');
+const btnReplayUser = document.getElementById('btnReplayUser');
+const btnReplayTeacher = document.getElementById('btnReplayTeacher');
 const statusBadge = document.getElementById('statusBadge');
 const sessionMeta = document.getElementById('sessionMeta');
 const canvas = document.getElementById('avatarCanvas');
@@ -838,6 +923,20 @@ const mistakeListEl = document.getElementById('mistakeList');
 const btnCloseMistakeModal = document.getElementById('btnCloseMistakeModal');
 const btnClearMistakes = document.getElementById('btnClearMistakes');
 const mistakeCategoryFilterEl = document.getElementById('mistakeCategoryFilter');
+const btnOpenVocab = document.getElementById('btnOpenVocab');
+const vocabCountEl = document.getElementById('vocabCount');
+const vocabModalOverlay = document.getElementById('vocabModalOverlay');
+const vocabListEl = document.getElementById('vocabList');
+const btnCloseVocabModal = document.getElementById('btnCloseVocabModal');
+const btnClearVocab = document.getElementById('btnClearVocab');
+const vocabTopicFilterEl = document.getElementById('vocabTopicFilter');
+const vocabPrimerIdle = document.getElementById('vocabPrimerIdle');
+const vocabPrimerLoading = document.getElementById('vocabPrimerLoading');
+const vocabPrimerResult = document.getElementById('vocabPrimerResult');
+const vocabPrimerGrid = document.getElementById('vocabPrimerGrid');
+const btnLoadVocabPrimer = document.getElementById('btnLoadVocabPrimer');
+const btnRerollVocabPrimer = document.getElementById('btnRerollVocabPrimer');
+const btnSaveAllVocabPrimer = document.getElementById('btnSaveAllVocabPrimer');
 const reminderBanner = document.getElementById('reminderBanner');
 const reminderText = document.getElementById('reminderText');
 const btnReminderPractice = document.getElementById('btnReminderPractice');
@@ -1141,6 +1240,300 @@ btnClearMistakes.onclick = () => {
     renderMistakeList();
   }
 };
+
+// ===== Sổ tay từ vựng (tự động ghi trong lúc luyện nói + lưu từ gợi ý trước bài học) =====
+const VOCAB_KEY = 'ai_coach_vocab_v1';
+let vocabItems = loadVocab();
+let vocabTopicFilterValue = '';
+
+function loadVocab() {
+  try { return JSON.parse(localStorage.getItem(VOCAB_KEY)) || []; } catch { return []; }
+}
+function saveVocab() {
+  try { localStorage.setItem(VOCAB_KEY, JSON.stringify(vocabItems)); } catch {}
+}
+function updateVocabBadge() {
+  if (vocabItems.length > 0) {
+    vocabCountEl.style.display = 'flex';
+    vocabCountEl.textContent = vocabItems.length > 99 ? '99+' : String(vocabItems.length);
+  } else {
+    vocabCountEl.style.display = 'none';
+  }
+}
+// Thêm 1 từ vào sổ tay, tự bỏ qua nếu từ đó (cùng ngôn ngữ) đã có sẵn — trả về true nếu thêm thành công
+function addVocabItem({ word, meaning, example, lang, langLabel, topicLabel, lessonId, source }) {
+  if (!word || !word.trim()) return false;
+  const w = word.trim();
+  const exists = vocabItems.some(v => v.lang === lang && v.word.toLowerCase() === w.toLowerCase());
+  if (exists) return false;
+  vocabItems.unshift({
+    id: 'V' + Date.now() + Math.random().toString(36).slice(2, 6),
+    lessonId: lessonId || null,
+    lang, langLabel: langLabel || lang, topicLabel: topicLabel || '',
+    word: w, meaning: (meaning || '').trim(), example: (example || '').trim(),
+    ts: Date.now(), source: source || 'auto'
+  });
+  saveVocab();
+  updateVocabBadge();
+  if (vocabModalOverlay.classList.contains('show')) renderVocabList();
+  return true;
+}
+
+// Gọi model text riêng để xem giáo viên vừa dạy từ/cụm từ mới đáng ghi nhớ nào không, để tự lưu vào sổ tay
+async function classifyVocab(lessonId, userText, teacherText) {
+  if (!aiClient || !teacherText.trim()) return;
+  try {
+    const prompt = `Bạn là trợ lý học từ vựng ngoại ngữ.
+Học viên vừa nói: "${(userText || '').trim() || '(không có bản ghi giọng nói)'}"
+Giáo viên AI phản hồi: "${teacherText.trim()}"
+
+Xác định giáo viên có vừa DẠY hoặc GIỚI THIỆU một TỪ hay CỤM TỪ mới, hữu ích, đáng ghi nhớ hay không (ví dụ: giới thiệu từ mới, giải thích nghĩa một từ, gợi ý cách diễn đạt tự nhiên hơn).
+Không tính: lời chào, khen ngợi chung chung, hoặc chỉ sửa lỗi phát âm/ngữ pháp đơn thuần mà không có từ mới. Nếu có (tối đa 2 từ), liệt kê từng từ kèm nghĩa tiếng Việt ngắn gọn và 1 câu ví dụ ngắn bằng đúng ngôn ngữ đang học. Nếu không có, trả về danh sách rỗng.`;
+
+    const response = await aiClient.models.generateContent({
+      model: 'gemini-3.1-flash-lite',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'OBJECT',
+          properties: {
+            items: {
+              type: 'ARRAY',
+              items: {
+                type: 'OBJECT',
+                properties: {
+                  word: { type: 'STRING' },
+                  meaning: { type: 'STRING' },
+                  example: { type: 'STRING' }
+                },
+                required: ['word', 'meaning']
+              }
+            }
+          },
+          required: ['items']
+        }
+      }
+    });
+    const result = JSON.parse(response.text);
+    const lesson = getLesson(lessonId);
+    let addedCount = 0;
+    (result.items || []).forEach(it => {
+      const added = addVocabItem({
+        word: it.word, meaning: it.meaning, example: it.example,
+        lang: lesson?.lang || '', langLabel: lesson?.langLabel || lesson?.lang || '',
+        topicLabel: lesson?.topicLabel || '', lessonId, source: 'auto'
+      });
+      if (added) addedCount++;
+    });
+    if (addedCount > 0) showToast(`📗 +${addedCount} từ vựng mới trong sổ tay`);
+  } catch (err) {
+    console.warn('Không thể trích từ vựng:', err);
+  }
+}
+
+function renderVocabList() {
+  vocabListEl.innerHTML = '';
+  document.getElementById('vocabSelectAll').checked = false;
+  updateVocabSelCount();
+  const filtered = vocabTopicFilterValue ? vocabItems.filter(v => v.topicLabel === vocabTopicFilterValue) : vocabItems;
+  if (vocabItems.length === 0) {
+    vocabListEl.innerHTML = '<div class="empty-hint">Chưa có từ vựng nào.<br>Từ sẽ tự động được ghi lại khi cô giáo dạy từ mới trong lúc luyện nói, hoặc bạn lưu từ mục "Từ vựng gợi ý" trước khi học.</div>';
+    return;
+  }
+  if (filtered.length === 0) {
+    vocabListEl.innerHTML = '<div class="empty-hint">Không có từ nào thuộc chủ đề này.</div>';
+    return;
+  }
+  const sorted = [...filtered].sort((a, b) => b.ts - a.ts);
+  sorted.forEach(v => {
+    const item = document.createElement('div');
+    item.className = 'vocab-item';
+    const srcTag = v.source === 'primer' ? '<span class="vocab-src-tag">GỢI Ý</span>' : '<span class="vocab-src-tag">TỰ ĐỘNG</span>';
+    item.innerHTML = `
+      <div class="mistake-meta">
+        <label class="mistake-select-label">
+          <input type="checkbox" class="vocab-select" data-vid="${v.id}">
+          <span>${srcTag} ${v.topicLabel || 'Chủ đề'} · ${v.langLabel || v.lang || ''}</span>
+        </label>
+        <span>${fmtTime(v.ts)}</span>
+      </div>
+      <div class="vocab-flip" data-vid="${v.id}">
+        <div class="vocab-word">${escapeHtml(v.word)}<span class="vocab-hint-tap"> (bấm để xem nghĩa)</span></div>
+        <div class="vocab-reveal" style="display:none;">
+          <div class="vocab-meaning">${escapeHtml(v.meaning || '')}</div>
+          ${v.example ? `<div class="vocab-example">🎬 ${escapeHtml(v.example)}</div>` : ''}
+        </div>
+      </div>
+      <div class="lesson-actions">
+        <button class="mini-btn danger" data-vid-del="${v.id}">🗑 Xóa</button>
+      </div>`;
+    vocabListEl.appendChild(item);
+  });
+}
+function updateVocabSelCount() {
+  const n = vocabListEl.querySelectorAll('.vocab-select:checked').length;
+  document.getElementById('vocabSelCount').textContent = n;
+}
+vocabListEl.addEventListener('change', (e) => {
+  if (e.target.classList.contains('vocab-select')) updateVocabSelCount();
+});
+vocabListEl.addEventListener('click', (e) => {
+  if (e.target.closest('button')) {
+    const delBtn = e.target.closest('button[data-vid-del]');
+    if (delBtn) {
+      vocabItems = vocabItems.filter(v => v.id !== delBtn.dataset.vidDel);
+      saveVocab(); updateVocabBadge(); renderVocabList();
+    }
+    return;
+  }
+  const flip = e.target.closest('.vocab-flip');
+  if (flip) {
+    const reveal = flip.querySelector('.vocab-reveal');
+    reveal.style.display = reveal.style.display === 'none' ? 'block' : 'none';
+  }
+});
+document.getElementById('vocabSelectAll').onchange = (e) => {
+  vocabListEl.querySelectorAll('.vocab-select').forEach(cb => cb.checked = e.target.checked);
+  updateVocabSelCount();
+};
+document.getElementById('btnDeleteSelectedVocab').onclick = () => {
+  const ids = [...vocabListEl.querySelectorAll('.vocab-select:checked')].map(cb => cb.dataset.vid);
+  if (!ids.length) { showToast('⚠️ Chưa chọn từ nào', true); return; }
+  vocabItems = vocabItems.filter(v => !ids.includes(v.id));
+  saveVocab(); updateVocabBadge(); renderVocabList();
+  showToast(`🗑 Đã xóa ${ids.length} từ`);
+};
+vocabTopicFilterEl.onchange = () => { vocabTopicFilterValue = vocabTopicFilterEl.value; renderVocabList(); };
+btnOpenVocab.onclick = () => { renderVocabList(); vocabModalOverlay.classList.add('show'); closeSidebarMobile(); };
+btnCloseVocabModal.onclick = () => vocabModalOverlay.classList.remove('show');
+vocabModalOverlay.addEventListener('click', (e) => { if (e.target === vocabModalOverlay) vocabModalOverlay.classList.remove('show'); });
+btnClearVocab.onclick = () => {
+  if (vocabItems.length === 0) return;
+  if (confirm('Xóa toàn bộ sổ tay từ vựng? Không thể hoàn tác.')) {
+    vocabItems = [];
+    saveVocab();
+    updateVocabBadge();
+    renderVocabList();
+  }
+};
+
+// ----- Gợi ý từ vựng trước khi luyện nói (mục 2) -----
+let adHocAiClient = null;
+function getAdHocClient() {
+  const key = apiKeyInput.value.trim();
+  if (!key) return null;
+  if (!adHocAiClient || adHocAiClient.__key !== key) {
+    adHocAiClient = new GoogleGenAI({ apiKey: key });
+    adHocAiClient.__key = key;
+  }
+  return adHocAiClient;
+}
+let currentPrimerWords = [];
+
+async function loadVocabPrimer() {
+  const client = getAdHocClient();
+  if (!client) { showToast('⚠️ Hãy nhập Gemini API Key ở mục 1 trước', true); return; }
+  const topicObj = TOPICS[topicSelect.value];
+  const lang = langSelect.value;
+  const scenarioText = scenarioMode === 'custom' ? customScenarioInput.value.trim() : currentPreviewScenario;
+
+  vocabPrimerIdle.style.display = 'none';
+  vocabPrimerResult.style.display = 'none';
+  vocabPrimerLoading.style.display = 'block';
+
+  try {
+    const prompt = `Bạn là trợ lý dạy từ vựng ngoại ngữ. Học viên sắp luyện nói ${lang} theo chủ đề "${topicObj?.label || ''}"${scenarioText ? ` với tình huống cụ thể: "${scenarioText}"` : ''}.
+Gợi ý 7 từ hoặc cụm từ ${lang} hữu ích, thông dụng nhất cho đúng chủ đề/tình huống này, xếp từ dễ đến khó. Với mỗi từ, cho nghĩa tiếng Việt ngắn gọn và 1 câu ví dụ ngắn bằng ${lang}.`;
+    const response = await client.models.generateContent({
+      model: 'gemini-3.1-flash-lite',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'OBJECT',
+          properties: {
+            items: {
+              type: 'ARRAY',
+              items: {
+                type: 'OBJECT',
+                properties: {
+                  word: { type: 'STRING' },
+                  meaning: { type: 'STRING' },
+                  example: { type: 'STRING' }
+                },
+                required: ['word', 'meaning']
+              }
+            }
+          },
+          required: ['items']
+        }
+      }
+    });
+    const result = JSON.parse(response.text);
+    currentPrimerWords = (result.items || []).filter(it => it.word && it.word.trim());
+    if (!currentPrimerWords.length) throw new Error('empty');
+    renderVocabPrimerGrid();
+  } catch (err) {
+    console.warn('Không thể tạo gợi ý từ vựng:', err);
+    showToast('⚠️ Không tạo được gợi ý từ vựng, thử lại sau', true);
+    vocabPrimerIdle.style.display = 'block';
+  } finally {
+    vocabPrimerLoading.style.display = 'none';
+  }
+}
+
+function renderVocabPrimerGrid() {
+  vocabPrimerGrid.innerHTML = currentPrimerWords.map((it, idx) => `
+    <div class="primer-chip">
+      <div class="primer-word">${escapeHtml(it.word)}</div>
+      <div class="primer-meaning">${escapeHtml(it.meaning || '')}</div>
+      ${it.example ? `<div class="primer-example">🎬 ${escapeHtml(it.example)}</div>` : ''}
+      <button type="button" class="mini-btn primary" data-primer-save="${idx}">➕ Lưu</button>
+    </div>`).join('');
+  vocabPrimerResult.style.display = 'block';
+}
+
+vocabPrimerGrid.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-primer-save]');
+  if (!btn) return;
+  const idx = Number(btn.dataset.primerSave);
+  const it = currentPrimerWords[idx];
+  if (!it) return;
+  const topicObj = TOPICS[topicSelect.value];
+  const added = addVocabItem({
+    word: it.word, meaning: it.meaning, example: it.example,
+    lang: langSelect.value, langLabel: langSelect.selectedOptions[0]?.textContent.trim(),
+    topicLabel: topicObj?.label || '', source: 'primer'
+  });
+  if (added) {
+    showToast(`📗 Đã lưu "${it.word}" vào sổ tay`);
+    btn.textContent = '✅ Đã lưu'; btn.disabled = true;
+  } else {
+    showToast('Từ này đã có trong sổ tay rồi', true);
+  }
+});
+btnSaveAllVocabPrimer.onclick = () => {
+  const topicObj = TOPICS[topicSelect.value];
+  let added = 0;
+  currentPrimerWords.forEach(it => {
+    if (addVocabItem({
+      word: it.word, meaning: it.meaning, example: it.example,
+      lang: langSelect.value, langLabel: langSelect.selectedOptions[0]?.textContent.trim(),
+      topicLabel: topicObj?.label || '', source: 'primer'
+    })) added++;
+  });
+  showToast(added ? `📗 Đã lưu ${added} từ vào sổ tay` : 'Các từ này đã có trong sổ tay rồi', !added);
+  vocabPrimerGrid.querySelectorAll('button[data-primer-save]').forEach(b => { b.textContent = '✅ Đã lưu'; b.disabled = true; });
+};
+btnLoadVocabPrimer.onclick = loadVocabPrimer;
+btnRerollVocabPrimer.onclick = loadVocabPrimer;
+// Đổi chủ đề thì gợi ý từ vựng cũ không còn phù hợp -> reset lại khối gợi ý
+topicSelect.addEventListener('change', () => {
+  currentPrimerWords = [];
+  vocabPrimerResult.style.display = 'none';
+  vocabPrimerIdle.style.display = 'block';
+});
 
 function fmtTime(ts) {
   return new Date(ts).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -1447,6 +1840,13 @@ let session = null, aiClient = null, micStream = null, audioContext = null, micS
 let playbackContext = null, analyser = null, animFrameId = null;
 let nextPlayTime = 0, isAiSpeaking = false, userBuffer = "", aiBuffer = "";
 
+// Đệm âm thanh của lượt hội thoại hiện tại, để bấm 🔊 nghe lại đúng câu vừa nói/vừa nghe
+let userAudioChunks = [];       // các đoạn PCM16 micro ghi được trong lượt hiện tại
+let userAudioSampleRate = 16000;
+let teacherAudioChunks = [];    // các đoạn PCM16 24kHz giọng cô giáo trong lượt hiện tại
+let lastUserAudioRec = null;    // { samples: Int16Array, sampleRate } của lượt gần nhất — dùng để 🔊 nghe lại
+let lastTeacherAudioRec = null;
+
 const anim = { mouthCurrent: 0, mouthTarget: 0, blinking: false, blinkStart: 0, blinkTimer: 2, eyeOpen: 1, lastTime: performance.now() };
 
 function drawBow(x, y, color) {
@@ -1591,6 +1991,78 @@ function base64ToBytes(base64){
   return bytes;
 }
 
+// Nối nhiều đoạn Int16Array lại thành một mảng liền mạch (dùng cho phần nghe lại)
+function concatInt16(chunks) {
+  let total = 0;
+  chunks.forEach(c => total += c.length);
+  const out = new Int16Array(total);
+  let offset = 0;
+  chunks.forEach(c => { out.set(c, offset); offset += c.length; });
+  return out;
+}
+// Cắt bỏ khoảng lặng ở đầu/cuối bản ghi (mic vẫn thu liên tục kể cả lúc chưa nói/ngừng suy nghĩ giữa chừng,
+// nên nếu không cắt thì bản nghe lại sẽ bị dư ra rất dài so với câu thực sự nói).
+function trimSilence(int16, sampleRate, thresholdRatio = 0.025, padMs = 150) {
+  if (!int16.length) return int16;
+  const windowSize = Math.max(1, Math.floor(sampleRate * 0.02)); // cửa sổ ~20ms
+  const rmsList = [];
+  let maxRms = 0;
+  for (let i = 0; i < int16.length; i += windowSize) {
+    let sum = 0, count = 0;
+    for (let j = i; j < Math.min(i + windowSize, int16.length); j++) { sum += int16[j] * int16[j]; count++; }
+    const rms = Math.sqrt(sum / count);
+    rmsList.push(rms);
+    if (rms > maxRms) maxRms = rms;
+  }
+  if (maxRms === 0) return int16; // toàn im lặng, không cắt được gì thì giữ nguyên
+  const threshold = maxRms * thresholdRatio;
+  const startWin = rmsList.findIndex(r => r > threshold);
+  let endWin = -1;
+  for (let i = rmsList.length - 1; i >= 0; i--) { if (rmsList[i] > threshold) { endWin = i; break; } }
+  if (startWin === -1 || endWin === -1) return int16;
+  const padSamples = Math.floor(sampleRate * padMs / 1000);
+  const startSample = Math.max(0, startWin * windowSize - padSamples);
+  const endSample = Math.min(int16.length, (endWin + 1) * windowSize + padSamples);
+  return int16.slice(startSample, endSample);
+}
+function int16ArrayToAudioBuffer(int16, sampleRate, ctxForBuffer) {
+  const buffer = ctxForBuffer.createBuffer(1, Math.max(1, int16.length), sampleRate);
+  const channel = buffer.getChannelData(0);
+  for (let i = 0; i < int16.length; i++) channel[i] = int16[i] / 32768;
+  return buffer;
+}
+// Chốt lại audio của lượt vừa xong (khi turnComplete) để nút 🔊 có gì để phát lại
+function finalizeTurnAudio() {
+  if (userAudioChunks.length) {
+    const merged = concatInt16(userAudioChunks);
+    lastUserAudioRec = { samples: trimSilence(merged, userAudioSampleRate), sampleRate: userAudioSampleRate };
+    userAudioChunks = [];
+    btnReplayUser.disabled = false;
+  }
+  if (teacherAudioChunks.length) {
+    const merged = concatInt16(teacherAudioChunks);
+    lastTeacherAudioRec = { samples: trimSilence(merged, 24000), sampleRate: 24000 };
+    teacherAudioChunks = [];
+    btnReplayTeacher.disabled = false;
+  }
+}
+// Phát lại một bản ghi đã chốt (giọng bạn hoặc giọng cô giáo)
+function replayRecording(rec, btn) {
+  if (!rec || !rec.samples || !rec.samples.length) { showToast('⚠️ Chưa có bản ghi để nghe lại', true); return; }
+  initPlaybackAudio();
+  const buffer = int16ArrayToAudioBuffer(rec.samples, rec.sampleRate, playbackContext);
+  const source = playbackContext.createBufferSource();
+  source.buffer = buffer;
+  source.connect(playbackContext.destination);
+  if (btn) {
+    btn.classList.add('playing');
+    source.onended = () => btn.classList.remove('playing');
+  }
+  source.start();
+}
+btnReplayUser.onclick = () => replayRecording(lastUserAudioRec, btnReplayUser);
+btnReplayTeacher.onclick = () => replayRecording(lastTeacherAudioRec, btnReplayTeacher);
+
 function initPlaybackAudio() {
   if (!playbackContext) {
     playbackContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -1607,6 +2079,7 @@ function playPCM24k(base64){
   geminiOutput.classList.add('speaking');
   const bytes = base64ToBytes(base64);
   const samples = new Int16Array(bytes.buffer, bytes.byteOffset, Math.floor(bytes.byteLength / 2));
+  teacherAudioChunks.push(samples); // đệm lại để lát nữa bấm 🔊 nghe lại được đúng câu cô giáo vừa nói
   const buffer = playbackContext.createBuffer(1, samples.length, 24000);
   const channel = buffer.getChannelData(0);
   for(let i = 0; i < samples.length; i++){ channel[i] = samples[i] / 32768; }
@@ -1638,6 +2111,8 @@ async function startMicrophone(){
     if (!session || isAiSpeaking) return;
     const pcm = floatTo16BitPCM(e.inputBuffer.getChannelData(0));
     session.sendRealtimeInput({ audio: { data: bytesToBase64(pcm), mimeType: `audio/pcm;rate=${audioContext.sampleRate}` } });
+    userAudioChunks.push(new Int16Array(pcm.buffer)); // đệm lại để lát nữa bấm 🔊 nghe lại đúng câu bạn vừa nói
+    userAudioSampleRate = audioContext.sampleRate;
   };
   micSource.connect(processor); processor.connect(audioContext.destination);
 }
@@ -1658,6 +2133,8 @@ async function startLiveSession() {
     statusBadge.className = "status-badge status-offline";
     btnConnect.disabled = true;
     userBuffer = ""; aiBuffer = ""; sttOutput.textContent = "";
+    userAudioChunks = []; teacherAudioChunks = []; lastUserAudioRec = null; lastTeacherAudioRec = null;
+    btnReplayUser.disabled = true; btnReplayTeacher.disabled = true;
 
     const selectedLang = langSelect.value;
     const selectedLangLabel = langSelect.selectedOptions[0].textContent.trim();
@@ -1759,7 +2236,9 @@ async function startLiveSession() {
               renderLessonList();
               showToast('💾 Đã lưu tiến trình bài học');
               if (finishedTeacherText.trim()) classifyMistake(currentLessonId, finishedUserText, finishedTeacherText);
+              if (finishedTeacherText.trim()) classifyVocab(currentLessonId, finishedUserText, finishedTeacherText);
             }
+            finalizeTurnAudio();
             isAiSpeaking = false; userBuffer = ""; aiBuffer = "";
           }
         },
@@ -1791,6 +2270,8 @@ async function startMistakePractice(mistakeList) {
     statusBadge.className = "status-badge status-offline";
     btnConnect.disabled = true;
     userBuffer = ""; aiBuffer = ""; sttOutput.textContent = "";
+    userAudioChunks = []; teacherAudioChunks = []; lastUserAudioRec = null; lastTeacherAudioRec = null;
+    btnReplayUser.disabled = true; btnReplayTeacher.disabled = true;
 
     // Chọn ngôn ngữ đại diện: ưu tiên ngôn ngữ xuất hiện nhiều nhất trong nhóm lỗi được chọn
     const langCount = {};
@@ -1858,6 +2339,7 @@ Nhiệm vụ:
               renderLessonList();
               showToast('💾 Đã lưu tiến trình ôn tập');
             }
+            finalizeTurnAudio();
             isAiSpeaking = false; userBuffer = ""; aiBuffer = "";
           }
         },
@@ -1922,6 +2404,7 @@ btnDisconnect.onclick = () => stopSession(true);
 
 renderLessonList();
 updateMistakeBadge();
+updateVocabBadge();
 updateLipSync();
 updateScenarioPreview();
 updatePersonaOptions(topicSelect.value);
