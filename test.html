@@ -445,14 +445,15 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
    Tuyệt đối không dùng lại btnChopInterrupt trong khu bài người chơi vì sẽ làm nút
    "treo" ở dưới tay bài khi state vừa đổi. */
 .test-instant-chop-overlay{
-  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:95;
-  min-width:210px;min-height:58px;padding:10px 22px;border-radius:14px;
-  font-size:18px;font-weight:1000;letter-spacing:.5px;cursor:pointer;
-  border:2px solid #ffe600 !important;color:#ffe600 !important;
-  background:rgba(18,12,0,.96);
-  box-shadow:0 0 24px rgba(255,230,0,.55),0 0 60px rgba(255,180,0,.20);
-  animation:testChopPulse 1s ease-in-out infinite alternate;
+  position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);z-index:500;
+  min-width:min(310px,88%);min-height:76px;padding:12px 20px;border-radius:16px;
+  font-size:19px;font-weight:1000;letter-spacing:.5px;cursor:pointer;
+  border:3px solid #ffe600 !important;color:#ffe600 !important;
+  background:rgba(18,12,0,.98);
+  box-shadow:0 0 28px rgba(255,230,0,.75),0 0 70px rgba(255,180,0,.30);
+  animation:none;
   pointer-events:auto !important;touch-action:manipulation;user-select:none;
+  text-align:center;
 }
 .test-instant-chop-overlay.hidden{display:none !important;}
 @keyframes testChopPulse{from{transform:translate(-50%,-50%) scale(1)}to{transform:translate(-50%,-50%) scale(1.06)}}
@@ -1158,6 +1159,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
       <select class="sel" id="gameModeSelect">
         <option value="WATER" selected>[I] CHẾ ĐỘ ĐÁNH NƯỚC (Nhất +2, Nhì +1, Ba -1, Bét -2)</option>
         <option value="POINTS">[II] CHẾ ĐỘ TÍNH ĐIỂM (Nhất 3, Nhì 2, Ba 1, Bét 0 • Tới Trắng +3)</option>
+        <option value="CHATCHEM">[II] CHẾ ĐỘ CHẶT CHÉM (như Tính Điểm • mỗi người được chia sẵn 1 Bom: 3-5 Đôi Thông hoặc Tứ Quý)</option>
         <option value="NHATANCA">[III] CHẾ ĐỘ NHẤT ĂN CẢ (Về Nhất là hết ván • chỉ Nhất +3 + Thối từ 3 nhà kia)</option>
         <option value="KNEEL_A">[II] CHẾ ĐỘ QUỲ - Option A (Quỳ Chốt Ván)</option>
         <option value="KNEEL_B">[II] CHẾ ĐỘ QUỲ - Option B (Quỳ Tích Lũy)</option>
@@ -2021,6 +2023,94 @@ function shuffle(arr){
 
 function cardKey(c){return c.r+'-'+c.s;}
 
+/* ---------- CHẾ ĐỘ CHẶT CHÉM: chia bài sao cho MỖI người đều có sẵn ít nhất 1 "Bom"
+   (3 Đôi Thông, 4 Đôi Thông, 5 Đôi Thông, hoặc Tứ Quý) ngay từ đầu ván, để cả bàn
+   có vũ khí chọi/chặt nhau ngay từ lượt đầu. Vẫn dùng đúng 1 bộ 52 lá tiêu chuẩn,
+   không bịa thêm lá — chỉ CHỌN LỌC cách chia để đảm bảo mỗi người trúng 1 Bom.
+   Rank 0..11 = 3..A (dùng cho Đôi Thông, không tính lá 2/rank 12). Tứ Quý cũng
+   tránh rank 12 (Tứ Quý Heo) để không đụng luật Tới Trắng/Lục Đôi Heo hiện có. */
+function chatChemPickBombType(){
+  // Trọng số: ưu tiên bom nhỏ (dễ chia hơn), nhưng vẫn có cơ hội bom to/tứ quý.
+  const roll = Math.random();
+  if(roll < 0.40) return 'run3';
+  if(roll < 0.70) return 'run4';
+  if(roll < 0.88) return 'run5';
+  return 'quad';
+}
+
+function dealChatChemHands(playerIds){
+  // rankCards[r] = các lá còn lại (chưa phát vào Bom nào) của hạng r, đã xáo trộn.
+  const rankCards = {};
+  const rankRemaining = {};
+  for(let r=0;r<=12;r++){
+    rankCards[r] = shuffle(SUITS.map((_,s)=>({r,s})));
+    rankRemaining[r] = 4;
+  }
+
+  function tryTakeRun(len){
+    const starts = [];
+    for(let s=0; s<=11-len+1; s++) starts.push(s);
+    shuffle(starts);
+    for(const s of starts){
+      let ok = true;
+      for(let i=0;i<len;i++){ if(rankRemaining[s+i] < 2){ ok = false; break; } }
+      if(ok){
+        const cards = [];
+        for(let i=0;i<len;i++){
+          const r = s+i;
+          cards.push(rankCards[r].pop(), rankCards[r].pop());
+          rankRemaining[r] -= 2;
+        }
+        return cards;
+      }
+    }
+    return null;
+  }
+
+  function tryTakeQuad(){
+    const ranks = [];
+    for(let r=0;r<=11;r++) ranks.push(r); // né rank 12 (Tứ Quý Heo) để không đụng luật Tới Trắng
+    shuffle(ranks);
+    for(const r of ranks){
+      if(rankRemaining[r] === 4){
+        const cards = rankCards[r].splice(0,4);
+        rankRemaining[r] = 0;
+        return cards;
+      }
+    }
+    return null;
+  }
+
+  const order = shuffle([...playerIds]);
+  const bombByPlayer = {};
+  order.forEach(pid => {
+    const target = chatChemPickBombType();
+    const attemptOrder = [...new Set([target,'run3','run4','run5','quad'])];
+    let cards = null;
+    for(const t of attemptOrder){
+      if(t==='run3') cards = tryTakeRun(3);
+      else if(t==='run4') cards = tryTakeRun(4);
+      else if(t==='run5') cards = tryTakeRun(5);
+      else if(t==='quad') cards = tryTakeQuad();
+      if(cards) break;
+    }
+    bombByPlayer[pid] = cards; // có thể null trong trường hợp hiếm hết chỗ chia — vẫn chia bài bình thường
+  });
+
+  let leftover = [];
+  for(let r=0;r<=12;r++) leftover = leftover.concat(rankCards[r]);
+  leftover = shuffle(leftover);
+
+  const hands = {};
+  playerIds.forEach(pid => {
+    const bomb = bombByPlayer[pid] || [];
+    const need = 13 - bomb.length;
+    const fill = leftover.splice(0, Math.max(0,need));
+    hands[pid] = sortHand([...bomb, ...fill]);
+  });
+  return hands;
+}
+
 let currentSortMode = 'RANK';
 
 function sortHand(hand, mode = currentSortMode){ 
@@ -2681,7 +2771,7 @@ function onClientMessage(msg){
       return;
     } else if(msg.t==='state'){
       applyState(msg.state);
-      if(msg.state && msg.state.isEnded && msg.state.pendingRound && (msg.state.gameMode==='POINTS'||msg.state.gameMode==='NHATANCA')) showResultOverlay(msg.state.pendingRound.results, msg.state.pendingRound.settlements||[]);
+      if(msg.state && msg.state.isEnded && msg.state.pendingRound && (msg.state.gameMode==='POINTS'||msg.state.gameMode==='NHATANCA'||msg.state.gameMode==='CHATCHEM')) showResultOverlay(msg.state.pendingRound.results, msg.state.pendingRound.settlements||[]);
     } else if(msg.t==='scoreRoundAck'){
       if(msg.ok && msg.state) applyState(msg.state);
     } else if(msg.t==='chat'){
@@ -3119,7 +3209,7 @@ function ensureMatchLedger(order){const ids=safeArray(order);const next={};ids.f
 function resetMatchLedger(){matchScores={};matchHistory=[];matchStartedAt=null;}
 function getPointsRankValue(rank){return ({1:3,2:2,3:1,4:0})[Number(rank)]??0;}
 function applyPointsRoundToMatch(results){
-  if(!gameState||(gameState.gameMode!=='POINTS'&&gameState.gameMode!=='NHATANCA')||gameState.matchScoreApplied) return;
+  if(!gameState||(gameState.gameMode!=='POINTS'&&gameState.gameMode!=='NHATANCA'&&gameState.gameMode!=='CHATCHEM')||gameState.matchScoreApplied) return;
   ensureMatchLedger(gameState.order);
   const stats={};
   safeArray(gameState.order).forEach(id=>{
@@ -3157,7 +3247,7 @@ function applyPointsRoundToMatch(results){
 }
 
 function applyPendingRoundWithoutEdit(){
-  if(!isHost || !gameState || (gameState.gameMode!=='POINTS'&&gameState.gameMode!=='NHATANCA') || !gameState.isEnded) return false;
+  if(!isHost || !gameState || (gameState.gameMode!=='POINTS'&&gameState.gameMode!=='NHATANCA'&&gameState.gameMode!=='CHATCHEM') || !gameState.isEnded) return false;
   const p=gameState.pendingRound;
   if(!p || p.scoreEditActive) return false;
 
@@ -3199,7 +3289,7 @@ function applyPendingRoundWithoutEdit(){
 }
 
 function handleScoreRoundEdit(fromId,msg){
-  if(!isHost || !gameState || (gameState.gameMode!=='POINTS'&&gameState.gameMode!=='NHATANCA') || !gameState.isEnded || !gameState.pendingRound) return;
+  if(!isHost || !gameState || (gameState.gameMode!=='POINTS'&&gameState.gameMode!=='NHATANCA'&&gameState.gameMode!=='CHATCHEM') || !gameState.isEnded || !gameState.pendingRound) return;
   const p=gameState.pendingRound;
   const next={...p.proposedScores};
   for(const id of gameState.order){ if(msg.scores && Object.prototype.hasOwnProperty.call(msg.scores,id)){ const v=Number(msg.scores[id]); if(Number.isFinite(v)) next[id]=Math.trunc(v); } }
@@ -3253,8 +3343,8 @@ function handleScoreRoundConfirm(fromId,msg){
 }
 function renderMatchSummary(st=currentState){st=st||{};const scores=st.matchScores||{};const history=safeArray(st.matchHistory);const order=safeArray(st.order);const names=st.names||{};const body=$('matchSummaryBody'),sub=$('matchSummarySub'),box=$('matchHistoryBox'),actions=$('matchSummaryActions');if(!body||!sub||!box||!actions)return;const rows=order.map(id=>{const rs=history.filter(h=>h.players&&h.players[id]);const rk={1:0,2:0,3:0,4:0};rs.forEach(h=>{const r=Number(h.players[id]?.rank);if(rk[r]!==undefined)rk[r]++;});return{id,name:names[id]||id,total:Number(scores[id]||0),rounds:rs.length,rk};}).sort((a,b)=>b.total-a.total||a.name.localeCompare(b.name,'vi'));sub.textContent = st.gameMode==='NHATANCA'
   ? `Chế độ Nhất Ăn Cả • ${history.length} ván • Về Nhất là hết ván ngay: Nhất +3 • 3 nhà còn lại 0 điểm • Nhất được đền Thối từ 3 nhà kia • Cóng/Chặt theo cấu hình.`
-  : `Chế độ Tính Điểm • ${history.length} ván • Nhất +3 • Nhì +2 • Ba +1 • Bét 0 • Tới Trắng/Giết ngộp +3 • Cóng 1 điểm/người • Thối/Chặt theo cấu hình.`;body.innerHTML=rows.map((r,i)=>{const cls=r.total>0?'match-total-plus':r.total<0?'match-total-minus':'';return `<tr><td><b>#${i+1} ${escapeHtml(r.name)}</b></td><td class="${cls}">${r.total>0?'+':''}${r.total}</td><td>${r.rounds}</td><td>${r.rk[1]}</td><td>${r.rk[2]}</td><td>${r.rk[3]}</td><td>${r.rk[4]}</td></tr>`;}).join('');box.innerHTML=history.length?`<h4 style="color:var(--gold);margin:0 0 6px;">📊 Chi tiết từng ván</h4><table><thead><tr><th>Ván</th>${order.map(id=>`<th>${escapeHtml(names[id]||id)}</th>`).join('')}</tr></thead><tbody>${history.map(h=>`<tr><td><b>${h.roundNo}</b></td>${order.map(id=>{const d=Number(h.players?.[id]?.delta||0);return `<td>${d>0?'+':''}${d}</td>`}).join('')}</tr>`).join('')}</tbody></table>`:'<div style="text-align:center;color:rgba(250,246,238,.5);padding:8px;">Chưa có ván nào được chốt điểm.</div>';actions.innerHTML='';
-if(isHost && (st.gameMode==='POINTS'||st.gameMode==='NHATANCA')){
+  : (st.gameMode==='CHATCHEM' ? `Chế độ Chặt Chém • ${history.length} ván • như Tính Điểm (Nhất +3 • Nhì +2 • Ba +1 • Bét 0) • mỗi người được chia sẵn 1 Bom (3-5 Đôi Thông/Tứ Quý) để chọi nhau.` : `Chế độ Tính Điểm • ${history.length} ván • Nhất +3 • Nhì +2 • Ba +1 • Bét 0 • Tới Trắng/Giết ngộp +3 • Cóng 1 điểm/người • Thối/Chặt theo cấu hình.`);body.innerHTML=rows.map((r,i)=>{const cls=r.total>0?'match-total-plus':r.total<0?'match-total-minus':'';return `<tr><td><b>#${i+1} ${escapeHtml(r.name)}</b></td><td class="${cls}">${r.total>0?'+':''}${r.total}</td><td>${r.rounds}</td><td>${r.rk[1]}</td><td>${r.rk[2]}</td><td>${r.rk[3]}</td><td>${r.rk[4]}</td></tr>`;}).join('');box.innerHTML=history.length?`<h4 style="color:var(--gold);margin:0 0 6px;">📊 Chi tiết từng ván</h4><table><thead><tr><th>Ván</th>${order.map(id=>`<th>${escapeHtml(names[id]||id)}</th>`).join('')}</tr></thead><tbody>${history.map(h=>`<tr><td><b>${h.roundNo}</b></td>${order.map(id=>{const d=Number(h.players?.[id]?.delta||0);return `<td>${d>0?'+':''}${d}</td>`}).join('')}</tr>`).join('')}</tbody></table>`:'<div style="text-align:center;color:rgba(250,246,238,.5);padding:8px;">Chưa có ván nào được chốt điểm.</div>';actions.innerHTML='';
+if(isHost && (st.gameMode==='POINTS'||st.gameMode==='NHATANCA'||st.gameMode==='CHATCHEM')){
   const edit=document.createElement('button');
   edit.className='btn btn-outline';
   edit.textContent='✏️ Điều chỉnh điểm';
@@ -3333,14 +3423,14 @@ function dealNewGame(){
 
   // Nếu ván trước không chỉnh điểm, chốt proposedScores vào sổ điểm
   // trước khi chia ván mới. Nếu đã bấm Điều chỉnh, bắt buộc đi qua xác nhận.
-  if(isHost && gameState && (gameState.gameMode==='POINTS'||gameState.gameMode==='NHATANCA') && gameState.pendingRound && !gameState.pendingRound.scoreEditActive){
+  if(isHost && gameState && (gameState.gameMode==='POINTS'||gameState.gameMode==='NHATANCA'||gameState.gameMode==='CHATCHEM') && gameState.pendingRound && !gameState.pendingRound.scoreEditActive){
     applyPendingRoundWithoutEdit();
   }
 
   // SỔ ĐIỂM TRẬN là nguồn duy nhất cho ván kế tiếp.
   // Host giữ matchScores; gameState.matchScores chỉ là bản đồng bộ xuống client.
   // Trước khi chia ván mới, đảm bảo ledger không bị rơi về 0.
-  if(gameState && (gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA') && gameState.matchScores){
+  if(gameState && (gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM') && gameState.matchScores){
     const persisted = {};
     safeArray(players).forEach(p=>{
       const v = Number(gameState.matchScores[p.id]);
@@ -3352,19 +3442,32 @@ function dealNewGame(){
   if(isHost && !isBotMode) publishRoomToPublic(roomCode, players[0] ? players[0].name : myName);
   consecutivePlayCount = 0;
   lastNotifiedTurnId = null;
-  const deck = shuffle(buildDeck());
-  const hands = {};
-  players.forEach((p,i) => { hands[p.id] = sortHand(deck.slice(i*13, (i+1)*13)); });
+  let hands;
+  if(roomSettings.gameMode === 'CHATCHEM'){
+    // CHẶT CHÉM: đảm bảo mỗi người có sẵn 1 Bom (3-5 Đôi Thông hoặc Tứ Quý) để chọi nhau.
+    hands = dealChatChemHands(players.map(p=>p.id));
+  } else {
+    const deck = shuffle(buildDeck());
+    hands = {};
+    players.forEach((p,i) => { hands[p.id] = sortHand(deck.slice(i*13, (i+1)*13)); });
+  }
 
   // LUẬT TỚI TRẮNG: kiểm tra ngay sau khi chia bài.
   // lastGameWinnerId === null chỉ đúng ở VÁN ĐẦU TIÊN của trận đấu.
+  // CHẾ ĐỘ CHẶT CHÉM: KHÔNG kiểm tra Tới Trắng — vì mode này CHỦ ĐỘNG chia sẵn Bom
+  // (3-5 Đôi Thông / Tứ Quý) cho MỌI người, đúng những bộ bài mà luật Tới Trắng vốn
+  // coi là "bài đặc biệt ăn ngay" (Ngũ Đôi Thông, Lục Đôi...). Nếu vẫn áp luật này,
+  // ván sẽ tự kết thúc ngay sau khi chia bài mỗi khi có ai trúng Bom 5 Đôi Thông/6 đôi,
+  // khiến KHÔNG AI kịp đánh hay CHẶT NGAY gì cả — đúng nguyên nhân "Chặt Ngay không hoạt động".
   const isFirstGame = (lastGameWinnerId === null);
   let instantWinnerId = null, instantWinInfo = null;
-  players.forEach(p => {
-    if (instantWinnerId) return;
-    const info = checkInstantWin(hands[p.id], {isFirstGame});
-    if (info) { instantWinnerId = p.id; instantWinInfo = info; }
-  });
+  if(roomSettings.gameMode !== 'CHATCHEM'){
+    players.forEach(p => {
+      if (instantWinnerId) return;
+      const info = checkInstantWin(hands[p.id], {isFirstGame});
+      if (info) { instantWinnerId = p.id; instantWinInfo = info; }
+    });
+  }
 
   if (instantWinnerId) {
     revealInstantWin(hands, instantWinnerId, instantWinInfo);
@@ -3714,7 +3817,7 @@ function calculateCongSettlement(congIdsInput){
   //   Bàn 4, 1 Cóng -> người Cóng -3; mỗi người còn lại +1.
   //   Bàn 4, 3 Cóng -> mỗi người Cóng -1; người duy nhất còn lại +3.
   // - CHẾ ĐỘ ĐÁNH NƯỚC: giữ nguyên mức Cóng hiện tại (4 Nước/người nhận).
-  const congPerReceiver = gameState && (gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA') ? 1 : 4;
+  const congPerReceiver = gameState && (gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM') ? 1 : 4;
   const debtByCong = {};
   const receiveByPlayer = {};
   let totalDebt = 0;
@@ -3835,7 +3938,7 @@ function foldColdPlayers(){
     }
   });
 
-  if(newlyCongIds.length === 0 || (gameState.gameMode !== 'WATER' && gameState.gameMode !== 'POINTS' && gameState.gameMode !== 'NHATANCA')) return;
+  if(newlyCongIds.length === 0 || (gameState.gameMode !== 'WATER' && gameState.gameMode !== 'POINTS' && gameState.gameMode !== 'NHATANCA' && gameState.gameMode !== 'CHATCHEM')) return;
 
   // Chỉ tạo snapshot một lần. Không tính lại khi endGame().
   const settlement = getOrCreateCongSettlement();
@@ -3847,7 +3950,7 @@ function foldColdPlayers(){
     const debt = Number(settlement.debtByCong[congId] || 0);
     gameState.roundLog.push({
       icon: '🧊',
-      text: `${gameState.names[congId]} bị Cóng → trừ ${debt} ${(gameState.gameMode==='POINTS'||gameState.gameMode==='NHATANCA')?'điểm':'Nước'}, đền ${settlement.congPerReceiver} ${(gameState.gameMode==='POINTS'||gameState.gameMode==='NHATANCA')?'điểm':'Nước'} cho mỗi người không Cóng.`
+      text: `${gameState.names[congId]} bị Cóng → trừ ${debt} ${(gameState.gameMode==='POINTS'||gameState.gameMode==='NHATANCA'||gameState.gameMode==='CHATCHEM')?'điểm':'Nước'}, đền ${settlement.congPerReceiver} ${(gameState.gameMode==='POINTS'||gameState.gameMode==='NHATANCA'||gameState.gameMode==='CHATCHEM')?'điểm':'Nước'} cho mỗi người không Cóng.`
     });
   });
 
@@ -3899,7 +4002,7 @@ function isSpecialStackContinuation(prevCombo, nextCombo){
 }
 
 function settleChopChain(reason='') {
-  if(!gameState || (gameState.gameMode !== 'WATER' && gameState.gameMode !== 'POINTS' && gameState.gameMode !== 'NHATANCA')) {
+  if(!gameState || (gameState.gameMode !== 'WATER' && gameState.gameMode !== 'POINTS' && gameState.gameMode !== 'NHATANCA' && gameState.gameMode !== 'CHATCHEM')) {
     if(gameState) {
       gameState.chopChainValue = 0;
       gameState.chopStackValue = 0;
@@ -3935,9 +4038,9 @@ function settleChopChain(reason='') {
     const chainDetail = history.length > 1 ? ` — ${history.length} mắt xích chặt chồng` : '';
     gameState.roundLog.push({
       icon:'💥',
-      text:`💥 CHẶT CHỒNG kết sổ: ${payerName} chịu TOÀN BỘ ${total} ${(gameState.gameMode==='POINTS'||gameState.gameMode==='NHATANCA')?'điểm':'Nước'} → ${receiverName}${chainDetail}${tag}.`
+      text:`💥 CHẶT CHỒNG kết sổ: ${payerName} chịu TOÀN BỘ ${total} ${(gameState.gameMode==='POINTS'||gameState.gameMode==='NHATANCA'||gameState.gameMode==='CHATCHEM')?'điểm':'Nước'} → ${receiverName}${chainDetail}${tag}.`
     });
-    gameState.log = `💥 CHẶT CHỒNG: ${payerName} chịu toàn bộ ${total} ${(gameState.gameMode==='POINTS'||gameState.gameMode==='NHATANCA')?'điểm':'Nước'} → ${receiverName}.`;
+    gameState.log = `💥 CHẶT CHỒNG: ${payerName} chịu toàn bộ ${total} ${(gameState.gameMode==='POINTS'||gameState.gameMode==='NHATANCA'||gameState.gameMode==='CHATCHEM')?'điểm':'Nước'} → ${receiverName}.`;
   }
 
   // Reset atomically after settlement: any later call in the same end-of-round
@@ -3951,6 +4054,16 @@ function settleChopChain(reason='') {
 }
 function hasFourPairRun(handCards){
   return findMaxPairRuns(safeArray(handCards)).some(run => run.count >= 4);
+}
+// BOM TỨ QUÝ TRONG TAY: người chơi có sẵn 1 bộ Tứ Quý (4 lá cùng hạng) cũng được quyền
+// CHẶT NGAY (không phụ thuộc cửa sổ 3 giây), giống hệt người có 4+ Đôi Thông.
+// Trước đây hasFourPairRun() CHỈ nhận diện Đôi Thông — bỏ sót Tứ Quý làm vũ khí chặt,
+// khiến người trúng Bom Tứ Quý ở Chặt Chém bấm CHẶT NGAY không có phản ứng gì.
+// Hàm này KHÔNG đụng tới hasThreePairRunOnly()/cửa sổ Chặt Ngang.
+function hasQuadInHand(handCards){
+  const counts = {};
+  safeArray(handCards).forEach(c => { counts[c.r] = (counts[c.r]||0) + 1; });
+  return Object.values(counts).some(n => n >= 4);
 }
 
 // 3 Đôi Thông vẫn dùng cửa sổ Chặt Ngang cũ.
@@ -4039,8 +4152,8 @@ function describeInstantTarget(combo){
 
 function findBestInstantChopCardsForHand(hand, curr){
   if(!curr || !isChoppableSpecialTarget(curr)) return null;
-  const runs = findMaxPairRuns(safeArray(hand)).filter(r=>r.count >= 4);
   const out=[];
+  const runs = findMaxPairRuns(safeArray(hand)).filter(r=>r.count >= 4);
   for(const run of runs){
     const cards=[];
     for(let r=run.fromR; r<=run.toR; r++){
@@ -4050,9 +4163,21 @@ function findBestInstantChopCardsForHand(hand, curr){
     }
     if(cards.length !== run.count*2) continue;
     const combo=classify(cards);
-    if(combo && combo.type==='pairs_run' && combo.count>=4 && canBeat(combo,curr)) out.push({cards,combo});
+    if(combo && combo.type==='pairs_run' && combo.count>=4 && canBeat(combo,curr)) out.push({cards,combo,weight:1000+combo.count});
   }
-  out.sort((a,b)=>a.combo.count-b.combo.count || a.combo.highR-b.combo.highR);
+  // BOM TỨ QUÝ TRONG TAY: nếu người chơi có sẵn 1 bộ Tứ Quý, đây cũng là 1 lựa chọn
+  // chặt ngay hợp lệ — trước đây hàm này chỉ tìm Đôi Thông nên bỏ sót Tứ Quý.
+  const rankCounts = {};
+  safeArray(hand).forEach(c => { (rankCounts[c.r] = rankCounts[c.r]||[]).push(c); });
+  Object.values(rankCounts).forEach(cardsOfRank => {
+    if(cardsOfRank.length >= 4){
+      const cards = cardsOfRank.slice(0,4);
+      const combo = classify(cards);
+      if(combo && combo.type==='quad' && canBeat(combo,curr)) out.push({cards,combo,weight:1});
+    }
+  });
+  if(!out.length) return null;
+  out.sort((a,b)=> a.weight-b.weight || (a.combo.count||0)-(b.combo.count||0) || (a.combo.highR||0)-(b.combo.highR||0));
   return out[0] || null;
 }
 
@@ -4362,21 +4487,21 @@ function handleAction(playerId, action, isAuto=false){
     if(!curr||gameState.leaderId===playerId){rejectTrackedAction(playerId,action,'INVALID_CHOP');return;}
     if(!isChoppableSpecialTarget(curr)){rejectTrackedAction(playerId,action,'INVALID_CHOP');return;}
     const hand=safeArray(gameState.hands[playerId]);
-    const hasFour=hasFourPairRun(hand), hasThreeOnly=!hasFour&&hasThreePairRunOnly(hand);
+    const hasFour=hasFourPairRun(hand)||hasQuadInHand(hand), hasThreeOnly=!hasFour&&hasThreePairRunOnly(hand);
     const chopWindowOpen=Number(gameState.chopInterruptDeadline||0)>Date.now();
     if(!hasFour&&!hasThreeOnly){rejectTrackedAction(playerId,action,'INVALID_CHOP');return;}
     if(hasThreeOnly&&!chopWindowOpen){rejectTrackedAction(playerId,action,'CHOP_WINDOW_CLOSED');return;}
     const resolved=resolveActionCards(hand,action.cards);
     if(!resolved.ok){rejectTrackedAction(playerId,action,resolved.reason);return;}
     let cards=resolved.cards, combo=classify(cards);
-    if(!combo||combo.type!=='pairs_run'||!canBeat(combo,curr)){
+    if(!combo||(combo.type!=='pairs_run'&&combo.type!=='quad')||!canBeat(combo,curr)){
       if(hasThreeOnly){rejectTrackedAction(playerId,action,!combo?'INVALID_CHOP':'CANNOT_BEAT',{duplicateRanks:duplicateRanks(cards)});return;}
       const autoBest=findBestInstantChopCardsForHand(hand,curr);
       if(!autoBest){rejectTrackedAction(playerId,action,!combo?'INVALID_CHOP':'CANNOT_BEAT');return;}
       cards=autoBest.cards; combo=autoBest.combo;
     }
     if(hasThreeOnly&&combo.count!==3){rejectTrackedAction(playerId,action,'INVALID_CHOP');return;}
-    if(hasFour&&combo.count<4){rejectTrackedAction(playerId,action,'INVALID_CHOP');return;}
+    if(hasFour&&combo.type==='pairs_run'&&combo.count<4){rejectTrackedAction(playerId,action,'INVALID_CHOP');return;}
 
     // LUẬT AN TOÀN SAU KHI VỀ: nếu người vừa ném bộ bài đã HẾT BÀI (đặc biệt
     // vừa ném Heo và về luôn), họ đã an toàn. Người khác vẫn có thể chặt bộ bài
@@ -4443,7 +4568,7 @@ function handleAction(playerId, action, isAuto=false){
       });
       // Chỉ tạo hiệu ứng trực quan cho từng mắt xích; KHÔNG thanh toán từng mắt xích.
       broadcastStakeTransfer(prevLeader, playerId, chopReward, gameState.stakeUnit);
-      const chopUnit = (gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA') ? 'điểm' : 'Nước';
+      const chopUnit = (gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM') ? 'điểm' : 'Nước';
       gameState.log = `⚡ ${pName} CHẶT NGANG thành công! Bom chồng hiện tại: ${totalChain} Nước — chưa thanh toán; người bị chặt ở mắt xích cuối sẽ chịu toàn bộ.`;
       if(!gameState.roundLog) gameState.roundLog = [];
       gameState.roundLog.push({ icon:'⚡', text: `${pName} CHẶT NGANG ${choppedDesc} của ${prevLeaderName} bằng ${describeCombo(combo)} → dồn bom ${totalChain} ${chopUnit}.${chainTag}` });
@@ -4693,7 +4818,7 @@ function handleAction(playerId, action, isAuto=false){
       const prevLeaderName = gameState.names[gameState.leaderId];
       const choppedDesc = describeCombo(gameState.currentCombo);
       if(!gameState.roundLog) gameState.roundLog = [];
-      if(gameState.gameMode === 'WATER' || gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA'){
+      if(gameState.gameMode === 'WATER' || gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM'){
         // Ghi nhận mắt xích mới; chưa thanh toán. Người bị chặt cuối cùng sẽ gánh toàn bộ bom.
         gameState.chopChainPayer = gameState.leaderId;
         gameState.chopChainReceiver = playerId;
@@ -4707,7 +4832,7 @@ function handleAction(playerId, action, isAuto=false){
         });
         // Hiệu ứng chuyển cược chỉ để minh họa mắt xích; tiền/nước chỉ kết sổ MỘT LẦN ở cuối chuỗi.
         if(gameState.gameMode === 'WATER') broadcastStakeTransfer(gameState.leaderId, playerId, chopReward, gameState.stakeUnit);
-        const chopUnit = (gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA') ? 'điểm' : 'Nước';
+        const chopUnit = (gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM') ? 'điểm' : 'Nước';
         gameState.log = `${prefix}${pName} chặt thành công! Bom chồng hiện tại: ${totalChain} ${chopUnit} — chưa thanh toán; người bị chặt ở mắt xích cuối sẽ chịu toàn bộ.`;
         gameState.roundLog.push({ icon:'⚡', text: `${pName} CHẶT ${choppedDesc} của ${prevLeaderName} bằng ${describeCombo(combo)} → dồn bom ${totalChain} Nước.${chainTag}` });
         shortMsg = `⚡ Chặt! Bom ${totalChain} Nước${chainTag ? ' 🔥' : ''}`;
@@ -4874,7 +4999,7 @@ function awardLiveBaseScore(playerId, forcedRank, suppressFinishSound){
   if(!playerId) return;
   const finishRank = Number.isInteger(forcedRank) ? forcedRank : (gameState && gameState.finished.indexOf(playerId) + 1);
   playFinishSound(finishRank, suppressFinishSound);
-  if(!gameState || (gameState.gameMode !== 'WATER' && gameState.gameMode !== 'POINTS' && gameState.gameMode !== 'NHATANCA')) return;
+  if(!gameState || (gameState.gameMode !== 'WATER' && gameState.gameMode !== 'POINTS' && gameState.gameMode !== 'NHATANCA' && gameState.gameMode !== 'CHATCHEM')) return;
 
   // Ưu tiên thứ hạng đã được chốt ngay lúc người chơi hết bài.
   // Không phụ thuộc vào việc foldColdPlayers() có thêm người vào finished sau đó.
@@ -4883,7 +5008,7 @@ function awardLiveBaseScore(playerId, forcedRank, suppressFinishSound){
 
   const activeCount = gameState.order.length;
   let baseAward = 0;
-  if(gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA') baseAward = getPointsRankValue(rank);
+  if(gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM') baseAward = getPointsRankValue(rank);
   else if(activeCount === 2){ if(rank === 1) baseAward = 1; else return; }
   else if(activeCount === 3){ baseAward = rank === 1 ? 2 : 0; }
   else { if(rank === 1) baseAward = 2; else if(rank === 2) baseAward = 1; }
@@ -4894,7 +5019,7 @@ function awardLiveBaseScore(playerId, forcedRank, suppressFinishSound){
   gameState.liveBaseAwards[playerId] = baseAward;
   if(!gameState.roundLog) gameState.roundLog = [];
   const title = rank === 1 ? '🏆 NHẤT' : (rank === 2 ? '🥈 NHÌ' : (rank === 3 ? '🥉 BA' : '🏁 BÉT'));
-  const unit = (gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA') ? 'điểm' : 'Nước';
+  const unit = (gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM') ? 'điểm' : 'Nước';
   const awardText = baseAward > 0 ? `+${baseAward}` : `${baseAward}`;
   gameState.roundLog.push({icon:rank===1?'🏆':rank===2?'🥈':rank===3?'🥉':'🏁',text:`${gameState.names[playerId]} về hạng ${rank} → ${awardText} ${unit} ngay.`});
   bumpActor(playerId, `${title}! ${awardText} ${unit}`);
@@ -4906,7 +5031,7 @@ function endGame(){
   // Đặc biệt quan trọng khi ván kết thúc do mất mạng/đấu thủ cuối cùng bị loại,
   // vì các đường này có thể gọi endGame() trực tiếp mà không đi qua nhánh đánh bài.
   // settleChopChain() tự reset BOM sau khi chốt nên gọi ở đây là idempotent.
-  if(gameState && (gameState.gameMode === 'WATER' || gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA') && Number(gameState.chopChainValue || 0) > 0){
+  if(gameState && (gameState.gameMode === 'WATER' || gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM') && Number(gameState.chopChainValue || 0) > 0){
     settleChopChain('ván kết thúc (bảo đảm)');
   }
 
@@ -5552,12 +5677,12 @@ function applyState(st){
   $('tableScreen').classList.remove('hidden');
   $('chatToggle').classList.remove('hidden');
   $('roomTag').textContent = 'Phòng: ' + roomCode;
-  $('modeTag').textContent = 'Chế độ: ' + (st.gameMode === 'WATER' ? 'Đánh Nước' : (st.gameMode === 'POINTS' ? 'Tính Điểm' : (st.gameMode === 'NHATANCA' ? 'Nhất Ăn Cả' : 'Quỳ')));
+  $('modeTag').textContent = 'Chế độ: ' + (st.gameMode === 'WATER' ? 'Đánh Nước' : (st.gameMode === 'POINTS' ? 'Tính Điểm' : (st.gameMode === 'NHATANCA' ? 'Nhất Ăn Cả' : (st.gameMode === 'CHATCHEM' ? 'Chặt Chém' : 'Quỳ'))));
   $('stakeTag').textContent = st.gameMode === 'WATER' ? 'Cược: ' + st.stakeUnit : 'Hình phạt: Quỳ';
 
   const myLiveVal = (st.liveScores && st.liveScores[myId] !== undefined) ? Number(st.liveScores[myId]) : 0;
   const myBaseTotal = Number((st.matchScores && st.matchScores[myId] !== undefined) ? st.matchScores[myId] : (matchScores[myId] || 0));
-  const myTotalVal = (st.gameMode === 'POINTS' || st.gameMode === 'NHATANCA')
+  const myTotalVal = (st.gameMode === 'POINTS' || st.gameMode === 'NHATANCA' || st.gameMode === 'CHATCHEM')
     ? (st.matchScoreApplied ? myBaseTotal : myBaseTotal + myLiveVal)
     : myLiveVal;
   const myScoreBox = $('myLiveScoreBox');
@@ -5566,7 +5691,7 @@ function applyState(st){
       myScoreBox.style.display = '';
       myScoreBox.className = 'live-score-sticker ' + (myLiveVal > 0 ? 'plus' : (myLiveVal < 0 ? 'minus' : ''));
       myScoreBox.textContent = (myLiveVal > 0 ? `+${myLiveVal}` : myLiveVal) + ' Nước';
-    } else if(st.gameMode === 'POINTS' || st.gameMode === 'NHATANCA'){
+    } else if(st.gameMode === 'POINTS' || st.gameMode === 'NHATANCA' || st.gameMode === 'CHATCHEM'){
       myScoreBox.style.display = '';
       myScoreBox.className = 'points-score-wrap';
       const totalEl = $('myTotalScore');
@@ -5656,7 +5781,7 @@ function renderOpponents(){
     if(currentState.gameMode === 'WATER'){
       const oppLiveVal = (currentState.liveScores && currentState.liveScores[pId] !== undefined) ? Number(currentState.liveScores[pId]) : 0;
       waterSticker = `<div class="live-score-sticker ${oppLiveVal>0?'plus':(oppLiveVal<0?'minus':'')}" style="position:relative;top:auto;right:auto;margin-top:2px;font-size:9px;padding:1px 4px;">${oppLiveVal>0?'+'+oppLiveVal:oppLiveVal} Nước</div>`;
-    } else if(currentState.gameMode === 'POINTS' || currentState.gameMode === 'NHATANCA'){
+    } else if(currentState.gameMode === 'POINTS' || currentState.gameMode === 'NHATANCA' || currentState.gameMode === 'CHATCHEM'){
       const oppRoundVal = (currentState.liveScores && currentState.liveScores[pId] !== undefined) ? Number(currentState.liveScores[pId]) : 0;
       const oppBaseTotal = Number((currentState.matchScores && currentState.matchScores[pId] !== undefined) ? currentState.matchScores[pId] : (matchScores[pId] || 0));
       const oppTotalVal = currentState.matchScoreApplied ? oppBaseTotal : oppBaseTotal + oppRoundVal;
@@ -5779,28 +5904,16 @@ function stopInstantChopCountdown(){
 function startInstantChopCountdown(key){
   const overlay=$('testInstantChopOverlay');
   if(!overlay) return;
-  if(instantChopCountdownExpiredKey===key) return;
-  if(instantChopCountdownKey===key && instantChopCountdownEnds>Date.now()) return;
+
+  // CHẶT NGAY 4+ ĐÔI THÔNG / TỨ QUÝ KHÔNG PHẢI cửa sổ 3 giây.
+  // Quyền này giữ nguyên miễn là mục tiêu còn nằm trên bàn.
+  // Trước đây hàm tự ẩn nút sau 3 giây -> quá nhanh, nhất là trên mobile.
   stopInstantChopCountdown();
+  instantChopCountdownKey=key || '';
   instantChopCountdownExpiredKey='';
-  instantChopCountdownKey=key;
-  instantChopCountdownExpiredKey='';
-  instantChopCountdownEnds=Date.now()+3000;
-  const tick=()=>{
-    const left=Math.max(0, instantChopCountdownEnds-Date.now());
-    const sec=Math.ceil(left/1000);
-    if(sec<=0){
-      instantChopCountdownExpiredKey=instantChopCountdownKey;
-      stopInstantChopCountdown();
-      overlay.classList.add('hidden');
-      overlay.disabled=true;
-      return;
-    }
-    overlay.dataset.countdown=String(sec);
-    overlay.innerHTML=`<span class=\"chop-now-main\">⚡ CHẶT NGAY</span><span class=\"chop-now-target\">${overlay.dataset.targetLabel||''}</span><span class=\"chop-now-countdown\">${sec}</span>`;
-  };
-  tick();
-  instantChopCountdownTimer=setInterval(tick,120);
+  instantChopCountdownEnds=0;
+  overlay.dataset.countdown='';
+  overlay.innerHTML=`<span class="chop-now-main">⚡ CHẶT NGAY</span><span class="chop-now-target">${overlay.dataset.targetLabel||''}</span>`;
 }
 
 function syncTestInstantChopUI(){
@@ -5857,7 +5970,7 @@ function syncTestInstantChopUI(){
     overlay.dataset.targetLabel=`${targetLabel}${targetOwnerName ? ' của ' + targetOwnerName : ''}${bomTxt}`;
     overlay.classList.remove('hidden');
     overlay.disabled=false;
-    overlay.title=`Chặt ${targetLabel}${targetOwnerName ? ' của ' + targetOwnerName : ''} bằng ${best.combo.count} đôi thông${bomTxt} • còn 3 giây để quyết định`;
+    overlay.title=`Chặt ${targetLabel}${targetOwnerName ? ' của ' + targetOwnerName : ''} bằng ${best.combo.count} đôi thông${bomTxt} • giữ quyền đến khi mục tiêu thay đổi`;
     startInstantChopCountdown(targetKey);
   }else{
     stopInstantChopCountdown();
@@ -5972,7 +6085,7 @@ function renderHand(){
   const chopOpen = chopDeadline > Date.now();
   const isChoppableTarget = isChoppableSpecialTarget(curr);
   const iAmActive = !isSpectator && !safeArray(currentState.finished).includes(myId) && !currentState.isEnded && !iAmColdFolded;
-  const iHaveFourPairs = hasFourPairRun(myHand);
+  const iHaveFourPairs = hasFourPairRun(myHand) || hasQuadInHand(myHand);
   const isOwnLeader = currentState.leaderId === myId;
   const btnChop = $('btnChopInterrupt');
   if(btnChop){
@@ -5986,13 +6099,18 @@ function renderHand(){
 
     if(isChoppableTarget && iAmActive && !isOwnLeader && iHaveFourPairs){
       showChop = true;
-      if(selected.size){
+      // CHẶT NGAY (4+ Đôi Thông/Tứ Quý): TỰ TÌM bộ hợp lệ trong tay, KHÔNG bắt người chơi
+      // phải tự chọn từng lá trước — giống hệt cơ chế getTestInstantChopCards() ở Phòng Test.
+      // Nếu người chơi lỡ tự chọn bài tay (vd đang xếp bài để đánh nước khác), vẫn ưu tiên
+      // dùng đúng bộ họ chọn nếu hợp lệ; nếu không, nút vẫn bấm được nhờ tự tìm bộ tốt nhất.
+      selectedChopValid = !!findBestInstantChopCardsForHand(myHand, curr);
+      if(!selectedChopValid && selected.size){
         const selectedCards = [...selected]
           .map(k => safeArray(myHand).find(c => cardKey(c) === k))
           .filter(Boolean);
         const selectedCombo = classify(selectedCards);
-        selectedChopValid = !!(selectedCombo && selectedCombo.type === 'pairs_run' &&
-          selectedCombo.count >= 4 && canBeat(selectedCombo, curr));
+        selectedChopValid = !!(selectedCombo && (selectedCombo.type === 'pairs_run' || selectedCombo.type === 'quad') &&
+          (selectedCombo.type !== 'pairs_run' || selectedCombo.count >= 4) && canBeat(selectedCombo, curr));
       }
     } else if(chopOpen && isChoppableTarget && iAmActive && !isMyTurn && !iHaveFourPairs){
       // Người chỉ có đúng 3 Đôi Thông vẫn được Chặt Ngang theo cửa sổ 3 giây cũ.
@@ -6161,8 +6279,9 @@ function updateHandActionButtonsOnly(){
       .map(k => safeArray(myHand).find(c => cardKey(c) === k))
       .filter(Boolean);
     const selectedCombo=classify(selectedCards);
-    const validInstant=!!(curr&&selectedCombo&&selectedCombo.type==='pairs_run'&&selectedCombo.count>=4&&canBeat(selectedCombo,curr));
-    const chopDeadline=Number(currentState.chopInterruptDeadline||0), hasFour=hasFourPairRun(myHand);
+    const validInstant = (hasFourPairRun(myHand)||hasQuadInHand(myHand)) && !!findBestInstantChopCardsForHand(myHand, curr) ||
+      !!(curr&&selectedCombo&&(selectedCombo.type==='pairs_run'||selectedCombo.type==='quad')&&(selectedCombo.type!=='pairs_run'||selectedCombo.count>=4)&&canBeat(selectedCombo,curr));
+    const chopDeadline=Number(currentState.chopInterruptDeadline||0), hasFour=hasFourPairRun(myHand)||hasQuadInHand(myHand);
     const validThreeWindow=!!(curr&&!hasFour&&hasThreePairRunOnly(myHand)&&chopDeadline>Date.now()&&selectedCombo&&selectedCombo.type==='pairs_run'&&selectedCombo.count===3&&canBeat(selectedCombo,curr));
     btnChop.disabled=!(validInstant||validThreeWindow);
   }
@@ -6196,7 +6315,7 @@ setInterval(()=>{
   if(!currentState) return;
 
   // 4+ Đôi Thông = nút CHẶT NGAY cố định, không đếm ngược.
-  if(hasFourPairRun(myHand)){
+  if(hasFourPairRun(myHand) || hasQuadInHand(myHand)){
     btnChop.innerHTML = buildChopButtonLabel(currentState.currentCombo, currentState.leaderId, 0, true);
     return;
   }
@@ -6294,12 +6413,12 @@ function validateSelectedInterrupt(){
   const curr=currentState?.currentCombo;
   if(!curr) return {ok:false,reason:'INVALID_CHOP',msg:'Hiện không có bộ bài đặc biệt để chặt.'};
   const combo=classify(resolved.cards);
-  if(!combo || combo.type!=='pairs_run' || !canBeat(combo,curr)) return {ok:false,reason:'INVALID_CHOP',msg:'Bộ đã chọn không phải đôi thông hợp lệ hoặc không chặt được bài trên bàn.'};
-  const hasFour=hasFourPairRun(myHand), hasThreeOnly=!hasFour&&hasThreePairRunOnly(myHand);
+  if(!combo || (combo.type!=='pairs_run'&&combo.type!=='quad') || !canBeat(combo,curr)) return {ok:false,reason:'INVALID_CHOP',msg:'Bộ đã chọn không phải Đôi Thông/Tứ Quý hợp lệ hoặc không chặt được bài trên bàn.'};
+  const hasFour=hasFourPairRun(myHand)||hasQuadInHand(myHand), hasThreeOnly=!hasFour&&hasThreePairRunOnly(myHand);
   const deadline=Number(currentState?.chopInterruptDeadline||0);
   if(hasThreeOnly && deadline<=Date.now()) return {ok:false,reason:'CHOP_WINDOW_CLOSED',msg:formatActionRejectMessage('CHOP_WINDOW_CLOSED')};
-  if(!hasFour && !hasThreeOnly) return {ok:false,reason:'INVALID_CHOP',msg:'Bạn không có 3 Đôi Thông/4+ Đôi Thông đủ điều kiện chặt.'};
-  if(hasFour && combo.count<4) return {ok:false,reason:'INVALID_CHOP',msg:'Bạn có 4+ Đôi Thông nhưng bộ đang chọn chưa đủ 4 đôi thông.'};
+  if(!hasFour && !hasThreeOnly) return {ok:false,reason:'INVALID_CHOP',msg:'Bạn không có 3 Đôi Thông/4+ Đôi Thông/Tứ Quý đủ điều kiện chặt.'};
+  if(hasFour && combo.type==='pairs_run' && combo.count<4) return {ok:false,reason:'INVALID_CHOP',msg:'Bạn có 4+ Đôi Thông nhưng bộ đang chọn chưa đủ 4 đôi thông.'};
   if(hasThreeOnly && combo.count!==3) return {ok:false,reason:'INVALID_CHOP',msg:'Bạn đang dùng quyền 3 Đôi Thông; hãy chọn đúng 3 đôi thông.'};
   return {ok:true,combo,cards:resolved.cards};
 }
@@ -6309,6 +6428,16 @@ $('btnPlay').onclick=()=>{
 };
 $('btnPass').onclick=()=>sendAction({kind:'pass'});
 $('btnChopInterrupt').onclick=()=>{
+  const curr = currentState && currentState.currentCombo;
+  // CHẶT NGAY (4+ Đôi Thông / Tứ Quý): TỰ TÌM bộ hợp lệ trong tay rồi gửi thẳng —
+  // đồng bộ đúng 1 đường xử lý với getTestInstantChopCards() ở Phòng Test, không còn
+  // bắt người chơi phải tự chọn từng lá trước khi bấm như trước đây.
+  // Chặt Ngang (đúng 3 Đôi Thông, cửa sổ 3 giây cũ) KHÔNG đổi — vẫn bắt chọn tay như cũ.
+  if(curr && isChoppableSpecialTarget(curr) && (hasFourPairRun(myHand) || hasQuadInHand(myHand))){
+    const best = findBestInstantChopCardsForHand(myHand, curr);
+    if(best){ sendAction({kind:'interrupt_chop', cards: best.cards.map(cardKey)}); return; }
+    // Bộ tự tìm không có (hiếm khi xảy ra) — thử dùng đúng bộ người chơi đã tự chọn tay, nếu có.
+  }
   const check=validateSelectedInterrupt(); if(!check.ok){showHandSelectMsg(check.msg);return;}
   sendAction({kind:'interrupt_chop',cards:[...selected]});
 };
@@ -6594,14 +6723,14 @@ function showResultOverlay(results, settlements){
   const tbody = $('resultBody'); tbody.innerHTML = '';
   const isWater = currentState && currentState.gameMode === 'WATER';
 
-  $('resultHeaderUnit').textContent = isWater ? 'Số Nước' : (currentState && (currentState.gameMode === 'POINTS' || currentState.gameMode === 'NHATANCA') ? 'Điểm' : 'Hình Phạt Quỳ');
+  $('resultHeaderUnit').textContent = isWater ? 'Số Nước' : (currentState && (currentState.gameMode === 'POINTS' || currentState.gameMode === 'NHATANCA' || currentState.gameMode === 'CHATCHEM') ? 'Điểm' : 'Hình Phạt Quỳ');
 
   const sortedResults = Object.values(results).sort((a,b)=>a.rank-b.rank);
   const cardRevealQueue = []; // chỉ ngửa bài người Bét hoặc người Cóng
 
   sortedResults.forEach((r, idx) => {
     let cls = isWater ? (r.score > 0 ? 'plus' : (r.score < 0 ? 'minus' : '')) : '';
-    let scoreTxt = isWater ? (r.score > 0 ? `+${r.score} Nước` : `${r.score} Nước`) : (currentState && (currentState.gameMode === 'POINTS' || currentState.gameMode === 'NHATANCA') ? (r.score > 0 ? `+${r.score} Điểm` : `${r.score} Điểm`) : r.score);
+    let scoreTxt = isWater ? (r.score > 0 ? `+${r.score} Nước` : `${r.score} Nước`) : (currentState && (currentState.gameMode === 'POINTS' || currentState.gameMode === 'NHATANCA' || currentState.gameMode === 'CHATCHEM') ? (r.score > 0 ? `+${r.score} Điểm` : `${r.score} Điểm`) : r.score);
 
     const playedCards = safeArray(r.playedCards);
     const remainingCards = safeArray(r.remainingCards);
@@ -6679,7 +6808,7 @@ function showResultOverlay(results, settlements){
           <span style="color:var(--gold);font-weight:bold;">${s.amount} Nước</span>
         </div>`;
     });
-  } else if(currentState && (currentState.gameMode === 'POINTS' || currentState.gameMode === 'NHATANCA')){
+  } else if(currentState && (currentState.gameMode === 'POINTS' || currentState.gameMode === 'NHATANCA' || currentState.gameMode === 'CHATCHEM')){
     const totalMap = currentState.matchScores || {};
     const pointRows = Object.values(results).sort((a,b)=>a.rank-b.rank).map(r=>{
       const rid = currentState.order.find(id => currentState.names[id] === r.name);
@@ -6694,7 +6823,7 @@ function showResultOverlay(results, settlements){
   const editor=$('pendingScoreEditor');
   if(editor){
     editor.innerHTML='';
-    if(currentState && (currentState.gameMode==='POINTS'||currentState.gameMode==='NHATANCA') && currentState.pendingRound && currentState.pendingRound.scoreEditActive){
+    if(currentState && (currentState.gameMode==='POINTS'||currentState.gameMode==='NHATANCA'||currentState.gameMode==='CHATCHEM') && currentState.pendingRound && currentState.pendingRound.scoreEditActive){
       const p=currentState.pendingRound, names=currentState.names||{}, order=safeArray(currentState.order);
       const count=order.filter(id=>p.confirmations&&p.confirmations[id]).length;
       const confirmed=!!(p.confirmations&&p.confirmations[myId]);
@@ -6731,7 +6860,7 @@ function showResultOverlay(results, settlements){
     }
   }
   const actions = $('resultActions'); actions.innerHTML = '';
-  if(currentState && (currentState.gameMode==='POINTS'||currentState.gameMode==='NHATANCA') && isHost){
+  if(currentState && (currentState.gameMode==='POINTS'||currentState.gameMode==='NHATANCA'||currentState.gameMode==='CHATCHEM') && isHost){
     const pending = currentState.pendingRound;
     const order = safeArray(currentState.order);
     const editActive = !!pending?.scoreEditActive;
@@ -6767,7 +6896,7 @@ function showResultOverlay(results, settlements){
       next.textContent='▶️ Ván mới';
       next.style.cssText='width:100%;font-weight:900;';
       next.onclick=()=>{
-        if(currentState && (currentState.gameMode==='POINTS'||currentState.gameMode==='NHATANCA') && currentState.pendingRound && !currentState.pendingRound.scoreEditActive){
+        if(currentState && (currentState.gameMode==='POINTS'||currentState.gameMode==='NHATANCA'||currentState.gameMode==='CHATCHEM') && currentState.pendingRound && !currentState.pendingRound.scoreEditActive){
           if(!applyPendingRoundWithoutEdit()) return;
         }
         dealNewGame();
