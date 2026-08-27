@@ -2387,7 +2387,6 @@ let selected=new Set();
 // ACTION ACK / RACE GUARD: chỉ clear selection sau khi server xác nhận ACCEPT.
 let pendingActionRequests = new Map();
 let actionRequestSeq = 0;
-let localPendingFourPairChopTargetKey = '';
 let currentRoundToken = null;
 function makeActionRequestId(){
   actionRequestSeq++;
@@ -2661,7 +2660,7 @@ function kickPlayerNow(disconnectedId){
     return;
   }
   if(gameState.order[gameState.turnIdx] === disconnectedId) checkNextTurn();
-  armTurnTimer(gameState.order[gameState.turnIdx]);
+  gameState.turnDeadline = Date.now() + gameState.turnSeconds * 1000;
   broadcastState(); broadcastLobby();
 }
 
@@ -2764,11 +2763,9 @@ function onClientMessage(msg){
       clearTimeout(pending.timer);
       pendingActionRequests.delete(msg.requestId);
       if(msg.status === 'ACCEPT'){
-        if(msg.action === 'interrupt_chop') localPendingFourPairChopTargetKey = comboTargetKey(currentState && currentState.currentCombo);
         selected.clear();
         hideHandSelectMsg();
       } else {
-        if(msg.action === 'interrupt_chop') localPendingFourPairChopTargetKey = '';
         showHandSelectMsg(formatActionRejectMessage(msg.reason, msg.details));
       }
       updateHandActionButtonsOnly();
@@ -3543,7 +3540,6 @@ function dealNewGame(){
     stakeUnit: roomSettings.stakeUnit,
     hideCardCount: roomSettings.hideCardCount,
     turnDeadline: Date.now() + roomSettings.turnSeconds*1000,
-    turnDeadlinePlayerId: players[leadIdx].id,
     isEnded: false,
     chopChainValue: 0, // Luật CHẶT CHỒNG: chỉ kết sổ khi chuỗi kết thúc
     chopStackValue: 0, // Tổng giá trị các bộ đặc biệt đang chồng trên bàn; chưa thanh toán
@@ -3559,22 +3555,6 @@ function dealNewGame(){
 }
 
 let timerLoop = null;
-
-// TIMER LƯỢT: deadline luôn gắn với đúng player đang giữ lượt. PASS phải hủy
-// deadline cũ ngay lập tức; cửa sổ Chặt Ngang 3s dùng state riêng và không bị ảnh hưởng.
-function armTurnTimer(playerId){
-  if(!gameState || !playerId) return;
-  gameState.turnDeadlinePlayerId = String(playerId);
-  gameState.turnDeadline = Date.now() + Number(gameState.turnSeconds || 30) * 1000;
-}
-function stopTurnTimer(playerId){
-  if(!gameState) return;
-  if(!playerId || !gameState.turnDeadlinePlayerId || String(gameState.turnDeadlinePlayerId)===String(playerId)){
-    gameState.turnDeadline = 0;
-    gameState.turnDeadlinePlayerId = null;
-  }
-}
-
 function startTimerLoop(){
   if(timerLoop) clearInterval(timerLoop);
   timerLoop = setInterval(()=>{
@@ -3616,8 +3596,6 @@ function startTimerLoop(){
       }
       return;
     }
-    if(gameState.turnDeadlinePlayerId && String(gameState.turnDeadlinePlayerId) !== String(currId)) return;
-    if(!gameState.turnDeadline) return;
     if(Date.now() >= gameState.turnDeadline) autoForceTurn(currId);
   }, 400);
 }
@@ -3673,120 +3651,6 @@ function getAllPossibleCombos(hand) {
 let botInstantChopToken=0;
 // Token chống callback Bot cũ giành lại lượt sau khi CHẶT NGANG.
 let turnControlToken=0;
-// CHẶT NGANG 4–5 ĐÔI THÔNG: hàng đợi ý định chặt chỉ tồn tại ở phía host,
-// KHÔNG nằm trong gameState nên tuyệt đối không broadcast ai đang chờ chặt.
-let pendingChopIntents = new Map();
-let chopSettleTimer = null;
-let chopSettleToken = 0;
-function clearPendingChopIntents(){ pendingChopIntents.clear(); }
-function clearChopSettleTimer(){
-  if(chopSettleTimer){ clearTimeout(chopSettleTimer); chopSettleTimer=null; }
-}
-function getActiveRoundPlayers(){
-  if(!gameState) return [];
-  return gameState.order.filter(id => !gameState.finished.includes(id) && !gameState.coldFolded.has(id));
-}
-function scheduleChopSettleTimeout(){
-  clearChopSettleTimer();
-  if(!gameState || gameState.isEnded) return;
-  const token=++chopSettleToken;
-  const deadline=Number(gameState.chopSettleDeadline||0);
-  if(deadline<=0) return;
-  const wait=Math.max(0, deadline-Date.now())+20;
-  chopSettleTimer=setTimeout(()=>{
-    chopSettleTimer=null;
-    if(!gameState || gameState.isEnded || token!==chopSettleToken) return;
-    if(Number(gameState.chopSettleDeadline||0)>Date.now()) return scheduleChopSettleTimeout();
-    gameState.chopSettleDeadline=0;
-    processPendingChopAfterGrace();
-  },wait);
-}
-function openChopSettleGrace(){
-  if(!gameState || gameState.isEnded || !isChoppableSpecialTarget(gameState.currentCombo)) return false;
-  gameState.chopSettleDeadline=Date.now()+3000;
-  gameState.chopSettleToken=(gameState.chopSettleToken||0)+1;
-  broadcastState();
-  scheduleChopSettleTimeout();
-  return true;
-}
-function queueFourPairChop(playerId, action, cards, combo){
-  const key=comboTargetKey(gameState.currentCombo);
-  if(!key) return false;
-  pendingChopIntents.set(String(playerId),{
-    playerId:String(playerId), targetKey:key,
-    cards:cards.map(c=>cardKey(c)), combo,
-    at:Date.now(), requestId:action?.requestId||null
-  });
-  gameState.log=`⚡ Đã ghi nhận quyền tham gia Chặt Ngang.`;
-  acceptTrackedAction(playerId, action, {queued:true, combo:debugComboText(combo)});
-  broadcastState();
-  return true;
-}
-function choosePendingChopIntents(curr){
-  const out=[]; const targetKey=comboTargetKey(curr);
-  for(const [pid,intent] of pendingChopIntents){
-    if(intent.targetKey!==targetKey) continue;
-    if(!gameState.order.includes(pid) || gameState.finished.includes(pid) || gameState.coldFolded.has(pid)) continue;
-    // FIX BUG "TREO BÀN SAU CHẶT NGANG": nếu người này đã BỎ LƯỢT trên chính target
-    // này sau khi gửi ý định chặt, ý định coi như hết hiệu lực — phải loại ngay tại
-    // đây. Trước đây hàm này không kiểm tra hasPassedInstantTarget(), nên một ý định
-    // đã "chết" vẫn được chọn làm ứng viên, rồi bị handleAction() reject
-    // (ALREADY_PASSED_TARGET) mà không có phương án dự phòng nào khác → treo bàn.
-    if(hasPassedInstantTarget(gameState,pid,curr)) continue;
-    const hand=safeArray(gameState.hands[pid]);
-    const fresh=findBestInstantChopCardsForHand(hand,curr);
-    if(!fresh || fresh.combo.type!=='pairs_run' || fresh.combo.count<4 || !canBeat(fresh.combo,curr)) continue;
-    out.push({playerId:pid,...fresh,at:intent.at});
-  }
-  // Nhiều người xác nhận cùng lúc: bộ yếu vung trước, bộ mạnh tự chặt lại bộ yếu.
-  out.sort((a,b)=> a.combo.count-b.combo.count || a.combo.highR-b.combo.highR || a.at-b.at);
-  return out;
-}
-function executePendingChop(playerId, cards){
-  // Đường thực thi duy nhất của một ý định đã được xếp hàng.
-  // Dùng lại validator + engine CHẶT hiện có để không nhân bản luật/tính điểm.
-  // FIX BUG "TREO BÀN SAU CHẶT NGANG": handleAction() không trả về trạng thái
-  // thành công/thất bại, nên trước đây processPendingChopAfterGrace() không thể biết
-  // ứng viên vừa chọn có thực sự chặt được hay bị reject ngầm (hand đã đổi, đã PASS
-  // target này sau khi xếp hàng, v.v.). Ở đây suy ra kết quả bằng cách so sánh target
-  // trước/sau: nếu cú chặt thành công, currentCombo chắc chắn bị đổi (thường về null)
-  // hoặc ván kết thúc; nếu bị reject, handleAction() return sớm nên currentCombo giữ
-  // nguyên y hệt target cũ.
-  const targetKeyBefore = comboTargetKey(gameState.currentCombo);
-  const wasEnded = !!(gameState && gameState.isEnded);
-  handleAction(playerId,{kind:'interrupt_chop',cards:cards.map(cardKey),_queuedExecute:true},true);
-  if(!gameState) return true;
-  if(gameState.isEnded && !wasEnded) return true; // cú chặt vừa kết thúc luôn cả ván
-  const targetKeyAfter = comboTargetKey(gameState.currentCombo);
-  return targetKeyAfter !== targetKeyBefore;
-}
-function processPendingChopAfterGrace(){
-  if(!gameState || gameState.isEnded) return;
-  const curr=gameState.currentCombo;
-  if(!isChoppableSpecialTarget(curr)){ clearPendingChopIntents(); return; }
-  const candidates=choosePendingChopIntents(curr);
-  // FIX BUG "TREO BÀN SAU CHẶT NGANG": trước đây chỉ thử ĐÚNG 1 ứng viên mạnh nhất —
-  // nếu ứng viên đó bị handleAction() reject (hand vừa đổi, race condition, v.v.) thì
-  // hàm dừng lại luôn, không thử ứng viên kế tiếp và cũng không trả lượt về bàn, khiến
-  // cả ván bị treo vĩnh viễn (không ai còn hành động nào hợp lệ). Giờ thử lần lượt
-  // từng ứng viên hợp lệ cho tới khi có 1 người chặt thành công thật sự.
-  for(const cand of candidates){
-    pendingChopIntents.delete(String(cand.playerId));
-    const ok = executePendingChop(cand.playerId, cand.cards);
-    if(ok) return; // đã có người chặt thành công — state/broadcast đã được xử lý trong handleAction()
-    if(!gameState || gameState.isEnded) return; // ván kết thúc theo hướng khác trong lúc xử lý ứng viên này
-  }
-  // Không còn ứng viên nào chặt được thật sự (danh sách rỗng ngay từ đầu, hoặc toàn
-  // bộ ứng viên đều bị reject khi thực thi) → BẮT BUỘC chủ động trả lượt về bàn,
-  // tuyệt đối không được để ván treo ở đây.
-  clearPendingChopIntents();
-  settleChopChain('hết 3 giây không có chặt thêm');
-  gameState.currentCombo=null; gameState.passed.clear(); gameState.instantChopPassedTarget={};
-  checkNextTurn();
-  armTurnTimer(gameState.order[gameState.turnIdx]);
-  broadcastState();
-}
-
 function scheduleBotInstantChop(){
   if(!isRuleTestMode || !gameState || gameState.isEnded) return;
   const curr=gameState.currentCombo;
@@ -4180,15 +4044,6 @@ function settleChopChain(reason='') {
     gameState.log = `💥 CHẶT CHỒNG: ${payerName} chịu toàn bộ ${total} ${(gameState.gameMode==='POINTS'||gameState.gameMode==='NHATANCA'||gameState.gameMode==='CHATCHEM')?'điểm':'Nước'} → ${receiverName}.`;
   }
 
-  // Nếu có BOM nhưng chưa xác định được payer/receiver thì KHÔNG được âm thầm xóa BOM:
-  // đây là lỗi dữ liệu/luồng, cần giữ nguyên để lần settle sau còn có thể thanh toán.
-  if(total > 0 && (!payer || !receiver || payer === receiver)){
-    if(!gameState.roundLog) gameState.roundLog = [];
-    gameState.roundLog.push({icon:'⚠️', text:`⚠️ CHẶT CHƯA KẾT SỔ: BOM ${total} chưa thể thanh toán (thiếu payer/receiver). Giữ nguyên BOM để không mất điểm.`});
-    gameState.log = `⚠️ CHẶT CHƯA KẾT SỔ: BOM ${total} chưa thể thanh toán — giữ nguyên.`;
-    return 0;
-  }
-
   // Reset atomically after settlement: any later call in the same end-of-round
   // path sees BOM = 0 and cannot pay the same chain a second time.
   gameState.chopChainValue = 0;
@@ -4535,13 +4390,7 @@ function handleAction(playerId, action, isAuto=false){
   // Bất kỳ action nào của người khác sau cú chặt đều bị CHẶN NGAY tại cửa vào.
   if(gameState.lastChopWinnerId){
     const chopWinner = String(gameState.lastChopWinnerId);
-    // Trong cửa sổ chờ Chặt Ngang 4–5 đôi thông, người khác vẫn được phép
-    // GỬI Ý ĐỊNH interrupt_chop. Đây chỉ là xác nhận kín, chưa vung bài và
-    // không làm mất hard-lock quyền đánh tiếp của người vừa chặt.
-    const allowQueuedChop = action && action.kind === 'interrupt_chop' &&
-      isChoppableSpecialTarget(gameState.currentCombo) &&
-      !gameState.finished.includes(playerId) && !gameState.coldFolded.has(playerId);
-    if(String(playerId) !== chopWinner && !allowQueuedChop){
+    if(String(playerId) !== chopWinner){
       debugActionRequest(playerId, action, isAuto);
       debugActionEvent('BLOCK', playerId, `BLOCK SAU CHẶT NGANG V4: quyền đang thuộc ${gameState.names[chopWinner] || chopWinner}`, {
         lastChopWinnerId: chopWinner, attemptedAction: action && action.kind, auto: !!isAuto,
@@ -4560,8 +4409,7 @@ function handleAction(playerId, action, isAuto=false){
       gameState.forcedNextTurnId = null;
       gameState.forcedNextTurnAt = 0;
     } else if(action && action.kind === 'interrupt_chop'){
-      // Cho phép đi tiếp xuống nhánh queueFourPairChop().
-      // Không được return ở đây vì người khác cần xác nhận chặt trong 3s.
+      return;
     }
   }
 
@@ -4572,10 +4420,7 @@ function handleAction(playerId, action, isAuto=false){
   // dù chạy trễ cũng không thể cướp lượt.
   if(gameState.forcedNextTurnId){
     const forcedId = String(gameState.forcedNextTurnId);
-    const allowQueuedChop = action && action.kind === 'interrupt_chop' &&
-      isChoppableSpecialTarget(gameState.currentCombo) &&
-      !gameState.finished.includes(playerId) && !gameState.coldFolded.has(playerId);
-    if(String(playerId) !== forcedId && !allowQueuedChop) {
+    if(String(playerId) !== forcedId) {
       debugActionRequest(playerId, action, isAuto);
       debugActionEvent('BLOCK', playerId,
         `BLOCK action sau CHẶT NGANG: quyền đang khóa cho ${gameState.names[forcedId] || forcedId}`, {
@@ -4591,22 +4436,17 @@ function handleAction(playerId, action, isAuto=false){
     const forcedIdx = gameState.order.findIndex(id => String(id) === forcedId);
     if(forcedIdx < 0) return;
     gameState.turnIdx = forcedIdx;
-    armTurnTimer(gameState.order[gameState.turnIdx]);
+    gameState.turnDeadline = Date.now() + gameState.turnSeconds * 1000;
 
-    // Chỉ PLAY/PASS của chính người vừa chặt mới kết thúc quyền ưu tiên.
-    // interrupt_chop của người khác là XÁC NHẬN KÍN, phải được đi tiếp xuống
-    // queueFourPairChop(), không được coi là hành động chiếm lượt.
-    const queuedOtherChop = action && action.kind === 'interrupt_chop' && String(playerId) !== forcedId;
-    if(queuedOtherChop){
-      // giữ nguyên forcedNextTurnId/turnIdx; chỉ ghi nhận queue phía dưới.
-    } else if(!action || (action.kind !== 'play' && action.kind !== 'pass')){
+    // Chỉ PLAY/PASS mới kết thúc quyền ưu tiên sau chặt.
+    // interrupt_chop không được chen vào ngay chính lượt của người chặt.
+    if(!action || (action.kind !== 'play' && action.kind !== 'pass')){
       debugActionRequest(playerId, action, isAuto);
       return;
-    } else {
-      gameState.forcedNextTurnId = null;
-      gameState.forcedNextTurnAt = 0;
     }
 
+    gameState.forcedNextTurnId = null;
+    gameState.forcedNextTurnAt = 0;
   }
 
   debugActionRequest(playerId, action, isAuto);
@@ -4642,31 +4482,13 @@ function handleAction(playerId, action, isAuto=false){
     // Nếu người chơi đã BỎ LƯỢT trong vòng hiện tại thì cũng không được quay lại
     // chặt chính bộ đang nằm trên bàn; chỉ khi mở vòng mới (passed được clear) mới xét lại.
     if(gameState.finished.includes(playerId)){rejectTrackedAction(playerId,action,'ACTION_BLOCKED');return;}
+    if(gameState.order[gameState.turnIdx]===playerId){rejectTrackedAction(playerId,action,'NOT_YOUR_TURN');return;}
     const curr=gameState.currentCombo;
-    // 4–5 Đôi Thông là nút XÁC NHẬN, nên được gửi khi chưa tới lượt.
-    // Chỉ sau khi đã xác định đây là target đặc biệt + người có 4+ đôi thông
-    // mới cho phép đi qua; lượt hiện tại vẫn không bị thay đổi.
-    const canQueueOutOfTurn = !action._queuedExecute &&
-      gameState.order[gameState.turnIdx]!==playerId &&
-      curr && isChoppableSpecialTarget(curr) &&
-      hasFourPairRun(safeArray(gameState.hands[playerId]));
-    if(gameState.order[gameState.turnIdx]===playerId && !action._queuedExecute){rejectTrackedAction(playerId,action,'NOT_YOUR_TURN');return;}
-    if(gameState.order[gameState.turnIdx]!==playerId && !action._queuedExecute && !canQueueOutOfTurn && !hasQuadInHand(safeArray(gameState.hands[playerId]))){
-      // Tứ Quý vẫn giữ luật Chặt Ngay cũ.
-      rejectTrackedAction(playerId,action,'NOT_YOUR_TURN');return;
-    }
-    const hand=safeArray(gameState.hands[playerId]);
-    const hasFourRun=hasFourPairRun(hand);
-    const hasQuad=hasQuadInHand(hand);
-    // PASS trong vòng hiện tại = từ chối tham gia Chặt Ngang vào chính target này.
-    // Sau khi PASS, tuyệt đối không được xác nhận/chặt lại target cũ, kể cả đang có
-    // 4–5 đôi thông hoặc Tứ Quý. Quyền này chỉ được xét lại khi target/vòng mới mở.
-    if(hasPassedInstantTarget(gameState,playerId,curr)){
-      rejectTrackedAction(playerId,action,'ALREADY_PASSED_TARGET'); return;
-    }
+    if(hasPassedInstantTarget(gameState,playerId,curr)){rejectTrackedAction(playerId,action,'ACTION_BLOCKED');return;}
     if(!curr||gameState.leaderId===playerId){rejectTrackedAction(playerId,action,'INVALID_CHOP');return;}
     if(!isChoppableSpecialTarget(curr)){rejectTrackedAction(playerId,action,'INVALID_CHOP');return;}
-    const hasFour=hasFourRun||hasQuad, hasThreeOnly=!hasFour&&hasThreePairRunOnly(hand);
+    const hand=safeArray(gameState.hands[playerId]);
+    const hasFour=hasFourPairRun(hand)||hasQuadInHand(hand), hasThreeOnly=!hasFour&&hasThreePairRunOnly(hand);
     const chopWindowOpen=Number(gameState.chopInterruptDeadline||0)>Date.now();
     if(!hasFour&&!hasThreeOnly){rejectTrackedAction(playerId,action,'INVALID_CHOP');return;}
     if(hasThreeOnly&&!chopWindowOpen){rejectTrackedAction(playerId,action,'CHOP_WINDOW_CLOSED');return;}
@@ -4681,13 +4503,6 @@ function handleAction(playerId, action, isAuto=false){
     }
     if(hasThreeOnly&&combo.count!==3){rejectTrackedAction(playerId,action,'INVALID_CHOP');return;}
     if(hasFour&&combo.type==='pairs_run'&&combo.count<4){rejectTrackedAction(playerId,action,'INVALID_CHOP');return;}
-
-    // LUỒNG MỚI: 4–5 Đôi Thông chỉ XÁC NHẬN trước, chưa vung ngay.
-    // Tứ Quý vẫn giữ đường xử lý cũ để không ảnh hưởng cấu trúc luật khác.
-    if(hasFourRun && combo.type==='pairs_run' && combo.count>=4 && !action._queuedExecute){
-      queueFourPairChop(playerId, action, cards, combo);
-      return;
-    }
 
     // LUẬT AN TOÀN SAU KHI VỀ: nếu người vừa ném bộ bài đã HẾT BÀI (đặc biệt
     // vừa ném Heo và về luôn), họ đã an toàn. Người khác vẫn có thể chặt bộ bài
@@ -4739,7 +4554,7 @@ function handleAction(playerId, action, isAuto=false){
       setChopBanner(`🛡️ ${pName} chặt ${describeChopTargetNice(curr)} của ${prevLeaderName} bằng ${describeChopTargetNice(combo)} — không tính Nước (đã về)`, cards);
       // FIX: đã bỏ broadcastSoundEvent('CHOP') ở đây vì có 1 lệnh gọi chung
       // ngay sau khối if/else-if/else bên dưới (áp dụng cho cả 3 nhánh) → tránh phát CHOP 2 lần.
-    } else if((gameState.gameMode === 'WATER' || gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM') && prevLeader && prevLeader !== playerId){
+    } else if(gameState.gameMode === 'WATER' && prevLeader && prevLeader !== playerId){
       // KHÔNG trừ/cộng ngay từng mắt xích. Người bị chặt ở MẮT XÍCH CUỐI
       // sẽ gánh toàn bộ quả bom khi chuỗi chặt kết thúc.
       gameState.chopChainPayer = prevLeader;
@@ -4753,9 +4568,7 @@ function handleAction(playerId, action, isAuto=false){
         at: Date.now()
       });
       // Chỉ tạo hiệu ứng trực quan cho từng mắt xích; KHÔNG thanh toán từng mắt xích.
-      // WATER mới có hiệu ứng chuyển cược; POINTS/NHATANCA/CHATCHEM chỉ ghi sổ
-      // payer/receiver để settleChopChain() cộng/trừ điểm đúng ở cuối chuỗi.
-      if(gameState.gameMode === 'WATER') broadcastStakeTransfer(prevLeader, playerId, chopReward, gameState.stakeUnit);
+      broadcastStakeTransfer(prevLeader, playerId, chopReward, gameState.stakeUnit);
       const chopUnit = (gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM') ? 'điểm' : 'Nước';
       gameState.log = `⚡ ${pName} CHẶT NGANG thành công! Bom chồng hiện tại: ${totalChain} Nước — chưa thanh toán; người bị chặt ở mắt xích cuối sẽ chịu toàn bộ.`;
       if(!gameState.roundLog) gameState.roundLog = [];
@@ -4777,13 +4590,6 @@ function handleAction(playerId, action, isAuto=false){
     if(!gameState.revealedCards[playerId]) gameState.revealedCards[playerId] = [];
     gameState.revealedCards[playerId].push(...cards.map(c=>({r:c.r,s:c.s})));
     gameState.currentCombo = combo;
-    // Các xác nhận 4–5 đôi thông còn lại thuộc CÙNG một chuỗi chặt.
-    // Sau khi target đổi do một cú chặt vừa vung, cập nhật targetKey của các
-    // ý định còn treo để chúng có thể tiếp tục chặt nếu vẫn canBeat() target mới.
-    if(pendingChopIntents && pendingChopIntents.size && combo.type === 'pairs_run' && combo.count >= 4){
-      const nextTargetKey = comboTargetKey(combo);
-      for(const intent of pendingChopIntents.values()) intent.targetKey = nextTargetKey;
-    }
     // QUAN TRỌNG: nếu vừa chồng một bộ đặc biệt lên bộ đặc biệt trước đó,
     // chopStackValue đã được tính dồn ở nhánh isSpecialStackBeat (ví dụ
     // Heo đen 1 → Heo đỏ 2 = 3 Nước treo). Không được ghi đè nó bằng
@@ -4867,7 +4673,7 @@ function handleAction(playerId, action, isAuto=false){
     // KHÓA LƯỢT SAU CHẶT NGAY: người vừa chặt là người duy nhất được phép ra quân.
     // Hủy trạng thái Bot đang nghĩ/đang chờ của nước cũ để callback cũ không thể chen vào.
     gameState.botThinking = false;
-    armTurnTimer(gameState.order[gameState.turnIdx]);
+    gameState.turnDeadline = Date.now() + gameState.turnSeconds * 1000;
     gameState.forcedNextTurnId = playerId;
     gameState.forcedNextTurnAt = Date.now();
     gameState.log = `${pName} đã chặt thành công — ${pName} được đánh tiếp.`;
@@ -4879,13 +4685,8 @@ function handleAction(playerId, action, isAuto=false){
     debugActionEvent('TURN', playerId, `Sau CHẶT NGAY, khóa lượt cho ${pName}`, {turnId:playerId,turnIdx:chopNextIdx});
     bumpActor(playerId, '⚡ Chặt xong — ĐÁNH TIẾP!');
     acceptTrackedAction(playerId,action,{combo:debugComboText(combo),cards:debugCardText(cards)});
-    // Sau mỗi cú chặt 4–5 Đôi Thông, mở ngay một cửa sổ công khai 3 giây cho chặt chồng.
-    // Không công khai pendingChopIntents nên không lộ ai đang cầm bom.
-    gameState.chopSettleDeadline=Date.now()+3000;
-    gameState.chopSettleToken=(gameState.chopSettleToken||0)+1;
     broadcastState();
-    scheduleChopSettleTimeout();
-    // Không gọi checkNextTurn() và không tự kích Bot trong lúc cửa sổ chặt chồng đang mở.
+    // Không gọi checkNextTurn() và không tự kích Bot. Người vừa chặt phải là người ra quân.
     return;
   }
 
@@ -4934,30 +4735,15 @@ function handleAction(playerId, action, isAuto=false){
 
   if(action.kind === 'pass'){
     if(!gameState.currentCombo) return;
-    // Ghi nhận PASS theo target ở mọi chế độ. Như vậy sau khi người chơi
-    // bấm BỎ LƯỢT, nút THAM GIA CHẶT NGANG không thể hiện lại trong cùng target.
-    gameState.instantChopPassedTarget = gameState.instantChopPassedTarget || {};
-    gameState.instantChopPassedTarget[playerId] = comboTargetKey(gameState.currentCombo);
-    gameState.passed.add(playerId);
-    // FIX BUG "TREO BÀN SAU CHẶT NGANG": nếu người này trước đó đã gửi ý định
-    // Chặt Ngang 4-5 Đôi Thông (queueFourPairChop) cho ĐÚNG target đang bị bỏ ở đây,
-    // ý định đó phải bị huỷ ngay lập tức. Nếu không, processPendingChopAfterGrace()
-    // vẫn có thể chọn trúng ý định này làm ứng viên rồi bị handleAction() reject
-    // (ALREADY_PASSED_TARGET) → cú chặt không xảy ra nhưng cũng không có gì trả lượt
-    // về bàn nữa, khiến cả ván bị treo (đây chính là nguồn gốc "bot đơ"/kẹt lượt).
-    if(pendingChopIntents.has(String(playerId))){
-      const staleIntent = pendingChopIntents.get(String(playerId));
-      if(staleIntent && staleIntent.targetKey === comboTargetKey(gameState.currentCombo)){
-        pendingChopIntents.delete(String(playerId));
-      }
+    if(isRuleTestMode){
+      gameState.instantChopPassedTarget = gameState.instantChopPassedTarget || {};
+      gameState.instantChopPassedTarget[playerId] = comboTargetKey(gameState.currentCombo);
     }
+    gameState.passed.add(playerId);
     gameState.log = `${prefix}${pName} đã bỏ lượt.`;
     debugActionEvent('PASS', playerId, `${pName} bỏ lượt${isAuto?' (auto/bot)':''}`, {auto:!!isAuto});
     bumpActor(playerId, isAuto ? '⏰ Bỏ lượt (tự động)' : '🚫 Bỏ lượt');
     consecutivePlayCount = 0;
-    // PASS kết thúc ngay timer của người vừa bỏ. Timer mới chỉ được arm cho người
-    // thực sự nhận lượt sau checkNextTurn(); không dùng lại deadline của lượt cũ.
-    stopTurnTimer(playerId);
     checkNextTurn();
   } 
   else if(action.kind === 'play'){
@@ -5135,7 +4921,7 @@ function handleAction(playerId, action, isAuto=false){
   }
 
   acceptTrackedAction(playerId,action,{combo:debugComboText(gameState.currentCombo)});
-  armTurnTimer(gameState.order[gameState.turnIdx]);
+  gameState.turnDeadline = Date.now() + gameState.turnSeconds * 1000;
   debugActionEvent('TURN', null, `Chuyển lượt → ${debugName(gameState.order[gameState.turnIdx],gameState)}`, {
     turnId:gameState.order[gameState.turnIdx]||null,
     turnIdx:gameState.turnIdx
@@ -5169,15 +4955,6 @@ function checkNextTurn(){
     const allPassed = activeChallengers.length === 0 || activeChallengers.every(id => gameState.passed.has(id));
 
     if(allPassed){
-      // Target đặc biệt + luồng Chặt Ngang 4–5 Đôi Thông: không chốt ngay.
-      // Luôn cho đủ 3 giây sau hành động BỎ CUỐI CÙNG, kể cả khi bàn có 4 người
-      // nhưng thực tế vòng hiện tại chỉ còn 2 người tham gia.
-      if(isChoppableSpecialTarget(gameState.currentCombo)){
-        if(Number(gameState.chopSettleDeadline||0)<=Date.now()){
-          openChopSettleGrace();
-        }
-        return;
-      }
       settleChopChain('tất cả người chơi bỏ lượt');
       gameState.currentCombo = null; gameState.passed.clear(); gameState.instantChopPassedTarget = {}; consecutivePlayCount = 0;
       if(isOut(gameState.leaderId)){
@@ -5725,7 +5502,6 @@ function getViewStateForPlayer(id){
     debugLog: safeArray(gameState.debugLog).slice(-DEBUG_LOG_LIMIT),
     gameMode: gameState.gameMode,
     turnDeadline: gameState.turnDeadline || 0,
-    turnDeadlinePlayerId: gameState.turnDeadlinePlayerId || null,
     turnSeconds: gameState.turnSeconds,
     stakeUnit: gameState.stakeUnit,
     hideCardCount: gameState.hideCardCount,
@@ -6138,15 +5914,14 @@ function startInstantChopCountdown(key){
   instantChopCountdownExpiredKey='';
   instantChopCountdownEnds=0;
   overlay.dataset.countdown='';
-  const alreadyQueued = localPendingFourPairChopTargetKey === targetKey;
-    overlay.innerHTML=`<span class="chop-now-main">${alreadyQueued ? '✅ ĐÃ THAM GIA CHẶT' : '⚡ THAM GIA CHẶT'}</span><span class="chop-now-target">${overlay.dataset.targetLabel||''}</span>`;
+  overlay.innerHTML=`<span class="chop-now-main">⚡ CHẶT NGAY</span><span class="chop-now-target">${overlay.dataset.targetLabel||''}</span>`;
 }
 
 function syncTestInstantChopUI(){
   const legacy=$('btnChopInterrupt');
   const overlay=$('testInstantChopOverlay');
 
-  // TEST 4/5 dùng nút trung tâm để XÁC NHẬN tham gia Chặt Ngang; không vung ngay.
+  // TEST 4/5 chỉ có MỘT nút trung tâm. Nút legacy dưới tay bài luôn ẩn.
   if(legacy){
     legacy.classList.add('hidden');
     legacy.disabled=true;
@@ -6180,7 +5955,7 @@ function syncTestInstantChopUI(){
 
   // Điều kiện duy nhất: bàn đang có mục tiêu + tay hiện tại thật sự có 4/5+ đôi thông
   // có thể chặt mục tiêu. Không có mục tiêu thì tuyệt đối không hiện.
-  const best=active ? getTestInstantChopCards() : null;
+  const best=active && !chopOpen ? getTestInstantChopCards() : null;
   if(best){
     const targetLabel=describeInstantTarget(currentState.currentCombo);
     const targetKey=comboTargetKey(currentState.currentCombo);
@@ -6220,8 +5995,6 @@ function renderCenter(){
     if (isMyTurn) timerBox.classList.add('my-turn-timer');
     else timerBox.classList.remove('my-turn-timer');
   }
-  const timerSecEl = $('turnTimerSecs');
-  if(timerSecEl && !isMyTurn) { timerSecEl.textContent='—'; timerSecEl.classList.remove('low'); }
 
   const pc = $('playedCombo'); pc.innerHTML = '';
   if(st.currentCombo && st.currentCombo.cards){
@@ -6313,9 +6086,7 @@ function renderHand(){
   const chopOpen = chopDeadline > Date.now();
   const isChoppableTarget = isChoppableSpecialTarget(curr);
   const iAmActive = !isSpectator && !safeArray(currentState.finished).includes(myId) && !currentState.isEnded && !iAmColdFolded;
-  const iHaveFourRun = hasFourPairRun(myHand);
-  const iHaveQuad = hasQuadInHand(myHand);
-  const iHaveFourPairs = iHaveFourRun || iHaveQuad;
+  const iHaveFourPairs = hasFourPairRun(myHand) || hasQuadInHand(myHand);
   const isOwnLeader = currentState.leaderId === myId;
   const btnChop = $('btnChopInterrupt');
   if(btnChop){
@@ -6327,8 +6098,7 @@ function renderHand(){
     let showChop = false;
     let selectedChopValid = false;
 
-    const passedThisTarget = hasPassedInstantTarget(currentState, myId, curr);
-    if(isChoppableTarget && iAmActive && !isMyTurn && !isOwnLeader && !passedThisTarget && (iHaveFourRun || iHaveQuad)){
+    if(isChoppableTarget && iAmActive && !isOwnLeader && iHaveFourPairs){
       showChop = true;
       // CHẶT NGAY (4+ Đôi Thông/Tứ Quý): TỰ TÌM bộ hợp lệ trong tay, KHÔNG bắt người chơi
       // phải tự chọn từng lá trước — giống hệt cơ chế getTestInstantChopCards() ở Phòng Test.
@@ -6343,7 +6113,7 @@ function renderHand(){
         selectedChopValid = !!(selectedCombo && (selectedCombo.type === 'pairs_run' || selectedCombo.type === 'quad') &&
           (selectedCombo.type !== 'pairs_run' || selectedCombo.count >= 4) && canBeat(selectedCombo, curr));
       }
-    } else if(chopOpen && isChoppableTarget && iAmActive && !isMyTurn && !passedThisTarget && !iHaveFourPairs){
+    } else if(chopOpen && isChoppableTarget && iAmActive && !isMyTurn && !iHaveFourPairs){
       // Người chỉ có đúng 3 Đôi Thông vẫn được Chặt Ngang theo cửa sổ 3 giây cũ.
       showChop = true;
       const selectedCards=[...selected].map(k=>safeArray(myHand).find(c=>cardKey(c)===k)).filter(Boolean);
@@ -6354,11 +6124,8 @@ function renderHand(){
     if(showChop){
       btnChop.classList.remove('hidden');
       const sec = Math.max(1, Math.ceil((chopDeadline - Date.now()) / 1000));
-      const queuedHere = iHaveFourRun && localPendingFourPairChopTargetKey === comboTargetKey(curr);
-      btnChop.innerHTML = iHaveFourRun
-        ? `<span class="chop-btn-main">${queuedHere ? '✅ ĐÃ THAM GIA CHẶT' : '⚡ THAM GIA CHẶT'}</span><span class="chop-btn-target">${escapeHtml(describeInstantTarget(curr))}</span>`
-        : buildChopButtonLabel(curr, currentState.leaderId, sec, true);
-      btnChop.disabled = queuedHere || !selectedChopValid;
+      btnChop.innerHTML = buildChopButtonLabel(curr, currentState.leaderId, sec, iHaveFourPairs);
+      btnChop.disabled = !selectedChopValid;
     } else {
       btnChop.classList.add('hidden');
       btnChop.textContent = '⚡ CHẶT NGAY';
@@ -6508,7 +6275,6 @@ function updateHandActionButtonsOnly(){
   if(isRuleTestMode){ syncTestInstantChopUI(); return; }
   const btnChop = $('btnChopInterrupt');
   if(btnChop && !btnChop.classList.contains('hidden') && !isRuleTestMode){
-    if(isMyTurn){ btnChop.classList.add('hidden'); btnChop.disabled=true; return; }
     const curr = currentState.currentCombo;
     const selectedCards = [...selected]
       .map(k => safeArray(myHand).find(c => cardKey(c) === k))
@@ -6527,17 +6293,11 @@ setInterval(()=>{
     updatePauseOverlay(currentState);
     return;
   }
-  const el = $('turnTimerSecs');
-  if(!currentState || currentState.isEnded){ if(el) el.textContent='—'; return; }
-  const myTurn = !isSpectator && String(currentState.turnId||'') === String(myId);
-  if(!myTurn || !currentState.turnDeadline){
-    if(el) el.textContent='—';
-    if(el) el.classList.remove('low');
-    return;
-  }
+  if(!currentState || !currentState.turnDeadline || currentState.isEnded) return;
   const rem = Math.max(0, Math.ceil((currentState.turnDeadline - Date.now())/1000));
-  if(el) el.textContent = rem;
-  if(el) el.classList.toggle('low', rem <= 5);
+  const el = $('turnTimerSecs');
+  el.textContent = rem;
+  el.classList.toggle('low', rem <= 5);
 }, 250);
 
 // TỐI ƯU MOBILE: cập nhật số giây đếm ngược của nút "Chặt Ngang" bằng cách chỉ đổi textContent
@@ -6555,15 +6315,8 @@ setInterval(()=>{
   if(!btnChop || btnChop.classList.contains('hidden')) return;
   if(!currentState) return;
 
-  // 4–5 Đôi Thông giờ là nút XÁC NHẬN, không vung ngay.
-  // Tứ Quý vẫn giữ nút CHẶT NGAY cũ để không ảnh hưởng luật khác.
-  if(hasFourPairRun(myHand)){
-    const targetKey=comboTargetKey(currentState.currentCombo);
-    const queuedHere=localPendingFourPairChopTargetKey===targetKey;
-    btnChop.innerHTML=`<span class="chop-btn-main">${queuedHere ? '✅ ĐÃ THAM GIA CHẶT' : '⚡ THAM GIA CHẶT'}</span><span class="chop-btn-target">${escapeHtml(describeInstantTarget(currentState.currentCombo))}</span>`;
-    return;
-  }
-  if(hasQuadInHand(myHand)){
+  // 4+ Đôi Thông = nút CHẶT NGAY cố định, không đếm ngược.
+  if(hasFourPairRun(myHand) || hasQuadInHand(myHand)){
     btnChop.innerHTML = buildChopButtonLabel(currentState.currentCombo, currentState.leaderId, 0, true);
     return;
   }
@@ -6681,15 +6434,10 @@ $('btnChopInterrupt').onclick=()=>{
   // đồng bộ đúng 1 đường xử lý với getTestInstantChopCards() ở Phòng Test, không còn
   // bắt người chơi phải tự chọn từng lá trước khi bấm như trước đây.
   // Chặt Ngang (đúng 3 Đôi Thông, cửa sổ 3 giây cũ) KHÔNG đổi — vẫn bắt chọn tay như cũ.
-  if(curr && isChoppableSpecialTarget(curr) && hasFourPairRun(myHand)){
-    const targetKey=comboTargetKey(curr);
-    if(localPendingFourPairChopTargetKey===targetKey) return;
+  if(curr && isChoppableSpecialTarget(curr) && (hasFourPairRun(myHand) || hasQuadInHand(myHand))){
     const best = findBestInstantChopCardsForHand(myHand, curr);
     if(best){ sendAction({kind:'interrupt_chop', cards: best.cards.map(cardKey)}); return; }
-  }
-  if(curr && isChoppableSpecialTarget(curr) && hasQuadInHand(myHand)){
-    const best = findBestInstantChopCardsForHand(myHand, curr);
-    if(best){ sendAction({kind:'interrupt_chop', cards: best.cards.map(cardKey)}); return; }
+    // Bộ tự tìm không có (hiếm khi xảy ra) — thử dùng đúng bộ người chơi đã tự chọn tay, nếu có.
   }
   const check=validateSelectedInterrupt(); if(!check.ok){showHandSelectMsg(check.msg);return;}
   sendAction({kind:'interrupt_chop',cards:[...selected]});
@@ -6700,8 +6448,8 @@ $('testInstantChopOverlay').onclick=(e)=>{
   const isMyTurnNow=currentState.turnId===myId||(Array.isArray(currentState.order)&&currentState.order[currentState.turnIdx]===myId);
   if(isMyTurnNow){syncTestInstantChopUI();return;}
   if(hasPassedInstantTarget(currentState,myId,currentState.currentCombo)){syncTestInstantChopUI();return;}
-  const targetKey=comboTargetKey(currentState.currentCombo);
-  if(localPendingFourPairChopTargetKey===targetKey){syncTestInstantChopUI();return;}
+  const chopDeadline=Number(currentState.chopInterruptDeadline||0);
+  if(chopDeadline>Date.now()){syncTestInstantChopUI();return;}
   const best=getTestInstantChopCards(); if(!best){syncTestInstantChopUI();return;}
   autoPrepareInstantChop(); sendAction({kind:'interrupt_chop',cards:best.cards.map(cardKey)});
 };
