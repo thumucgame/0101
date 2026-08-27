@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -4620,7 +4622,7 @@ function handleAction(playerId, action, isAuto=false){
     // càng chặt chồng nhiều vòng thì "quả bom" càng to, ai lãnh cú chặt cuối cùng trả trọn.
     gameState.chopChainValue = (gameState.chopChainValue || 0) + chopReward;
     const totalChain = gameState.chopChainValue;
-    const chainTag = totalChain > chopReward ? ` [Chặt chồng dồn: ${totalChain} Nước]` : '';
+    const chainTag = totalChain > chopReward ? ` [Chặt chồng dồn: ${totalChain} ${(gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM') ? 'điểm' : 'Nước'}]` : '';
 
     const prevLeader = gameState.leaderId;
     const targetWasAlreadyFinished = gameState.finished.includes(prevLeader);
@@ -4638,9 +4640,15 @@ function handleAction(playerId, action, isAuto=false){
       setChopBanner(`🛡️ ${pName} chặt ${describeChopTargetNice(curr)} của ${prevLeaderName} bằng ${describeChopTargetNice(combo)} — không tính Nước (đã về)`, cards);
       // FIX: đã bỏ broadcastSoundEvent('CHOP') ở đây vì có 1 lệnh gọi chung
       // ngay sau khối if/else-if/else bên dưới (áp dụng cho cả 3 nhánh) → tránh phát CHOP 2 lần.
-    } else if(gameState.gameMode === 'WATER' && prevLeader && prevLeader !== playerId){
-      // KHÔNG trừ/cộng ngay từng mắt xích. Người bị chặt ở MẮT XÍCH CUỐI
-      // sẽ gánh toàn bộ quả bom khi chuỗi chặt kết thúc.
+    } else if(prevLeader && prevLeader !== playerId &&
+              (gameState.gameMode === 'WATER' || gameState.gameMode === 'POINTS' ||
+               gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM')){
+      // CHẶT NGAY phải ghi nhận mắt xích cho TẤT CẢ chế độ có tính Nước/Điểm.
+      // BUG V8: nhánh này trước đây chỉ chạy ở WATER. Vì vậy POINTS/NHATANCA/CHATCHEM
+      // vẫn tăng chopChainValue (BOM hiển thị 2/2) nhưng KHÔNG lưu payer/receiver/history.
+      // Khi người chặt đánh nước kế tiếp, settleChopChain() không có cặp thanh toán nên
+      // không cộng điểm cho người chặt. Đây chính là lỗi: "chặt rồi nhưng không có điểm".
+      // Không thanh toán từng mắt xích; chỉ ghi sổ để settleChopChain() kết sổ 1 lần.
       gameState.chopChainPayer = prevLeader;
       gameState.chopChainReceiver = playerId;
       gameState.chopChainHistory = Array.isArray(gameState.chopChainHistory) ? gameState.chopChainHistory : [];
@@ -4651,8 +4659,8 @@ function handleAction(playerId, action, isAuto=false){
         target: choppedDesc,
         at: Date.now()
       });
-      // Chỉ tạo hiệu ứng trực quan cho từng mắt xích; KHÔNG thanh toán từng mắt xích.
-      broadcastStakeTransfer(prevLeader, playerId, chopReward, gameState.stakeUnit);
+      // Chỉ tạo hiệu ứng chuyển cược trực quan ở WATER; POINTS chỉ ghi điểm vào sổ.
+      if(gameState.gameMode === 'WATER') broadcastStakeTransfer(prevLeader, playerId, chopReward, gameState.stakeUnit);
       const chopUnit = (gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM') ? 'điểm' : 'Nước';
       gameState.log = `⚡ ${pName} CHẶT NGANG thành công! Bom chồng hiện tại: ${totalChain} Nước — chưa thanh toán; người bị chặt ở mắt xích cuối sẽ chịu toàn bộ.`;
       if(!gameState.roundLog) gameState.roundLog = [];
@@ -4942,7 +4950,7 @@ function handleAction(playerId, action, isAuto=false){
       // gánh TOÀN BỘ số nước đã dồn từ đầu chuỗi, không chỉ riêng bộ vừa mất.
       gameState.chopChainValue = (gameState.chopChainValue || 0) + chopReward;
       const totalChain = gameState.chopChainValue;
-      const chainTag = totalChain > chopReward ? ` [Chặt chồng dồn: ${totalChain} Nước]` : '';
+      const chainTag = totalChain > chopReward ? ` [Chặt chồng dồn: ${totalChain} ${(gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM') ? 'điểm' : 'Nước'}]` : '';
 
       const prevLeaderName = gameState.names[gameState.leaderId];
       const choppedDesc = describeCombo(gameState.currentCombo);
