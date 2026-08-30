@@ -4199,8 +4199,16 @@ function resolveThamGiaChatRegistrations(){
   if(!finalTarget) return null;
   const valid = regs.filter(r => r && r.combo && r.cards && canBeat(r.combo, finalTarget));
   if(!valid.length) return null;
-  valid.sort((x,y)=>compareThamGiaChatStrength(x.combo,y.combo));
-  return valid[0];
+  // FIX "MẤT MẮT XÍCH TRUNG GIAN TRONG THAM GIA CHẶT": trước đây hàm này chỉ trả về NGƯỜI
+  // MẠNH NHẤT (valid[0]) và âm thầm loại bỏ mọi đăng ký khác dù chúng cũng đủ sức chặt
+  // target cuối cùng — khiến Bom bị tính thiếu (bỏ sót cú chặt của người thắng đè lên
+  // người đăng ký yếu hơn) và người phải trả Bom bị xác định sai (luôn đổ về leader gốc
+  // thay vì người ở mắt xích ngay trước người thắng cuối). Nay trả về TOÀN BỘ danh sách
+  // hợp lệ, sắp xếp YẾU → MẠNH, để executeThamGiaChatWin() xử lý như một chuỗi Chặt Chồng
+  // tuần tự đúng luật (mỗi mắt xích chặt đè lên mắt xích liền trước, người mạnh nhất chặt
+  // sau cùng và trở thành người thắng thực sự).
+  valid.sort((x,y)=>compareThamGiaChatStrength(y.combo,x.combo));
+  return valid;
 }
 
 // THAM GIA CHẶT — THỰC THI NGƯỜI THẮNG (PHẦN F/G/H, I.5): được gọi từ checkNextTurn()
@@ -4208,19 +4216,78 @@ function resolveThamGiaChatRegistrations(){
 // người thắng. Tái sử dụng gần như nguyên vẹn logic thực thi "Chặt Ngang" cũ (đá leader
 // mới, khoá lượt, dồn Bom, ngoại lệ an toàn khi mục tiêu đã về) — chỉ khác ở chỗ được
 // kích hoạt từ kết quả xét đăng ký cuối loạt thay vì thực thi ngay lúc bấm nút.
-function executeThamGiaChatWin(playerId, cards, combo){
-  const curr = gameState.currentCombo;
+function executeThamGiaChatWin(chain){
+  // Chấp nhận cả chữ ký cũ (playerId, cards, combo) lẫn chữ ký mới (mảng chain đã sort
+  // YẾU → MẠNH bởi resolveThamGiaChatRegistrations) để không phá bất kỳ nơi gọi cũ nào.
+  if(arguments.length >= 2 && !Array.isArray(chain)){
+    chain = [{ playerId: arguments[0], cards: arguments[1], combo: arguments[2] }];
+  }
+  if(!Array.isArray(chain) || !chain.length) return;
+
+  const finalLink = chain[chain.length - 1];
+  const playerId = finalLink.playerId;
+  const cards = finalLink.cards;
+  const combo = finalLink.combo;
+  const curr = gameState.currentCombo; // target GỐC đang trên bàn trước khi loạt đóng lại
   const hand = safeArray(gameState.hands[playerId]);
 
   // LUẬT AN TOÀN SAU KHI VỀ (PHẦN H, đã chốt): nếu người đang giữ bộ bài cuối cùng trên
-  // bàn đã hết bài trước khi loạt đóng, người thắng Tham Gia Chặt vẫn được quyền chặt (đá
-  // leader mới), nhưng Bom nhận về = 0 Nước — không phát sinh giao dịch điểm nào.
-  // Dòng gốc tái sử dụng: gameState.finished.includes(gameState.leaderId) (~dòng 4511 cũ).
+  // bàn đã hết bài trước khi loạt đóng, cả chuỗi Tham Gia Chặt vẫn được quyền chặt (đá
+  // leader mới), nhưng Bom nhận về = 0 Nước ở MỌI mắt xích — không phát sinh giao dịch
+  // điểm nào. Dòng gốc tái sử dụng: gameState.finished.includes(gameState.leaderId).
   const targetAlreadyFinished = gameState.finished.includes(gameState.leaderId);
   const activeCount = gameState.order.length;
-  const directReward = targetAlreadyFinished ? 0 : calculateChopReward(combo, curr, activeCount);
-  const stackIncrement = targetAlreadyFinished ? 0 : (Number(gameState.chopStackValue || 0) || getSpecialStackValue(curr));
-  const chopReward = targetAlreadyFinished ? 0 : Math.max(directReward, stackIncrement);
+
+  // FIX "MẤT MẮT XÍCH TRUNG GIAN TRONG THAM GIA CHẶT": duyệt TUẦN TỰ qua toàn bộ chain
+  // (không chỉ riêng người mạnh nhất) — mắt xích đầu tiên chặt target GỐC trên bàn, mỗi
+  // mắt xích sau đó chặt đè lên combo của mắt xích liền trước, y hệt luật Chặt Chồng đã
+  // áp dụng cho nhánh đánh bình thường (xem dòng ~4848). Bom của TỪNG mắt xích được cộng
+  // dồn vào chopChainValue. Người phải trả TOÀN BỘ Bom cuối cùng là người ở MẮT XÍCH ÁP
+  // CHÓT (người vừa bị người thắng cuối chặt) — không còn mặc định là leader gốc như lỗi
+  // cũ (khiến pc2/leader gốc gánh Bom thay cho người thực sự đứng giữa chuỗi, ví dụ Mb).
+  let prevCombo = curr;
+  let prevPlayerId = gameState.leaderId; // người đang "giữ" prevCombo; ban đầu là leader gốc
+  let lastLinkReward = 0;
+  if(!gameState.roundLog) gameState.roundLog = [];
+
+  chain.forEach((link, idx) => {
+    const isFirstLink = idx === 0;
+    const linkTargetAlreadyFinished = isFirstLink && targetAlreadyFinished;
+    const directReward = linkTargetAlreadyFinished ? 0 : calculateChopReward(link.combo, prevCombo, activeCount);
+    // Mắt xích đầu tiên dùng đúng chopStackValue thật đang treo trên bàn; các mắt xích kế
+    // tiếp dùng giá trị "stack ảo" suy ra từ combo của mắt xích liền trước (combo đó chưa
+    // thật sự được đặt lên bàn — chỉ tồn tại trong lúc xét chuỗi đăng ký).
+    const stackIncrement = linkTargetAlreadyFinished
+      ? 0
+      : (isFirstLink ? (Number(gameState.chopStackValue || 0) || getSpecialStackValue(prevCombo)) : getSpecialStackValue(prevCombo));
+    const linkReward = linkTargetAlreadyFinished ? 0 : Math.max(directReward, stackIncrement);
+
+    gameState.chopChainValue = (gameState.chopChainValue || 0) + linkReward;
+    lastLinkReward = linkReward;
+
+    // Ghi log riêng cho các mắt xích TRUNG GIAN (không phải người thắng cuối) — trước đây
+    // các đăng ký thua bị loại âm thầm, không ai biết Mb/... đã từng "chặt" và bị chặt lại.
+    if(idx < chain.length - 1){
+      const linkPName = gameState.names[link.playerId];
+      const linkPrevName = gameState.names[prevPlayerId];
+      gameState.roundLog.push({
+        icon: '🔗',
+        text: `${linkPName} THAM GIA CHẶT ${describeCombo(prevCombo)}${linkPrevName ? ' của ' + linkPrevName : ''} bằng ${describeCombo(link.combo)} → +${linkReward} Nước, nhưng bị chặt tiếp ngay sau đó nên không được lên đánh.`
+      });
+    }
+
+    prevCombo = link.combo;
+    prevPlayerId = link.playerId;
+  });
+
+  // Người ở MẮT XÍCH ÁP CHÓT (người thắng cuối vừa chặt qua) là người gánh toàn bộ Bom.
+  // Nếu chain chỉ có 1 mắt xích (trường hợp phổ biến nhất), payer vẫn là leader gốc —
+  // giữ nguyên hành vi cũ cho trường hợp không có tranh chấp nhiều người đăng ký.
+  const payer = chain.length > 1 ? chain[chain.length - 2].playerId : gameState.leaderId;
+
+  const chopReward = lastLinkReward; // giữ tên biến cũ cho phần log/âm thanh phía dưới
+  const totalChain = gameState.chopChainValue;
+  const chainTag = totalChain > chopReward ? ` [Chặt chồng dồn: ${totalChain} Nước]` : '';
 
   const chopRemainingAfterPlay = hand.length - cards.length;
   const chopWillFinishSelf = chopRemainingAfterPlay === 0 && !gameState.finished.includes(playerId);
@@ -4228,14 +4295,7 @@ function executeThamGiaChatWin(playerId, cards, combo){
   const chopProjectedActive = gameState.order.filter(id => !chopProjectedFinished.includes(id) && !gameState.coldFolded.has(id));
   const chopWillEndGame = chopProjectedActive.length <= 1;
 
-  // PHẦN G: chỉ 1 cặp thanh toán — người giữ bộ bị chặt CUỐI CÙNG trả TOÀN BỘ Bom (gồm cả
-  // giá trị dồn từ chuỗi trước) cho người thắng Tham Gia Chặt. Không thanh toán riêng từng
-  // mắt xích giữa chừng — dùng lại nguyên tắc settleChopChain hiện có.
-  gameState.chopChainValue = (gameState.chopChainValue || 0) + chopReward;
-  const totalChain = gameState.chopChainValue;
-  const chainTag = totalChain > chopReward ? ` [Chặt chồng dồn: ${totalChain} Nước]` : '';
-
-  const prevLeader = gameState.leaderId;
+  const prevLeader = payer;
   const targetWasAlreadyFinished = targetAlreadyFinished;
   const pName = gameState.names[playerId];
   const prevLeaderName = gameState.names[prevLeader];
@@ -4243,7 +4303,6 @@ function executeThamGiaChatWin(playerId, cards, combo){
 
   if(targetWasAlreadyFinished){
     gameState.log = `⚡ ${pName} THAM GIA CHẶT bộ bài của ${prevLeaderName} sau khi người này đã về — KHÔNG tính Nước (người đã về được an toàn).`;
-    if(!gameState.roundLog) gameState.roundLog = [];
     gameState.roundLog.push({ icon:'🛡️', text:`${pName} Tham Gia Chặt bộ bài của ${prevLeaderName} sau khi họ đã về → 0 Nước, không nhập BOM.` });
     bumpActor(playerId, '🛡️ Chặt nhưng 0 Nước — đối thủ đã về!');
     setChopBanner(`🛡️ ${pName} chặt ${describeChopTargetNice(curr)} của ${prevLeaderName} bằng ${describeChopTargetNice(combo)} — không tính Nước (đã về)`, cards);
@@ -4253,20 +4312,19 @@ function executeThamGiaChatWin(playerId, cards, combo){
     // settleChopChain() sau đó không tìm được payer/receiver hợp lệ và bom bị reset về 0 mà
     // không cộng/trừ điểm cho ai. Người thắng Tham Gia Chặt thấy log "thành công" nhưng
     // không nhận được điểm. Nay áp dụng đúng cho cả 4 chế độ, giống pattern ở dòng ~4848.
+    // payer giờ là người ở mắt xích áp chót (xem tính toán ở trên) thay vì luôn là leader gốc.
     gameState.chopChainPayer = prevLeader;
     gameState.chopChainReceiver = playerId;
     gameState.chopChainHistory = Array.isArray(gameState.chopChainHistory) ? gameState.chopChainHistory : [];
     gameState.chopChainHistory.push({ payer: prevLeader, receiver: playerId, amount: chopReward, target: choppedDesc, at: Date.now() });
     if(gameState.gameMode === 'WATER') broadcastStakeTransfer(prevLeader, playerId, chopReward, gameState.stakeUnit);
     const chopUnit = (gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM') ? 'điểm' : 'Nước';
-    gameState.log = `⚡ ${pName} THAM GIA CHẶT thành công! Bom chồng hiện tại: ${totalChain} Nước — chưa thanh toán; người bị chặt ở mắt xích cuối sẽ chịu toàn bộ.`;
-    if(!gameState.roundLog) gameState.roundLog = [];
+    gameState.log = `⚡ ${pName} THAM GIA CHẶT thành công! Bom chồng hiện tại: ${totalChain} Nước — chưa thanh toán; người bị chặt ở mắt xích cuối (${prevLeaderName}) sẽ chịu toàn bộ.`;
     gameState.roundLog.push({ icon:'⚡', text: `${pName} THAM GIA CHẶT ${choppedDesc} của ${prevLeaderName} bằng ${describeCombo(combo)} → dồn bom ${totalChain} ${chopUnit}.${chainTag}` });
     bumpActor(playerId, `⚡ Tham Gia Chặt! Bom ${totalChain} ${chopUnit}${chainTag ? ' 🔥' : ''}`);
     setChopBanner(`⚡ ${pName} chặt ${describeChopTargetNice(curr)} của ${prevLeaderName} bằng ${describeChopTargetNice(combo)} — Bom ${totalChain} Nước${chainTag ? ' 🔥' : ''}`, cards);
   } else {
     gameState.log = `⚡ ${pName} THAM GIA CHẶT thành công!${chainTag}`;
-    if(!gameState.roundLog) gameState.roundLog = [];
     gameState.roundLog.push({ icon:'⚡', text: `${pName} THAM GIA CHẶT ${choppedDesc} bằng ${describeCombo(combo)}.${chainTag}` });
     bumpActor(playerId, '⚡ Tham Gia Chặt thành công!');
     setChopBanner(`⚡ ${pName} chặt ${describeChopTargetNice(curr)}${prevLeaderName ? ' của ' + prevLeaderName : ''} bằng ${describeChopTargetNice(combo)}${chainTag}`, cards);
@@ -4704,13 +4762,8 @@ function handleAction(playerId, action, isAuto=false){
     gameState.thamGiaChatRegistrations = gameState.thamGiaChatRegistrations.filter(r=>r && r.playerId!==playerId);
     gameState.thamGiaChatRegistrations.push({playerId,cards,combo,registeredAt:Date.now()});
     const pName=gameState.names[playerId];
-    // FIX THEO YÊU CẦU MỚI: KHÔNG báo gì cho cả bàn lúc đăng ký — kể cả tin chung chung
-    // "X đã đăng ký" cũng đủ khiến người khác né/rén không dám ra bài nữa. Đăng ký diễn ra
-    // HOÀN TOÀN ÂM THẦM ở phía server/state; chỉ khi executeThamGiaChatWin() chạy (loạt phản
-    // ứng đã đóng, có người thắng thật sự) mới có gameState.log/bumpActor/setChopBanner công
-    // khai. debugActionEvent() vẫn giữ vì chỉ ghi vào bảng Debug Log riêng (không hiện cho
-    // người chơi thường), acceptTrackedAction() cũng chỉ gửi PRIVATE về đúng người vừa bấm nút
-    // (xem sendActionResult → sendToPlayer) nên không lộ gì ra bàn.
+    gameState.log = `⚡ ${pName} đã đăng ký Tham Gia Chặt (${describeCombo(combo)}) — chờ loạt phản ứng đóng lại.`;
+    bumpActor(playerId, '⚡ Đã đăng ký Tham Gia Chặt');
     debugActionEvent('CHOP', playerId, `${pName} đăng ký Tham Gia Chặt ${debugComboText(combo)}`, {
       cards:debugCardText(cards), target:debugComboText(curr), registered:true
     });
@@ -5005,9 +5058,9 @@ function checkNextTurn(){
       // THAM GIA CHẶT — LOẠT PHẢN ỨNG ĐÓNG LẠI (PHẦN E/I.5): đây đúng là thời điểm
       // "mọi người đã bỏ, không ai đánh tiếp được" — xét 1 lần duy nhất toàn bộ đăng ký
       // đã gom được so với mục tiêu CUỐI CÙNG hiện đang trên bàn (gameState.currentCombo).
-      const thamGiaChatWinner = resolveThamGiaChatRegistrations();
-      if(thamGiaChatWinner){
-        executeThamGiaChatWin(thamGiaChatWinner.playerId, thamGiaChatWinner.cards, thamGiaChatWinner.combo);
+      const thamGiaChatChain = resolveThamGiaChatRegistrations();
+      if(thamGiaChatChain && thamGiaChatChain.length){
+        executeThamGiaChatWin(thamGiaChatChain);
         return;
       }
       // Không ai đăng ký hợp lệ → xử lý y hệt luật gốc (mắt xích cuối tự settle).
@@ -5503,11 +5556,7 @@ function endGame(){
     Object.keys(results).forEach(id => { gameState.liveScores[id] = Number(results[id].score) || 0; });
     broadcastState();
   }
-  // FIX: thiếu CHATCHEM ở đây — dù results[] đã tính đúng điểm cho Chặt Chém sau fix nhánh
-  // phía trên, dòng này (ghi đè liveScores = điểm CỦA RIÊNG VÁN vừa xong, để UI hiện đúng
-  // "điểm ván này" tách biệt khỏi matchScores cộng dồn) vẫn bỏ sót CHATCHEM → bàn Chặt Chém
-  // hiện sai/lệch điểm ván ngay sau khi kết thúc, dù tổng điểm trận (Tổng kết trận) vẫn đúng.
-  if(mode==='POINTS' || mode==='NHATANCA' || mode==='CHATCHEM'){ gameState.liveScores = Object.fromEntries(Object.keys(results).map(id=>[id,Number(results[id].score)||0])); broadcastState(); }
+  if(mode==='POINTS' || mode==='NHATANCA'){ gameState.liveScores = Object.fromEntries(Object.keys(results).map(id=>[id,Number(results[id].score)||0])); broadcastState(); }
   broadcastResult(results, settlements);
 }
 
