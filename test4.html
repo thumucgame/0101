@@ -1,4 +1,6 @@
 
+
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -141,6 +143,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .p-slot .card-cnt{font-size:9px;color:var(--gold);font-weight:bold;margin-top:1px;}
 .p-slot .kneeling-badge{font-size:10px;color:#ff5252;font-weight:bold;margin-top:1px;}
 .p-slot .last-card-badge{font-size:10px;color:#111;font-weight:900;margin-top:1px;background:#ffe600;border-radius:6px;padding:1px 6px;letter-spacing:.3px;animation:pulseLastCard 0.8s infinite alternate;box-shadow:0 0 8px rgba(255,230,0,.7);}
+.p-slot .chop-registered-badge{font-size:10px;color:#0a2e18;font-weight:900;margin-top:1px;background:#3ecf6e;border-radius:6px;padding:1px 6px;letter-spacing:.2px;box-shadow:0 0 8px rgba(62,207,110,.6);}
 @keyframes pulseLastCard{0%{transform:scale(1);}100%{transform:scale(1.08);}}
 
 /* Ghế đối thủ giờ nằm BÊN TRONG .table-center (thay vì canh theo toàn màn hình),
@@ -279,6 +282,9 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 #btnChopInterrupt{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.15;padding-top:6px;padding-bottom:6px;}
 #btnChopInterrupt .chop-btn-main{font-size:13px;font-weight:800;}
 #btnChopInterrupt .chop-btn-target{font-size:10px;font-weight:700;color:#fff3a0;opacity:.92;white-space:normal;text-align:center;}
+#btnChopInterrupt.chop-btn-registered{border-color:#3ecf6e!important;color:#3ecf6e!important;opacity:.75;cursor:default;}
+#btnChopInterrupt.chop-btn-registered .chop-btn-main{color:#3ecf6e;}
+#btnChopInterrupt.chop-btn-registered .chop-btn-target{color:#a8f0bd;opacity:.85;}
 .timer-sec.low{color:var(--bad);}
 
 .live-score-sticker {
@@ -387,6 +393,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 @keyframes cardShake{0%,100%{transform:translateY(-16px) translateX(0);}25%{transform:translateY(-16px) translateX(-4px);}75%{transform:translateY(-16px) translateX(4px);}}
 .hand-select-msg{text-align:center;font-size:12px;color:var(--bad);font-weight:700;margin:2px 0;min-height:16px;transition:opacity .2s;}
 .hand-select-msg.hidden{display:none;}
+.hand-select-msg.hand-select-msg-ok{color:#3ecf6e;}
 .card.table-card{
   width:76px;height:110px;margin-left:-28px;pointer-events:none;box-shadow:-3px 3px 8px rgba(0,0,0,.6);border:1.5px solid rgba(0,0,0,.35);
 }
@@ -1239,6 +1246,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
       <div id="myLiveScoreBox" class="points-score-wrap" style="display:none;"><div class="points-total-score" id="myTotalScore">Tổng: 0</div><div class="points-round-score" id="myRoundScore"></div></div>
       <div id="myKneelingBadge" class="kneeling-badge hidden">🧎 Đang Quỳ</div>
       <div id="myLastCardBadge" class="last-card-badge hidden">⚠️ 1 LÁ!</div>
+      <div id="myChopRegisteredBadge" class="chop-registered-badge hidden">✅ Đã đăng ký</div>
     </div>
     <div class="hand-cards" id="handCards"><div class="hand-cards-inner" id="handCardsInner"></div></div>
     <div class="hand-select-msg hidden" id="handSelectMsg"></div>
@@ -1309,7 +1317,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     <p><b>Luật Tới Trắng (Ù ngay khi chia bài):</b> Ngay sau khi chia đủ 13 lá, hệ thống kiểm tra bài Tới Trắng trước khi bắt đầu lượt. Nếu có người sở hữu <b>Sảnh Rồng (3→A)</b>, <b>Tứ Quý Heo (đủ 4 quân 2)</b>, <b>Lục Đôi (6 đôi)</b> hoặc <b>Ngũ Đôi Thông (5 đôi liên tiếp)</b>, ván đấu kết thúc ngay lập tức, người đó thắng trắng và nhận thưởng cố định từ tất cả người chơi còn lại, không đánh tiếp.</p>
     <p><b>Tứ Quý 3 — Tới Trắng ván đầu tiên:</b> Chỉ ở <b>ván đầu tiên của trận đấu</b>, nếu một người cầm đủ <b>4 quân 3</b> (3♠, 3♣, 3♦, 3♥) thì được <b>Tới Trắng</b> ngay khi chia bài. Từ ván thứ hai trở đi, Tứ Quý 3 <b>không</b> còn là điều kiện Tới Trắng.</p>
     <p><b>Luật Phạt Cóng/Đốt:</b> Người không đánh được lá nào trong suốt ván sẽ bị Cóng và đền cho <b>tất cả người chơi còn lại</b> giống cơ chế Tới Trắng nhưng ngược chiều: Bàn 4 người đền <b>2 Nước/người × 3 = 6 Nước</b>; Bàn 3 người <b>2 × 2 = 4 Nước</b>; Bàn 2 người <b>2 × 1 = 2 Nước</b>. Khoản Cóng được chia đều cho toàn bộ người còn lại. <b>Thối bài là khoản riêng</b>: Heo/Tứ Quý/Đôi Thông... vẫn đền trực tiếp cho người đã ép/chặn người Cóng.</p>
-    <p><b>Luật Tham Gia Chặt (ngoài lượt):</b> Khi trên bàn đang có Heo đơn/đôi hoặc Tứ Quý bị lộ, người KHÔNG có lượt vẫn có thể chen vào chặt bằng nút "⚡ THAM GIA CHẶT" — nhưng chỉ khi đang <b>giữ vé</b>: vé được cấp khi bấm <b>Bỏ</b> đúng lượt của mình lúc bàn còn là bài cơ bản (chưa đặc biệt); nếu bấm Bỏ khi bàn ĐÃ đặc biệt thì mất quyền này vĩnh viễn cho ván (round) đó. Vé chỉ có hiệu lực trong round hiện tại, hết round là reset sạch. Bấm nút chỉ <b>đăng ký</b> — khi mọi phản ứng đã dừng (không ai đánh tiếp được), hệ thống xét 1 lần duy nhất: ai đăng ký mạnh nhất so với mục tiêu cuối cùng trên bàn là người thắng, được đá làm leader mới. <b>3 Đôi Thông không tham gia cơ chế này</b> — muốn dùng 3 Đôi Thông chặt Heo đơn thì chỉ cần đánh bình thường vào đúng lượt của mình như một nước đi thường (không cần vé, không cần nút riêng). Thứ bậc chặt cụ thể:</p>
+    <p><b>Luật Tham Gia Chặt (ngoài lượt):</b> Khi trên bàn đang có Heo đơn/đôi, Tứ Quý, hoặc 3+ Đôi Thông (kể cả đúng 3 Đôi Thông) bị lộ, người KHÔNG có lượt vẫn có thể chen vào chặt bằng nút "⚡ THAM GIA CHẶT" — nhưng chỉ khi đang <b>giữ vé</b>: vé được cấp khi bấm <b>Bỏ</b> đúng lượt của mình lúc bàn còn là bài cơ bản (chưa đặc biệt); nếu bấm Bỏ khi bàn ĐÃ đặc biệt thì mất quyền này vĩnh viễn cho ván (round) đó. Vé chỉ có hiệu lực trong round hiện tại, hết round là reset sạch. Bấm nút chỉ <b>đăng ký</b> — khi mọi phản ứng đã dừng (không ai đánh tiếp được), hệ thống xét 1 lần duy nhất: ai đăng ký mạnh nhất so với mục tiêu cuối cùng trên bàn là người thắng, được đá làm leader mới. <b>3 Đôi Thông chỉ có thể là ĐỐI TƯỢNG bị chặt theo cơ chế này (bởi 4+ Đôi Thông hoặc Tứ Quý), KHÔNG được dùng làm VŨ KHÍ để đăng ký chặt ngoài lượt</b> — muốn dùng 3 Đôi Thông để chặt thì chỉ cần đánh bình thường vào đúng lượt của mình như một nước đi thường (không cần vé, không cần nút riêng). Thứ bậc chặt cụ thể:</p>
     <table>
       <thead><tr><th>Bị chặt</th><th>Được chặt bởi</th></tr></thead>
       <tbody>
@@ -2194,9 +2202,9 @@ function canBeat(next, curr){
   if(!curr) return true;
   if(curr.type==='single' && curr.cards[0].r===12){
     if(next.type==='quad') return true;
-    // CHỐT MỚI: 3 Đôi Thông được phép chặt Heo ĐƠN khi đánh bình thường vào đúng lượt
-    // (không qua Tham Gia Chặt/interrupt_chop — 3 Đôi Thông không còn là vũ khí phản ứng
-    // ngoài lượt, chỉ là 1 nước đi hợp lệ như mọi nước khác, xem PHẦN A).
+    // 3 Đôi Thông được phép chặt Heo ĐƠN khi đánh bình thường vào đúng lượt (không
+    // qua nút "⚡ THAM GIA CHẶT" — 3 Đôi Thông không được dùng làm vũ khí đăng ký
+    // chặt ngoài lượt, xem findBestThamGiaChatCardsForHand()/PHẦN B).
     if(next.type==='pairs_run' && next.count>=3) return true;
   }
   if(curr.type==='pair' && curr.cards[0].r===12){
@@ -2770,7 +2778,17 @@ function onClientMessage(msg){
       pendingActionRequests.delete(msg.requestId);
       if(msg.status === 'ACCEPT'){
         selected.clear();
-        hideHandSelectMsg();
+        // FIX "sợ chưa ăn bấm nhiều lần": Tham Gia Chặt chỉ ĐĂNG KÝ (không thực thi ngay,
+        // xem PHẦN E), nên trước đây lúc server accept KHÔNG có phản hồi tích cực nào rõ
+        // ràng — nút thì mất luôn (đã sửa ở updateHandActionButtonsOnly) còn khung thông
+        // báo thì chỉ ẩn đi, im lặng y hệt lúc chưa bấm. Người chơi không cách nào phân biệt
+        // "đã đăng ký thành công" với "chưa bấm được" nên hay bấm lại nhiều lần. Giờ báo rõ
+        // bằng thông báo xanh xác nhận, hiển thị lâu hơn thông báo lỗi thường.
+        if(pending.action && pending.action.kind === 'interrupt_chop'){
+          showHandSelectMsg('✅ Đã đăng ký Tham Gia Chặt thành công — chờ loạt phản ứng đóng lại.', 'ok');
+        } else {
+          hideHandSelectMsg();
+        }
       } else {
         showHandSelectMsg(formatActionRejectMessage(msg.reason, msg.details));
       }
@@ -4079,13 +4097,16 @@ function hasQuadInHand(handCards){
   return Object.values(counts).some(n => n >= 4);
 }
 
-// THAM GIA CHẶT (PHẦN B): chỉ áp dụng cho Heo đơn/đôi, Tứ Quý, và 4+ Đôi Thông.
-// 3 Đôi Thông không còn là mục tiêu đặc biệt (đã bỏ điều kiện pairs_run.count>=3).
+// THAM GIA CHẶT (PHẦN B): ĐỐI TƯỢNG (bài trên bàn) có thể bị chặt ngoài lượt gồm
+// Heo đơn/đôi, Tứ Quý, và 3+ Đôi Thông (kể cả đúng 3 Đôi Thông — bổ sung theo yêu cầu).
+// LƯU Ý: đây chỉ là điều kiện cho MỤC TIÊU trên bàn. VŨ KHÍ dùng để đăng ký chặt vẫn
+// giới hạn ở 4+ Đôi Thông / Tứ Quý — xem findBestThamGiaChatCardsForHand(): 3 Đôi Thông
+// KHÔNG được dùng làm vũ khí đăng ký, dù giờ nó có thể là mục tiêu bị chặt.
 function isChoppableSpecialTarget(combo){
   return !!(combo && (
     (combo.type === 'single' && combo.cards?.[0]?.r === 12) ||
     (combo.type === 'pair' && combo.cards?.[0]?.r === 12) ||
-    (combo.type === 'pairs_run' && combo.count >= 4) ||
+    (combo.type === 'pairs_run' && combo.count >= 3) ||
     combo.type === 'quad'
   ));
 }
@@ -4142,6 +4163,10 @@ function describeInstantTarget(combo){
 function findBestThamGiaChatCardsForHand(hand, curr){
   if(!curr || !isChoppableSpecialTarget(curr)) return null;
   const out=[];
+  // VŨ KHÍ đăng ký Tham Gia Chặt vẫn CHỈ cho phép 4+ Đôi Thông (và Tứ Quý bên dưới).
+  // 3 Đôi Thông trong tay KHÔNG được dùng làm vũ khí chặt ngoài lượt — dù bây giờ
+  // 3 Đôi Thông TRÊN BÀN đã có thể là đối tượng (target) bị chặt (xem isChoppableSpecialTarget).
+  // Muốn dùng 3 Đôi Thông để chặt, người chơi phải đánh bình thường vào đúng lượt của mình.
   const runs = findMaxPairRuns(safeArray(hand)).filter(r=>r.count >= 4);
   for(const run of runs){
     const cards=[];
@@ -4190,8 +4215,9 @@ function compareThamGiaChatStrength(a, b){
 }
 
 // PHẦN E — XÉT DANH SÁCH ĐĂNG KÝ LÚC ĐÓNG LOẠT: lọc bỏ đăng ký không còn đủ sức chặt
-// mục tiêu CUỐI CÙNG hiện tại trên bàn, rồi trả về đăng ký mạnh nhất trong số còn hợp lệ
-// (hoặc null nếu không ai đủ điều kiện — khi đó luồng gốc settleChopChain xử lý như cũ).
+// mục tiêu CUỐI CÙNG hiện tại trên bàn, rồi trả về TOÀN BỘ chuỗi đăng ký còn hợp lệ, sắp
+// xếp YẾU → MẠNH (hoặc null nếu không ai đủ điều kiện — khi đó luồng gốc settleChopChain
+// xử lý như cũ). executeThamGiaChatWin() sẽ duyệt tuần tự chuỗi này.
 function resolveThamGiaChatRegistrations(){
   if(!gameState) return null;
   const regs = safeArray(gameState.thamGiaChatRegistrations);
@@ -4249,11 +4275,25 @@ function executeThamGiaChatWin(chain){
   let prevCombo = curr;
   let prevPlayerId = gameState.leaderId; // người đang "giữ" prevCombo; ban đầu là leader gốc
   let lastLinkReward = 0;
+  // FIX "MẮT XÍCH VỀ NGAY VẪN BỊ TÍNH BOM": PHẦN H chỉ áp dụng luật "về là an toàn khỏi
+  // Bom" cho MẮT XÍCH ĐẦU TIÊN (dựa vào targetAlreadyFinished được chốt tĩnh TRƯỚC vòng
+  // lặp). Nhưng nếu một mắt xích TRUNG GIAN (ví dụ người "4") hết sạch bài NGAY LÚC chặt
+  // (tự "về" tại chính mắt xích đó), thì theo đúng tinh thần PHẦN H, mắt xích đó — và MỌI
+  // mắt xích sau nó trong chuỗi (kể cả người thắng cuối) — đều phải tính Bom = 0, vì chặt
+  // một người đã về thì không thu được gì. Trước đây code vẫn cộng nguyên linkReward đã
+  // tính trước khi biết họ về, rồi mới cho "về" sau — sai. Dùng 1 cờ ĐỘNG, lan truyền qua
+  // các mắt xích còn lại một khi có người "về" giữa chừng.
+  let chainAlreadyFinished = targetAlreadyFinished;
   if(!gameState.roundLog) gameState.roundLog = [];
 
   chain.forEach((link, idx) => {
     const isFirstLink = idx === 0;
-    const linkTargetAlreadyFinished = isFirstLink && targetAlreadyFinished;
+    // FIX: dùng cờ ĐỘNG chainAlreadyFinished (trạng thái "người đang giữ prevCombo đã về
+    // hay chưa" TÍNH ĐẾN NGAY TRƯỚC mắt xích này) thay vì chỉ static-check ở mắt xích đầu.
+    // Nếu một mắt xích trung gian tự "về" ngay khi chặt (xử lý ở dưới), mọi mắt xích SAU
+    // đó — kể cả người thắng cuối — đều phải tính Bom = 0 cho phần này, vì người bị chặt
+    // lúc đó đã về, không còn gì để "thu".
+    const linkTargetAlreadyFinished = chainAlreadyFinished;
     const directReward = linkTargetAlreadyFinished ? 0 : calculateChopReward(link.combo, prevCombo, activeCount);
     // Mắt xích đầu tiên dùng đúng chopStackValue thật đang treo trên bàn; các mắt xích kế
     // tiếp dùng giá trị "stack ảo" suy ra từ combo của mắt xích liền trước (combo đó chưa
@@ -4271,15 +4311,64 @@ function executeThamGiaChatWin(chain){
     if(idx < chain.length - 1){
       const linkPName = gameState.names[link.playerId];
       const linkPrevName = gameState.names[prevPlayerId];
+      const linkSafeSuffix = linkTargetAlreadyFinished
+        ? ` (0 Nước — ${linkPrevName || 'người trước'} đã về, được an toàn)`
+        : ` → +${linkReward} Nước, nhưng bị chặt tiếp ngay sau đó nên không được lên đánh.`;
       gameState.roundLog.push({
-        icon: '🔗',
-        text: `${linkPName} THAM GIA CHẶT ${describeCombo(prevCombo)}${linkPrevName ? ' của ' + linkPrevName : ''} bằng ${describeCombo(link.combo)} → +${linkReward} Nước, nhưng bị chặt tiếp ngay sau đó nên không được lên đánh.`
+        icon: linkTargetAlreadyFinished ? '🛡️' : '🔗',
+        text: `${linkPName} THAM GIA CHẶT ${describeCombo(prevCombo)}${linkPrevName ? ' của ' + linkPrevName : ''} bằng ${describeCombo(link.combo)}${linkSafeSuffix}`
       });
+      // FIX "MẮT XÍCH TRUNG GIAN KHÔNG XUẤT HIỆN TRONG DEBUG LOG": trước đây chỉ ghi vào
+      // gameState.roundLog (hiển thị trong UI ván đấu), nhưng KHÔNG hề gọi debugActionEvent()
+      // — nên trong log debug/audit trace (định dạng #N | giờ | LOẠI | 👤người | ...), mắt
+      // xích trung gian (ví dụ người "4" bị người "1" chặt đè) hoàn toàn không xuất hiện dòng
+      // nào, dù đã được TÍNH ĐÚNG vào tổng Bom (BOM=14 đã gồm cả phần của họ). Người xem log
+      // debug dễ hiểu nhầm là "đăng ký nhưng không được xét" dù thực ra họ VẪN được xét đúng —
+      // chỉ là không được GHI LẠI ra kênh debug này. Nay thêm debugActionEvent('CHOP', ...)
+      // riêng cho từng mắt xích trung gian, cùng định dạng với dòng thắng cuối (dòng ~4429),
+      // để log debug phản ánh đầy đủ toàn bộ chuỗi, không chỉ người thắng sau cùng.
+      debugActionEvent('CHOP', link.playerId,
+        `${linkPName} THAM GIA CHẶT ${debugComboText(link.combo)} (mắt xích ${idx+1}/${chain.length}, bị chặt tiếp ngay sau) → +${linkReward} Nước${linkTargetAlreadyFinished ? ' (miễn — đã về)' : ''}`,
+        { cards:debugCardText(link.cards), target:debugComboText(prevCombo), chainLink:idx+1, chainTotal:chain.length, intermediate:true, safeAlreadyFinished:linkTargetAlreadyFinished }
+      );
+
+      // FIX "MẮT XÍCH TRUNG GIAN KHÔNG MẤT BÀI": trước đây bộ bài dùng để chặt ở 1 mắt
+      // xích trung gian (ví dụ 4 đôi thông của người "4") KHÔNG hề bị trừ khỏi tay — vì
+      // đoạn trừ bài gốc phía dưới chỉ áp dụng cho finalLink (người thắng cuối). Nhưng
+      // "chặt" là một HÀNH ĐỘNG ĐÃ CAM KẾT: một khi đăng ký được xét và bị người mạnh hơn
+      // chặt đè lên, bộ bài đó coi như ĐÃ ĐÁNH (bị lộ ra bàn/vào lịch sử), chỉ khác là
+      // KHÔNG được lên làm leader / đặt combo mới lên bàn (điều đó chỉ dành cho người
+      // thắng cuối). Nếu không trừ bài, người "4" vẫn giữ nguyên bộ 4 đôi thông trong tay
+      // để dùng lại — sai luật, vì thực chất bộ bài đó đã bị "tiêu" trong lượt chặt này.
+      const linkHandBefore = safeArray(gameState.hands[link.playerId]);
+      gameState.hands[link.playerId] = linkHandBefore.filter(c => !link.cards.some(sc => sc.r === c.r && sc.s === c.s));
+      gameState.playedCardsCount[link.playerId] = (gameState.playedCardsCount[link.playerId] || 0) + link.cards.length;
+      if(!gameState.revealedCards) gameState.revealedCards = {};
+      if(!gameState.revealedCards[link.playerId]) gameState.revealedCards[link.playerId] = [];
+      gameState.revealedCards[link.playerId].push(...link.cards.map(c => ({ r:c.r, s:c.s })));
+      // Nếu việc mất bộ bài chặt này khiến người "4" hết sạch bài trên tay, họ "về" ngay
+      // tại mắt xích này (dù không phải người thắng cuối) — chốt hạng đúng thời điểm hết
+      // bài, giống hệt cách nhánh đánh bình thường xử lý "về khi chặt" (dòng ~4367).
+      if(gameState.hands[link.playerId].length === 0 && !gameState.finished.includes(link.playerId)){
+        gameState.finished.push(link.playerId);
+        awardLiveBaseScore(link.playerId, gameState.finished.length, true);
+        foldColdPlayers();
+        // FIX "MẮT XÍCH VỀ NGAY VẪN BỊ TÍNH BOM" (tiếp): từ đây trở đi, người đang giữ
+        // combo (link.playerId, sắp thành prevPlayerId) đã VỀ — nên MỌI mắt xích tiếp theo
+        // trong chuỗi (kể cả người thắng cuối) phải coi target là "đã về", tính Bom = 0.
+        chainAlreadyFinished = true;
+      }
     }
 
     prevCombo = link.combo;
     prevPlayerId = link.playerId;
   });
+
+  // Bom thực nhận của người thắng cuối và cờ "đã về" dùng cho phần thanh toán bên dưới
+  // phải phản ánh trạng thái ĐỘNG sau khi duyệt hết chuỗi — không chỉ trạng thái tĩnh lúc
+  // bắt đầu (targetAlreadyFinished ban đầu). Nếu có ai đó "về" giữa chừng, người thắng
+  // cuối chặt trúng 1 combo đã "vô chủ" (an toàn) và không được nhận Nước cho cú chặt đó.
+  const targetAlreadyFinishedAtEnd = chainAlreadyFinished;
 
   // Người ở MẮT XÍCH ÁP CHÓT (người thắng cuối vừa chặt qua) là người gánh toàn bộ Bom.
   // Nếu chain chỉ có 1 mắt xích (trường hợp phổ biến nhất), payer vẫn là leader gốc —
@@ -4297,7 +4386,7 @@ function executeThamGiaChatWin(chain){
   const chopWillEndGame = chopProjectedActive.length <= 1;
 
   const prevLeader = payer;
-  const targetWasAlreadyFinished = targetAlreadyFinished;
+  const targetWasAlreadyFinished = targetAlreadyFinishedAtEnd;
   const pName = gameState.names[playerId];
   const prevLeaderName = gameState.names[prevLeader];
   const choppedDesc = describeCombo(curr);
@@ -4753,6 +4842,8 @@ function handleAction(playerId, action, isAuto=false){
     const resolved=resolveActionCards(hand,action.cards);
     if(!resolved.ok){rejectTrackedAction(playerId,action,resolved.reason);return;}
     const cards=resolved.cards, combo=classify(cards);
+    // VŨ KHÍ đăng ký Tham Gia Chặt: chỉ 4+ Đôi Thông hoặc Tứ Quý — 3 Đôi Thông
+    // không được dùng để đăng ký (phải đánh bình thường đúng lượt nếu muốn dùng 3 Đôi Thông).
     if(!combo || (combo.type!=='pairs_run' && combo.type!=='quad') ||
        (combo.type==='pairs_run' && combo.count<4) || !canBeat(combo,curr)){
       rejectTrackedAction(playerId,action,!combo?'INVALID_CHOP':'CANNOT_BEAT',{duplicateRanks:duplicateRanks(cards)});return;
@@ -4981,20 +5072,6 @@ function handleAction(playerId, action, isAuto=false){
       : getSpecialStackValue(combo);
     gameState.leaderId = playerId;
     gameState.firstMove = false;
-    // FIX BUG "MẤT LƯỢT VÌ passed CŨ RÒ RỈ SANG TARGET MỚI": gameState.passed trước đây chỉ
-    // được xoá khi có người thắng Chặt hoặc khi CẢ BÀN đã bỏ hết 1 vòng (checkNextTurn) — KHÔNG
-    // hề được xoá mỗi khi 1 nước PLAY bình thường đổi leader/currentCombo. Hệ quả: nếu A đã bấm
-    // Bỏ trên 1 combo CŨ (ví dụ "lá 8"), rồi bàn tiếp tục đổi leader nhiều lần qua các nước đánh
-    // bình thường (không ai bỏ vòng nào), A vẫn bị coi là "đã bỏ" mãi mãi cho MỌI combo mới sau
-    // đó — dù A chưa từng được hỏi ý kiến với target hiện tại. Khi checkNextTurn() xét allPassed
-    // (dòng ~5057), A bị tính nhầm là đã phản ứng xong, khiến loạt phản ứng đóng SỚM và cướp mất
-    // lượt Đánh/Bỏ bình thường của A (và của bất kỳ ai khác cũng lỡ "dính" passed cũ tương tự) —
-    // đúng hiện tượng "pc1 không được hỏi lượt" dù chưa từng bỏ trên combo hiện tại. Sửa: mỗi
-    // khi có 1 nước PLAY bình thường đặt combo MỚI lên bàn (leader đổi), coi như mở 1 loạt phản
-    // ứng MỚI — xoá sạch passed để mọi người (trừ leader mới) đều được xét lại từ đầu với target
-    // hiện tại. Không ảnh hưởng tới hệ thống vé Tham Gia Chặt (chopTicketHolders) vì đó là Set
-    // độc lập, chỉ bị xoá bởi resetThamGiaChatRoundState() như cũ.
-    gameState.passed = new Set();
 
     if(gameState.hands[playerId].length === 0 && !gameState.finished.includes(playerId)){
       gameState.finished.push(playerId);
@@ -5869,6 +5946,21 @@ function applyState(st){
     }
   }
 
+  // FIX "hiển thị đã đăng ký cho người chơi biết": huy hiệu xanh ngay tại ghế của CHÍNH
+  // MÌNH cũng phải bật, đồng bộ với huy hiệu hiện ở ghế đối thủ (renderOpponents) — để dù
+  // đang nhìn tay bài của mình (không thấy nút Tham Gia Chặt do đã đăng ký) vẫn còn dấu
+  // hiệu rõ ràng ngay trên avatar rằng đã đăng ký thành công.
+  const myChopRegisteredBadge = $('myChopRegisteredBadge');
+  if(myChopRegisteredBadge){
+    const iHaveChopRegistered = safeArray(st.thamGiaChatRegistrations)
+      .some(r => r && String(r.playerId) === String(myId));
+    if(iHaveChopRegistered && !iAmFinishedNow && !isSpectator){
+      myChopRegisteredBadge.classList.remove('hidden');
+    } else {
+      myChopRegisteredBadge.classList.add('hidden');
+    }
+  }
+
   if (st.turnId === myId && !st.isEnded && !isSpectator && lastNotifiedTurnId !== st.turnId) {
     lastNotifiedTurnId = st.turnId;
     playGlobalSound('MY_TURN', 1.0);
@@ -5942,6 +6034,19 @@ function renderOpponents(){
       lastCardSticker = `<div class="last-card-badge">⚠️ 1 LÁ!</div>`;
     }
 
+    // FIX "hiển thị đã đăng ký cho người chơi biết": trước đây chỉ người vừa bấm nút mới
+    // thấy trạng thái đã đăng ký (qua nút của chính họ) — CÁC NGƯỜI CHƠI KHÁC hoàn toàn
+    // không biết đối thủ nào đã đăng ký Tham Gia Chặt, dễ hiểu lầm/tưởng chưa ai đăng ký.
+    // Giờ hiện huy hiệu xanh "✅ Đã đăng ký" NGAY TẠI GHẾ của người đó, cho CẢ BÀN cùng
+    // thấy, tồn tại cho tới khi loạt phản ứng đóng lại (danh sách đăng ký bị xoá) chứ
+    // không tự ẩn sau vài giây như bong bóng bumpActor().
+    let chopRegisteredSticker = '';
+    const hasChopRegistered = safeArray(currentState.thamGiaChatRegistrations)
+      .some(r => r && String(r.playerId) === String(pId));
+    if(hasChopRegistered && !isFinished && !isColdFolded){
+      chopRegisteredSticker = `<div class="chop-registered-badge">✅ Đã đăng ký</div>`;
+    }
+
     slotDiv.innerHTML = `
       <div class="avatar" id="avatar-${pId}">👤</div>
       <div class="name">${escapeHtml(currentState.names[pId]) || 'Người chơi'}</div>
@@ -5949,6 +6054,7 @@ function renderOpponents(){
       ${waterSticker}
       ${kneelingSticker}
       ${lastCardSticker}
+      ${chopRegisteredSticker}
     `;
 
     slotDiv.onclick = (e) => { e.stopPropagation(); openThrowPopover(pId, slotDiv); };
@@ -6204,15 +6310,26 @@ function renderHand(){
       let showChop = false;
       const alreadyRegistered = safeArray(currentState.thamGiaChatRegistrations)
         .some(r => r && String(r.playerId) === String(myId));
-      if(isChoppableTarget && iAmActive && !isMyTurn && !isOwnLeader && iHaveTicket && !alreadyRegistered){
+      // FIX "sợ chưa ăn bấm nhiều lần": trước đây khi đã đăng ký xong thì ẨN LUÔN nút,
+      // khiến người chơi tưởng thao tác chưa ăn nên bấm đi bấm lại. Giờ chỉ ẨN nút khi
+      // KHÔNG đủ điều kiện đăng ký (mất vé/hết bài/đúng lượt mình/...); còn nếu ĐÃ đăng
+      // ký rồi thì vẫn GIỮ nút hiển thị, chỉ khoá lại + đổi nhãn để xác nhận trạng thái.
+      const canShowChopUI = isChoppableTarget && iAmActive && !isMyTurn && !isOwnLeader && iHaveTicket;
+      if(canShowChopUI && !alreadyRegistered){
         showChop = !!findBestThamGiaChatCardsForHand(myHand, curr);
       }
-      if(showChop){
+      if(alreadyRegistered && canShowChopUI){
         btnChop.classList.remove('hidden');
+        btnChop.innerHTML = '<span class="chop-btn-main">✅ ĐÃ ĐĂNG KÝ</span><span class="chop-btn-target">Chờ loạt phản ứng đóng lại…</span>';
+        btnChop.disabled = true;
+        btnChop.classList.add('chop-btn-registered');
+      } else if(showChop){
+        btnChop.classList.remove('hidden','chop-btn-registered');
         btnChop.innerHTML = buildChopButtonLabel(curr, currentState.leaderId, 0, true);
         btnChop.disabled = false;
       } else {
         btnChop.classList.add('hidden');
+        btnChop.classList.remove('chop-btn-registered');
         btnChop.textContent = '⚡ THAM GIA CHẶT';
         btnChop.disabled = true;
       }
@@ -6433,13 +6550,23 @@ function formatActionRejectMessage(reason, details={}){
     default: return reason ? `⚠️ ${reason}` : '⚠️ Nước đi chưa được máy chủ xác nhận.';
   }
 }
-function showHandSelectMsg(text){
+// FIX "sợ chưa ăn bấm nhiều lần": trước đây MỌI thông báo (kể cả xác nhận đăng ký
+// Tham Gia Chặt thành công) đều dùng chung màu đỏ cảnh báo + rung lá bài giống hệt
+// thông báo lỗi, khiến người chơi tưởng thao tác thất bại rồi bấm lại nhiều lần.
+// Giờ thêm tham số `type`: 'error' (mặc định, giữ nguyên hành vi cũ — đỏ + rung) và
+// 'ok' (xác nhận thành công — xanh lá, KHÔNG rung, hiển thị lâu hơn cho kịp đọc).
+function showHandSelectMsg(text, type, durationMs){
   const el=$('handSelectMsg'); if(!el) return;
+  const isOk = type === 'ok';
   el.textContent=text; el.classList.remove('hidden');
-  clearTimeout(showHandSelectMsg._t); showHandSelectMsg._t=setTimeout(()=>el.classList.add('hidden'),3200);
-  document.querySelectorAll('#handCards .card.selected').forEach(el2=>{
-    el2.classList.remove('selection-shake'); void el2.offsetWidth; el2.classList.add('selection-shake');
-  });
+  el.classList.toggle('hand-select-msg-ok', isOk);
+  clearTimeout(showHandSelectMsg._t);
+  showHandSelectMsg._t=setTimeout(()=>el.classList.add('hidden'), durationMs || (isOk ? 4200 : 3200));
+  if(!isOk){
+    document.querySelectorAll('#handCards .card.selected').forEach(el2=>{
+      el2.classList.remove('selection-shake'); void el2.offsetWidth; el2.classList.add('selection-shake');
+    });
+  }
 }
 function selectedCardsFromSet(){
   const keys=[...selected], hand=safeArray(myHand), cards=[], seen=new Set();
@@ -6494,7 +6621,7 @@ $('btnChopInterrupt').onclick=()=>{
   const alreadyRegistered = safeArray(currentState?.thamGiaChatRegistrations)
     .some(r => r && String(r.playerId) === String(myId));
   if(alreadyRegistered){
-    showHandSelectMsg('⚡ Bạn đã đăng ký Tham Gia Chặt — chỉ cần nhấn 1 lần, chờ loạt phản ứng kết thúc.');
+    showHandSelectMsg('✅ Bạn đã đăng ký Tham Gia Chặt rồi — không cần bấm thêm, chờ loạt phản ứng kết thúc.', 'ok');
     return;
   }
   // THAM GIA CHẶT (4+ Đôi Thông / Tứ Quý): TỰ TÌM bộ hợp lệ trong tay rồi gửi đăng ký thẳng —
