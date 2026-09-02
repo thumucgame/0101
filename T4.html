@@ -1,6 +1,3 @@
-
-
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -77,6 +74,33 @@
     background: var(--card); border: 1px solid var(--card-line); border-left: 3px solid var(--sage);
     border-radius: 10px; padding: 10px 12px; font-size: 13px; line-height: 1.55;
   }
+  /* --- NHÓM THEO DANH MỤC (sổ lỗi / sổ từ vựng gọn hơn) --- */
+  .group-block { display: flex; flex-direction: column; gap: 8px; }
+  .group-header {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    cursor: pointer; user-select: none; padding: 7px 10px; border-radius: 9px;
+    background: var(--gold-soft); border: 1px solid transparent;
+  }
+  .group-header:hover { border-color: var(--gold); }
+  .group-header-left { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .group-header-left b { font-size: 12.5px; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .group-count {
+    background: var(--card); color: var(--chalk-dim); font-size: 10px; font-weight: 800;
+    padding: 2px 7px; border-radius: 999px; flex: none; border: 1px solid var(--card-line);
+  }
+  .group-caret { flex: none; font-size: 10px; color: var(--chalk-dim); transition: transform .15s; }
+  .group-header.collapsed .group-caret { transform: rotate(-90deg); }
+  .group-body { display: flex; flex-direction: column; gap: 8px; padding-left: 4px; }
+  .group-body.collapsed { display: none; }
+  .tag-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+  .chip {
+    font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 999px;
+    background: var(--card-line); color: var(--chalk-dim); line-height: 1.6; white-space: nowrap;
+  }
+  .chip-hp { background: var(--coral-soft); color: var(--coral); }
+  .chip-streak { background: var(--sage-soft); color: var(--sage); }
+  .item-top-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .item-time { font-size: 10.5px; color: var(--chalk-dim); flex: none; }
   .vocab-flip { cursor: pointer; margin: 6px 0; user-select: none; }
   .vocab-word { font-weight: 800; font-size: 15px; color: var(--gold); }
   .vocab-hint-tap { font-size: 10.5px; color: var(--chalk-dim); font-weight: 600; margin-left: 6px; }
@@ -1452,30 +1476,64 @@ function renderMistakeList() {
   }
   // Sắp xếp theo độ ưu tiên ôn tập (spaced repetition): lỗi lâu chưa ôn / chưa ôn bao giờ lên đầu
   const sorted = [...filtered].sort((a, b) => mistakePriority(b) - mistakePriority(a));
+  // Gom nhóm theo danh mục lỗi để đỡ rối mắt; nhóm nào có lỗi "nên ôn lại" thì hiện lên trước
+  const groups = new Map();
   sorted.forEach(m => {
-    const item = document.createElement('div');
-    item.className = 'mistake-item';
-    const progressText = m.practiceCount
-      ? `✅ Đã luyện ${m.practiceCount} lần · gần nhất ${fmtTime(m.lastPracticedAt)}`
-      : '⏳ Chưa luyện lần nào';
-    const priorityTag = isOverdue(m) ? '<span class="priority-tag">🔥 Nên ôn lại</span>' : '';
-    const occurrenceTag = (m.occurrences || 1) > 1 ? `<span class="occurrence-tag">×${m.occurrences} lần gặp</span>` : '';
-    item.innerHTML = `
-      <div class="mistake-meta">
-        <label class="mistake-select-label">
-          <input type="checkbox" class="mistake-select" data-mid="${m.id}">
-          <b style="color:var(--coral);">${m.category || 'Khác'}</b> · ${m.topicLabel || 'Chủ đề'} · ${m.langLabel || m.lang || ''}
-        </label>
-        <span>${fmtTime(m.ts)}</span>
-      </div>
-      <div>${escapeHtml(m.text)} ${priorityTag}${occurrenceTag}</div>
-      <div class="hp-row"><span class="hp-hearts">${'❤️'.repeat(Math.max(0, Math.min(3, m.hp ?? 3)))}${'🖤'.repeat(Math.max(0, 3-Math.max(0, Math.min(3, m.hp ?? 3))))}</span><span class="streak-pill">🔥 Streak ${m.streak || 0}</span></div>
-      <div class="mistake-progress">${progressText}</div>
-      <div class="lesson-actions">
-        <button class="mini-btn primary" data-practice="${m.id}">🎯 Luyện ngay</button>
-        <button class="mini-btn danger" data-mid="${m.id}">🗑 Xóa</button>
-      </div>`;
-    mistakeListEl.appendChild(item);
+    const key = m.category || 'Khác';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(m);
+  });
+  const orderedKeys = [...groups.keys()].sort((a, b) => {
+    const overdueA = groups.get(a).some(isOverdue) ? 1 : 0;
+    const overdueB = groups.get(b).some(isOverdue) ? 1 : 0;
+    if (overdueA !== overdueB) return overdueB - overdueA;
+    return groups.get(b).length - groups.get(a).length;
+  });
+  orderedKeys.forEach(key => {
+    const items = groups.get(key);
+    const block = document.createElement('div');
+    block.className = 'group-block';
+    const header = document.createElement('div');
+    header.className = 'group-header';
+    header.innerHTML = `
+      <span class="group-header-left"><span class="group-caret">▾</span><b>${key}</b></span>
+      <span class="group-count">${items.length}</span>`;
+    const body = document.createElement('div');
+    body.className = 'group-body';
+    header.onclick = () => { header.classList.toggle('collapsed'); body.classList.toggle('collapsed'); };
+    items.forEach(m => {
+      const item = document.createElement('div');
+      item.className = 'mistake-item';
+      const progressText = m.practiceCount
+        ? `✅ Đã luyện ${m.practiceCount} lần · gần nhất ${fmtTime(m.lastPracticedAt)}`
+        : '⏳ Chưa luyện lần nào';
+      const priorityTag = isOverdue(m) ? '<span class="priority-tag">🔥 Nên ôn lại</span>' : '';
+      const occurrenceTag = (m.occurrences || 1) > 1 ? `<span class="occurrence-tag">×${m.occurrences} lần gặp</span>` : '';
+      const hp = Math.max(0, Math.min(3, m.hp ?? 3));
+      item.innerHTML = `
+        <div class="item-top-row">
+          <label class="mistake-select-label">
+            <input type="checkbox" class="mistake-select" data-mid="${m.id}">
+            <span style="font-size:11px;color:var(--chalk-dim);">${m.topicLabel || 'Chủ đề'} · ${m.langLabel || m.lang || ''}</span>
+          </label>
+          <span class="item-time">${fmtTime(m.ts)}</span>
+        </div>
+        <div>${escapeHtml(m.text)}</div>
+        <div class="tag-row">
+          ${priorityTag}${occurrenceTag}
+          <span class="chip chip-hp">${'❤️'.repeat(hp)}${'🖤'.repeat(3 - hp)}</span>
+          <span class="chip chip-streak">🔥 Streak ${m.streak || 0}</span>
+        </div>
+        <div class="mistake-progress">${progressText}</div>
+        <div class="lesson-actions">
+          <button class="mini-btn primary" data-practice="${m.id}">🎯 Luyện ngay</button>
+          <button class="mini-btn danger" data-mid="${m.id}">🗑 Xóa</button>
+        </div>`;
+      body.appendChild(item);
+    });
+    block.appendChild(header);
+    block.appendChild(body);
+    mistakeListEl.appendChild(block);
   });
 }
 function updatePracticeSelCount() {
@@ -1647,30 +1705,60 @@ function renderVocabList() {
     return;
   }
   const sorted = [...filtered].sort((a, b) => b.ts - a.ts);
+  // Gom nhóm theo chủ đề để dễ ôn theo từng mảng, nhóm có từ "đến hạn ôn" hiện lên trước
+  const groups = new Map();
   sorted.forEach(v => {
-    const item = document.createElement('div');
-    item.className = 'vocab-item';
-    const srcTag = v.source === 'primer' ? '<span class="vocab-src-tag">GỢI Ý</span>' : '<span class="vocab-src-tag">TỰ ĐỘNG</span>';
-    const dueTag = isVocabDue(v) ? '<span class="vocab-src-tag" style="background:rgba(217,120,90,.18);color:var(--coral);">ĐẾN HẠN ÔN</span>' : '';
-    item.innerHTML = `
-      <div class="mistake-meta">
-        <label class="mistake-select-label">
-          <input type="checkbox" class="vocab-select" data-vid="${v.id}">
-          <span>${srcTag}${dueTag} ${v.topicLabel || 'Chủ đề'} · ${v.langLabel || v.lang || ''}</span>
-        </label>
-        <span>${fmtTime(v.ts)}</span>
-      </div>
-      <div class="vocab-flip" data-vid="${v.id}">
-        <div class="vocab-word">${escapeHtml(v.word)}<span class="vocab-hint-tap"> (bấm để xem nghĩa)</span></div>
-        <div class="vocab-reveal" style="display:none;">
-          <div class="vocab-meaning">${escapeHtml(v.meaning || '')}</div>
-          ${v.example ? `<div class="vocab-example">🎬 ${escapeHtml(v.example)}</div>` : ''}
+    const key = v.topicLabel || 'Chủ đề khác';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(v);
+  });
+  const orderedKeys = [...groups.keys()].sort((a, b) => {
+    const dueA = groups.get(a).some(isVocabDue) ? 1 : 0;
+    const dueB = groups.get(b).some(isVocabDue) ? 1 : 0;
+    if (dueA !== dueB) return dueB - dueA;
+    return groups.get(b).length - groups.get(a).length;
+  });
+  orderedKeys.forEach(key => {
+    const items = groups.get(key);
+    const block = document.createElement('div');
+    block.className = 'group-block';
+    const header = document.createElement('div');
+    header.className = 'group-header';
+    header.innerHTML = `
+      <span class="group-header-left"><span class="group-caret">▾</span><b>${key}</b></span>
+      <span class="group-count">${items.length}</span>`;
+    const body = document.createElement('div');
+    body.className = 'group-body';
+    header.onclick = () => { header.classList.toggle('collapsed'); body.classList.toggle('collapsed'); };
+    items.forEach(v => {
+      const item = document.createElement('div');
+      item.className = 'vocab-item';
+      const srcTag = v.source === 'primer' ? '<span class="vocab-src-tag">GỢI Ý</span>' : '<span class="vocab-src-tag">TỰ ĐỘNG</span>';
+      const dueTag = isVocabDue(v) ? '<span class="vocab-src-tag" style="background:rgba(217,120,90,.18);color:var(--coral);">ĐẾN HẠN ÔN</span>' : '';
+      item.innerHTML = `
+        <div class="item-top-row">
+          <label class="mistake-select-label">
+            <input type="checkbox" class="vocab-select" data-vid="${v.id}">
+            <span style="font-size:11px;color:var(--chalk-dim);">${v.langLabel || v.lang || ''}</span>
+          </label>
+          <span class="item-time">${fmtTime(v.ts)}</span>
         </div>
-      </div>
-      <div class="lesson-actions">
-        <button class="mini-btn danger" data-vid-del="${v.id}">🗑 Xóa</button>
-      </div>`;
-    vocabListEl.appendChild(item);
+        <div class="tag-row" style="margin-top:0;margin-bottom:6px;">${srcTag}${dueTag}</div>
+        <div class="vocab-flip" data-vid="${v.id}">
+          <div class="vocab-word">${escapeHtml(v.word)}<span class="vocab-hint-tap"> (bấm để xem nghĩa)</span></div>
+          <div class="vocab-reveal" style="display:none;">
+            <div class="vocab-meaning">${escapeHtml(v.meaning || '')}</div>
+            ${v.example ? `<div class="vocab-example">🎬 ${escapeHtml(v.example)}</div>` : ''}
+          </div>
+        </div>
+        <div class="lesson-actions">
+          <button class="mini-btn danger" data-vid-del="${v.id}">🗑 Xóa</button>
+        </div>`;
+      body.appendChild(item);
+    });
+    block.appendChild(header);
+    block.appendChild(body);
+    vocabListEl.appendChild(block);
   });
 }
 function updateVocabSelCount() {
@@ -2836,6 +2924,16 @@ async function stopSession(manual) {
   session = null; await stopMicrophone();
   if (aiSpeakEndTimer) { clearTimeout(aiSpeakEndTimer); aiSpeakEndTimer = null; }
   isAiSpeaking = false;
+
+  // QUAN TRỌNG: nếu mất kết nối/gián đoạn ngay giữa một lượt nói (chưa kịp turnComplete),
+  // đoạn hội thoại dở dang trong userBuffer/aiBuffer sẽ KHÔNG được lưu — đây chính là lý do
+  // "tiếp tục" sau đó AI như quên mất, vì đúng đoạn gần nhất (quan trọng nhất) bị rơi mất.
+  // Nên luôn cố lưu nốt phần dở dang này trước khi đóng buổi học.
+  if (currentLessonId && (userBuffer.trim() || aiBuffer.trim())) {
+    if (userBuffer.trim()) addTurn(currentLessonId, 'user', userBuffer);
+    if (aiBuffer.trim()) addTurn(currentLessonId, 'teacher', aiBuffer);
+    userBuffer = ""; aiBuffer = "";
+  }
 
   if (currentLessonId) {
     setLessonStatus(currentLessonId, manual ? 'completed' : 'interrupted');
