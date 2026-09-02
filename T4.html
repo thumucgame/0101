@@ -1,3 +1,7 @@
+
+
+
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -92,6 +96,11 @@
   .group-header.collapsed .group-caret { transform: rotate(-90deg); }
   .group-body { display: flex; flex-direction: column; gap: 8px; padding-left: 4px; }
   .group-body.collapsed { display: none; }
+  .group-header.day-header { background: var(--sage-soft); }
+  .group-header.day-header .group-header-left b { color: var(--sage); }
+  .group-mode-toggle { display: flex; gap: 6px; }
+  .group-mode-btn { flex: 1; font-size: 12px; padding: 7px 8px; }
+  .group-mode-btn.active { background: var(--gold); color: #fff; border-color: var(--gold); }
   .tag-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
   .chip {
     font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 999px;
@@ -421,11 +430,15 @@
     background: var(--bg); border: 1px solid var(--card-line); border-radius: 16px;
     padding: 20px; width: 100%; max-width: 560px; max-height: 82vh;
     display: flex; flex-direction: column; gap: 12px;
+    overflow-y: auto; overflow-x: hidden; /* dự phòng: nếu có tràn thì tự cuộn cả khung, không bị cắt mất nội dung */
   }
-  .modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .modal-head { flex: none; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
   .modal-head h3 { font-family: 'Caveat', cursive; color: var(--gold); font-size: 24px; }
   .modal-head p { font-size: 11.5px; color: var(--chalk-dim); margin-top: 2px; }
-  .modal-transcript { overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; }
+  /* min-height:0 là chìa khóa để flex item cuộn được thay vì đẩy khung cha to ra */
+  .modal-transcript { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; }
+  #vocabListView, #vocabReviewView, #mistakeListView { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+  #vocabListView > *:not(.modal-transcript), #vocabReviewView > *:not(.modal-transcript) { flex: none; }
   .transcript-line { padding: 9px 12px; border-radius: 10px; font-size: 13px; line-height: 1.5; }
   .lesson-summary-box {
     background: var(--gold-soft); border: 1px solid var(--gold-soft); border-radius: 10px;
@@ -458,7 +471,22 @@
 #memoryToolsModal.show { display:flex !important; }
 #memoryToolsModal { pointer-events:auto; }
 #memoryToolsModal .modal-card { pointer-events:auto; }
-""</style>
+""
+/* ===== GIAI ĐOẠN 1: ÔN THÔNG MINH ===== */
+.smart-review-card{margin:14px 0 18px;border:1px solid rgba(255,196,80,.38);border-radius:18px;padding:16px 18px;background:linear-gradient(135deg,rgba(255,248,225,.98),rgba(255,255,255,.96));box-shadow:0 10px 28px rgba(72,45,15,.10)}
+.smart-review-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.smart-review-title{font-size:20px;font-weight:800;color:#4a3215}
+.smart-review-sub{font-size:13px;color:#75654f;margin-top:3px}
+.smart-review-score{font-size:12px;font-weight:800;padding:6px 9px;border-radius:999px;background:#fff0c2;color:#805400;white-space:nowrap}
+.smart-review-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+.smart-review-item{background:#fff;border:1px solid #eadfca;border-radius:14px;padding:12px}
+.smart-review-item b{display:block;font-size:15px;color:#392816;margin-bottom:5px}
+.smart-review-item span{display:block;font-size:12px;color:#776956;min-height:32px}
+.smart-review-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.smart-review-empty{padding:10px 0 2px;color:#6d624f;font-size:13px}
+@media(max-width:800px){.smart-review-list{grid-template-columns:1fr}.smart-review-card{padding:14px}}
+
+</style>
 <style>
 /* V9 - NỀN CÀI ĐẶT: ép trực tiếp, không xuyên nội dung */
 #memoryToolsModal[style] {
@@ -505,6 +533,7 @@
         <button class="icon-btn" id="btnCloseSidebar" title="Đóng">✕</button>
       </div>
     </div>
+    <div class="srs-banner" id="lessonReviewBanner" style="display:none;"></div>
     <div class="lesson-list" id="lessonList"></div>
   </aside>
   <div class="overlay" id="overlay"></div>
@@ -540,6 +569,20 @@
         <button class="mini-btn" id="btnDismissReminder">Bỏ qua hôm nay</button>
       </div>
     </div>
+
+
+    <!-- GIAI ĐOẠN 1: ÔN THÔNG MINH -->
+    <section class="smart-review-card" id="smartReviewCard">
+      <div class="smart-review-head">
+        <div>
+          <div class="smart-review-title">🧠 Hôm nay ôn gì?</div>
+          <div class="smart-review-sub" id="smartReviewSub">Hệ thống tự ưu tiên nội dung đang đến hạn và điểm yếu cần củng cố.</div>
+        </div>
+        <div class="smart-review-score" id="smartReviewScore">Đang tính…</div>
+      </div>
+      <div class="smart-review-list" id="smartReviewList"></div>
+      <div class="smart-review-actions" id="smartReviewActions"></div>
+    </section>
 
     <!-- CÔ GIÁO THU NHỎ -->
     <div class="stage-wrapper">
@@ -721,9 +764,13 @@
     <div class="modal-head">
       <div>
         <h3>📕 Sổ tay lỗi sai hay gặp</h3>
-        <p>Cô giáo tự động ghi lại mỗi khi sửa phát âm cho bạn. Chọn lỗi rồi bấm "Luyện tập" để AI dẫn bạn luyện lại từng lỗi bằng giọng nói — không chỉ đọc lại suông.</p>
+        <p>Cô giáo <b>tự động ghi lại</b> mỗi khi sửa phát âm cho bạn. Chọn lỗi rồi bấm "<b>Luyện tập</b>" để AI dẫn bạn luyện lại từng lỗi bằng giọng nói — không chỉ đọc lại suông.</p>
       </div>
       <button class="icon-btn" id="btnCloseMistakeModal">✕</button>
+    </div>
+    <div class="group-mode-toggle" id="mistakeGroupModeToggle">
+      <button type="button" class="mini-btn group-mode-btn active" data-mode="day">📅 Theo ngày</button>
+      <button type="button" class="mini-btn group-mode-btn" data-mode="category">🏷 Theo nhóm lỗi</button>
     </div>
     <select id="mistakeCategoryFilter">
       <option value="">Tất cả nhóm lỗi</option>
@@ -750,7 +797,7 @@
     <div class="modal-head">
       <div>
         <h3>📗 Sổ tay từ vựng</h3>
-        <p>Từ được tự động ghi lại khi cô giáo dạy từ mới lúc luyện nói, hoặc bạn lưu từ mục "Từ vựng gợi ý" trước khi học. Bấm vào từ để lật xem nghĩa &amp; ví dụ.</p>
+        <p><b>Tự động ghi lại</b> khi cô giáo dạy từ mới lúc luyện nói, hoặc bạn lưu từ mục "<b>Từ vựng gợi ý</b>" trước khi học. <b>Bấm vào từ</b> để lật xem nghĩa &amp; ví dụ.</p>
       </div>
       <button class="icon-btn" id="btnCloseVocabModal">✕</button>
     </div>
@@ -759,6 +806,10 @@
       <div class="srs-banner" id="vocabReviewBanner" style="display:none;">
         <span>🎯 <b><span id="vocabDueCount">0</span> từ</b> đến hạn ôn hôm nay</span>
         <button type="button" class="mini-btn primary" id="btnStartVocabReview">Bắt đầu ôn tập</button>
+      </div>
+      <div class="group-mode-toggle" id="vocabGroupModeToggle">
+        <button type="button" class="mini-btn group-mode-btn active" data-mode="day">📅 Theo ngày</button>
+        <button type="button" class="mini-btn group-mode-btn" data-mode="topic">🏷 Theo chủ đề</button>
       </div>
       <select id="vocabTopicFilter">
         <option value="">Tất cả chủ đề</option>
@@ -1151,6 +1202,7 @@ function loadLessons() {
 }
 function saveLessons() {
   try { localStorage.setItem(LESSON_KEY, JSON.stringify(lessons)); } catch {}
+  if (typeof renderSmartReview === 'function') renderSmartReview();
 }
 function getLesson(id) { return lessons.find(l => l.id === id); }
 
@@ -1266,6 +1318,7 @@ function createLesson(lang, langLabel, topicKey, topicLabel, scenario) {
     durationMs: 0,
     summary: '',
     summarizedUpTo: 0,
+    lastReviewedAt: null, // chưa từng "Xem lại" hoặc "Học lại" -> vẫn null
     turns: []
   };
   lessons.unshift(lesson);
@@ -1332,6 +1385,7 @@ function deleteLesson(id) {
 const MISTAKE_KEY = 'ai_coach_mistakes_v1';
 let mistakes = loadMistakes();
 let mistakeCategoryFilter = '';
+let mistakeGroupMode = 'day';
 let practicingMistakeIds = [];
 let practiceMistakeCursor = 0;
 
@@ -1340,6 +1394,7 @@ function loadMistakes() {
 }
 function saveMistakes() {
   try { localStorage.setItem(MISTAKE_KEY, JSON.stringify(mistakes)); } catch {}
+  if (typeof renderSmartReview === 'function') renderSmartReview();
 }
 function applyMonsterVerdict(finishedUserText, finishedTeacherText) {
   if (!finishedUserText?.trim() || !practicingMistakeIds.length) return;
@@ -1427,6 +1482,7 @@ Nếu có lỗi thật sự, tóm tắt lỗi đó trong đúng 1 câu ngắn g�
         if (summary.length > existing.text.length) existing.text = summary;
         saveMistakes();
         if (mistakeModalOverlay.classList.contains('show')) renderMistakeList();
+        if (existing.occurrences === RELEARN_OCCURRENCE_THRESHOLD) renderLessonList();
         showToast(`📕 Lỗi cũ lặp lại (gặp lần ${existing.occurrences}) — đã gộp vào sổ tay`);
       } else {
         mistakes.unshift({
@@ -1476,27 +1532,32 @@ function renderMistakeList() {
   }
   // Sắp xếp theo độ ưu tiên ôn tập (spaced repetition): lỗi lâu chưa ôn / chưa ôn bao giờ lên đầu
   const sorted = [...filtered].sort((a, b) => mistakePriority(b) - mistakePriority(a));
-  // Gom nhóm theo danh mục lỗi để đỡ rối mắt; nhóm nào có lỗi "nên ôn lại" thì hiện lên trước
-  const groups = new Map();
-  sorted.forEach(m => {
-    const key = m.category || 'Khác';
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(m);
-  });
-  const orderedKeys = [...groups.keys()].sort((a, b) => {
-    const overdueA = groups.get(a).some(isOverdue) ? 1 : 0;
-    const overdueB = groups.get(b).some(isOverdue) ? 1 : 0;
-    if (overdueA !== overdueB) return overdueB - overdueA;
-    return groups.get(b).length - groups.get(a).length;
-  });
-  orderedKeys.forEach(key => {
-    const items = groups.get(key);
+  // Gom nhóm theo ngày ghi nhận (mặc định, để dễ ôn lại "hôm qua đã học gì") hoặc theo danh mục lỗi
+  let renderGroups;
+  if (mistakeGroupMode === 'day') {
+    renderGroups = groupByDay(sorted, m => m.ts).map(g => ({ key: g.label, label: g.label, items: g.items, isDay: true }));
+  } else {
+    const groups = new Map();
+    sorted.forEach(m => {
+      const key = m.category || 'Khác';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(m);
+    });
+    const orderedKeys = [...groups.keys()].sort((a, b) => {
+      const overdueA = groups.get(a).some(isOverdue) ? 1 : 0;
+      const overdueB = groups.get(b).some(isOverdue) ? 1 : 0;
+      if (overdueA !== overdueB) return overdueB - overdueA;
+      return groups.get(b).length - groups.get(a).length;
+    });
+    renderGroups = orderedKeys.map(key => ({ key, label: key, items: groups.get(key), isDay: false }));
+  }
+  renderGroups.forEach(({ key, label, items, isDay }) => {
     const block = document.createElement('div');
     block.className = 'group-block';
     const header = document.createElement('div');
-    header.className = 'group-header';
+    header.className = 'group-header' + (isDay ? ' day-header' : '');
     header.innerHTML = `
-      <span class="group-header-left"><span class="group-caret">▾</span><b>${key}</b></span>
+      <span class="group-header-left"><span class="group-caret">▾</span><b>${label}</b></span>
       <span class="group-count">${items.length}</span>`;
     const body = document.createElement('div');
     body.className = 'group-body';
@@ -1572,6 +1633,13 @@ document.getElementById('btnPracticeSelected').onclick = () => {
 };
 btnOpenMistakes.onclick = () => { renderMistakeList(); mistakeModalOverlay.classList.add('show'); closeSidebarMobile(); };
 mistakeCategoryFilterEl.onchange = () => { mistakeCategoryFilter = mistakeCategoryFilterEl.value; renderMistakeList(); };
+document.getElementById('mistakeGroupModeToggle')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.group-mode-btn');
+  if (!btn) return;
+  mistakeGroupMode = btn.dataset.mode;
+  document.querySelectorAll('#mistakeGroupModeToggle .group-mode-btn').forEach(b => b.classList.toggle('active', b === btn));
+  renderMistakeList();
+});
 btnCloseMistakeModal.onclick = () => mistakeModalOverlay.classList.remove('show');
 mistakeModalOverlay.addEventListener('click', (e) => { if (e.target === mistakeModalOverlay) mistakeModalOverlay.classList.remove('show'); });
 btnClearMistakes.onclick = () => {
@@ -1588,12 +1656,14 @@ btnClearMistakes.onclick = () => {
 const VOCAB_KEY = 'ai_coach_vocab_v1';
 let vocabItems = loadVocab();
 let vocabTopicFilterValue = '';
+let vocabGroupMode = 'day';
 
 function loadVocab() {
   try { return JSON.parse(localStorage.getItem(VOCAB_KEY)) || []; } catch { return []; }
 }
 function saveVocab() {
   try { localStorage.setItem(VOCAB_KEY, JSON.stringify(vocabItems)); } catch {}
+  if (typeof renderSmartReview === 'function') renderSmartReview();
 }
 function updateVocabBadge() {
   if (vocabItems.length > 0) {
@@ -1705,27 +1775,32 @@ function renderVocabList() {
     return;
   }
   const sorted = [...filtered].sort((a, b) => b.ts - a.ts);
-  // Gom nhóm theo chủ đề để dễ ôn theo từng mảng, nhóm có từ "đến hạn ôn" hiện lên trước
-  const groups = new Map();
-  sorted.forEach(v => {
-    const key = v.topicLabel || 'Chủ đề khác';
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(v);
-  });
-  const orderedKeys = [...groups.keys()].sort((a, b) => {
-    const dueA = groups.get(a).some(isVocabDue) ? 1 : 0;
-    const dueB = groups.get(b).some(isVocabDue) ? 1 : 0;
-    if (dueA !== dueB) return dueB - dueA;
-    return groups.get(b).length - groups.get(a).length;
-  });
-  orderedKeys.forEach(key => {
-    const items = groups.get(key);
+  // Gom nhóm theo ngày học (mặc định, để dễ ôn lại "hôm qua học từ gì") hoặc theo chủ đề
+  let renderGroups;
+  if (vocabGroupMode === 'day') {
+    renderGroups = groupByDay(sorted, v => v.ts).map(g => ({ key: g.label, label: g.label, items: g.items, isDay: true }));
+  } else {
+    const groups = new Map();
+    sorted.forEach(v => {
+      const key = v.topicLabel || 'Chủ đề khác';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(v);
+    });
+    const orderedKeys = [...groups.keys()].sort((a, b) => {
+      const dueA = groups.get(a).some(isVocabDue) ? 1 : 0;
+      const dueB = groups.get(b).some(isVocabDue) ? 1 : 0;
+      if (dueA !== dueB) return dueB - dueA;
+      return groups.get(b).length - groups.get(a).length;
+    });
+    renderGroups = orderedKeys.map(key => ({ key, label: key, items: groups.get(key), isDay: false }));
+  }
+  renderGroups.forEach(({ key, label, items, isDay }) => {
     const block = document.createElement('div');
     block.className = 'group-block';
     const header = document.createElement('div');
-    header.className = 'group-header';
+    header.className = 'group-header' + (isDay ? ' day-header' : '');
     header.innerHTML = `
-      <span class="group-header-left"><span class="group-caret">▾</span><b>${key}</b></span>
+      <span class="group-header-left"><span class="group-caret">▾</span><b>${label}</b></span>
       <span class="group-count">${items.length}</span>`;
     const body = document.createElement('div');
     body.className = 'group-body';
@@ -1795,6 +1870,13 @@ document.getElementById('btnDeleteSelectedVocab').onclick = () => {
   showToast(`🗑 Đã xóa ${ids.length} từ`);
 };
 vocabTopicFilterEl.onchange = () => { vocabTopicFilterValue = vocabTopicFilterEl.value; renderVocabList(); };
+document.getElementById('vocabGroupModeToggle')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.group-mode-btn');
+  if (!btn) return;
+  vocabGroupMode = btn.dataset.mode;
+  document.querySelectorAll('#vocabGroupModeToggle .group-mode-btn').forEach(b => b.classList.toggle('active', b === btn));
+  renderVocabList();
+});
 btnOpenVocab.onclick = () => { renderVocabList(); vocabModalOverlay.classList.add('show'); closeSidebarMobile(); };
 btnCloseVocabModal.onclick = () => vocabModalOverlay.classList.remove('show');
 vocabModalOverlay.addEventListener('click', (e) => { if (e.target === vocabModalOverlay) vocabModalOverlay.classList.remove('show'); });
@@ -2004,6 +2086,30 @@ topicSelect.addEventListener('change', () => {
 function fmtTime(ts) {
   return new Date(ts).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
+function dayKey(ts) {
+  return new Date(ts || Date.now()).toDateString();
+}
+function dayLabel(ts) {
+  const d = new Date(ts || Date.now());
+  const today = new Date();
+  const yesterday = new Date(); yesterday.setDate(today.getDate() - 1);
+  const dateStr = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  if (d.toDateString() === today.toDateString()) return `📅 Hôm nay · ${dateStr}`;
+  if (d.toDateString() === yesterday.toDateString()) return `📅 Hôm qua · ${dateStr}`;
+  const weekday = d.toLocaleDateString('vi-VN', { weekday: 'long' });
+  return `📅 ${weekday.charAt(0).toUpperCase() + weekday.slice(1)} · ${dateStr}`;
+}
+function groupByDay(items, getTs) {
+  const groups = new Map();
+  items.forEach(it => {
+    const key = dayKey(getTs(it));
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(it);
+  });
+  return [...groups.keys()]
+    .sort((a, b) => new Date(b) - new Date(a))
+    .map(key => ({ label: dayLabel(groups.get(key)[0] ? getTs(groups.get(key)[0]) : Date.now()), items: groups.get(key) }));
+}
 function statusLabel(s) {
   return s === 'ongoing' ? 'Đang học' : s === 'interrupted' ? 'Bị gián đoạn' : 'Hoàn thành';
 }
@@ -2014,31 +2120,79 @@ function showToast(msg, warn) {
   showToast._t = setTimeout(() => { toastEl.className = 'toast'; }, 2600);
 }
 
+// Số lỗi lặp lại nhiều lần (>=3) gắn với một bài học -> coi là dấu hiệu cần học lại bài đó
+const RELEARN_OCCURRENCE_THRESHOLD = 3;
+function getLessonReviewInfo(lesson) {
+  const relatedMistakes = (typeof mistakes !== 'undefined' ? mistakes : []).filter(m => m.lessonId === lesson.id);
+  const repeatedMistakes = relatedMistakes.filter(m => (m.occurrences || 1) >= RELEARN_OCCURRENCE_THRESHOLD);
+  const needsRelearn = repeatedMistakes.length > 0;
+  const notReviewedYet = lesson.status !== 'ongoing' && !lesson.lastReviewedAt;
+  return { relatedMistakes, repeatedMistakes, needsRelearn, notReviewedYet };
+}
 function renderLessonList() {
   lessonListEl.innerHTML = '';
+  updateLessonReviewBanner();
   if (lessons.length === 0) {
     lessonListEl.innerHTML = '<div class="empty-hint">Chưa có bài học nào được lưu.<br>Bấm "Bắt đầu luyện nói" — mọi tiến trình sẽ tự động lưu lại tại đây, kể cả khi mất kết nối giữa chừng.</div>';
     return;
   }
-  lessons.forEach(lesson => {
-    const card = document.createElement('div');
-    card.className = 'lesson-card' + (lesson.id === currentLessonId ? ' active' : '');
-    const topicLabel = lesson.topicLabel || (TOPICS[lesson.topicKey] && TOPICS[lesson.topicKey].label) || 'Chủ đề';
-    card.innerHTML = `
-      <div class="lesson-top">
-        <span>${fmtTime(lesson.updatedAt)}</span>
-        <span class="lesson-status status-${lesson.status}" title="${statusLabel(lesson.status)}"></span>
-      </div>
-      <div class="lesson-title">${topicLabel}</div>
-      <div class="lesson-sub">${lesson.langLabel || lesson.lang} · ${lesson.turns.length} lượt · ${statusLabel(lesson.status)} ${lesson.summary ? '<span title="Đã có tóm tắt tiến trình">📋</span>' : ''}</div>
-      ${lesson.scenario ? `<div class="lesson-sub" style="color:var(--chalk-dim);font-style:italic;">🎬 ${escapeHtml(lesson.scenario)}</div>` : ''}
-      <div class="lesson-actions">
-        <button class="mini-btn" data-act="view" data-id="${lesson.id}">👁 Xem lại</button>
-        <button class="mini-btn primary" data-act="resume" data-id="${lesson.id}">▶ ${lesson.status === 'completed' ? 'Học lại' : 'Tiếp tục'}</button>
-        <button class="mini-btn danger" data-act="delete" data-id="${lesson.id}">🗑 Xóa</button>
-      </div>`;
-    lessonListEl.appendChild(card);
+  // Nhóm theo ngày học để dễ ôn lại "hôm đó đã học gì", vẫn giữ thứ tự mới nhất trước
+  const dayGroups = groupByDay(lessons, l => l.updatedAt || l.createdAt);
+  dayGroups.forEach(({ label, items }) => {
+    const header = document.createElement('div');
+    header.className = 'group-header day-header';
+    header.innerHTML = `
+      <span class="group-header-left"><span class="group-caret">▾</span><b>${label}</b></span>
+      <span class="group-count">${items.length}</span>`;
+    const body = document.createElement('div');
+    body.className = 'group-body';
+    header.onclick = () => { header.classList.toggle('collapsed'); body.classList.toggle('collapsed'); };
+    items.forEach(lesson => {
+      const card = document.createElement('div');
+      const { needsRelearn, notReviewedYet, repeatedMistakes } = getLessonReviewInfo(lesson);
+      card.className = 'lesson-card' + (lesson.id === currentLessonId ? ' active' : '');
+      const topicLabel = lesson.topicLabel || (TOPICS[lesson.topicKey] && TOPICS[lesson.topicKey].label) || 'Chủ đề';
+      const reviewTag = needsRelearn
+        ? `<span class="priority-tag" title="Có ${repeatedMistakes.length} lỗi lặp lại nhiều lần trong bài này">🔥 Cần học lại</span>`
+        : notReviewedYet
+          ? `<span class="occurrence-tag" title="Bạn chưa xem lại hay học lại bài này lần nào">🆕 Chưa ôn</span>`
+          : '';
+      card.innerHTML = `
+        <div class="lesson-top">
+          <span>${fmtTime(lesson.updatedAt)}</span>
+          <span class="lesson-status status-${lesson.status}" title="${statusLabel(lesson.status)}"></span>
+        </div>
+        <div class="lesson-title">${topicLabel}</div>
+        <div class="lesson-sub">${lesson.langLabel || lesson.lang} · ${lesson.turns.length} lượt · ${statusLabel(lesson.status)} ${lesson.summary ? '<span title="Đã có tóm tắt tiến trình">📋</span>' : ''}</div>
+        ${lesson.scenario ? `<div class="lesson-sub" style="color:var(--chalk-dim);font-style:italic;">🎬 ${escapeHtml(lesson.scenario)}</div>` : ''}
+        ${reviewTag ? `<div class="tag-row">${reviewTag}</div>` : ''}
+        <div class="lesson-actions">
+          <button class="mini-btn" data-act="view" data-id="${lesson.id}">👁 Xem lại</button>
+          <button class="mini-btn primary" data-act="resume" data-id="${lesson.id}">▶ ${lesson.status === 'completed' ? 'Học lại' : 'Tiếp tục'}</button>
+          <button class="mini-btn danger" data-act="delete" data-id="${lesson.id}">🗑 Xóa</button>
+        </div>`;
+      body.appendChild(card);
+    });
+    lessonListEl.appendChild(header);
+    lessonListEl.appendChild(body);
   });
+}
+// Banner tổng quan đầu sidebar: cho biết có bao nhiêu bài cần ôn lại / học lại
+function updateLessonReviewBanner() {
+  const banner = document.getElementById('lessonReviewBanner');
+  if (!banner) return;
+  let relearnCount = 0, notReviewedCount = 0;
+  lessons.forEach(lesson => {
+    const { needsRelearn, notReviewedYet } = getLessonReviewInfo(lesson);
+    if (needsRelearn) relearnCount++;
+    else if (notReviewedYet) notReviewedCount++;
+  });
+  if (!relearnCount && !notReviewedCount) { banner.style.display = 'none'; return; }
+  const parts = [];
+  if (relearnCount) parts.push(`🔥 <b>${relearnCount} bài</b> có lỗi lặp lại nhiều — nên học lại`);
+  if (notReviewedCount) parts.push(`🆕 <b>${notReviewedCount} bài</b> chưa được ôn lại`);
+  banner.style.display = 'flex';
+  banner.innerHTML = `<span>${parts.join(' · ')}</span>`;
 }
 
 lessonListEl.addEventListener('click', (e) => {
@@ -2066,6 +2220,9 @@ btnClearAll.onclick = () => {
 function openTranscriptModal(id) {
   const lesson = getLesson(id);
   if (!lesson) return;
+  lesson.lastReviewedAt = Date.now();
+  saveLessons();
+  renderLessonList();
   const topicLabel = lesson.topicLabel || (TOPICS[lesson.topicKey] && TOPICS[lesson.topicKey].label) || 'Chủ đề';
   modalTitle.textContent = topicLabel;
   modalSub.textContent = `${lesson.langLabel || lesson.lang} · ${fmtTime(lesson.createdAt)} · ${statusLabel(lesson.status)}`;
@@ -2100,6 +2257,8 @@ function selectResume(id) {
   const lesson = getLesson(id);
   if (!lesson) return;
   resumeLessonId = id;
+  lesson.lastReviewedAt = Date.now();
+  saveLessons();
   if (lesson.lang) langSelect.value = lesson.lang;
   if (lesson.topicKey) topicSelect.value = lesson.topicKey;
   setScenarioMode('auto');
@@ -2182,6 +2341,65 @@ function renderMistakeWeeklyChart() {
       <div class="chart-bar" style="height:${Math.max(3, (w.count / max) * 90)}px;" title="${w.count} lỗi tuần này"></div>
       <div class="chart-bar-label">${w.label}</div>
     </div>`).join('');
+}
+
+// ===== GIAI ĐOẠN 1: ÔN THÔNG MINH =====
+// Không cần AI/API: dùng chính dữ liệu SRS + lỗi sai + lịch sử bài học hiện có.
+function getSmartReviewPlan() {
+  const dueVocab = getDueVocab();
+  const overdueMistakes = mistakes.filter(isOverdue).sort((a,b) => mistakePriority(b) - mistakePriority(a));
+  const relearnLessons = lessons
+    .map(l => ({ lesson:l, info:getLessonReviewInfo(l) }))
+    .filter(x => x.info.needsRelearn)
+    .sort((a,b) => {
+      const ao = Math.max(...a.info.repeatedMistakes.map(m => m.occurrences || 1), 0);
+      const bo = Math.max(...b.info.repeatedMistakes.map(m => m.occurrences || 1), 0);
+      return bo - ao || (b.lesson.updatedAt || b.lesson.createdAt) - (a.lesson.updatedAt || a.lesson.createdAt);
+    });
+  return { dueVocab, overdueMistakes, relearnLessons };
+}
+
+function renderSmartReview() {
+  const card = document.getElementById('smartReviewCard');
+  const list = document.getElementById('smartReviewList');
+  const actions = document.getElementById('smartReviewActions');
+  const score = document.getElementById('smartReviewScore');
+  const sub = document.getElementById('smartReviewSub');
+  if (!card || !list || !actions) return;
+
+  const p = getSmartReviewPlan();
+  const total = p.dueVocab.length + p.overdueMistakes.length + p.relearnLessons.length;
+  score.textContent = total ? `${total} mục cần chú ý` : 'Đã ổn hôm nay';
+  sub.textContent = total
+    ? 'Ưu tiên theo thứ tự: từ vựng đến hạn → lỗi cần ôn → bài có lỗi lặp lại.'
+    : 'Chưa có nội dung bắt buộc. Bạn có thể học bài mới hoặc luyện tự do.';
+
+  const cards = [];
+  if (p.dueVocab.length) cards.push(`<div class="smart-review-item"><b>📗 ${p.dueVocab.length} từ đến hạn</b><span>Ôn ngay theo lịch SRS hiện tại.</span></div>`);
+  if (p.overdueMistakes.length) cards.push(`<div class="smart-review-item"><b>📕 ${p.overdueMistakes.length} lỗi cần ôn</b><span>${escapeHtml(p.overdueMistakes[0].text || 'Lỗi cần củng cố')}</span></div>`);
+  if (p.relearnLessons.length) {
+    const l=p.relearnLessons[0].lesson;
+    cards.push(`<div class="smart-review-item"><b>🔥 ${p.relearnLessons.length} bài nên học lại</b><span>${escapeHtml(l.topicLabel || 'Bài học gần đây')}</span></div>`);
+  }
+  list.innerHTML = cards.length ? cards.join('') : '<div class="smart-review-empty">🎉 Hiện chưa có mục nào quá hạn. Lịch ôn của bạn đang ổn.</div>';
+
+  actions.innerHTML = '';
+  if (p.dueVocab.length) {
+    const b=document.createElement('button'); b.className='mini-btn primary'; b.textContent=`📗 Ôn ${Math.min(p.dueVocab.length,20)} từ ngay`;
+    b.onclick=()=>startVocabReview(); actions.appendChild(b);
+  }
+  if (p.overdueMistakes.length) {
+    const b=document.createElement('button'); b.className='mini-btn'; b.textContent=`📕 Mở ${p.overdueMistakes.length} lỗi cần ôn`;
+    b.onclick=()=>{ renderMistakeList(); mistakeModalOverlay.classList.add('show'); closeSidebarMobile(); }; actions.appendChild(b);
+  }
+  if (p.relearnLessons.length) {
+    const b=document.createElement('button'); b.className='mini-btn'; b.textContent='🔥 Học lại bài ưu tiên';
+    b.onclick=()=>selectResume(p.relearnLessons[0].lesson.id); actions.appendChild(b);
+  }
+  if (!total) {
+    const b=document.createElement('button'); b.className='mini-btn primary'; b.textContent='▶ Bắt đầu luyện nói';
+    b.onclick=()=>document.getElementById('btnConnect')?.click(); actions.appendChild(b);
+  }
 }
 
 function renderDashboard() {
@@ -3011,6 +3229,7 @@ btnDisconnect.onclick = () => stopSession(true);
 renderLessonList();
 updateMistakeBadge();
 updateVocabBadge();
+renderSmartReview();
 updateLipSync();
 updateScenarioPreview();
 updatePersonaOptions(topicSelect.value);
