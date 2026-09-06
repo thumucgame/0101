@@ -1,7 +1,6 @@
 
 
 
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -1196,6 +1195,7 @@ let currentLessonId = null;
 let resumeLessonId = null;
 let sessionStartTime = null;
 let timerInterval = null;
+let isStoppingSession = false;
 
 function loadLessons() {
   try { return JSON.parse(localStorage.getItem(LESSON_KEY)) || []; } catch { return []; }
@@ -2873,6 +2873,7 @@ async function stopMicrophone(){
 }
 
 async function startLiveSession() {
+  if (session || isStoppingSession) { showToast('⚠️ Buổi học cũ vẫn đang được đóng, vui lòng thử lại sau 1 giây', true); return; }
   const key = apiKeyInput.value.trim();
   if (!key) return alert("Vui lòng nhập API Key!");
 
@@ -3138,32 +3139,46 @@ Nhiệm vụ:
 }
 
 async function stopSession(manual) {
-  try { session?.sendRealtimeInput?.({ audioStreamEnd: true }); session?.close?.(); } catch {}
-  session = null; await stopMicrophone();
+  if (isStoppingSession) return;
+  isStoppingSession = true;
+
+  const endedSession = session;
+  const endedLessonId = currentLessonId;
+  session = null;
+
+  try { endedSession?.sendRealtimeInput?.({ audioStreamEnd: true }); } catch {}
+  try { endedSession?.close?.(); } catch {}
+  await stopMicrophone();
   if (aiSpeakEndTimer) { clearTimeout(aiSpeakEndTimer); aiSpeakEndTimer = null; }
   isAiSpeaking = false;
 
-  // QUAN TRỌNG: nếu mất kết nối/gián đoạn ngay giữa một lượt nói (chưa kịp turnComplete),
-  // đoạn hội thoại dở dang trong userBuffer/aiBuffer sẽ KHÔNG được lưu — đây chính là lý do
-  // "tiếp tục" sau đó AI như quên mất, vì đúng đoạn gần nhất (quan trọng nhất) bị rơi mất.
-  // Nên luôn cố lưu nốt phần dở dang này trước khi đóng buổi học.
-  if (currentLessonId && (userBuffer.trim() || aiBuffer.trim())) {
-    if (userBuffer.trim()) addTurn(currentLessonId, 'user', userBuffer);
-    if (aiBuffer.trim()) addTurn(currentLessonId, 'teacher', aiBuffer);
-    userBuffer = ""; aiBuffer = "";
+  // Lưu nốt lượt nói đang dở trước khi kết thúc phiên.
+  if (endedLessonId && (userBuffer.trim() || aiBuffer.trim())) {
+    if (userBuffer.trim()) addTurn(endedLessonId, 'user', userBuffer);
+    if (aiBuffer.trim()) addTurn(endedLessonId, 'teacher', aiBuffer);
+    userBuffer = ''; aiBuffer = '';
   }
 
-  if (currentLessonId) {
-    setLessonStatus(currentLessonId, manual ? 'completed' : 'interrupted');
-    const lesson = getLesson(currentLessonId);
+  if (endedLessonId) {
+    setLessonStatus(endedLessonId, manual ? 'completed' : 'interrupted');
+    const lesson = getLesson(endedLessonId);
     if (lesson && sessionStartTime) {
       lesson.durationMs = (lesson.durationMs || 0) + (Date.now() - sessionStartTime);
       saveLessons();
     }
     renderLessonList();
-    // Buộc tóm tắt lần cuối khi kết thúc buổi học, để lần "tiếp tục" sau luôn có bản tóm tắt mới nhất
-    updateLessonSummary(currentLessonId, true);
-    updateUserMemory(currentLessonId);
+    updateLessonSummary(endedLessonId, true);
+    updateUserMemory(endedLessonId);
+
+    // Nếu bị lỗi/gián đoạn: giữ đúng bài này để lần bấm "Bắt đầu luyện nói"
+    // tiếp tục bài cũ, không tạo lesson mới.
+    if (!manual) {
+      resumeLessonId = endedLessonId;
+      const topicLabel = lesson?.topicLabel || 'Chủ đề';
+      resumeText.innerHTML = `⚠️ Bài học bị gián đoạn. <b>Tiếp tục bài cũ: ${escapeHtml(topicLabel)}</b> · ${lesson?.turns?.length || 0} lượt đã lưu`;
+      resumeBanner.classList.add('show');
+      showToast('🔄 Đã giữ bài học. Bấm "Bắt đầu luyện nói" để tiếp tục đúng chỗ vừa dừng.', true);
+    }
   }
 
   if (practicingMistakeIds.length) {
@@ -3183,12 +3198,14 @@ async function stopSession(manual) {
 
   stopTimer();
   currentLessonId = null;
+  sessionStartTime = null;
   studioMode = null;
   pastSelfMistakeId = null;
 
   statusBadge.innerHTML = '<span class="dot"></span>Offline';
-  statusBadge.className = "status-badge status-offline";
+  statusBadge.className = 'status-badge status-offline';
   btnConnect.disabled = false; btnDisconnect.disabled = true;
+  isStoppingSession = false;
 }
 
 
