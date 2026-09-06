@@ -1,6 +1,3 @@
-
-
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -583,6 +580,47 @@
       <div class="smart-review-actions" id="smartReviewActions"></div>
     </section>
 
+    <!-- GIÁO TRÌNH 1.000 CÂU GIAO TIẾP — LEVEL 1 -->
+    <section class="smart-review-card" id="curriculumCard" style="border-color:var(--sage);">
+      <div class="smart-review-head">
+        <div>
+          <div class="smart-review-title">🚀 Lộ trình 1000 mẫu phản xạ</div>
+          <div class="smart-review-sub" id="curriculumSub">Đang tải...</div>
+        </div>
+        <div class="smart-review-score" id="curriculumScore">Ngày 1</div>
+      </div>
+      <div class="smart-review-list" id="curriculumList"></div>
+      <div class="smart-review-actions" id="curriculumActions" style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="mini-btn primary" id="btnCurriculumPractice">🗣️ Luyện 3 mẫu hôm nay với AI</button>
+        <button class="mini-btn" id="btnCurriculumDone">✅ Đã học xong hôm nay</button>
+        <button class="mini-btn" id="btnCurriculumChange" style="display:none;">🔄 Đổi bài</button>
+        <button class="mini-btn" id="btnCurriculumSetTopic">🏷️ Đặt chủ đề</button>
+        <button class="mini-btn" id="btnCurriculumReview">🔁 Ôn lại</button>
+      </div>
+
+      <div id="curriculumTopicPanel" style="display:none; margin-top:10px; padding:10px; border:1px solid var(--card-line); border-radius:12px; flex-direction:column; gap:8px;">
+        <div style="font-size:12px;color:var(--chalk-dim);">Tự chọn chủ đề cho các mẫu sắp tới, thay vì để AI tự quyết:</div>
+        <input id="curriculumTopicInput" type="text" placeholder="VD: Mua sắm, Du lịch, Xin nghỉ phép, Than phiền dịch vụ..." style="width:100%;box-sizing:border-box;">
+        <select id="curriculumTopicScope">
+          <option value="1">Chỉ ngày kế tiếp (3 mẫu)</option>
+          <option value="7">Cả tuần kế tiếp (7 ngày · 21 mẫu)</option>
+        </select>
+        <button class="mini-btn primary" id="btnSaveCurriculumTopic">Lưu chủ đề</button>
+        <div id="curriculumTopicStatus" style="font-size:11px;color:var(--chalk-dim);"></div>
+      </div>
+
+      <div id="curriculumReviewPanel" style="display:none; margin-top:10px; padding:10px; border:1px solid var(--card-line); border-radius:12px; flex-direction:column; gap:8px;">
+        <div style="font-size:12px;color:var(--chalk-dim);">Ôn lại các mẫu đã học (không tính là ngày mới):</div>
+        <select id="curriculumReviewMode">
+          <option value="day">Theo một ngày cụ thể</option>
+          <option value="topic">Theo một chủ đề cụ thể</option>
+          <option value="all">Trộn ngẫu nhiên tất cả mẫu đã học</option>
+        </select>
+        <select id="curriculumReviewValue"></select>
+        <button class="mini-btn primary" id="btnStartCurriculumReview">🔁 Bắt đầu ôn tập</button>
+      </div>
+    </section>
+
     <!-- CÔ GIÁO THU NHỎ -->
     <div class="stage-wrapper">
       <canvas id="avatarCanvas" width="130" height="130"></canvas>
@@ -975,6 +1013,96 @@ const TOPICS = {
   health:     { label: "Sức khỏe & Bác sĩ",        desc: "mô tả triệu chứng, khám bệnh" },
   free:       { label: "Tự do",                    desc: "cô giáo tự chọn chủ đề" },
 };
+
+/* ============================================================
+   GIÁO TRÌNH CỐ ĐỊNH — LEVEL 1: 1.000 CÂU GIAO TIẾP THÔNG DỤNG
+   Dữ liệu tĩnh, soạn sẵn theo 20 chủ đề, phát 3 câu/ngày (~334 ngày).
+   Không phụ thuộc AI sinh ngẫu nhiên — đảm bảo lộ trình nhất quán.
+   ============================================================ */
+/* ============================================================
+   1000 MẪU PHẢN XẠ — dữ liệu "hạt giống" cho ngày 1 (3 mẫu đầu tiên).
+   Từ ngày 2 trở đi, hệ thống dùng Gemini để SINH TIẾP các mẫu mới
+   theo đúng cấu trúc này (xem generatePatternsForDay bên dưới),
+   thay vì nhồi cứng 1000 câu vào file HTML.
+   Mỗi mẫu gồm: ý nghĩa giao tiếp, nhiều cách nói tương đương,
+   tình huống thực tế, từ/cụm liên quan, hội thoại mẫu, và 1 challenge
+   để học viên tự phản xạ (không phải học thuộc 1 câu cứng).
+   ============================================================ */
+const REFLEX_PATTERNS_SEED = [
+  {
+    id: 'P0001', day: 1, topic: 'Giao tiếp cơ bản hằng ngày',
+    title: 'Hỏi người khác có rảnh không',
+    meaning: 'Dùng khi bạn muốn kiểm tra xem đối phương có đang bận hay có thể dành chút thời gian cho bạn trước khi bạn nói tiếp việc cần nhờ hoặc trao đổi.',
+    expressions: [
+      'Are you free right now?',
+      'Do you have a minute?',
+      'Got a sec?',
+      'Is this a good time?',
+      'Are you busy at the moment?'
+    ],
+    situations: [
+      'Muốn nhờ đồng nghiệp xem giúp một email trước khi gửi',
+      'Gọi điện cho bạn nhưng không chắc họ có đang bận không',
+      'Muốn hỏi sếp một câu nhanh giữa giờ làm'
+    ],
+    related: ['busy', 'available', 'free time', 'spare a minute', 'in the middle of something'],
+    dialogue: [
+      { speaker: 'A', text: 'Hey, got a sec?' },
+      { speaker: 'B', text: "Sure, what's up?" },
+      { speaker: 'A', text: 'Could you take a quick look at this for me?' },
+      { speaker: 'B', text: 'Yeah, no problem.' }
+    ],
+    challenge: 'Bạn muốn rủ một người bạn đi ăn trưa nhưng không chắc họ có đang bận việc không. Hãy tự nói ra câu hỏi phù hợp trước khi rủ.'
+  },
+  {
+    id: 'P0002', day: 1, topic: 'Giao tiếp cơ bản hằng ngày',
+    title: 'Nói rằng mình chưa hiểu',
+    meaning: 'Dùng khi bạn cần thành thật báo cho đối phương biết bạn chưa nắm được điều họ vừa nói, để họ giải thích lại theo cách khác thay vì bạn giả vờ hiểu.',
+    expressions: [
+      "Sorry, I don't quite understand.",
+      'Could you say that again?',
+      "I'm not sure I follow.",
+      'Can you explain that a bit more?',
+      "I'm a little confused, could you clarify?"
+    ],
+    situations: [
+      'Đồng nghiệp vừa giải thích một quy trình mới quá nhanh',
+      'Nghe một người bản xứ nói nhanh trong hội thoại',
+      'Đọc hướng dẫn nhưng chưa rõ bước tiếp theo'
+    ],
+    related: ['confused', 'follow', 'clarify', 'in other words', 'lost me there'],
+    dialogue: [
+      { speaker: 'A', text: 'So basically you just merge the branch and redeploy.' },
+      { speaker: 'B', text: "Sorry, I don't quite follow. Could you explain that a bit more?" },
+      { speaker: 'A', text: 'Sure — let me break it down step by step.' }
+    ],
+    challenge: 'Ai đó vừa giải thích cách đi đến một địa điểm nhưng quá nhanh, bạn chưa nhớ được đường. Hãy tự nói ra câu để nhờ họ nói lại.'
+  },
+  {
+    id: 'P0003', day: 1, topic: 'Giao tiếp cơ bản hằng ngày',
+    title: 'Nhờ người khác giúp',
+    meaning: 'Dùng khi bạn cần một sự trợ giúp cụ thể từ ai đó, theo cách lịch sự và tự nhiên, phù hợp với mức độ thân quen giữa hai người.',
+    expressions: [
+      'Could you help me with this?',
+      'Can you give me a hand?',
+      'Would you mind helping me for a second?',
+      'I could really use some help here.',
+      'Do you think you could help me out?'
+    ],
+    situations: [
+      'Nhờ đồng nghiệp giúp mang đồ nặng',
+      'Nhờ bạn cùng phòng giúp sửa wifi',
+      'Nhờ người lạ chỉ đường trên phố'
+    ],
+    related: ['give someone a hand', 'help out', 'favor', 'assist', 'lend a hand'],
+    dialogue: [
+      { speaker: 'A', text: 'Excuse me, could you help me with this bag? It\'s pretty heavy.' },
+      { speaker: 'B', text: 'Of course, let me grab that for you.' },
+      { speaker: 'A', text: 'Thanks so much, I really appreciate it.' }
+    ],
+    challenge: 'Máy tính của bạn bị treo giữa lúc làm việc quan trọng. Hãy tự nói ra câu nhờ đồng nghiệp giúp bạn xem qua.'
+  }
+];
 
 // Vai AI có thể đóng, chia theo từng chủ đề — mỗi chủ đề có bộ vai riêng phù hợp bối cảnh.
 const PERSONA_LIBRARY = {
@@ -3452,6 +3580,435 @@ document.getElementById('importJsonFile')?.addEventListener('change',e=>{
   reader.readAsText(file);
 });
 // Cho phép chọn file sau khi đã mở quyền.
+
+/* ============================================================
+   ĐIỀU KHIỂN "1000 MẪU PHẢN XẠ" — LEVEL 1
+   3 mẫu/ngày · localStorage riêng, tách biệt với vocabItems/lessons.
+   Ngày 1 dùng 3 mẫu đã soạn sẵn (REFLEX_PATTERNS_SEED).
+   Từ ngày 2 trở đi, hệ thống gọi Gemini để SINH TIẾP 3 mẫu mới mỗi
+   ngày theo đúng cấu trúc (topic, title, meaning, expressions,
+   situations, related, dialogue, challenge), rồi lưu cache vào
+   localStorage — không cần nhồi cứng 1000 mẫu vào HTML.
+   Học viên có thể TỰ CHỌN chủ đề cho các ngày sắp tới (thay vì để
+   AI tự quyết), và có 2 cách ôn lại mẫu cũ: (a) mỗi buổi luyện mới
+   AI tự chèn ngẫu nhiên 1-2 tình huống ôn lại, (b) nút "Ôn lại"
+   riêng để chủ động chọn ôn theo ngày hoặc theo chủ đề.
+   ============================================================ */
+const CURRICULUM_UNITS_PER_DAY = 3;
+const CURRICULUM_TARGET_TOTAL = 1000; // mục tiêu tổng số mẫu của lộ trình
+const CURRICULUM_TOTAL_DAYS = Math.ceil(CURRICULUM_TARGET_TOTAL / CURRICULUM_UNITS_PER_DAY);
+const CURRICULUM_KEY = 'curriculumProgressV1';
+const CURRICULUM_PATTERNS_KEY = 'curriculumPatternsV2'; // cache các mẫu đã sinh theo từng ngày
+const CURRICULUM_TOPIC_KEY = 'curriculumTopicOverridesV1'; // chủ đề do học viên tự đặt theo ngày
+
+function loadCurriculumProgress() {
+  try {
+    const raw = localStorage.getItem(CURRICULUM_KEY);
+    if (raw) {
+      const p = JSON.parse(raw);
+      if (p && typeof p.dayIndex === 'number' && Array.isArray(p.completedDays)) return p;
+    }
+  } catch {}
+  return { dayIndex: 1, completedDays: [] }; // dayIndex: ngày hiện tại đang học (1-based)
+}
+function saveCurriculumProgress() {
+  try { localStorage.setItem(CURRICULUM_KEY, JSON.stringify(curriculumProgress)); } catch {}
+}
+let curriculumProgress = loadCurriculumProgress();
+
+function loadPatternCache() {
+  try { return JSON.parse(localStorage.getItem(CURRICULUM_PATTERNS_KEY)) || {}; } catch { return {}; }
+}
+function savePatternCache() {
+  try { localStorage.setItem(CURRICULUM_PATTERNS_KEY, JSON.stringify(patternCache)); } catch {}
+}
+let patternCache = loadPatternCache(); // { [day]: [pattern, pattern, pattern] }
+let curriculumGenerating = false;
+
+function loadTopicOverrides() {
+  try { return JSON.parse(localStorage.getItem(CURRICULUM_TOPIC_KEY)) || {}; } catch { return {}; }
+}
+function saveTopicOverrides() {
+  try { localStorage.setItem(CURRICULUM_TOPIC_KEY, JSON.stringify(topicOverrides)); } catch {}
+}
+let topicOverrides = loadTopicOverrides(); // { [day]: 'Chủ đề do học viên đặt' }
+
+function getCachedPatternsForDay(day) {
+  if (day === 1) return REFLEX_PATTERNS_SEED;
+  return patternCache[day] || null;
+}
+
+// Ngày sắp tới chưa có mẫu (mục tiêu để đặt chủ đề hoặc sinh mẫu mới).
+function getNextUngeneratedDay() {
+  let d = curriculumProgress.dayIndex;
+  while (getCachedPatternsForDay(d)) d++;
+  return d;
+}
+
+function collectRecentTitles(beforeDay, count) {
+  const titles = [];
+  for (let d = beforeDay - 1; d >= 1 && titles.length < count; d--) {
+    const units = getCachedPatternsForDay(d);
+    if (units) units.forEach(u => titles.push(u.title));
+  }
+  return titles;
+}
+
+// Gọi Gemini để sinh 3 mẫu phản xạ mới cho một ngày cụ thể, theo đúng schema.
+async function generatePatternsForDay(day) {
+  const client = getAdHocClient();
+  if (!client) throw new Error('Chưa nhập Gemini API Key');
+  const recentTitles = collectRecentTitles(day, 15);
+  const forcedTopic = topicOverrides[day];
+  const topicLine = forcedTopic
+    ? `Chủ đề BẮT BUỘC cho ngày này (do học viên tự chọn): "${forcedTopic}". Cả 3 mẫu đều phải xoay quanh chủ đề này.`
+    : `Học viên chưa chỉ định chủ đề, hãy TỰ CHỌN một chủ đề giao tiếp phù hợp cho cả 3 mẫu và ghi rõ vào trường "topic" (không trùng các chủ đề đã dùng trước đó).`;
+  const prompt = `Bạn là chuyên gia thiết kế giáo trình phản xạ giao tiếp tiếng Anh cho người Việt.
+Hãy soạn đúng ${CURRICULUM_UNITS_PER_DAY} MẪU PHẢN XẠ mới cho NGÀY ${day} của lộ trình "1000 mẫu phản xạ" (mỗi ngày 3 mẫu, tổng ${CURRICULUM_TARGET_TOTAL} mẫu).
+${topicLine}
+Độ khó tăng dần nhẹ theo số ngày; ngày càng lớn thì tình huống càng đa dạng/tự nhiên hơn (nhưng vẫn ở trình độ giao tiếp đời sống, không học thuật).
+KHÔNG trùng ý nghĩa với các mẫu đã dùng trước đó: ${recentTitles.length ? recentTitles.join('; ') : '(chưa có)'}.
+Mỗi mẫu cần đủ các phần:
+- topic: tên chủ đề lớn áp dụng chung cho cả 3 mẫu hôm nay (tiếng Việt).
+- title: tên ngắn bằng tiếng Việt cho Ý NGHĨA GIAO TIẾP cụ thể của mẫu (vd: "Từ chối lời mời khéo léo").
+- meaning: mô tả 1-2 câu bằng tiếng Việt về khi nào và tại sao dùng mẫu này.
+- expressions: 4-5 CÁCH NÓI tương đương bằng tiếng Anh (khác nhau về mức trang trọng/ngữ cảnh) để diễn đạt cùng một ý.
+- situations: 3 TÌNH HUỐNG THỰC TẾ (tiếng Việt) mà mẫu này thường xuất hiện.
+- related: 4-5 từ/cụm từ tiếng Anh liên quan, hữu ích khi mở rộng.
+- dialogue: một đoạn hội thoại thực tế ngắn (4 lượt thoại) bằng tiếng Anh, gồm speaker "A"/"B" và text, minh hoạ mẫu này trong ngữ cảnh tự nhiên.
+- challenge: 1 tình huống ngắn bằng tiếng Việt để học viên TỰ nói ra câu phù hợp (không cho sẵn đáp án).
+Trả về đúng JSON theo schema, không thêm lời dẫn.`;
+
+  const response = await client.models.generateContent({
+    model: 'gemini-3.1-flash-lite',
+    contents: prompt,
+    config: {
+      responseMimeType: 'application/json',
+      responseSchema: {
+        type: 'ARRAY',
+        items: {
+          type: 'OBJECT',
+          properties: {
+            topic: { type: 'STRING' },
+            title: { type: 'STRING' },
+            meaning: { type: 'STRING' },
+            expressions: { type: 'ARRAY', items: { type: 'STRING' } },
+            situations: { type: 'ARRAY', items: { type: 'STRING' } },
+            related: { type: 'ARRAY', items: { type: 'STRING' } },
+            dialogue: {
+              type: 'ARRAY',
+              items: {
+                type: 'OBJECT',
+                properties: { speaker: { type: 'STRING' }, text: { type: 'STRING' } },
+                required: ['speaker', 'text']
+              }
+            },
+            challenge: { type: 'STRING' }
+          },
+          required: ['topic', 'title', 'meaning', 'expressions', 'situations', 'related', 'dialogue', 'challenge']
+        }
+      }
+    }
+  });
+
+  const raw = JSON.parse(response.text || '[]');
+  const units = raw.slice(0, CURRICULUM_UNITS_PER_DAY).map((u, i) => ({
+    id: `G${String(day).padStart(4, '0')}${i}`,
+    day,
+    topic: forcedTopic || String(u.topic || '').trim() || 'Giao tiếp tổng quát',
+    title: String(u.title || '').trim(),
+    meaning: String(u.meaning || '').trim(),
+    expressions: Array.isArray(u.expressions) ? u.expressions.slice(0, 6) : [],
+    situations: Array.isArray(u.situations) ? u.situations.slice(0, 4) : [],
+    related: Array.isArray(u.related) ? u.related.slice(0, 6) : [],
+    dialogue: Array.isArray(u.dialogue) ? u.dialogue.slice(0, 8) : [],
+    challenge: String(u.challenge || '').trim()
+  }));
+  patternCache[day] = units;
+  savePatternCache();
+  return units;
+}
+
+// Đảm bảo có đủ 3 mẫu cho ngày `day` (từ cache, hoặc sinh mới bằng Gemini nếu cần).
+async function ensurePatternsForDay(day) {
+  const cached = getCachedPatternsForDay(day);
+  if (cached) return cached;
+  return generatePatternsForDay(day);
+}
+
+function renderPatternListHTML(units) {
+  return units.map((u, i) => `
+    <div class="vocab-item" style="display:flex;flex-direction:column;gap:6px;">
+      <b>#${i + 1} — ${u.title}</b>
+      <span style="color:var(--chalk-dim)">${u.meaning}</span>
+      <div><b style="font-size:11px;color:var(--sage)">Cách nói:</b> ${u.expressions.join(' · ')}</div>
+      <div><b style="font-size:11px;color:var(--gold)">Tình huống:</b> ${u.situations.join('; ')}</div>
+      <div><b style="font-size:11px;color:var(--coral)">Từ liên quan:</b> ${u.related.join(', ')}</div>
+      ${u.dialogue?.length ? `<div style="font-size:12.5px;line-height:1.6">${u.dialogue.map(t => `<b>${t.speaker}:</b> ${t.text}`).join('<br>')}</div>` : ''}
+      <div style="font-size:12.5px;font-style:italic">🎯 Challenge: ${u.challenge}</div>
+    </div>`).join('');
+}
+
+async function renderCurriculumCard() {
+  const listEl = document.getElementById('curriculumList');
+  if (!listEl) return;
+  const scoreEl = document.getElementById('curriculumScore');
+  const subEl = document.getElementById('curriculumSub');
+  const doneBtn = document.getElementById('btnCurriculumDone');
+  const practiceBtn = document.getElementById('btnCurriculumPractice');
+  const changeBtn = document.getElementById('btnCurriculumChange');
+
+  const day = curriculumProgress.dayIndex;
+  const learnedCount = Math.min(curriculumProgress.completedDays.length * CURRICULUM_UNITS_PER_DAY, CURRICULUM_TARGET_TOTAL);
+
+  if (day > CURRICULUM_TOTAL_DAYS) {
+    if (scoreEl) scoreEl.textContent = `Hoàn thành 🎉`;
+    if (subEl) subEl.textContent = `Bạn đã học xong cả ${CURRICULUM_TARGET_TOTAL} mẫu phản xạ giao tiếp!`;
+    listEl.innerHTML = `<div class="vocab-item">🏁 Đã hoàn thành Level 1. Hãy thử luyện hội thoại tự do (Practice Studio → Nhật ký thoại) để củng cố phản xạ.</div>`;
+    if (doneBtn) doneBtn.style.display = 'none';
+    if (practiceBtn) practiceBtn.style.display = 'none';
+    if (changeBtn) changeBtn.style.display = 'none';
+    return;
+  }
+
+  const cached = getCachedPatternsForDay(day);
+  if (scoreEl) scoreEl.textContent = `Ngày ${day}/${CURRICULUM_TOTAL_DAYS}`;
+  if (practiceBtn) practiceBtn.style.display = 'none';
+  if (changeBtn) changeBtn.style.display = day === 1 ? 'none' : '';
+
+  if (!cached) {
+    if (subEl) subEl.textContent = `Đã học ${learnedCount}/${CURRICULUM_TARGET_TOTAL} mẫu`;
+    listEl.innerHTML = `<div class="vocab-item">⏳ Đang nhờ AI soạn 3 mẫu phản xạ mới cho hôm nay${topicOverrides[day] ? ` (chủ đề: ${topicOverrides[day]})` : ''}...</div>`;
+    if (doneBtn) doneBtn.style.display = 'none';
+    if (curriculumGenerating) return;
+    if (!apiKeyInput.value.trim()) {
+      listEl.innerHTML = `<div class="vocab-item">⚠️ Cần nhập Gemini API Key ở mục 1 để AI soạn tiếp các mẫu từ ngày 2 trở đi.</div>`;
+      return;
+    }
+    curriculumGenerating = true;
+    try {
+      await generatePatternsForDay(day);
+    } catch (e) {
+      listEl.innerHTML = `<div class="vocab-item">❌ Không sinh được mẫu mới: ${e.message}. Thử lại bằng nút "🔄 Đổi bài".</div>`;
+      if (changeBtn) changeBtn.style.display = day === 1 ? 'none' : '';
+      curriculumGenerating = false;
+      return;
+    }
+    curriculumGenerating = false;
+    return renderCurriculumCard();
+  }
+
+  if (subEl) subEl.textContent = `Chủ đề hôm nay: ${cached[0]?.topic || cached.map(u => u.title).join(', ')} · Đã học ${learnedCount}/${CURRICULUM_TARGET_TOTAL} mẫu`;
+  listEl.innerHTML = renderPatternListHTML(cached);
+
+  const alreadyDoneToday = curriculumProgress.completedDays.includes(day);
+  if (doneBtn) {
+    doneBtn.style.display = '';
+    doneBtn.textContent = alreadyDoneToday ? '✅ Đã hoàn thành hôm nay' : '✅ Đã học xong hôm nay';
+    doneBtn.disabled = alreadyDoneToday;
+  }
+  if (practiceBtn) practiceBtn.style.display = '';
+}
+
+function markCurriculumDayDone() {
+  const day = curriculumProgress.dayIndex;
+  const units = getCachedPatternsForDay(day);
+  if (!units) return;
+
+  let added = 0;
+  units.forEach(u => {
+    const ok = addVocabItem({
+      word: u.title, meaning: u.meaning, example: u.expressions[0] || '',
+      lang: 'en', langLabel: 'Tiếng Anh', topicLabel: u.topic || 'Mẫu phản xạ',
+      lessonId: currentLessonId || null, source: 'curriculum'
+    });
+    if (ok) added++;
+  });
+
+  if (!curriculumProgress.completedDays.includes(day)) {
+    curriculumProgress.completedDays.push(day);
+  }
+  curriculumProgress.dayIndex = day + 1;
+  saveCurriculumProgress();
+  renderCurriculumCard();
+  showToast(`🎯 Ngày ${day}/${CURRICULUM_TOTAL_DAYS} hoàn thành · +${added} mẫu mới vào Sổ từ vựng (📗)`);
+}
+
+// "Đổi bài": bỏ 3 mẫu đã sinh cho ngày hiện tại và nhờ AI soạn lại bộ mới (chỉ áp dụng từ ngày 2).
+async function changeCurriculumDay() {
+  const day = curriculumProgress.dayIndex;
+  if (day === 1) return; // 3 mẫu ngày 1 là mẫu cố định, không đổi
+  delete patternCache[day];
+  savePatternCache();
+  await renderCurriculumCard();
+  showToast('🔄 Đã đổi sang bộ 3 mẫu mới cho hôm nay');
+}
+
+/* ---------- Đặt chủ đề theo ngày/tuần (học viên tự chọn) ---------- */
+const topicPanel = document.getElementById('curriculumTopicPanel');
+document.getElementById('btnCurriculumSetTopic')?.addEventListener('click', () => {
+  const showing = topicPanel.style.display === 'flex';
+  topicPanel.style.display = showing ? 'none' : 'flex';
+  const reviewPanel = document.getElementById('curriculumReviewPanel');
+  if (reviewPanel) reviewPanel.style.display = 'none';
+  if (!showing) {
+    const target = getNextUngeneratedDay();
+    const statusEl = document.getElementById('curriculumTopicStatus');
+    if (target === 1) {
+      statusEl.textContent = '⚠️ 3 mẫu ngày 1 là mẫu cố định, chưa thể đặt chủ đề. Bạn có thể đặt chủ đề từ ngày 2 trở đi.';
+    } else {
+      statusEl.textContent = `Sẽ áp dụng bắt đầu từ ngày ${target}.` + (topicOverrides[target] ? ` (Hiện đang đặt: "${topicOverrides[target]}")` : '');
+    }
+  }
+});
+document.getElementById('btnSaveCurriculumTopic')?.addEventListener('click', () => {
+  const target = getNextUngeneratedDay();
+  const statusEl = document.getElementById('curriculumTopicStatus');
+  if (target === 1) { statusEl.textContent = '⚠️ Không thể đặt chủ đề cho ngày 1 (mẫu cố định).'; return; }
+  const topic = document.getElementById('curriculumTopicInput').value.trim();
+  if (!topic) { statusEl.textContent = '⚠️ Hãy nhập tên chủ đề trước khi lưu.'; return; }
+  const scope = parseInt(document.getElementById('curriculumTopicScope').value, 10) || 1;
+  for (let d = target; d < target + scope; d++) {
+    topicOverrides[d] = topic;
+    if (patternCache[d]) delete patternCache[d]; // xoá cache cũ (nếu có) để áp dụng chủ đề mới ngay
+  }
+  saveTopicOverrides();
+  savePatternCache();
+  statusEl.textContent = `✅ Đã đặt chủ đề "${topic}" cho ${scope === 1 ? `ngày ${target}` : `ngày ${target}–${target + scope - 1}`}.`;
+  renderCurriculumCard();
+});
+
+/* ---------- Ôn lại mẫu cũ ---------- */
+function getCompletedPatternsFlat() {
+  const days = [...curriculumProgress.completedDays].sort((a, b) => a - b);
+  const flat = [];
+  days.forEach(d => {
+    const units = getCachedPatternsForDay(d);
+    if (units) units.forEach(u => flat.push(u));
+  });
+  return flat;
+}
+function pickRandom(arr, n) {
+  const copy = [...arr];
+  const out = [];
+  while (copy.length && out.length < n) out.push(copy.splice(Math.floor(Math.random() * copy.length), 1)[0]);
+  return out;
+}
+
+const reviewPanel = document.getElementById('curriculumReviewPanel');
+document.getElementById('btnCurriculumReview')?.addEventListener('click', () => {
+  const showing = reviewPanel.style.display === 'flex';
+  reviewPanel.style.display = showing ? 'none' : 'flex';
+  if (topicPanel) topicPanel.style.display = 'none';
+  if (!showing) populateReviewSelectors();
+});
+document.getElementById('curriculumReviewMode')?.addEventListener('change', populateReviewSelectors);
+
+function populateReviewSelectors() {
+  const mode = document.getElementById('curriculumReviewMode').value;
+  const valueSelect = document.getElementById('curriculumReviewValue');
+  valueSelect.innerHTML = '';
+  valueSelect.style.display = mode === 'all' ? 'none' : '';
+  const flat = getCompletedPatternsFlat();
+  if (!flat.length) {
+    valueSelect.innerHTML = '<option value="">(Chưa có mẫu nào đã hoàn thành để ôn)</option>';
+    return;
+  }
+  if (mode === 'day') {
+    const days = [...curriculumProgress.completedDays].sort((a, b) => a - b);
+    days.forEach(d => {
+      const units = getCachedPatternsForDay(d);
+      const label = `Ngày ${d} — ${units?.[0]?.topic || units?.map(u => u.title).join(', ') || ''}`;
+      const opt = document.createElement('option');
+      opt.value = String(d); opt.textContent = label;
+      valueSelect.appendChild(opt);
+    });
+  } else if (mode === 'topic') {
+    const topics = [...new Set(flat.map(u => u.topic).filter(Boolean))];
+    topics.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t; opt.textContent = t;
+      valueSelect.appendChild(opt);
+    });
+  }
+}
+
+document.getElementById('btnStartCurriculumReview')?.addEventListener('click', () => {
+  if (!apiKeyInput.value.trim()) return alert('Vui lòng nhập Gemini API Key!');
+  if (session) return showToast('⚠️ Hãy dừng buổi học hiện tại trước', true);
+  const mode = document.getElementById('curriculumReviewMode').value;
+  const value = document.getElementById('curriculumReviewValue').value;
+  let units = [];
+  if (mode === 'day') {
+    if (!value) return showToast('⚠️ Hãy chọn một ngày để ôn tập', true);
+    units = getCachedPatternsForDay(parseInt(value, 10)) || [];
+  } else if (mode === 'topic') {
+    if (!value) return showToast('⚠️ Hãy chọn một chủ đề để ôn tập', true);
+    units = getCompletedPatternsFlat().filter(u => u.topic === value);
+  } else {
+    units = pickRandom(getCompletedPatternsFlat(), 5);
+  }
+  if (!units.length) return showToast('⚠️ Chưa có mẫu nào phù hợp để ôn tập', true);
+
+  const patternsJson = JSON.stringify(units.map(u => ({
+    title: u.title, meaning: u.meaning, expressions: u.expressions,
+    situations: u.situations, related: u.related, challenge: u.challenge
+  })), null, 0);
+
+  topicSelect.value = 'daily';
+  scenarioMode = 'custom';
+  customScenarioInput.value =
+    `Đây là buổi ÔN TẬP các mẫu phản xạ ĐÃ HỌC trước đây (không dạy mẫu mới). Danh sách mẫu cần ôn (JSON, chỉ để bạn tham khảo): ${patternsJson}. ` +
+    `Hãy tạo các tình huống NGẪU NHIÊN, KHÔNG theo thứ tự, để học viên phải tự phản xạ nói ra câu phù hợp cho từng mẫu — không đọc câu mẫu cho học viên, không báo trước sắp hỏi về mẫu nào. ` +
+    `Chấp nhận mọi cách diễn đạt đúng nghĩa. Khi học viên sai/lúng túng, sửa lỗi ngắn gọn bằng TIẾNG VIỆT rồi để học viên nói lại. ` +
+    `Cuối buổi, tổng kết mức độ nhớ của học viên với từng mẫu (còn nhớ tốt / cần ôn thêm) bằng tiếng Việt.`;
+  practiceMode = 'conversation';
+  reviewPanel.style.display = 'none';
+  startLiveSession();
+});
+
+async function startCurriculumPractice() {
+  const day = curriculumProgress.dayIndex;
+  const units = getCachedPatternsForDay(day);
+  if (!units) { showToast('⏳ Đang soạn mẫu cho hôm nay, vui lòng chờ chút...', true); return; }
+  if (!apiKeyInput.value.trim()) return alert('Vui lòng nhập Gemini API Key!');
+  if (session) return showToast('⚠️ Hãy dừng buổi học hiện tại trước', true);
+
+  const patternsJson = JSON.stringify(units.map(u => ({
+    title: u.title, meaning: u.meaning, expressions: u.expressions,
+    situations: u.situations, related: u.related, dialogue: u.dialogue, challenge: u.challenge
+  })), null, 0);
+
+  // Ôn lại ngẫu nhiên 1-2 mẫu cũ đã hoàn thành, chèn xen vào buổi học mới (nếu đã có mẫu cũ).
+  const oldOnes = pickRandom(getCompletedPatternsFlat(), 2);
+  const reviewLine = oldOnes.length
+    ? `Ngoài 3 mẫu hôm nay, giữa hội thoại hãy BẤT NGỜ (không báo trước) lồng ghép 1-2 tình huống để ôn lại các mẫu đã học trước đó: ${oldOnes.map(u => `"${u.title}" (${u.meaning})`).join('; ')}. `
+    : '';
+
+  topicSelect.value = 'daily';
+  scenarioMode = 'custom';
+  customScenarioInput.value =
+    `Đây là buổi LUYỆN PHẢN XẠ theo lộ trình "1000 mẫu phản xạ", ngày ${day}/${CURRICULUM_TOTAL_DAYS}, chủ đề "${units[0]?.topic || ''}". ` +
+    `Dưới đây là đúng 3 MẪU PHẢN XẠ của hôm nay (JSON, chỉ dành cho bạn tham khảo, không đọc nguyên văn cho học viên): ${patternsJson}. ` +
+    `Hãy dạy theo các nguyên tắc sau: ` +
+    `1) KHÔNG bắt học viên học thuộc lòng 1 câu cố định — mục tiêu là hiểu Ý NGHĨA GIAO TIẾP và tự diễn đạt được theo cách của mình. ` +
+    `2) CHẤP NHẬN mọi cách diễn đạt đúng nghĩa, kể cả khi khác với các "expressions" gợi ý ở trên, miễn là tự nhiên và đúng ngữ pháp cơ bản. ` +
+    `3) Chuyển dần từ việc bạn ĐỌC MẪU/học viên NHẮC LẠI, sang việc học viên PHẢI TỰ PHẢN XẠ nói ra câu phù hợp khi bạn tạo tình huống, không gợi ý sẵn câu trả lời. ` +
+    `4) Duy trì HỘI THOẠI TỰ NHIÊN, nhập vai nhân vật phù hợp với từng "situations", không liệt kê máy móc. ` +
+    `5) Chủ động TẠO RA CÁC TÌNH HUỐNG PHÁT SINH (bất ngờ, không báo trước) để học viên phải phản xạ, dựa trên "situations" và "challenge" của từng mẫu. ` +
+    `6) Khi học viên nói sai/lúng túng, SỬA LỖI BẰNG TIẾNG VIỆT ngắn gọn rồi để học viên nói lại. ` +
+    `7) CUỐI BUỔI, chủ động tạo lại 3 tình huống khác (mỗi tình huống ứng với 1 trong 3 mẫu) để KIỂM TRA LẠI xem học viên đã phản xạ tốt cả 3 mẫu chưa, rồi tổng kết và khen ngợi. ` +
+    reviewLine +
+    `Sau khi học viên đã phản xạ tốt cả 3 mẫu, nhắc học viên có thể bấm "Đã học xong hôm nay" để lưu lại.`;
+  practiceMode = 'conversation';
+
+  startLiveSession();
+}
+
+document.getElementById('btnCurriculumDone')?.addEventListener('click', markCurriculumDayDone);
+document.getElementById('btnCurriculumPractice')?.addEventListener('click', startCurriculumPractice);
+document.getElementById('btnCurriculumChange')?.addEventListener('click', changeCurriculumDay);
+renderCurriculumCard();
 
 </script>
 
