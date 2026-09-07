@@ -2002,6 +2002,25 @@ function clearTLSession(){
   try{ localStorage.removeItem(TL_SESSION_KEY); } catch(e){}
 }
 
+/* NGƯỜI CHƠI VẪN Ở TRONG BÀN, CHỈ RỚT MẠNG VÀI GIÂY RỒI TỰ NỐI LẠI (không tải lại trang):
+   trường hợp này KHÔNG bao giờ đi qua màn hình Home/nút "Vào lại", nên phải tự phát hiện
+   qua '.info/connected' của Firebase và tự gửi lại 'join' ngay khi mạng vừa nối lại, để
+   chủ phòng biết mình đã quay lại và gỡ trạng thái "mất mạng" (không cần bạn bấm gì cả). */
+function watchConnectionForAutoRejoin(){
+  if(!fbDb) return;
+  let hadDropped = false;
+  fbDb.ref('.info/connected').on('value', snap => {
+    const connected = snap.val() === true;
+    if(!connected){ hadDropped = true; return; }
+    if(!hadDropped) return; // lần "connected" đầu tiên lúc mới mở trang (chưa từng rớt) -> bỏ qua
+    hadDropped = false;
+    if(roomCode && myId && !isHost && !isBotMode){
+      try{ registerDisconnectNotice(); }catch(e){}
+      sendToHost({t:'join', name:myName, id:myId});
+    }
+  });
+}
+
 function sendToHost(msg){
   if(isBotMode || !fbDb) return;
   try{
@@ -2585,7 +2604,7 @@ function refreshPublicRooms(){
 }
 
 $('btnRefreshRooms').onclick = refreshPublicRooms;
-window.onload = () => { refreshPublicRooms(); checkForSavedTLSession(); };
+window.onload = () => { refreshPublicRooms(); checkForSavedTLSession(); watchConnectionForAutoRejoin(); };
 
 /* ---- VÀO LẠI VÁN ĐANG CHƠI (sau khi mất mạng/tắt app) ---- */
 function checkForSavedTLSession(){
