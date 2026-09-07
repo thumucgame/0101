@@ -1,6 +1,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -2398,6 +2399,11 @@ let players=[];
 let gameState=null;
 let myHand=[];
 let selected=new Set();
+// TỰ ĐỘNG ĐĂNG KÝ THAM GIA CHẶT: khi người chơi bấm "Hủy Đăng Ký" cho một mục tiêu (curr)
+// cụ thể, khoá không cho tự động đăng ký lại CHO ĐÚNG mục tiêu đó nữa; hễ mục tiêu trên bàn
+// đổi khác (bị người khác chặt tiếp, hoặc vòng mới) thì khoá này tự mở lại.
+let thamGiaChatDeclinedKey = null;
+let thamGiaChatAutoSentKey = null;
 // ACTION ACK / RACE GUARD: chỉ clear selection sau khi server xác nhận ACCEPT.
 let pendingActionRequests = new Map();
 let actionRequestSeq = 0;
@@ -4145,6 +4151,13 @@ function buildChopButtonLabel(curr, ownerId, sec, isFixedButton){
   const main = '⚡ THAM GIA CHẶT';
   return `<span class="chop-btn-main">${main}</span>${sub}`;
 }
+// Chữ ký duy nhất cho mục tiêu (curr) đang trên bàn — dùng để biết mục tiêu đã đổi hay
+// chưa (mở lại tự động đăng ký) khi so với thamGiaChatDeclinedKey / thamGiaChatAutoSentKey.
+function thamGiaChatTargetKey(curr){
+  if(!curr) return null;
+  const cardsPart = safeArray(curr.cards).map(cardKey).sort().join(',');
+  return `${curr.type}|${curr.count||0}|${cardsPart}`;
+}
 function describeInstantTarget(combo){
   if(!combo) return '';
   if(combo.type === 'single' && combo.cards?.[0]?.r === 12){
@@ -4808,6 +4821,25 @@ function handleAction(playerId, action, isAuto=false){
 
   if(gameState.isEnded){ rejectTrackedAction(playerId, action, 'ACTION_BLOCKED'); return; }
   const currId = gameState.order[gameState.turnIdx];
+
+  // HỦY ĐĂNG KÝ THAM GIA CHẶT: đăng ký giờ được gửi tự động phía client khi đủ điều kiện
+  // (xem action.kind==='interrupt_chop' bên dưới); action này chỉ để người chơi RÚT LẠI
+  // đăng ký của chính mình khỏi loạt phản ứng hiện tại. Không đụng đến vé (chopTicketHolders)
+  // — hủy đăng ký không làm mất vé, người chơi vẫn có thể tự động đăng ký lại nếu mục tiêu đổi.
+  if(action.kind === 'cancelThamGiaChat'){
+    const hadRegistration = safeArray(gameState.thamGiaChatRegistrations)
+      .some(r => r && String(r.playerId) === String(playerId));
+    if(!hadRegistration){ rejectTrackedAction(playerId,action,'ACTION_BLOCKED'); return; }
+    gameState.thamGiaChatRegistrations = safeArray(gameState.thamGiaChatRegistrations)
+      .filter(r => r && String(r.playerId) !== String(playerId));
+    const pName = gameState.names[playerId];
+    gameState.log = `🚫 ${pName} đã hủy đăng ký Tham Gia Chặt.`;
+    bumpActor(playerId, '🚫 Đã hủy đăng ký');
+    debugActionEvent('CHOP', playerId, `${pName} hủy đăng ký Tham Gia Chặt`, {cancelled:true});
+    acceptTrackedAction(playerId,action,{cancelled:true});
+    broadcastState();
+    return;
+  }
 
   // THAM GIA CHẶT (thay thế "Chặt Ngang 3 giây" + "Chặt Ngay" cũ — PHẦN A/B/C/E):
   // bấm nút giờ chỉ ĐĂNG KÝ vào danh sách xét của loạt phản ứng hiện tại, KHÔNG thực thi
@@ -6307,25 +6339,31 @@ function renderHand(){
     if(isRuleTestMode){
       syncTestInstantChopUI();
     } else {
-      let showChop = false;
       const alreadyRegistered = safeArray(currentState.thamGiaChatRegistrations)
         .some(r => r && String(r.playerId) === String(myId));
-      // FIX "sợ chưa ăn bấm nhiều lần": trước đây khi đã đăng ký xong thì ẨN LUÔN nút,
-      // khiến người chơi tưởng thao tác chưa ăn nên bấm đi bấm lại. Giờ chỉ ẨN nút khi
-      // KHÔNG đủ điều kiện đăng ký (mất vé/hết bài/đúng lượt mình/...); còn nếu ĐÃ đăng
-      // ký rồi thì vẫn GIỮ nút hiển thị, chỉ khoá lại + đổi nhãn để xác nhận trạng thái.
       const canShowChopUI = isChoppableTarget && iAmActive && !isMyTurn && !isOwnLeader && iHaveTicket;
-      if(canShowChopUI && !alreadyRegistered){
-        showChop = !!findBestThamGiaChatCardsForHand(myHand, curr);
+      const targetKey = thamGiaChatTargetKey(curr);
+      // Mục tiêu trên bàn đã đổi khác lần Hủy Đăng Ký / tự-gửi gần nhất -> mở lại quyền
+      // tự động đăng ký cho mục tiêu MỚI này.
+      if(targetKey !== thamGiaChatDeclinedKey) thamGiaChatDeclinedKey = null;
+      if(targetKey !== thamGiaChatAutoSentKey) thamGiaChatAutoSentKey = null;
+      const best = (canShowChopUI && !alreadyRegistered) ? findBestThamGiaChatCardsForHand(myHand, curr) : null;
+
+      // TỰ ĐỘNG ĐĂNG KÝ (thay cho việc bắt người chơi bấm "Tham Gia Chặt"): đủ điều kiện,
+      // chưa đăng ký, chưa từng bị chính người chơi bấm "Hủy Đăng Ký" cho đúng mục tiêu này,
+      // và chưa gửi đăng ký cho mục tiêu này trước đó (tránh gửi lặp mỗi lần render).
+      if(canShowChopUI && !alreadyRegistered && best &&
+         thamGiaChatDeclinedKey !== targetKey && thamGiaChatAutoSentKey !== targetKey){
+        thamGiaChatAutoSentKey = targetKey;
+        sendAction({kind:'interrupt_chop', cards: best.cards.map(cardKey)});
       }
+
+      // CHỈ CÒN 1 NÚT: hiện "🚫 HỦY ĐĂNG KÝ" khi đã đăng ký (dù tự động hay vừa gửi xong);
+      // không còn nút "bấm để đăng ký" nữa vì việc đăng ký giờ tự động.
       if(alreadyRegistered && canShowChopUI){
         btnChop.classList.remove('hidden');
-        btnChop.innerHTML = '<span class="chop-btn-main">✅ ĐÃ ĐĂNG KÝ</span><span class="chop-btn-target">Chờ loạt phản ứng đóng lại…</span>';
-        btnChop.disabled = true;
         btnChop.classList.add('chop-btn-registered');
-      } else if(showChop){
-        btnChop.classList.remove('hidden','chop-btn-registered');
-        btnChop.innerHTML = buildChopButtonLabel(curr, currentState.leaderId, 0, true);
+        btnChop.innerHTML = '<span class="chop-btn-main">🚫 HỦY ĐĂNG KÝ</span><span class="chop-btn-target">Đã tự động đăng ký Tham Gia Chặt — chờ loạt phản ứng đóng lại…</span>';
         btnChop.disabled = false;
       } else {
         btnChop.classList.add('hidden');
@@ -6617,23 +6655,15 @@ $('btnPlay').onclick=()=>{
 };
 $('btnPass').onclick=()=>sendAction({kind:'pass'});
 $('btnChopInterrupt').onclick=()=>{
+  // Việc ĐĂNG KÝ giờ tự động (xem renderTable/updateHandUI) — nút này giờ chỉ còn tác dụng
+  // HỦY đăng ký hiện tại. Ghi nhớ mục tiêu vừa hủy để không tự động đăng ký lại ngay cho
+  // đúng mục tiêu đó (chỉ mở lại khi mục tiêu trên bàn thực sự đổi khác).
   const curr = currentState && currentState.currentCombo;
   const alreadyRegistered = safeArray(currentState?.thamGiaChatRegistrations)
     .some(r => r && String(r.playerId) === String(myId));
-  if(alreadyRegistered){
-    showHandSelectMsg('✅ Bạn đã đăng ký Tham Gia Chặt rồi — không cần bấm thêm, chờ loạt phản ứng kết thúc.', 'ok');
-    return;
-  }
-  // THAM GIA CHẶT (4+ Đôi Thông / Tứ Quý): TỰ TÌM bộ hợp lệ trong tay rồi gửi đăng ký thẳng —
-  // đồng bộ đúng 1 đường xử lý với getTestInstantChopCards() ở Phòng Test. Bấm nút chỉ ĐĂNG
-  // KÝ vào loạt phản ứng hiện tại, không thực thi ngay — server xét người thắng khi loạt đóng.
-  if(curr && isChoppableSpecialTarget(curr) && hasThamGiaChatTicket(currentState, myId)){
-    const best = findBestThamGiaChatCardsForHand(myHand, curr);
-    if(best){ sendAction({kind:'interrupt_chop', cards: best.cards.map(cardKey)}); return; }
-    // Bộ tự tìm không có (hiếm khi xảy ra) — thử dùng đúng bộ người chơi đã tự chọn tay, nếu có.
-  }
-  const check=validateSelectedInterrupt(); if(!check.ok){showHandSelectMsg(check.msg);return;}
-  sendAction({kind:'interrupt_chop',cards:[...selected]});
+  if(!alreadyRegistered) return; // nút đang ở trạng thái chờ gửi tự động, chưa có gì để hủy
+  thamGiaChatDeclinedKey = thamGiaChatTargetKey(curr);
+  sendAction({kind:'cancelThamGiaChat'});
 };
 $('testInstantChopOverlay').onclick=(e)=>{
   e.preventDefault(); e.stopPropagation();
