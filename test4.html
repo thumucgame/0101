@@ -1,7 +1,3 @@
-
-
-
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -1120,6 +1116,12 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
       <button class="btn btn-outline" id="btnOpenRules" style="width: 100%;">📜 Xem Bộ Luật Hoàn Chỉnh</button>
     </div>
 
+    <div class="public-rooms-box hidden" id="tlReconnectBox" style="border:1px solid #e5c15a;">
+      <label style="margin:8px 0 4px;">🔄 Bạn vừa mất kết nối giữa ván đang chơi</label>
+      <div style="font-size:12px;color:rgba(250,246,238,0.75);margin-bottom:8px;" id="tlReconnectInfo"></div>
+      <button class="btn btn-gold" id="btnReconnectSaved" style="width:100%;">🔄 Vào lại ván đang chơi</button>
+    </div>
+
     <div class="public-rooms-box">
       <label style="margin:8px 0 4px;">🔑 Vào phòng bằng mã (dùng khi khác mạng/khác máy)</label>
       <div class="row">
@@ -1968,6 +1970,38 @@ function generateSessionToken(){
   }
 }
 
+/* ================= PHIÊN VÀO LẠI (RECONNECT) =================
+   Lưu lại danh tính (myId + sessionToken) của NGƯỜI CHƠI (không phải chủ phòng)
+   vào localStorage. Nếu mất mạng/tắt app rồi mở lại, ta dùng ĐÚNG myId cũ để
+   "join" lại -> chủ phòng nhận ra đây là người cũ (vẫn còn trong players[]),
+   trả lại state hiện tại (bài trên tay, lượt...) mà KHÔNG cần phá/khởi tạo lại ván. */
+const TL_SESSION_KEY = 'tienlen_session_v1';
+const TL_SESSION_MAX_AGE_MS = 20 * 60 * 1000; // quá 20 phút thì thôi, có thể ván đã kết thúc từ lâu
+
+function saveTLSession(){
+  try{
+    if(isBotMode || isHost || !roomCode || !myId || !sessionToken) return; // chỉ áp dụng cho khách, không áp dụng cho chủ phòng
+    localStorage.setItem(TL_SESSION_KEY, JSON.stringify({
+      roomCode, myId, myName, sessionToken, savedAt: Date.now()
+    }));
+  } catch(e){}
+}
+
+function loadTLSession(){
+  try{
+    const raw = localStorage.getItem(TL_SESSION_KEY);
+    if(!raw) return null;
+    const s = JSON.parse(raw);
+    if(!s || !s.roomCode || !s.myId || !s.sessionToken) return null;
+    if(Date.now() - (s.savedAt||0) > TL_SESSION_MAX_AGE_MS){ clearTLSession(); return null; }
+    return s;
+  } catch(e){ return null; }
+}
+
+function clearTLSession(){
+  try{ localStorage.removeItem(TL_SESSION_KEY); } catch(e){}
+}
+
 function sendToHost(msg){
   if(isBotMode || !fbDb) return;
   try{
@@ -2494,7 +2528,7 @@ $('btnInGameSettings').onclick=()=>{ updateInGameSettingsUI(); $('inGameSettings
 $('btnCloseInGameSettings').onclick=()=>$('inGameSettingsOverlay').classList.add('hidden');
 $('btnToggleSound').onclick=()=>{ setLocalSoundEnabled(!localSoundEnabled); };
 $('btnPause30').onclick=()=>{ requestPause30(); $('inGameSettingsOverlay').classList.add('hidden'); };
-$('btnExitMatchSettings').onclick=()=>{ if(confirm('🚪 Thoát trận này?')){ $('inGameSettingsOverlay').classList.add('hidden'); leaveRoom(); } };
+$('btnExitMatchSettings').onclick=()=>{ if(confirm('🚪 Thoát trận này?')){ $('inGameSettingsOverlay').classList.add('hidden'); clearTLSession(); leaveRoom(); } };
 $('btnCloseRules').onclick = () => $('rulesOverlay').classList.add('hidden');
 
 $('roomCodeDisplay').onclick = () => {
@@ -2551,7 +2585,31 @@ function refreshPublicRooms(){
 }
 
 $('btnRefreshRooms').onclick = refreshPublicRooms;
-window.onload = () => { refreshPublicRooms(); };
+window.onload = () => { refreshPublicRooms(); checkForSavedTLSession(); };
+
+/* ---- VÀO LẠI VÁN ĐANG CHƠI (sau khi mất mạng/tắt app) ---- */
+function checkForSavedTLSession(){
+  const s = loadTLSession();
+  const box = $('tlReconnectBox');
+  if(!box) return;
+  if(!s){ box.classList.add('hidden'); return; }
+  $('tlReconnectInfo').textContent = `Tên: ${s.myName} • Mã phòng: ${s.roomCode}`;
+  box.classList.remove('hidden');
+}
+
+function rejoinSavedSession(){
+  const s = loadTLSession();
+  if(!s || !fbDb){ checkForSavedTLSession(); return; }
+  isHost = false; isBotMode = false;
+  roomCode = s.roomCode; myId = s.myId; myName = s.myName; sessionToken = s.sessionToken;
+  $('homeErr').textContent = 'Đang vào lại phòng ' + roomCode + '...';
+  listenAsClient();
+  registerDisconnectNotice(); // đăng ký lại onDisconnect vì lần này KHÔNG có 'session' message mới
+  sendToHost({t:'join', name:myName, id:myId});
+  showLobby();
+}
+
+if($('btnReconnectSaved')) $('btnReconnectSaved').onclick = rejoinSavedSession;
 
 function publishRoomToPublic(code, hostName){
   if(!fbDb || !code) return;
@@ -2662,8 +2720,18 @@ function markPlayerDisconnected(disconnectedId){
   if(!gameState || gameState.isEnded) return;
   if(!gameState.disconnected) gameState.disconnected = new Set();
   gameState.disconnected.add(disconnectedId);
-  gameState.log = `⚠️ ${gameState.names[disconnectedId] || 'Người chơi'} đã mất mạng!`;
-  bumpActor(disconnectedId, '⚠️ Mất mạng');
+  gameState.log = `⚠️ ${gameState.names[disconnectedId] || 'Người chơi'} đã mất mạng — AI sẽ đánh hộ tạm thời!`;
+  bumpActor(disconnectedId, '⚠️ Mất mạng (AI đánh hộ)');
+  broadcastState();
+}
+
+// NGƯỜI MẤT MẠNG QUAY LẠI: gỡ cờ disconnected để họ lấy lại quyền điều khiển ngay
+// từ lượt kế tiếp (xem startTimerLoop), không cần bắt đầu lại ván.
+function reconnectPlayer(playerId){
+  if(!gameState || !gameState.disconnected || !gameState.disconnected.has(playerId)) return;
+  gameState.disconnected.delete(playerId);
+  gameState.log = `🔌 ${gameState.names[playerId] || 'Người chơi'} đã kết nối lại!`;
+  bumpActor(playerId, '🔌 Đã kết nối lại');
   broadcastState();
 }
 
@@ -2691,11 +2759,16 @@ function onHostMessage(fromId, msg, token){
   // từ client phải dùng đúng token đã gắn với fromId; tuyệt đối không tin msg.id.
   if(msg.t === 'join'){
     if(!fromId || !msg.id || fromId !== msg.id) return;
-    if(!players.find(p=>p.id===msg.id) && players.length<4){
+    const existing = players.find(p=>p.id===msg.id);
+    if(!existing && players.length<4){
       players.push({id:msg.id, name:String(msg.name || 'Người chơi').slice(0,30)});
       playerTokens[msg.id] = generateSessionToken();
       sendToPlayer(msg.id, {t:'session', token:playerTokens[msg.id]});
       publishRoomToPublic(roomCode, players[0].name);
+    } else if(existing && gameState && gameState.disconnected && gameState.disconnected.has(msg.id)){
+      // NGƯỜI CŨ MẤT MẠNG VỪA VÀO LẠI (cùng myId đã lưu ở localStorage) -> trả quyền
+      // điều khiển lại cho họ ngay, không phá/khởi tạo lại ván đang chơi.
+      reconnectPlayer(msg.id);
     }
     broadcastLobby();
     if(gameState && players.find(p=>p.id===msg.id)) sendToPlayer(msg.id, {t:'state', state: getViewStateForPlayer(msg.id)});
@@ -2770,6 +2843,7 @@ function onClientMessage(msg){
       if(typeof msg.token === 'string' && msg.token.length >= 32){
         sessionToken = msg.token;
         registerDisconnectNotice();
+        saveTLSession();
       }
       return;
     } else if(msg.t==='lobby'){
@@ -3394,7 +3468,7 @@ if(isHost && (st.gameMode==='POINTS'||st.gameMode==='NHATANCA'||st.gameMode==='C
   actions.appendChild(edit);
 }
 const close=document.createElement('button');close.className='btn btn-outline';close.textContent='Đóng';close.onclick=()=>$("matchSummaryOverlay").classList.add('hidden');actions.appendChild(close);
-const exitMatch=document.createElement('button');exitMatch.className='btn btn-danger';exitMatch.textContent='🚪 Thoát trận';exitMatch.onclick=()=>{ if(confirm('🚪 Thoát trận này?')) leaveRoom(); };actions.appendChild(exitMatch);
+const exitMatch=document.createElement('button');exitMatch.className='btn btn-danger';exitMatch.textContent='🚪 Thoát trận';exitMatch.onclick=()=>{ if(confirm('🚪 Thoát trận này?')){ clearTLSession(); leaveRoom(); } };actions.appendChild(exitMatch);
 $('matchSummaryOverlay').classList.remove('hidden');}
 
 function updateInGameSettingsUI(){
@@ -3599,7 +3673,12 @@ function startTimerLoop(){
     if(!isHost || !gameState || gameState.isEnded) return;
     if(gameState.pauseState && gameState.pauseState.active && Number(gameState.pauseState.until)>Date.now()) return;
     const currId = gameState.order[gameState.turnIdx];
-    if(botList.includes(currId)){
+    // NGƯỜI MẤT MẠNG: xử lý giống hệt Bot — đánh hộ ngay bằng AI thay vì chờ hết giờ
+    // rồi đuổi (kickPlayerNow), để ván không bị "lỗi, đứng" và bài không bị tính sai.
+    // Họ vẫn còn nguyên trong players[]/gameState.order; hễ kết nối lại (xem onHostMessage
+    // 'join'), gameState.disconnected sẽ được gỡ và họ lấy lại quyền điều khiển ngay lượt sau.
+    const isAutoPlayed = botList.includes(currId) || (gameState.disconnected && gameState.disconnected.has(currId));
+    if(isAutoPlayed){
       if(!gameState.botThinking){
         gameState.botThinking = true;
         const scheduledTurnToken = turnControlToken;
@@ -3628,7 +3707,10 @@ function startTimerLoop(){
             gameState.botThinking = false;
             return;
           }
-          if(gameState.order[gameState.turnIdx] === scheduledBotId) makeBotMove(scheduledBotId);
+          // Nếu người mất mạng vừa kết nối lại đúng lúc này (gameState.disconnected đã được
+          // gỡ), KHÔNG đánh hộ nữa — để nhường lại quyền điều khiển thật cho họ.
+          const stillAutoPlayed = botList.includes(scheduledBotId) || (gameState.disconnected && gameState.disconnected.has(scheduledBotId));
+          if(stillAutoPlayed && gameState.order[gameState.turnIdx] === scheduledBotId) makeBotMove(scheduledBotId);
           gameState.botThinking = false;
         }, 2000);
       }
@@ -3805,7 +3887,10 @@ function autoForceTurn(playerId){
   if(gameState.coldFolded && gameState.coldFolded.has(playerId)){ checkNextTurn(); broadcastState(); return; } // đã bị loại vì cóng, không đánh hộ nữa
   const hand = safeArray(gameState.hands[playerId]);
   if(!hand || hand.length === 0) return;
-  if(gameState.disconnected && gameState.disconnected.has(playerId)){ kickPlayerNow(playerId); return; }
+  // Không đuổi ngay khi mất mạng nữa — đánh hộ bằng AI (giống Bot) để ván tiếp tục
+  // bình thường, tránh làm sai điểm/số lá do trước đây kickPlayerNow() ép họ thành
+  // "đã về" dù bài trên tay chưa hết.
+  if(gameState.disconnected && gameState.disconnected.has(playerId)){ makeBotMove(playerId); return; }
 
   if(gameState.currentCombo){
     handleAction(playerId, {kind:'pass'}, true);
@@ -7135,17 +7220,17 @@ function showResultOverlay(results, settlements){
     exit.className='btn btn-danger';
     exit.textContent='🚪 Thoát trận';
     exit.style.cssText='width:100%;margin-top:7px';
-    exit.onclick=()=>{ if(confirm('🚪 Thoát trận này?')) leaveRoom(); };
+    exit.onclick=()=>{ if(confirm("🚪 Thoát trận này?")){ clearTLSession(); leaveRoom(); } };
     actions.appendChild(exit);
   } else if(isHost || isBotMode){
     const btn = document.createElement('button');
     btn.className = 'btn btn-gold'; btn.textContent = 'Chơi Ván Mới'; btn.style.width = '100%';
     btn.onclick = () => { if(isRuleTestMode){ dealNewGame(); } else { dealNewGame(); } };
     actions.appendChild(btn);
-    const exit=document.createElement('button'); exit.className='btn btn-outline'; exit.textContent='🚪 Thoát trận'; exit.style.cssText='width:100%;margin-top:7px'; exit.onclick=()=>{ if(confirm('Thoát trận này?')) leaveRoom(); }; actions.appendChild(exit);
+    const exit=document.createElement('button'); exit.className='btn btn-outline'; exit.textContent='🚪 Thoát trận'; exit.style.cssText='width:100%;margin-top:7px'; exit.onclick=()=>{ if(confirm("Thoát trận này?")){ clearTLSession(); leaveRoom(); } }; actions.appendChild(exit);
   } else {
     actions.innerHTML = '<div style="text-align:center;font-size:13px;color:rgba(250,246,238,.6);">Đang chờ chủ phòng bắt đầu ván mới...</div>';
-    const exit=document.createElement('button'); exit.className='btn btn-outline'; exit.textContent='🚪 Thoát trận'; exit.style.cssText='width:100%;margin-top:7px'; exit.onclick=()=>{ if(confirm('Thoát trận này?')) leaveRoom(); }; actions.appendChild(exit);
+    const exit=document.createElement('button'); exit.className='btn btn-outline'; exit.textContent='🚪 Thoát trận'; exit.style.cssText='width:100%;margin-top:7px'; exit.onclick=()=>{ if(confirm("Thoát trận này?")){ clearTLSession(); leaveRoom(); } }; actions.appendChild(exit);
   }
   $('resultOverlay').classList.remove('hidden');
 }
