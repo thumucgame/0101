@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -3208,6 +3209,18 @@ function onHostMessage(fromId, msg, token){
   const knownPlayer = players.find(p => p.id === fromId);
   if(!knownPlayer || !playerTokens[fromId] || token !== playerTokens[fromId]){
     console.warn('⚠️ Từ chối message không xác thực từ client:', fromId, msg.t);
+    if(knownPlayer && fromId && msg.t === 'action'){
+      playerTokens[fromId] = generateSessionToken();
+      sendToPlayer(fromId, {t:'session', token:playerTokens[fromId], reason:'TOKEN_REFRESH'});
+    }
+    // FIX TOKEN LỆCH SAU KHI CHỦ PHÒNG ĐỔI / RECONNECT:
+    // Trước đây request action bị drop im lặng -> client chờ 4.5s rồi báo
+    // "Máy chủ chưa xác nhận nước đi". Nếu đây vẫn là player hợp lệ nhưng
+    // token cũ, cấp ngay token mới để client tự gửi lại đúng request đang chờ.
+    if(knownPlayer && msg.t === 'action'){
+      playerTokens[fromId] = generateSessionToken();
+      sendToPlayer(fromId, {t:'session', token:playerTokens[fromId], reason:'TOKEN_REFRESH'});
+    }
     return;
   }
 
@@ -3274,6 +3287,34 @@ function onClientMessage(msg){
         sessionToken = msg.token;
         registerDisconnectNotice();
         saveTLSession();
+        if(msg.reason === 'TOKEN_REFRESH' && window._tokenRefreshRetry){
+          const retry = window._tokenRefreshRetry;
+          window._tokenRefreshRetry = null;
+          try{ sendToHost({t:'action', id:myId, action:retry.action}); }
+          catch(e){ console.warn('Retry action sau refresh token lỗi:',e); }
+        }
+
+        // Nếu request đánh bài đang chờ ACK mà token vừa được refresh,
+        // tự gửi lại ĐÚNG request đó một lần. Người chơi không cần thoát
+        // phòng / vào lại hoặc bấm nút lần 2.
+        const pendingEntries = [...pendingActionRequests.entries()];
+        pendingEntries.forEach(([requestId, pending])=>{
+          if(!pending || !pending.action || pending.retriedAfterTokenRefresh) return;
+          pending.retriedAfterTokenRefresh = true;
+          clearTimeout(pending.timer);
+          pending.timer = setTimeout(()=>{
+            const live = pendingActionRequests.get(requestId);
+            if(!live) return;
+            pendingActionRequests.delete(requestId);
+            showHandSelectMsg(formatActionRejectMessage('REQUEST_TIMEOUT')); updateHandActionButtonsOnly();
+          },4500);
+          try{
+            sendToHost({t:'action', id:myId, action:pending.action});
+            debugActionEvent('RETRY', myId, 'Retry action sau khi refresh session token', {requestId});
+          }catch(e){
+            console.warn('⚠️ Không thể retry action sau TOKEN_REFRESH:', e);
+          }
+        });
       }
       return;
     } else if(msg.t==='lobby'){
@@ -7255,6 +7296,7 @@ function sendAction(act){
       showHandSelectMsg(formatActionRejectMessage('REQUEST_TIMEOUT')); updateHandActionButtonsOnly();
     },4500);
     pendingActionRequests.set(requestId,{action:act,timer,sentAt:Date.now()});
+    window._tokenRefreshRetry = {action:act};
   }
   if(isHost) handleAction(myId,act); else sendToHost({t:'action',id:myId,action:act});
   // Không clear selected ở đây. Chỉ actionResult=ACCEPT mới được clear.
