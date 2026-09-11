@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -2177,7 +2178,6 @@ function checkForSavedHostSession(){
   $('tlHostReconnectInfo').textContent = `Tên: ${s.myName} • Mã phòng: ${s.roomCode}`;
   box.classList.remove('hidden');
 }
-if($('btnHostReconnectSaved')) $('btnHostReconnectSaved').onclick = resumeAsHost;
 
 /* ================= TỰ ĐỘNG CHUYỂN CHỦ PHÒNG (HOST MIGRATION) =================
    Không bắt người chơi phải chờ ĐÚNG chủ phòng cũ quay lại: bất kỳ ai đang đứng chờ
@@ -2199,19 +2199,27 @@ function activeHostRef(){
 // người khác (không phải mình) đang giữ quyền hợp lệ, KHÔNG ghi đè, trả success=false qua
 // callback để nơi gọi tự lui về làm khách, tránh 2 người cùng chạy listenAsHost() song song.
 function claimActiveHost(onResult){
-  const ref = activeHostRef();
-  if(!ref || isBotMode){ if(onResult) onResult(true); return; }
-  ref.transaction(current => {
-    if(current && current.id && current.id !== myId) return; // đã có người khác giữ -> bỏ cuộc, không ghi đè
-    return {id: myId, since: Date.now()};
-  }).then(res => {
-    const success = !!(res.committed && res.snapshot && res.snapshot.val() && res.snapshot.val().id === myId);
-    // ServerValue.TIMESTAMP để Firebase tự điền đúng thời điểm NGẮT KẾT NỐI THẬT SỰ khi
-    // sự kiện onDisconnect xảy ra — nếu dùng Date.now() ở đây, giá trị sẽ bị tính SAI ngay
-    // lúc đăng ký (lúc vừa lên làm chủ phòng), không phải lúc họ thực sự mất mạng sau này.
-    if(success) ref.onDisconnect().set({id: null, since: firebase.database.ServerValue.TIMESTAMP});
-    if(onResult) onResult(success);
-  }).catch(() => { if(onResult) onResult(false); });
+  try{
+    const ref = activeHostRef();
+    if(!ref || isBotMode){ if(onResult) onResult(true); return; }
+    ref.transaction(current => {
+      if(current && current.id && current.id !== myId) return; // đã có người khác giữ -> bỏ cuộc, không ghi đè
+      return {id: myId, since: Date.now()};
+    }).then(res => {
+      const success = !!(res.committed && res.snapshot && res.snapshot.val() && res.snapshot.val().id === myId);
+      // ServerValue.TIMESTAMP để Firebase tự điền đúng thời điểm NGẮT KẾT NỐI THẬT SỰ khi
+      // sự kiện onDisconnect xảy ra — nếu dùng Date.now() ở đây, giá trị sẽ bị tính SAI ngay
+      // lúc đăng ký (lúc vừa lên làm chủ phòng), không phải lúc họ thực sự mất mạng sau này.
+      try{
+        if(success) ref.onDisconnect().set({id: null, since: firebase.database.ServerValue.TIMESTAMP});
+      }catch(e){ console.error('Lỗi đăng ký onDisconnect cho activeHost:', e); }
+      if(onResult) onResult(success);
+    }).catch(err => { console.error('Lỗi transaction activeHost:', err); if(onResult) onResult(false); });
+  }catch(e){
+    // KHÔNG được để lỗi ở đây làm gián đoạn luồng tạo/vào phòng chính (create/join/resume).
+    console.error('Lỗi claimActiveHost (bỏ qua, không chặn luồng chính):', e);
+    if(onResult) onResult(false);
+  }
 }
 
 // Chủ phòng chủ động rời phòng (KHÔNG phải mất mạng — tab vẫn mở, onDisconnect chưa
@@ -2229,24 +2237,30 @@ let hostPresenceWatchRef = null, hostTakeoverTimer = null;
 // Khách gọi hàm này ngay sau khi vào phòng để theo dõi "có đúng 1 chủ phòng đang hoạt
 // động không". Nếu activeHost trống quá HOST_TAKEOVER_GRACE_MS thì tự thử chiếm quyền.
 function watchHostPresenceForTakeover(){
-  stopWatchingHostPresence();
-  const ref = activeHostRef();
-  if(!ref || isBotMode) return;
-  hostPresenceWatchRef = ref;
-  ref.on('value', snap => {
-    const v = snap.val();
-    clearTimeout(hostTakeoverTimer);
-    if(isHost) return; // tôi chính là chủ phòng, không cần tự chiếm quyền của mình
-    if(v && v.id){ return; } // đang có người giữ quyền chủ phòng -> yên tâm chờ
-    // activeHost trống -> tính grace period theo ĐÚNG thời điểm phòng bắt đầu trống
-    // (v.since, do onDisconnect ghi lại lúc chủ phòng thực sự mất kết nối), KHÔNG phải
-    // lúc client này mới mở app lên phát hiện ra. Nhờ vậy, kiểu chơi "đánh chậm" — cả bàn
-    // hay off không cùng lúc, có khi off hết cả bàn rồi ai đó quay lại sau nhiều giờ —
-    // sẽ được chiếm quyền NGAY khi mở app, thay vì phải chờ thêm 8 giây vô ích mỗi lần.
-    const vacantSince = (v && v.since) || 0;
-    const remaining = Math.max(0, HOST_TAKEOVER_GRACE_MS - (Date.now() - vacantSince));
-    hostTakeoverTimer = setTimeout(attemptTakeoverAsHost, remaining);
-  });
+  try{
+    stopWatchingHostPresence();
+    const ref = activeHostRef();
+    if(!ref || isBotMode) return;
+    hostPresenceWatchRef = ref;
+    ref.on('value', snap => {
+      try{
+        const v = snap.val();
+        clearTimeout(hostTakeoverTimer);
+        if(isHost) return; // tôi chính là chủ phòng, không cần tự chiếm quyền của mình
+        if(v && v.id){ return; } // đang có người giữ quyền chủ phòng -> yên tâm chờ
+        // activeHost trống -> tính grace period theo ĐÚNG thời điểm phòng bắt đầu trống
+        // (v.since, do onDisconnect ghi lại lúc chủ phòng thực sự mất kết nối), KHÔNG phải
+        // lúc client này mới mở app lên phát hiện ra. Nhờ vậy, kiểu chơi "đánh chậm" — cả bàn
+        // hay off không cùng lúc, có khi off hết cả bàn rồi ai đó quay lại sau nhiều giờ —
+        // sẽ được chiếm quyền NGAY khi mở app, thay vì phải chờ thêm 8 giây vô ích mỗi lần.
+        const vacantSince = (v && v.since) || 0;
+        const remaining = Math.max(0, HOST_TAKEOVER_GRACE_MS - (Date.now() - vacantSince));
+        hostTakeoverTimer = setTimeout(attemptTakeoverAsHost, remaining);
+      }catch(e){ console.error('Lỗi xử lý activeHost value:', e); }
+    });
+  }catch(e){
+    console.error('Lỗi watchHostPresenceForTakeover (bỏ qua, không chặn luồng chính):', e);
+  }
 }
 
 function stopWatchingHostPresence(){
@@ -2970,6 +2984,7 @@ function rejoinSavedSession(){
 }
 
 if($('btnReconnectSaved')) $('btnReconnectSaved').onclick = rejoinSavedSession;
+if($('btnHostReconnectSaved')) $('btnHostReconnectSaved').onclick = resumeAsHost;
 
 function publishRoomToPublic(code, hostName){
   if(!fbDb || !code) return;
