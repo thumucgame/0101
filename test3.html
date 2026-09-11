@@ -579,6 +579,18 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 }
 .chat-toggle.has-unread{background:var(--bad);color:#fff;animation:pulse 1s infinite alternate;}
 @keyframes pulse{0%{transform:scale(1);}100%{transform:scale(1.12);}}
+.debug-log-float{position:fixed;right:106px;bottom:12px;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:rgba(18,18,18,.88);color:var(--cream);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:80;box-shadow:0 4px 16px rgba(0,0,0,.35)}
+.debug-log-float:hover{transform:translateY(-1px)}
+.round-history-toggle{position:fixed;right:58px;bottom:12px;width:40px;height:40px;border:1px solid var(--gold);border-radius:50%;background:rgba(6,20,15,.96);color:var(--gold);font-size:17px;cursor:pointer;z-index:80;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,.4);transition:transform .1s,filter .15s;}
+.round-history-toggle:hover{filter:brightness(1.12);}.round-history-toggle:active{transform:scale(.94);}
+.round-history-modal{position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:110;padding:14px;}
+.round-history-panel{width:min(460px,94vw);max-height:82vh;overflow:hidden;background:linear-gradient(180deg,#102f25,#081d16);border:1px solid var(--gold);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.7);color:var(--cream);display:flex;flex-direction:column;}
+.round-history-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--panel-line);color:var(--gold);font-weight:900;}
+.round-history-close{border:0;background:transparent;color:var(--cream);font-size:18px;cursor:pointer;padding:2px 5px;}.round-history-list{overflow:auto;padding:10px 12px 12px;}
+.round-history-empty{text-align:center;padding:28px 12px;color:rgba(250,246,238,.55);font-size:13px;}.round-history-row{display:flex;align-items:flex-start;gap:8px;padding:8px 7px;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px;line-height:1.35;}.round-history-row:last-child{border-bottom:0;}
+.round-history-no{width:24px;flex:0 0 24px;color:rgba(250,246,238,.45);text-align:right;font-family:monospace;}.round-history-player{min-width:0;font-weight:800;color:var(--gold);max-width:115px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}.round-history-action{flex:1;min-width:0;color:var(--cream);word-break:break-word;}.round-history-cards{display:inline-flex;gap:3px;flex-wrap:wrap;vertical-align:middle;}
+.round-history-card{display:inline-flex;align-items:center;justify-content:center;min-width:25px;height:35px;padding:2px 3px;border-radius:4px;background:var(--cream);color:var(--ink);font:700 11px/1 Georgia,serif;border:1px solid rgba(0,0,0,.25);box-shadow:-1px 1px 2px rgba(0,0,0,.3);}.round-history-card.red{color:var(--red);}.round-history-pass{color:rgba(250,246,238,.62);font-weight:800;}
+@media(max-width:420px){.round-history-toggle{right:58px;bottom:12px;width:38px;height:38px}.round-history-panel{max-height:86vh}.round-history-player{max-width:88px;}}
 
 .throw-popover {
   position: fixed; background: rgba(10, 46, 35, 0.96); border: 1px solid var(--gold);
@@ -1233,7 +1245,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 
 <!-- TABLE SCREEN -->
 <div id="tableScreen" class="hidden">
-  <div class="table-header"><button id="btnExitRuleTest" class="btn btn-outline hidden" style="font-size:10px;padding:3px 7px;margin-left:auto;">🧪 Thoát TEST</button><button id="btnOpenDebugLog" class="btn btn-outline" type="button" style="font-size:10px;padding:3px 7px;">🐞 LOG</button>
+  <div class="table-header"><button id="btnExitRuleTest" class="btn btn-outline hidden" style="font-size:10px;padding:3px 7px;margin-left:auto;">🧪 Thoát TEST</button>
     <span id="roomTag" style="color:var(--gold);font-weight:700;">Phòng: ----</span>
     <span id="modeTag" style="color:var(--cream);">Chế độ: Đánh Nước</span>
     <span id="stakeTag">Cược: ---</span>
@@ -1314,6 +1326,9 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 
 <!-- CHAT PANEL -->
 <button class="chat-toggle hidden" id="chatToggle">💬</button>
+<button class="round-history-toggle hidden" id="roundHistoryToggle" type="button" aria-label="Xem lượt đánh trước" title="Lượt đánh trước">👁</button>
+<button class="debug-log-float" id="btnOpenDebugLog" type="button" aria-label="Mở log" title="Debug log">🐞</button>
+<div class="round-history-modal hidden" id="roundHistoryModal"><div class="round-history-panel" role="dialog" aria-modal="true" aria-label="Lượt đánh trước"><div class="round-history-head"><span>👁 LƯỢT ĐÁNH TRƯỚC</span><button class="round-history-close" id="roundHistoryClose" type="button" aria-label="Đóng">✕</button></div><div class="round-history-list" id="roundHistoryList"></div></div></div>
 <div class="side-panel" id="sidePanel">
   <div style="padding:10px;border-bottom:1px solid var(--panel-line);display:flex;justify-content:space-between;">
     <b>Trò chuyện</b>
@@ -2129,14 +2144,53 @@ function deserializeGameStateFromFirebase(gs){
   gs.order = safeArray(gs.order);
   return gs;
 }
+// ===== HOST SNAPSHOT V2: chống race khi host thoát ngay sau một nước =====
+// Mỗi lần broadcast tạo một snapshot bất biến tại thời điểm đó.
+// Các lần ghi được xếp hàng để snapshot mới không thể ghi đè ngược snapshot cũ.
+// Đồng thời đăng ký chính snapshot đó với onDisconnect: nếu host mất kết nối trước khi
+// lần set() cuối hoàn tất, Firebase vẫn có một bản snapshot cuối cùng đã được đăng ký.
+// stateVersion giúp host mới biết snapshot nào mới/cũ.
+let hostStateVersion = 0;
+let hostSnapshotWriteChain = Promise.resolve();
+
+function buildHostSnapshotPayload(){
+  if(isBotMode || !isHost || !fbDb || !roomCode || !gameState) return null;
+  hostStateVersion = Math.max(Number(hostStateVersion) || 0, Number(gameState.stateVersion) || 0) + 1;
+  gameState.stateVersion = hostStateVersion;
+  return sanitizeForFirebase({
+    players: safeArray(players).map(p => ({...p})),
+    roomSettings: roomSettings ? {...roomSettings} : {},
+    botList: safeArray(botList),
+    playerTokens: playerTokens ? {...playerTokens} : {},
+    gameState: serializeGameStateForFirebase(gameState),
+    stateVersion: hostStateVersion,
+    savedAt: Date.now()
+  });
+}
+
 function persistHostSnapshot(){
-  try{
-    if(isBotMode || !isHost || !fbDb || !roomCode) return;
-    fbDb.ref('tienlen_rooms/' + roomCode + '/hostSnapshot').set(sanitizeForFirebase({
-      players, roomSettings, botList, playerTokens,
-      gameState: serializeGameStateForFirebase(gameState), savedAt: Date.now()
-    })).catch(()=>{});
-  } catch(e){}
+  const payload = buildHostSnapshotPayload();
+  if(!payload) return Promise.resolve(false);
+
+  const room = roomCode;
+  const snapshotRef = fbDb.ref('tienlen_rooms/' + room + '/hostSnapshot');
+
+  // FIFO: nếu có nhiều broadcast liên tiếp, luôn ghi theo thứ tự tạo snapshot.
+  hostSnapshotWriteChain = hostSnapshotWriteChain
+    .catch(() => false)
+    .then(() => {
+      // Đăng ký backup trước khi set hiện tại. Nếu tab chết giữa chừng, Firebase
+      // có thể dùng chính payload mới nhất đã được đăng ký thay vì snapshot cũ.
+      return snapshotRef.onDisconnect().set(payload)
+        .then(() => snapshotRef.set(payload))
+        .then(() => true)
+        .catch(err => {
+          console.error('❌ persistHostSnapshot thất bại:', err);
+          return false;
+        });
+    });
+
+  return hostSnapshotWriteChain;
 }
 
 // Vào lại làm chủ phòng: khôi phục đúng vai trò + đọc lại snapshot gần nhất để
@@ -2155,6 +2209,7 @@ function resumeAsHost(){
       botList = safeArray(snapshot.botList);
       playerTokens = (snapshot.playerTokens && typeof snapshot.playerTokens === 'object') ? snapshot.playerTokens : {};
       gameState = deserializeGameStateFromFirebase(snapshot.gameState);
+      hostStateVersion = Number(snapshot.stateVersion || gameState?.stateVersion || 0) || 0;
     }
     claimActiveHost(success => {
       if(!success){
@@ -2243,10 +2298,19 @@ function claimActiveHost(onResult){
 // kích hoạt) thì phải tự tay nhả quyền ngay, để người khác không phải chờ hết grace period.
 function releaseActiveHostIfMine(){
   try{
-    if(!isHost || isBotMode) return;
+    if(!isHost || isBotMode) return Promise.resolve(false);
     const ref = activeHostRef();
-    if(ref) ref.set({id: null, since: Date.now()}).catch(()=>{});
-  } catch(e){}
+    if(!ref) return Promise.resolve(false);
+    return ref.set({id: null, since: Date.now()})
+      .then(() => true)
+      .catch(err => {
+        console.error('❌ Không thể nhả activeHost:', err);
+        return false;
+      });
+  } catch(e){
+    console.error('❌ Lỗi releaseActiveHostIfMine:', e);
+    return Promise.resolve(false);
+  }
 }
 
 let hostPresenceWatchRef = null, hostTakeoverTimer = null;
@@ -2299,6 +2363,7 @@ function attemptTakeoverAsHost(){
         botList = safeArray(snapshot.botList);
       playerTokens = (snapshot.playerTokens && typeof snapshot.playerTokens === 'object') ? snapshot.playerTokens : {};
         gameState = deserializeGameStateFromFirebase(snapshot.gameState);
+        hostStateVersion = Number(snapshot.stateVersion || gameState?.stateVersion || 0) || 0;
       }
       listenAsHost();
       saveTLHostSession();
@@ -2860,16 +2925,26 @@ document.addEventListener('click', function(e){
 // không làm gì cả. Định nghĩa lại đầy đủ ở đây: báo cho chủ phòng biết mình CHỦ
 // ĐỘNG rời (xử lý giống hệt mất mạng — AI đánh hộ nếu ván đang chạy, gỡ khỏi
 // phòng chờ nếu chưa vào ván), dọn dẹp listener/phiên, rồi quay về Home.
-function leaveRoom(){
+async function leaveRoom(){
+  const leavingAsHost = !!(isHost && !isBotMode);
   try{
     if(!isBotMode && !isHost && roomCode && myId && sessionToken){
       sendToHost({t:'__disconnect__'});
     }
   }catch(e){ console.error('Lỗi báo rời phòng:', e); }
+
+  // Host chủ động thoát: chốt snapshot mới nhất trước, rồi mới nhả activeHost.
+  // Đây là điểm quan trọng nhất của fix cho chế độ Đánh Chậm.
+  if(leavingAsHost){
+    try{ await persistHostSnapshot(); }catch(e){ console.error('❌ Lỗi chốt hostSnapshot trước khi thoát:', e); }
+  }
+
   try{ if(fbDb && roomCode && myId) fbDb.ref('tienlen_rooms/' + roomCode + '/toClient/' + myId).off(); }catch(e){}
   try{ if(fbDb && roomCode) fbDb.ref('tienlen_rooms/' + roomCode + '/toHost').off(); }catch(e){}
   removePlayerIndexEntry(myId);
-  releaseActiveHostIfMine();
+  if(leavingAsHost){
+    try{ await releaseActiveHostIfMine(); }catch(e){ console.error('❌ Lỗi nhả activeHost khi thoát:', e); }
+  }
   stopWatchingHostPresence();
   clearTLSession();
   clearTLHostSession();
@@ -2885,6 +2960,19 @@ function leaveRoom(){
   try{ checkForSavedTLSession(); }catch(e){}
   try{ checkForSavedHostSession(); }catch(e){}
 }
+
+// Backup lifecycle: không thể await beforeunload/pagehide, nên dựa vào onDisconnect
+// đã được đăng ký trong persistHostSnapshot(). Khi có thời gian, vẫn cố ghi snapshot
+// cuối cùng để giảm tối đa cửa sổ race khi host đóng tab/app ở chế độ Đánh Chậm.
+function registerHostLifecycleBackup(){
+  const flush = () => {
+    if(isBotMode || !isHost || !gameState || !fbDb || !roomCode) return;
+    try{ persistHostSnapshot(); }catch(e){ console.error('❌ Lifecycle snapshot error:', e); }
+  };
+  window.addEventListener('pagehide', flush, {capture:true});
+  window.addEventListener('beforeunload', flush, {capture:true});
+}
+registerHostLifecycleBackup();
 
 $('btnOpenRules').onclick = () => $('rulesOverlay').classList.remove('hidden');
 $('btnInGameSettings').onclick=()=>{ updateInGameSettingsUI(); $('inGameSettingsMsg').textContent=''; $('inGameSettingsOverlay').classList.remove('hidden'); };
@@ -3632,6 +3720,8 @@ function revealInstantWin(hands, winnerId, info){
     playedCardsCount: Object.fromEntries(players.map(p=>[p.id, 0])),
     revealedCards: Object.fromEntries(players.map(p=>[p.id, safeArray(hands[p.id]).map(c=>({r:c.r,s:c.s}))])),
     kneelingStatus: { ...kneelingTracker },
+    roundReview: [],
+    lastRoundReview: gameState && Array.isArray(gameState.lastRoundReview) ? gameState.lastRoundReview.map(x=>({...x, cards:Array.isArray(x.cards)?x.cards.map(c=>({r:c.r,s:c.s})):[]})) : [],
     roundLog: [{ icon:'🌟', text: `${winnerName} chia được ${info.label} — Tới Trắng, kết thúc ván ngay lập tức!` }],
     log: `🌟 TỚI TRẮNG! ${winnerName} có ${info.label} — kết thúc ván ngay.`,
     gameMode: roomSettings.gameMode, turnSeconds: roomSettings.turnSeconds, stakeUnit: roomSettings.stakeUnit,
@@ -4123,6 +4213,8 @@ function dealNewGame(){
     playedCardsCount: Object.fromEntries(players.map(p=>[p.id, 0])),
     revealedCards: Object.fromEntries(players.map(p=>[p.id, []])),
     kneelingStatus: { ...kneelingTracker },
+    roundReview: [],
+    lastRoundReview: gameState && Array.isArray(gameState.lastRoundReview) ? gameState.lastRoundReview.map(x=>({...x, cards:Array.isArray(x.cards)?x.cards.map(c=>({r:c.r,s:c.s})):[]})) : [],
     roundLog: [],
     log: logText,
     gameMode: roomSettings.gameMode,
@@ -5533,6 +5625,14 @@ function handleAction(playerId, action, isAuto=false){
     gameState.log = `${prefix}${pName} đã bỏ lượt.`;
     debugActionEvent('PASS', playerId, `${pName} bỏ lượt${isAuto?' (auto/bot)':''}`, {auto:!!isAuto});
     bumpActor(playerId, isAuto ? '⏰ Bỏ lượt (tự động)' : '🚫 Bỏ lượt');
+    // ĐÁNH CHẬM: 👁 cập nhật NGAY cả khi có người BỎ LƯỢT.
+    // Giữ nguyên chuỗi của lượt hiện tại để mọi người xem được diễn biến mới nhất.
+    recordRoundReview(playerId,'pass',[], 'BỎ LƯỢT');
+    gameState.lastRoundReview = safeArray(gameState.roundReview).map(x=>({
+      seq:Number(x.seq||0), playerId:x.playerId||null, playerName:x.playerName||'',
+      type:x.type==='pass'?'pass':'play', label:x.label||'',
+      cards:safeArray(x.cards).map(c=>({r:c.r,s:c.s}))
+    }));
     consecutivePlayCount = 0;
     checkNextTurn();
   } 
@@ -5652,6 +5752,12 @@ function handleAction(playerId, action, isAuto=false){
       {auto:!!isAuto, cards:debugCardText(cards), target:debugComboText(prevCombo), result:shortMsg}
     );
     bumpActor(playerId, (isAuto ? '⏰ ' : '') + shortMsg);
+    recordRoundReview(playerId,'play',cards,describeCombo(combo));
+    // ĐÁNH CHẬM: cập nhật 👁 NGAY sau mỗi nước đánh. Chỉ giữ chuỗi của lượt hiện tại.
+    gameState.lastRoundReview = safeArray(gameState.roundReview).map(x=>({
+      seq:Number(x.seq||0), playerId:x.playerId||null, playerName:x.playerName||'',
+      type:'play', label:x.label||'', cards:safeArray(x.cards).map(c=>({r:c.r,s:c.s}))
+    }));
 
     gameState.hands[playerId] = hand.filter(c => !cards.some(sc => sc.r === c.r && sc.s === c.s));
     gameState.playedCardsCount[playerId] += cards.length;
@@ -5762,6 +5868,9 @@ function checkNextTurn(){
         return;
       }
       // Không ai đăng ký hợp lệ → xử lý y hệt luật gốc (mắt xích cuối tự settle).
+      // ĐÁNH CHẬM: lượt vừa kết thúc. Giữ lastRoundReview để vẫn xem được lượt vừa đánh;
+      // xoá bộ đệm để nước đánh đầu tiên tiếp theo bắt đầu một lượt mới.
+      gameState.roundReview = [];
       settleChopChain('tất cả người chơi bỏ lượt');
       gameState.currentCombo = null; gameState.passed.clear(); gameState.instantChopPassedTarget = {}; consecutivePlayCount = 0;
       if(isOut(gameState.leaderId)){
@@ -5845,6 +5954,10 @@ function endGame(){
     settleChopChain('ván kết thúc (bảo đảm)');
   }
 
+  // Lịch sử 👁 đã được cập nhật ngay sau từng nước đánh. Chỉ dùng roundReview làm dự phòng.
+  if(!Array.isArray(gameState.lastRoundReview) || !gameState.lastRoundReview.length){
+    gameState.lastRoundReview = safeArray(gameState.roundReview).map(x=>({seq:Number(x.seq||0),playerId:x.playerId||null,playerName:x.playerName||'',type:'play',label:x.label||'',cards:safeArray(x.cards).map(c=>({r:c.r,s:c.s}))}));
+  }
   gameState.isEnded = true;
   if(!gameState.roundLog) gameState.roundLog = [];
   if(timerLoop) clearInterval(timerLoop);
@@ -6317,6 +6430,7 @@ function getViewStateForPlayer(id){
     chopStackValue: Number(gameState.chopStackValue || 0),
     chopChainValue: Number(gameState.chopChainValue || 0),
     roundLog: safeArray(gameState.roundLog),
+    lastRoundReview: safeArray(gameState.lastRoundReview).map(x=>({seq:Number(x.seq||0),playerId:x.playerId||null,playerName:x.playerName||'',type:x.type||'play',label:x.label||'',cards:safeArray(x.cards).map(c=>({r:c.r,s:c.s}))})),
     debugLog: safeArray(gameState.debugLog).slice(-DEBUG_LOG_LIMIT),
     gameMode: gameState.gameMode,
     turnDeadline: gameState.turnDeadline || 0,
@@ -6343,12 +6457,17 @@ function getViewStateForPlayer(id){
   };
 }
 
-function broadcastState(){
+async function broadcastState(){
   if(isBotMode){ 
     applyState(getViewStateForPlayer(myId)); 
     return; 
   }
   if(!gameState) return;
+
+  // QUAN TRỌNG: snapshot phải được tạo/ghi trước khi báo "tới lượt".
+  // Nhờ vậy ở chế độ Đánh Chậm, nếu host đóng tab ngay sau nước đi,
+  // người kế tiếp không thể nhận UI mới trong khi hostSnapshot vẫn còn cũ.
+  await persistHostSnapshot();
 
   // FIX: trước đây chỉ gửi state cho những ai đang có trong gameState.order của VÁN HIỆN TẠI.
   // Người vừa bị đuổi do mất mạng rồi kết nối lại (đang ở chế độ xem, không nằm trong order)
@@ -6375,7 +6494,6 @@ function broadcastState(){
       console.error('❌ Lỗi khi gửi trạng thái ván chơi cho ' + id + ':', err);
     }
   });
-  persistHostSnapshot();
 }
 
 let currentState = null;
@@ -6496,6 +6614,8 @@ function applyState(st){
   $('lobbyScreen').classList.add('hidden');
   $('tableScreen').classList.remove('hidden');
   $('chatToggle').classList.remove('hidden');
+  const roundHistoryBtn=$('roundHistoryToggle');
+  if(roundHistoryBtn) roundHistoryBtn.classList.toggle('hidden', !(st.slowMode || roomSettings.slowMode));
   $('roomTag').textContent = 'Phòng: ' + roomCode;
   $('modeTag').textContent = 'Chế độ: ' + (st.gameMode === 'WATER' ? 'Đánh Nước' : (st.gameMode === 'POINTS' ? 'Tính Điểm' : (st.gameMode === 'NHATANCA' ? 'Nhất Ăn Cả' : (st.gameMode === 'CHATCHEM' ? 'Chặt Chém' : 'Quỳ'))));
   // FIX: nhãn cũ chỉ check gameMode==='WATER', mọi mode còn lại (kể cả POINTS/NHATANCA/
@@ -7428,6 +7548,27 @@ $('chatClose').onclick = () => $('sidePanel').classList.remove('open');
 $('chatSend').onclick = sendChat;
 $('chatInput').onkeyup = (e) => { if(e.key === 'Enter') sendChat(); };
 
+function formatRoundReviewCard(c){
+  if(!c) return '';
+  const rankMap=['3','4','5','6','7','8','9','10','J','Q','K','A','2'], suitMap=['♠','♣','♦','♥'];
+  return (rankMap[Number(c.r)] ?? String(c.r)) + (suitMap[Number(c.s)] ?? '');
+}
+function renderRoundHistory(st){
+  const list=$('roundHistoryList'); if(!list) return;
+  const rows=safeArray(st&&st.lastRoundReview).filter(r=>r && (r.type==='play' || r.type==='pass'));
+  if(!rows.length){list.innerHTML='<div class="round-history-empty">Chưa có lượt đánh nào.</div>';return;}
+  list.innerHTML=rows.map((r,i)=>{
+    const name=escapeHtml(r.playerName || (st.names&&st.names[r.playerId]) || 'Người chơi');
+    if(r.type==='pass') return `<div class="round-history-row"><span class="round-history-no">${i+1}.</span><span class="round-history-player">${name}</span><span class="round-history-action round-history-pass">BỎ LƯỢT</span></div>`;
+    const cards=safeArray(r.cards).map(c=>{const t=formatRoundReviewCard(c);const red=(Number(c.s)===2||Number(c.s)===3)?' red':'';return `<span class="round-history-card${red}">${escapeHtml(t)}</span>`;}).join('');
+    return `<div class="round-history-row"><span class="round-history-no">${i+1}.</span><span class="round-history-player">${name}</span><span class="round-history-action"><span class="round-history-cards">${cards}</span></span></div>`;
+  }).join('');
+}
+function openRoundHistory(){if(!currentState || !(currentState.slowMode || roomSettings.slowMode))return;renderRoundHistory(currentState);$('roundHistoryModal').classList.remove('hidden');}
+function closeRoundHistory(){$('roundHistoryModal').classList.add('hidden');}
+$('roundHistoryToggle').onclick=openRoundHistory;$('roundHistoryClose').onclick=closeRoundHistory;$('roundHistoryModal').onclick=e=>{if(e.target.id==='roundHistoryModal')closeRoundHistory();};
+function recordRoundReview(playerId,type,cards,label){if(!gameState)return;if(!gameState.roundReview)gameState.roundReview=[];gameState.roundReview.push({seq:gameState.roundReview.length+1,playerId,playerName:(gameState.names&&gameState.names[playerId])||playerId,type,label:label||'',cards:Array.isArray(cards)?cards.map(c=>({r:c.r,s:c.s})):[]});}
+
 function sendChat(){
   const txt = $('chatInput').value.trim();
   if(!txt) return;
@@ -8312,7 +8453,7 @@ function exitRuleTestMode(){
   $('resultOverlay').classList.add('hidden');
   $('tableScreen').classList.add('hidden');
   $('btnExitRuleTest').classList.add('hidden');
-  $('chatToggle').classList.add('hidden');
+  $('chatToggle').classList.add('hidden'); $('roundHistoryToggle').classList.add('hidden');
   $('lobbyScreen').classList.add('hidden');
   $('homeScreen').classList.remove('hidden');
 }
