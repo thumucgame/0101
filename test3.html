@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -2114,11 +2113,38 @@ function clearTLHostSession(){
 // hoặc ván đấu thay đổi (xem hook trong broadcastLobby()/broadcastState()). Nhờ vậy
 // việc "lưu" không phụ thuộc vào chủ phòng phải chủ động bấm gì; nó luôn xảy ra sẵn
 // như một phần của các thao tác vốn đã chạy liên tục trong lúc chơi.
+//
+// QUAN TRỌNG: gameState có 3 trường kiểu Set (passed/disconnected/coldFolded) — Firebase
+// KHÔNG lưu được kiểu Set (sanitizeForFirebase sẽ biến nó thành {} rỗng, mất sạch dữ liệu).
+// serializeGameStateForFirebase()/deserializeGameStateFromFirebase() xử lý riêng 2 chiều
+// cho các trường này (Set <-> mảng) để khôi phục đúng, tránh lỗi "Cannot read properties
+// of undefined (reading 'includes')" khi code sau đó gọi .has()/.includes() trên chúng.
+function serializeGameStateForFirebase(gs){
+  if(!gs) return null;
+  const clone = {...gs};
+  ['passed','disconnected','coldFolded'].forEach(k=>{
+    clone[k] = (gs[k] instanceof Set) ? [...gs[k]] : safeArray(gs[k]);
+  });
+  return sanitizeForFirebase(clone);
+}
+function deserializeGameStateFromFirebase(gs){
+  if(!gs) return null;
+  gs.passed = new Set(safeArray(gs.passed));
+  gs.disconnected = new Set(safeArray(gs.disconnected));
+  gs.coldFolded = new Set(safeArray(gs.coldFolded));
+  // finished/order luôn được các nơi khác dùng trực tiếp .includes()/.filter() không qua
+  // safeArray() bọc sẵn — nếu rỗng lúc lưu, Firebase có thể làm mất hẳn key này khi đọc lại,
+  // nên phải đảm bảo luôn là mảng hợp lệ (kể cả mảng rỗng) sau khi khôi phục.
+  gs.finished = safeArray(gs.finished);
+  gs.order = safeArray(gs.order);
+  return gs;
+}
 function persistHostSnapshot(){
   try{
     if(isBotMode || !isHost || !fbDb || !roomCode) return;
     fbDb.ref('tienlen_rooms/' + roomCode + '/hostSnapshot').set(sanitizeForFirebase({
-      players, roomSettings, botList, gameState, savedAt: Date.now()
+      players, roomSettings, botList, playerTokens,
+      gameState: serializeGameStateForFirebase(gameState), savedAt: Date.now()
     })).catch(()=>{});
   } catch(e){}
 }
@@ -2137,7 +2163,8 @@ function resumeAsHost(){
       players = safeArray(snapshot.players);
       roomSettings = snapshot.roomSettings || roomSettings;
       botList = safeArray(snapshot.botList);
-      gameState = snapshot.gameState || null;
+      playerTokens = (snapshot.playerTokens && typeof snapshot.playerTokens === 'object') ? snapshot.playerTokens : {};
+      gameState = deserializeGameStateFromFirebase(snapshot.gameState);
     }
     claimActiveHost(success => {
       if(!success){
@@ -2280,7 +2307,8 @@ function attemptTakeoverAsHost(){
         players = safeArray(snapshot.players);
         roomSettings = snapshot.roomSettings || roomSettings;
         botList = safeArray(snapshot.botList);
-        gameState = snapshot.gameState || null;
+      playerTokens = (snapshot.playerTokens && typeof snapshot.playerTokens === 'object') ? snapshot.playerTokens : {};
+        gameState = deserializeGameStateFromFirebase(snapshot.gameState);
       }
       listenAsHost();
       saveTLHostSession();
