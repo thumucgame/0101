@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -660,7 +659,12 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 .debug-row.warn{color:#ffb36b}.debug-row.err{color:#ff8d8d}.debug-row.state{color:#cdb8ff}
 .debug-empty{color:rgba(250,246,238,.45);padding:20px;text-align:center;}
 .debug-badge{
-  position:fixed;right:58px;bottom:12px;z-index:81;display:none;
+  /* FIX: trước đây badge này đặt đúng right:58px;bottom:12px — TRÙNG hoàn toàn tọa độ với
+     .round-history-toggle (nút lịch sử ván, cũng right:58px;bottom:12px). Vì debug-badge có
+     z-index:81 cao hơn round-history-toggle (z-index:80), badge "LOG n" đè thẳng lên che
+     mất hẳn nút đó, đồng thời lấn sang mép nút 🐞 (debug-log-float, right:106px) bên cạnh.
+     Giờ dời badge lên góc trên-bên-phải của đúng nút 🐞 mà nó thuộc về, không đụng nút giữa. */
+  position:fixed;right:96px;bottom:46px;z-index:82;display:none;
   padding:3px 7px;border-radius:9px;background:#16100a;border:1px solid var(--gold);
   color:var(--gold);font:10px ui-monospace,monospace;pointer-events:none;
 }
@@ -2154,9 +2158,15 @@ let hostStateVersion = 0;
 let hostSnapshotWriteChain = Promise.resolve();
 
 function buildHostSnapshotPayload(){
-  if(isBotMode || !isHost || !fbDb || !roomCode || !gameState) return null;
-  hostStateVersion = Math.max(Number(hostStateVersion) || 0, Number(gameState.stateVersion) || 0) + 1;
-  gameState.stateVersion = hostStateVersion;
+  // FIX: điều kiện cũ "|| !gameState" khiến hàm này bỏ qua hoàn toàn việc lưu snapshot
+  // trong lúc còn ở PHÒNG CHỜ (gameState=null, ván chưa bắt đầu) — nếu chủ phòng thoát
+  // ngay lúc đó (vừa thêm/xoá bot, đổi cài đặt xong rồi thoát), người tiếp quản sau sẽ đọc
+  // phải snapshot CŨ hoặc rỗng, mất luôn danh sách người chơi/bot/cài đặt phòng chờ.
+  // Giờ vẫn cho phép lưu khi gameState=null — serializeGameStateForFirebase(null) trả về
+  // null một cách an toàn, và Firebase chỉ đơn giản không tạo field "gameState".
+  if(isBotMode || !isHost || !fbDb || !roomCode) return null;
+  hostStateVersion = Math.max(Number(hostStateVersion) || 0, Number(gameState && gameState.stateVersion) || 0) + 1;
+  if(gameState) gameState.stateVersion = hostStateVersion;
   return sanitizeForFirebase({
     players: safeArray(players).map(p => ({...p})),
     roomSettings: roomSettings ? {...roomSettings} : {},
@@ -2966,7 +2976,10 @@ async function leaveRoom(){
 // cuối cùng để giảm tối đa cửa sổ race khi host đóng tab/app ở chế độ Đánh Chậm.
 function registerHostLifecycleBackup(){
   const flush = () => {
-    if(isBotMode || !isHost || !gameState || !fbDb || !roomCode) return;
+    // FIX: bỏ điều kiện "!gameState" — vẫn cần chốt snapshot (players/roomSettings/botList)
+    // khi chủ phòng đóng tab ngay trong lúc phòng chờ (game chưa bắt đầu), không chỉ lúc
+    // đang có ván chơi. buildHostSnapshotPayload() đã tự xử lý an toàn khi gameState=null.
+    if(isBotMode || !isHost || !fbDb || !roomCode) return;
     try{ persistHostSnapshot(); }catch(e){ console.error('❌ Lifecycle snapshot error:', e); }
   };
   window.addEventListener('pagehide', flush, {capture:true});
@@ -3036,7 +3049,13 @@ function refreshPublicRooms(){
 }
 
 $('btnRefreshRooms').onclick = refreshPublicRooms;
-window.onload = () => { refreshPublicRooms(); checkForSavedTLSession(); checkForSavedHostSession(); watchConnectionForAutoRejoin(); checkCrossDeviceMatch(); };
+// FIX "LUÔN HIỆN PHÒNG ĐANG TREO GÂY RỐI": trước đây mở trang là tự động chạy
+// checkForSavedHostSession() + checkCrossDeviceMatch() ngay lập tức (dựa vào phiên đã lưu/
+// số điện thoại đã nhớ từ lần trước), nên 2 khối "Bạn là chủ phòng..." / "Nhận ra bạn qua
+// 4 số..." cứ hiện sẵn mỗi lần vào trang dù người chơi chỉ đang muốn tạo ván mới, gây rối.
+// Giờ 2 khối này CHỈ được kiểm tra khi người chơi chủ động gõ đủ 4 số cuối SĐT (xem
+// wirePhoneSuffixLiveCheck bên dưới) — đúng ý muốn "chỉ khi cần vào lại mới gõ số".
+window.onload = () => { refreshPublicRooms(); checkForSavedTLSession(); watchConnectionForAutoRejoin(); };
 
 /* ---- VÀO LẠI VÁN ĐANG CHƠI (sau khi mất mạng/tắt app) ---- */
 function checkForSavedTLSession(){
@@ -3093,10 +3112,16 @@ if($('btnCrossDeviceJoin')) $('btnCrossDeviceJoin').onclick = () => {
     if(!/^[0-9]{4}$/.test(v)){
       const box = $('tlCrossDeviceBox');
       if(box){ box.classList.add('hidden'); box.dataset.checkingSuffix = ''; }
+      const hostBox = $('tlHostReconnectBox');
+      if(hostBox) hostBox.classList.add('hidden');
       return;
     }
     try{ localStorage.setItem(PHONE_SUFFIX_KEY, v); }catch(e){}
-    t = setTimeout(() => checkCrossDeviceMatch(v), 400);
+    // Gõ đủ 4 số = tín hiệu "tôi muốn vào lại ván đang treo" — nhân tiện kiểm tra luôn
+    // phiên chủ phòng đã lưu trên MÁY NÀY (không phụ thuộc số vừa gõ, vì phiên chủ phòng
+    // vốn lưu theo trình duyệt chứ không theo SĐT), gộp chung một hành động cho gọn thay
+    // vì tách rời 2 lần tự động hiện như trước.
+    t = setTimeout(() => { checkCrossDeviceMatch(v); checkForSavedHostSession(); }, 400);
   });
 })();
 
