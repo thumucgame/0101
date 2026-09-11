@@ -1109,19 +1109,8 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     <label>Tên người chơi (tự đặt, đổi lúc nào cũng được)</label>
     <input type="text" id="nameInput" maxlength="14" placeholder="Nhập tên của bạn...">
 
-    <label style="margin-top:10px;">📱 4 số cuối SĐT (không bắt buộc)</label>
+    <label style="margin-top:10px;">📱 4 số cuối SĐT (không bắt buộc — điền để đổi máy/trình duyệt khác vẫn vào lại được ván đang chơi)</label>
     <input type="text" id="phoneSuffixInput" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="VD: 3456" style="letter-spacing:3px;">
-    <details style="margin-top:4px;">
-      <summary style="font-size:11px;color:rgba(250,246,238,0.55);cursor:pointer;list-style:none;">
-        ℹ️ Áp dụng cho <u>mọi người chơi</u> (chủ phòng lẫn khách) — bấm để xem vì sao nên điền
-      </summary>
-      <div style="font-size:11px;color:rgba(250,246,238,0.6);line-height:1.5;margin-top:6px;padding:8px 10px;background:rgba(0,0,0,.15);border-radius:8px;">
-        Dù bạn <b>tạo phòng</b> hay <b>vào phòng bằng mã</b>, điền số này trước khi bấm nút thì:<br>
-        ✅ Rớt mạng, đổi điện thoại/trình duyệt khác vẫn được nhận ra để vào lại ván "Đánh chậm tính điểm".<br>
-        ⚠️ Không điền: chỉ tự vào lại được nếu dùng đúng máy/trình duyệt cũ.<br>
-        Tên hiển thị vẫn tự do đặt, không bị khoá theo số này.
-      </div>
-    </details>
 
     <div class="row" style="margin-top:16px;">
       <button class="btn btn-gold" id="btnCreate">Tạo phòng</button>
@@ -2974,15 +2963,21 @@ function checkForSavedTLSession(){
    Khác với checkForSavedTLSession() (chỉ đọc localStorage trên CÙNG máy),
    hàm này tra chỉ mục PLAYER_INDEX_PATH trên Firebase theo "4 số cuối SĐT"
    đã lưu, nên hoạt động được kể cả khi mở trên máy/trình duyệt hoàn toàn khác. */
-function checkCrossDeviceMatch(){
+// TỪ v2: nhận suffixOverride (số vừa gõ) để dò được NGAY trên trình duyệt/máy mới,
+// không bắt buộc phải có sẵn trong localStorage như trước (localStorage trình duyệt
+// mới thì luôn rỗng nên trước đây phải tự nhớ mã phòng rồi gõ vào ô "Vào phòng bằng mã").
+function checkCrossDeviceMatch(suffixOverride){
   const box = $('tlCrossDeviceBox');
   if(!box) return;
   if(!fbDb){ box.classList.add('hidden'); return; }
-  let suffix = '';
-  try{ suffix = localStorage.getItem(PHONE_SUFFIX_KEY) || ''; }catch(e){}
+  let suffix = suffixOverride || '';
+  if(!suffix){ try{ suffix = localStorage.getItem(PHONE_SUFFIX_KEY) || ''; }catch(e){} }
   if(!/^[0-9]{4}$/.test(suffix)){ box.classList.add('hidden'); return; }
+  box.dataset.checkingSuffix = suffix;
   const idxId = 'ph_' + suffix;
   fbDb.ref(PLAYER_INDEX_PATH + '/' + idxId).once('value').then(snap => {
+    // Người dùng có thể đã gõ tiếp/xoá số trong lúc đợi Firebase trả lời — bỏ kết quả cũ.
+    if(box.dataset.checkingSuffix !== suffix) return;
     const entry = snap.val();
     if(!entry || !entry.roomCode){ box.classList.add('hidden'); return; }
     const local = loadTLSession();
@@ -2997,6 +2992,24 @@ if($('btnCrossDeviceJoin')) $('btnCrossDeviceJoin').onclick = () => {
   const code = box && box.dataset.roomCode;
   if(code) joinExistingRoom(code);
 };
+// Gõ tới đâu, dò tới đó: vừa nhập đủ 4 số là tự kiểm tra ngay (chờ 400ms để khỏi dò
+// liên tục từng ký tự), không cần chờ tải lại trang hay tự nhớ mã phòng nữa.
+(function wirePhoneSuffixLiveCheck(){
+  const el = document.getElementById('phoneSuffixInput');
+  if(!el) return;
+  let t = null;
+  el.addEventListener('input', () => {
+    const v = el.value.trim();
+    clearTimeout(t);
+    if(!/^[0-9]{4}$/.test(v)){
+      const box = $('tlCrossDeviceBox');
+      if(box){ box.classList.add('hidden'); box.dataset.checkingSuffix = ''; }
+      return;
+    }
+    try{ localStorage.setItem(PHONE_SUFFIX_KEY, v); }catch(e){}
+    t = setTimeout(() => checkCrossDeviceMatch(v), 400);
+  });
+})();
 
 function rejoinSavedSession(){
   const s = loadTLSession();
