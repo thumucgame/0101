@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -1138,6 +1137,12 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
       <button class="btn btn-gold" id="btnReconnectSaved" style="width:100%;">🔄 Vào lại ván đang chơi</button>
     </div>
 
+    <div class="public-rooms-box hidden" id="tlHostReconnectBox" style="border:1px solid #e5c15a;">
+      <label style="margin:8px 0 4px;">👑 Bạn là chủ phòng của một phòng đang chờ</label>
+      <div style="font-size:12px;color:rgba(250,246,238,0.75);margin-bottom:8px;" id="tlHostReconnectInfo"></div>
+      <button class="btn btn-gold" id="btnHostReconnectSaved" style="width:100%;">👑 Vào lại làm chủ phòng</button>
+    </div>
+
     <div class="public-rooms-box hidden" id="tlCrossDeviceBox" style="border:1px solid #e5c15a;">
       <label style="margin:8px 0 4px;">📱 Nhận ra bạn qua 4 số cuối SĐT — có ván đang chờ</label>
       <div style="font-size:12px;color:rgba(250,246,238,0.75);margin-bottom:8px;" id="tlCrossDeviceInfo"></div>
@@ -2068,6 +2073,215 @@ function clearTLSession(){
   try{ localStorage.removeItem(TL_SESSION_KEY); } catch(e){}
 }
 
+/* ================= PHIÊN CHỦ PHÒNG (HOST RECONNECT) =================
+   Trước đây saveTLSession() CỐ TÌNH bỏ qua chủ phòng ("chỉ áp dụng cho khách"),
+   nên nếu chủ phòng tải lại trang / rớt mạng, họ KHÔNG có cách nào tự động vào lại
+   làm chủ phòng — trong khi mọi trạng thái ván đấu (bài, lượt, deck...) chỉ nằm
+   trong bộ nhớ trình duyệt của chủ phòng, không hề được lưu ở đâu khác. Hệ quả:
+   ván bị đứng hình vĩnh viễn cho TẤT CẢ mọi người trong phòng.
+   Khối này thêm: (1) lưu phiên riêng cho chủ phòng, (2) tự động lưu snapshot
+   toàn bộ trạng thái phòng (players/roomSettings/botList/gameState) lên Firebase
+   mỗi khi có thay đổi — không cần chủ phòng chủ động làm gì, và (3) khi chủ phòng
+   mở lại app, đọc snapshot đó để phục hồi đúng vai trò + đúng ván đang chơi. */
+const TL_HOST_SESSION_KEY = 'tienlen_host_session_v1';
+
+function saveTLHostSession(){
+  try{
+    if(isBotMode || !isHost || !roomCode || !myId) return;
+    localStorage.setItem(TL_HOST_SESSION_KEY, JSON.stringify({
+      roomCode, myId, myName, savedAt: Date.now()
+    }));
+  } catch(e){}
+}
+
+function loadTLHostSession(){
+  try{
+    const raw = localStorage.getItem(TL_HOST_SESSION_KEY);
+    if(!raw) return null;
+    const s = JSON.parse(raw);
+    if(!s || !s.roomCode || !s.myId) return null;
+    if(Date.now() - (s.savedAt||0) > TL_SESSION_MAX_AGE_MS){ clearTLHostSession(); return null; }
+    return s;
+  } catch(e){ return null; }
+}
+
+function clearTLHostSession(){
+  try{ localStorage.removeItem(TL_HOST_SESSION_KEY); } catch(e){}
+}
+
+// Snapshot TOÀN BỘ trạng thái phòng lên Firebase — tự động, gọi mỗi khi phòng chờ
+// hoặc ván đấu thay đổi (xem hook trong broadcastLobby()/broadcastState()). Nhờ vậy
+// việc "lưu" không phụ thuộc vào chủ phòng phải chủ động bấm gì; nó luôn xảy ra sẵn
+// như một phần của các thao tác vốn đã chạy liên tục trong lúc chơi.
+function persistHostSnapshot(){
+  try{
+    if(isBotMode || !isHost || !fbDb || !roomCode) return;
+    fbDb.ref('tienlen_rooms/' + roomCode + '/hostSnapshot').set(sanitizeForFirebase({
+      players, roomSettings, botList, gameState, savedAt: Date.now()
+    })).catch(()=>{});
+  } catch(e){}
+}
+
+// Vào lại làm chủ phòng: khôi phục đúng vai trò + đọc lại snapshot gần nhất để
+// tiếp tục đúng ván đang dở (hoặc đúng phòng chờ nếu ván chưa bắt đầu).
+function resumeAsHost(){
+  const s = loadTLHostSession();
+  if(!s || !fbDb){ checkForSavedHostSession(); return; }
+  isBotMode = false; isRuleTestMode = false;
+  roomCode = s.roomCode; myId = s.myId; myName = s.myName;
+  $('homeErr').textContent = 'Đang vào lại phòng ' + roomCode + '...';
+  fbDb.ref('tienlen_rooms/' + roomCode + '/hostSnapshot').once('value').then(snap => {
+    const snapshot = snap.val();
+    if(snapshot){
+      players = safeArray(snapshot.players);
+      roomSettings = snapshot.roomSettings || roomSettings;
+      botList = safeArray(snapshot.botList);
+      gameState = snapshot.gameState || null;
+    }
+    claimActiveHost(success => {
+      if(!success){
+        // Ai đó đã tự động thay thế trong lúc mình vắng mặt (xem HOST_TAKEOVER_GRACE_MS)
+        // -> không giành nữa, tự lui về làm khách để tránh 2 người cùng xử lý song song.
+        isHost = false;
+        $('homeErr').textContent = 'Phòng đã có người khác giữ vai trò chủ phòng (do bạn vắng mặt hơi lâu). Đang vào lại với vai trò người chơi...';
+        sessionToken = null;
+        listenAsClient();
+        registerDisconnectNotice();
+        sendToHost({t:'join', name: myName, id: myId});
+        watchHostPresenceForTakeover();
+        showLobby();
+        return;
+      }
+      isHost = true;
+      listenAsHost();
+      saveTLHostSession();
+      if(gameState){
+        showLobby(); // đảm bảo #homeScreen ẩn / khung sườn sẵn sàng trước khi applyState() mở #tableScreen
+        broadcastState();
+      } else {
+        publishRoomToPublic(roomCode, myName);
+        showLobby();
+        broadcastLobby();
+      }
+    });
+  }).catch(err => {
+    $('homeErr').textContent = 'Không đọc được dữ liệu phòng: ' + (err && err.message ? err.message : err);
+  });
+}
+
+function checkForSavedHostSession(){
+  const s = loadTLHostSession();
+  const box = $('tlHostReconnectBox');
+  if(!box) return;
+  if(!s){ box.classList.add('hidden'); return; }
+  $('tlHostReconnectInfo').textContent = `Tên: ${s.myName} • Mã phòng: ${s.roomCode}`;
+  box.classList.remove('hidden');
+}
+if($('btnHostReconnectSaved')) $('btnHostReconnectSaved').onclick = resumeAsHost;
+
+/* ================= TỰ ĐỘNG CHUYỂN CHỦ PHÒNG (HOST MIGRATION) =================
+   Không bắt người chơi phải chờ ĐÚNG chủ phòng cũ quay lại: bất kỳ ai đang đứng chờ
+   trong phòng (khách) đều tự nhận ra chủ phòng đã vắng mặt quá lâu và tự thay thế,
+   dùng transaction() của Firebase để đảm bảo dù nhiều người cùng phát hiện cùng lúc
+   thì cũng chỉ đúng 1 người "thắng" trở thành chủ phòng mới — tránh 2 người cùng
+   chạy listenAsHost() xử lý trùng một hành động (sẽ làm lệch bài/lệch điểm).
+   'activeHost' là node duy nhất xác định ai đang thật sự cầm quyền chủ phòng tại
+   một thời điểm — tách biệt với roomMeta/hostSnapshot vốn chỉ chứa dữ liệu ván. */
+const HOST_TAKEOVER_GRACE_MS = 8000; // chờ 8s sau khi chủ phòng vắng mặt mới cho phép chiếm quyền, tránh chuyển nhầm khi chỉ giật mạng 1-2s
+
+function activeHostRef(){
+  if(!fbDb || !roomCode) return null;
+  return fbDb.ref('tienlen_rooms/' + roomCode + '/activeHost');
+}
+
+// Gọi ngay khi một client MUỐN bắt đầu chạy listenAsHost() (tạo phòng, vào lại làm chủ
+// phòng, hoặc chiếm quyền). Dùng transaction() để chỉ đúng 1 người thắng — nếu phát hiện
+// người khác (không phải mình) đang giữ quyền hợp lệ, KHÔNG ghi đè, trả success=false qua
+// callback để nơi gọi tự lui về làm khách, tránh 2 người cùng chạy listenAsHost() song song.
+function claimActiveHost(onResult){
+  const ref = activeHostRef();
+  if(!ref || isBotMode){ if(onResult) onResult(true); return; }
+  ref.transaction(current => {
+    if(current && current.id && current.id !== myId) return; // đã có người khác giữ -> bỏ cuộc, không ghi đè
+    return {id: myId, since: Date.now()};
+  }).then(res => {
+    const success = !!(res.committed && res.snapshot && res.snapshot.val() && res.snapshot.val().id === myId);
+    // ServerValue.TIMESTAMP để Firebase tự điền đúng thời điểm NGẮT KẾT NỐI THẬT SỰ khi
+    // sự kiện onDisconnect xảy ra — nếu dùng Date.now() ở đây, giá trị sẽ bị tính SAI ngay
+    // lúc đăng ký (lúc vừa lên làm chủ phòng), không phải lúc họ thực sự mất mạng sau này.
+    if(success) ref.onDisconnect().set({id: null, since: firebase.database.ServerValue.TIMESTAMP});
+    if(onResult) onResult(success);
+  }).catch(() => { if(onResult) onResult(false); });
+}
+
+// Chủ phòng chủ động rời phòng (KHÔNG phải mất mạng — tab vẫn mở, onDisconnect chưa
+// kích hoạt) thì phải tự tay nhả quyền ngay, để người khác không phải chờ hết grace period.
+function releaseActiveHostIfMine(){
+  try{
+    if(!isHost || isBotMode) return;
+    const ref = activeHostRef();
+    if(ref) ref.set({id: null, since: Date.now()}).catch(()=>{});
+  } catch(e){}
+}
+
+let hostPresenceWatchRef = null, hostTakeoverTimer = null;
+
+// Khách gọi hàm này ngay sau khi vào phòng để theo dõi "có đúng 1 chủ phòng đang hoạt
+// động không". Nếu activeHost trống quá HOST_TAKEOVER_GRACE_MS thì tự thử chiếm quyền.
+function watchHostPresenceForTakeover(){
+  stopWatchingHostPresence();
+  const ref = activeHostRef();
+  if(!ref || isBotMode) return;
+  hostPresenceWatchRef = ref;
+  ref.on('value', snap => {
+    const v = snap.val();
+    clearTimeout(hostTakeoverTimer);
+    if(isHost) return; // tôi chính là chủ phòng, không cần tự chiếm quyền của mình
+    if(v && v.id){ return; } // đang có người giữ quyền chủ phòng -> yên tâm chờ
+    // activeHost trống -> tính grace period theo ĐÚNG thời điểm phòng bắt đầu trống
+    // (v.since, do onDisconnect ghi lại lúc chủ phòng thực sự mất kết nối), KHÔNG phải
+    // lúc client này mới mở app lên phát hiện ra. Nhờ vậy, kiểu chơi "đánh chậm" — cả bàn
+    // hay off không cùng lúc, có khi off hết cả bàn rồi ai đó quay lại sau nhiều giờ —
+    // sẽ được chiếm quyền NGAY khi mở app, thay vì phải chờ thêm 8 giây vô ích mỗi lần.
+    const vacantSince = (v && v.since) || 0;
+    const remaining = Math.max(0, HOST_TAKEOVER_GRACE_MS - (Date.now() - vacantSince));
+    hostTakeoverTimer = setTimeout(attemptTakeoverAsHost, remaining);
+  });
+}
+
+function stopWatchingHostPresence(){
+  clearTimeout(hostTakeoverTimer);
+  if(hostPresenceWatchRef){ try{ hostPresenceWatchRef.off('value'); }catch(e){} hostPresenceWatchRef = null; }
+}
+
+function attemptTakeoverAsHost(){
+  if(isHost || isBotMode || !roomCode || !myId) return;
+  claimActiveHost(success => {
+    if(!success) return; // không thắng -> người khác đã lo, tiếp tục giữ vai khách
+    // Thắng quyền chiếm chủ phòng: khôi phục từ snapshot gần nhất rồi tiếp quản xử lý.
+    isHost = true;
+    fbDb.ref('tienlen_rooms/' + roomCode + '/hostSnapshot').once('value').then(snap => {
+      const snapshot = snap.val();
+      if(snapshot){
+        players = safeArray(snapshot.players);
+        roomSettings = snapshot.roomSettings || roomSettings;
+        botList = safeArray(snapshot.botList);
+        gameState = snapshot.gameState || null;
+      }
+      listenAsHost();
+      saveTLHostSession();
+      stopWatchingHostPresence();
+      if(gameState){
+        broadcastState();
+      } else {
+        publishRoomToPublic(roomCode, myName);
+        showLobby();
+        broadcastLobby();
+      }
+    });
+  });
+}
+
 /* NGƯỜI CHƠI VẪN Ở TRONG BÀN, CHỈ RỚT MẠNG VÀI GIÂY RỒI TỰ NỐI LẠI (không tải lại trang):
    trường hợp này KHÔNG bao giờ đi qua màn hình Home/nút "Vào lại", nên phải tự phát hiện
    qua '.info/connected' của Firebase và tự gửi lại 'join' ngay khi mạng vừa nối lại, để
@@ -2623,7 +2837,10 @@ function leaveRoom(){
   try{ if(fbDb && roomCode && myId) fbDb.ref('tienlen_rooms/' + roomCode + '/toClient/' + myId).off(); }catch(e){}
   try{ if(fbDb && roomCode) fbDb.ref('tienlen_rooms/' + roomCode + '/toHost').off(); }catch(e){}
   removePlayerIndexEntry(myId);
+  releaseActiveHostIfMine();
+  stopWatchingHostPresence();
   clearTLSession();
+  clearTLHostSession();
   if(typeof timerLoop !== 'undefined' && timerLoop) clearInterval(timerLoop);
   isHost=false; isBotMode=false; isRuleTestMode=false; botList=[];
   roomCode=null; myId=null; sessionToken=null;
@@ -2634,6 +2851,7 @@ function leaveRoom(){
   const home=$('homeScreen'); if(home) home.classList.remove('hidden');
   try{ refreshPublicRooms(); }catch(e){}
   try{ checkForSavedTLSession(); }catch(e){}
+  try{ checkForSavedHostSession(); }catch(e){}
 }
 
 $('btnOpenRules').onclick = () => $('rulesOverlay').classList.remove('hidden');
@@ -2698,7 +2916,7 @@ function refreshPublicRooms(){
 }
 
 $('btnRefreshRooms').onclick = refreshPublicRooms;
-window.onload = () => { refreshPublicRooms(); checkForSavedTLSession(); watchConnectionForAutoRejoin(); checkCrossDeviceMatch(); };
+window.onload = () => { refreshPublicRooms(); checkForSavedTLSession(); checkForSavedHostSession(); watchConnectionForAutoRejoin(); checkCrossDeviceMatch(); };
 
 /* ---- VÀO LẠI VÁN ĐANG CHƠI (sau khi mất mạng/tắt app) ---- */
 function checkForSavedTLSession(){
@@ -2747,6 +2965,7 @@ function rejoinSavedSession(){
   listenAsClient();
   registerDisconnectNotice(); // đăng ký lại onDisconnect vì lần này KHÔNG có 'session' message mới
   sendToHost({t:'join', name:myName, id:myId});
+  watchHostPresenceForTakeover();
   showLobby();
 }
 
@@ -2784,6 +3003,7 @@ window.joinExistingRoom = function(code){
   onFirstLobbyMessage = () => { joined = true; clearTimeout(joinTimeout); };
   sendToHost({t:'join', name:myName, id:myId});
   updatePlayerIndexEntry(myId, roomCode, myName);
+  watchHostPresenceForTakeover();
   showLobby();
 };
 
@@ -2801,6 +3021,8 @@ $('btnCreate').onclick=()=>{
   botList = [];
   publishRoomToPublic(roomCode, myName);
   listenAsHost();
+  claimActiveHost();
+  saveTLHostSession();
   updatePlayerIndexEntry(myId, roomCode, myName);
   showLobby();
 };
@@ -3083,6 +3305,7 @@ function onClientMessage(msg){
 function broadcastLobby(){
   sendToAll({t:'lobby', players, settings: roomSettings});
   renderLobby();
+  persistHostSnapshot();
 }
 
 function broadcastChat(name, text, fromId = null){
@@ -6055,6 +6278,7 @@ function broadcastState(){
       console.error('❌ Lỗi khi gửi trạng thái ván chơi cho ' + id + ':', err);
     }
   });
+  persistHostSnapshot();
 }
 
 let currentState = null;
