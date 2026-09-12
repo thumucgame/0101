@@ -1127,8 +1127,8 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     <label>Tên người chơi (tự đặt, đổi lúc nào cũng được)</label>
     <input type="text" id="nameInput" maxlength="14" placeholder="Nhập tên của bạn...">
 
-    <label style="margin-top:10px;">📱 4 số cuối SĐT (không bắt buộc — điền để đổi máy/trình duyệt khác vẫn vào lại được ván đang chơi)</label>
-    <input type="text" id="phoneSuffixInput" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="VD: 3456" style="letter-spacing:3px;">
+    <label style="margin-top:10px;">🔑 Mật khẩu (không bắt buộc — dùng mật khẩu này để vào lại ván ở phòng khác/máy khác)</label>
+    <input type="text" id="playerPasswordInput" maxlength="20" placeholder="VD: minhkhang1234" style="letter-spacing:1px;">
 
     <div class="row" style="margin-top:16px;">
       <button class="btn btn-gold" id="btnCreate">Tạo phòng</button>
@@ -1151,7 +1151,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     </div>
 
     <div class="public-rooms-box hidden" id="tlCrossDeviceBox" style="border:1px solid #e5c15a;">
-      <label style="margin:8px 0 4px;">📱 Nhận ra bạn qua 4 số cuối SĐT — có ván đang chờ</label>
+      <label style="margin:8px 0 4px;">🔑 Nhận ra bạn qua mật khẩu — có ván đang chờ</label>
       <div style="font-size:12px;color:rgba(250,246,238,0.75);margin-bottom:8px;" id="tlCrossDeviceInfo"></div>
       <button class="btn btn-gold" id="btnCrossDeviceJoin" style="width:100%;">🔄 Vào lại ván trên thiết bị khác</button>
     </div>
@@ -1175,7 +1175,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     </div>
 
     <div class="public-rooms-box">
-      <label style="margin:8px 0 4px;">🎮 Ván đang diễn ra trên server (vào lại — cần 4 số cuối SĐT)</label>
+      <label style="margin:8px 0 4px;">🎮 Ván đang diễn ra trên server (vào lại — cần mật khẩu)</label>
       <div class="public-rooms-list" id="activeRoomsList">
         <div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">Đang tìm ván đang chơi...</div>
       </div>
@@ -1247,6 +1247,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 
     <div id="hostControls" style="margin-top:16px;">
       <button class="btn btn-gold" id="btnStart" style="width:100%;" disabled>Bắt đầu (2-4 người)</button>
+      <button class="btn btn-danger" id="btnDissolveRoomLobby" style="width:100%;margin-top:8px;">💥 Giải tán phòng</button>
     </div>
     <div id="guestWait" class="hidden" style="text-align:center;font-size:13px;color:rgba(250,246,238,.6);margin-top:12px;">
       Đang chờ chủ phòng bắt đầu...
@@ -1315,6 +1316,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     <h3 style="color:var(--gold);margin-top:0;">⚙️ CÀI ĐẶT TRONG VÁN</h3>
     <button class="btn btn-outline" id="btnPause30" style="width:100%;margin:6px 0;">⏸ Tạm dừng 30 giây</button>
     <button class="btn btn-danger" id="btnExitMatchSettings" style="width:100%;margin:6px 0;">🚪 Thoát trận</button>
+    <button class="btn btn-danger hidden" id="btnDissolveRoomInGame" style="width:100%;margin:6px 0;">💥 Giải tán phòng (kết thúc cho tất cả)</button>
     <button class="btn btn-outline" id="btnToggleSound" style="width:100%;margin:6px 0;">🔊 Âm thanh</button>
     <button class="btn btn-outline" id="btnCloseInGameSettings" style="width:100%;margin-top:6px;">Đóng</button>
     <div id="inGameSettingsMsg" style="font-size:12px;text-align:center;min-height:18px;margin-top:8px;color:var(--gold);"></div>
@@ -1499,17 +1501,19 @@ try {
 const PUBLIC_ROOMS_PATH = 'tienlen_public_rooms';
 const ROOM_TTL_MS = 15 * 60 * 1000;
 
-// ===== CHỈ MỤC "VÁN ĐANG CHỜ TÔI" THEO SĐT (xuyên thiết bị) =====
-// Chỉ áp dụng cho người chơi có myId dạng 'ph_xxxx' (đã nhập 4 số cuối SĐT).
-// Ghi lại phòng gần nhất họ tham gia để mở lại đúng ván đó dù đổi hẳn thiết bị/trình
-// duyệt khác — khác với TL_SESSION_KEY (localStorage) chỉ hoạt động trên CÙNG máy.
+// ===== CHỈ MỤC "VÁN ĐANG CHỜ TÔI" THEO MẬT KHẨU (xuyên thiết bị, xuyên phòng) =====
+// Chỉ áp dụng cho người chơi có myId dạng 'pw_xxxx' (đã nhập mật khẩu). Mật khẩu này
+// KHÔNG bị khoá vào một mã phòng cụ thể nào — cùng một mật khẩu có thể được dùng để
+// tạo/vào bất kỳ phòng nào, và chỉ mục dưới đây luôn ghi nhận phòng GẦN NHẤT mà mật
+// khẩu đó tham gia, để mở lại đúng ván dù đổi hẳn thiết bị/trình duyệt khác — khác với
+// TL_SESSION_KEY (localStorage) chỉ hoạt động trên CÙNG máy.
 const PLAYER_INDEX_PATH = 'tienlen_player_index';
 function updatePlayerIndexEntry(id, code, name){
-  if(!fbDb || !id || !code || String(id).indexOf('ph_') !== 0) return;
+  if(!fbDb || !id || !code || String(id).indexOf('pw_') !== 0) return;
   fbDb.ref(PLAYER_INDEX_PATH + '/' + id).set({ roomCode: code, name: name || '', updatedAt: Date.now() }).catch(()=>{});
 }
 function removePlayerIndexEntry(id){
-  if(!fbDb || !id || String(id).indexOf('ph_') !== 0) return;
+  if(!fbDb || !id || String(id).indexOf('pw_') !== 0) return;
   fbDb.ref(PLAYER_INDEX_PATH + '/' + id).remove().catch(()=>{});
 }
 
@@ -1962,31 +1966,33 @@ function describeChopTargetNice(combo){
   return describeCombo(combo);
 }
 
-// Định danh người chơi: nếu họ nhập "4 số cuối SĐT" thì dùng làm id CỐ ĐỊNH (ph_xxxx) để
-// nhận ra đúng người này dù đổi thiết bị/trình duyệt — tên hiển thị (myName) vẫn hoàn toàn
-// tự do, không bị khoá theo 4 số này. Không nhập thì rơi về id ngẫu nhiên như cũ (ẩn danh).
-const PHONE_SUFFIX_KEY = 'tienlen_phone_suffix';
+// Định danh người chơi: nếu họ nhập "mật khẩu" thì dùng làm id CỐ ĐỊNH (pw_xxxx) để
+// nhận ra đúng người này dù đổi thiết bị/trình duyệt HOẶC đổi sang mã phòng khác — tên
+// hiển thị (myName) vẫn hoàn toàn tự do, không bị khoá theo mật khẩu này. Một mật khẩu
+// duy nhất có thể được dùng để tạo/vào NHIỀU mã phòng khác nhau (không giới hạn 1 phòng).
+// Không nhập thì rơi về id ngẫu nhiên như cũ (ẩn danh).
+const PLAYER_PASSWORD_KEY = 'tienlen_player_password';
 const PLAYER_NAME_KEY = 'tienlen_player_name';
-function getPhoneSuffix(){
-  const el = document.getElementById('phoneSuffixInput');
+function getPlayerPassword(){
+  const el = document.getElementById('playerPasswordInput');
   const v = el ? el.value.trim() : '';
-  return /^[0-9]{4}$/.test(v) ? v : '';
+  return /^[A-Za-z0-9]{4,20}$/.test(v) ? v : '';
 }
 function generatePlayerId(){
-  const suffix = getPhoneSuffix();
-  if(suffix){
-    try{ localStorage.setItem(PHONE_SUFFIX_KEY, suffix); }catch(e){}
-    return 'ph_' + suffix;
+  const pass = getPlayerPassword();
+  if(pass){
+    try{ localStorage.setItem(PLAYER_PASSWORD_KEY, pass); }catch(e){}
+    return 'pw_' + pass;
   }
   return 'p_' + Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4);
 }
 (function restoreHomeFields(){
   try{
-    const savedSuffix = localStorage.getItem(PHONE_SUFFIX_KEY);
+    const savedPassword = localStorage.getItem(PLAYER_PASSWORD_KEY);
     const savedName = localStorage.getItem(PLAYER_NAME_KEY);
-    const sEl = document.getElementById('phoneSuffixInput');
+    const sEl = document.getElementById('playerPasswordInput');
     const nEl = document.getElementById('nameInput');
-    if(sEl && savedSuffix) sEl.value = savedSuffix;
+    if(sEl && savedPassword) sEl.value = savedPassword;
     if(nEl && savedName) nEl.value = savedName;
   }catch(e){}
 })();
@@ -2985,6 +2991,78 @@ async function leaveRoom(){
   try{ checkForSavedHostSession(); }catch(e){}
 }
 
+// "Giải tán phòng": khác với leaveRoom() (chủ phòng rời đi nhưng phòng vẫn tồn tại,
+// một người chơi khác có thể chiếm quyền chủ phòng qua cơ chế activeHost/hostSnapshot),
+// đây là hành động CHỦ ĐỘNG của chủ phòng để KẾT THÚC hẳn phòng cho TẤT CẢ mọi người —
+// không ai (kể cả BOT/host mới) có thể tiếp tục ván này nữa. Chỉ chủ phòng thật (không
+// phải BOT mode) mới gọi được hành động này.
+async function dissolveRoom(){
+  if(!isHost) return;
+  if(isBotMode){
+    // Ván chơi với BOT chỉ có một mình mình -> "giải tán" tương đương thoát ván bình thường.
+    if(!confirm('🚪 Thoát ván chơi với BOT này?')) return;
+    clearTLSession();
+    leaveRoom();
+    return;
+  }
+  if(!confirm('💥 Giải tán phòng này?\nToàn bộ người chơi khác sẽ bị đưa về Trang chủ ngay lập tức và không thể tiếp tục ván này. Hành động không thể hoàn tác.')) return;
+
+  const codeBeingClosed = roomCode;
+
+  // Báo cho mọi người chơi khác biết phòng bị giải tán TRƯỚC khi xoá dữ liệu, để tin
+  // nhắn kịp tới nơi (xem xử lý msg.t==='roomDissolved' trong onClientMessage()).
+  try{ sendToAll({t:'roomDissolved', reason:'HOST_DISSOLVED'}); }catch(e){ console.error('❌ Lỗi báo giải tán phòng:', e); }
+
+  try{ if(fbDb && codeBeingClosed) fbDb.ref('tienlen_rooms/' + codeBeingClosed + '/toHost').off(); }catch(e){}
+  try{ if(fbDb && codeBeingClosed && myId) fbDb.ref('tienlen_rooms/' + codeBeingClosed + '/toClient/' + myId).off(); }catch(e){}
+
+  // Chờ một chút để tin nhắn roomDissolved kịp tới các trình duyệt khác trước khi xoá
+  // hẳn dữ liệu phòng trên Firebase (nếu xoá ngay lập tức có thể tin nhắn chưa kịp gửi).
+  await new Promise(resolve => setTimeout(resolve, 600));
+
+  try{ await releaseActiveHostIfMine(); }catch(e){ console.error('❌ Lỗi nhả activeHost khi giải tán:', e); }
+  try{ if(fbDb && codeBeingClosed) await fbDb.ref('tienlen_rooms/' + codeBeingClosed).remove(); }catch(e){ console.error('❌ Lỗi xoá dữ liệu phòng khi giải tán:', e); }
+  removeRoomFromPublic(codeBeingClosed);
+  removePlayerIndexEntry(myId);
+
+  stopWatchingHostPresence();
+  clearTLSession();
+  clearTLHostSession();
+  if(typeof timerLoop !== 'undefined' && timerLoop) clearInterval(timerLoop);
+  isHost=false; isBotMode=false; isRuleTestMode=false; botList=[];
+  roomCode=null; myId=null; sessionToken=null;
+  gameState=null; currentState=null; players=[];
+  ['resultOverlay','tableScreen','lobbyScreen','inGameSettingsOverlay','matchSummaryOverlay','chatToggle','sidePanel'].forEach(id=>{
+    const el=$(id); if(el) el.classList.add('hidden');
+  });
+  const home=$('homeScreen'); if(home) home.classList.remove('hidden');
+  try{ refreshPublicRooms(); }catch(e){}
+  try{ checkForSavedTLSession(); }catch(e){}
+  try{ checkForSavedHostSession(); }catch(e){}
+}
+
+// Xử lý phía KHÁCH khi nhận được tin "phòng đã bị chủ phòng giải tán" — dọn dẹp session/
+// listener cục bộ y hệt lúc tự thoát, rồi báo và đưa về Trang chủ. Không gửi __disconnect__
+// về host vì phòng/host coi như không còn tồn tại nữa.
+function handleRoomDissolved(){
+  try{ if(fbDb && roomCode && myId) fbDb.ref('tienlen_rooms/' + roomCode + '/toClient/' + myId).off(); }catch(e){}
+  stopWatchingHostPresence();
+  clearTLSession();
+  clearTLHostSession();
+  if(typeof timerLoop !== 'undefined' && timerLoop) clearInterval(timerLoop);
+  isHost=false; isBotMode=false; isRuleTestMode=false; botList=[];
+  roomCode=null; myId=null; sessionToken=null;
+  gameState=null; currentState=null; players=[];
+  ['resultOverlay','tableScreen','lobbyScreen','inGameSettingsOverlay','matchSummaryOverlay','chatToggle','sidePanel'].forEach(id=>{
+    const el=$(id); if(el) el.classList.add('hidden');
+  });
+  const home=$('homeScreen'); if(home) home.classList.remove('hidden');
+  try{ refreshPublicRooms(); }catch(e){}
+  try{ checkForSavedTLSession(); }catch(e){}
+  try{ checkForSavedHostSession(); }catch(e){}
+  alert('💥 Chủ phòng đã giải tán phòng này. Bạn đã được đưa về Trang chủ.');
+}
+
 // Backup lifecycle: không thể await beforeunload/pagehide, nên dựa vào onDisconnect
 // đã được đăng ký trong persistHostSnapshot(). Khi có thời gian, vẫn cố ghi snapshot
 // cuối cùng để giảm tối đa cửa sổ race khi host đóng tab/app ở chế độ Đánh Chậm.
@@ -3007,6 +3085,8 @@ $('btnCloseInGameSettings').onclick=()=>$('inGameSettingsOverlay').classList.add
 $('btnToggleSound').onclick=()=>{ setLocalSoundEnabled(!localSoundEnabled); };
 $('btnPause30').onclick=()=>{ requestPause30(); $('inGameSettingsOverlay').classList.add('hidden'); };
 $('btnExitMatchSettings').onclick=()=>{ if(confirm('🚪 Thoát trận này?')){ $('inGameSettingsOverlay').classList.add('hidden'); clearTLSession(); leaveRoom(); } };
+if($('btnDissolveRoomLobby')) $('btnDissolveRoomLobby').onclick = dissolveRoom;
+if($('btnDissolveRoomInGame')) $('btnDissolveRoomInGame').onclick = () => { $('inGameSettingsOverlay').classList.add('hidden'); dissolveRoom(); };
 $('btnCloseRules').onclick = () => $('rulesOverlay').classList.add('hidden');
 
 $('roomCodeDisplay').onclick = () => {
@@ -3043,8 +3123,8 @@ function renderPublicRoomsList(){
     }
   }
 
-  // Danh sách 2: phòng ĐANG CHƠI (đã chia bài). Vào lại phải nhập đúng 4 số cuối SĐT
-  // từng dùng ở phòng đó — tránh người lạ click "Vào" chiếm ghế của người đang chơi dở.
+  // Danh sách 2: phòng ĐANG CHƠI (đã chia bài). Vào lại phải nhập đúng mật khẩu từng
+  // dùng ở phòng đó — tránh người lạ click "Vào" chiếm ghế của người đang chơi dở.
   const playingRooms = publicRooms.filter(r => r.status === 'PLAYING');
   if(activeEl){
     activeEl.innerHTML = '';
@@ -3059,7 +3139,7 @@ function renderPublicRoomsList(){
           <div style="width:100%;">
             <div><b>🎮 Phòng ${escapeHtml(r.code)}</b><br><small style="color:rgba(250,246,238,0.6)">Chủ phòng: ${escapeHtml(r.hostName)} (${r.count}/4) — đang chơi</small></div>
             <div class="row" style="margin-top:6px;">
-              <input type="text" id="${escapeHtml(inputId)}" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="4 số cuối SĐT" style="letter-spacing:2px;">
+              <input type="text" id="${escapeHtml(inputId)}" maxlength="20" placeholder="Mật khẩu" style="letter-spacing:1px;">
               <button class="btn btn-gold" style="flex:0 0 auto;" onclick="reenterPlayingRoom('${escapeHtml(r.code)}','${escapeHtml(inputId)}')">Vào lại</button>
             </div>
             <div class="err" id="err_${escapeHtml(inputId)}" style="font-size:11px;margin-top:2px;"></div>
@@ -3071,24 +3151,26 @@ function renderPublicRoomsList(){
   }
 }
 
-// Vào lại một ván ĐANG CHƠI từ danh sách công khai: bắt buộc đúng 4 số cuối SĐT đã
-// dùng để chơi ván đó, để không cho người lạ tự ý chiếm chỗ của người chơi thật.
-// 4 số này chính là cái tạo ra myId cố định 'ph_xxxx' (xem generatePlayerId()), nên
-// nhập đúng số sẽ tự động được host nhận ra là người chơi cũ và cho vào lại đúng ghế.
+// Vào lại một ván ĐANG CHƠI từ danh sách công khai: bắt buộc đúng mật khẩu đã dùng để
+// chơi ván đó, để không cho người lạ tự ý chiếm chỗ của người chơi thật. Mật khẩu này
+// chính là cái tạo ra myId cố định 'pw_xxxx' (xem generatePlayerId()), nên nhập đúng
+// mật khẩu sẽ tự động được host nhận ra là người chơi cũ và cho vào lại đúng ghế — và
+// vì mật khẩu không bị khoá theo phòng, cùng một mật khẩu này có thể dùng ở các mã
+// phòng khác nhau vào những lúc khác.
 window.reenterPlayingRoom = function(code, inputId){
   const el = document.getElementById(inputId);
   const errEl = document.getElementById('err_' + inputId);
   const v = el ? el.value.trim() : '';
-  if(!/^[0-9]{4}$/.test(v)){
-    if(errEl) errEl.textContent = 'Nhập đủ 4 số cuối SĐT bạn đã dùng lúc chơi ván này.';
+  if(!/^[A-Za-z0-9]{4,20}$/.test(v)){
+    if(errEl) errEl.textContent = 'Nhập đúng mật khẩu bạn đã dùng lúc chơi ván này (4-20 ký tự chữ/số).';
     if(el) el.focus();
     return;
   }
   if(errEl) errEl.textContent = '';
-  // Điền vào ô SĐT chính ở màn hình chủ để generatePlayerId() lấy đúng myId='ph_xxxx'.
-  const mainSuffixEl = document.getElementById('phoneSuffixInput');
-  if(mainSuffixEl) mainSuffixEl.value = v;
-  try{ localStorage.setItem(PHONE_SUFFIX_KEY, v); }catch(e){}
+  // Điền vào ô mật khẩu chính ở màn hình chủ để generatePlayerId() lấy đúng myId='pw_xxxx'.
+  const mainPasswordEl = document.getElementById('playerPasswordInput');
+  if(mainPasswordEl) mainPasswordEl.value = v;
+  try{ localStorage.setItem(PLAYER_PASSWORD_KEY, v); }catch(e){}
   joinExistingRoom(code);
 };
 
@@ -3123,10 +3205,10 @@ function refreshPublicRooms(){
 $('btnRefreshRooms').onclick = refreshPublicRooms;
 // FIX "LUÔN HIỆN PHÒNG ĐANG TREO GÂY RỐI": trước đây mở trang là tự động chạy
 // checkForSavedHostSession() + checkCrossDeviceMatch() ngay lập tức (dựa vào phiên đã lưu/
-// số điện thoại đã nhớ từ lần trước), nên 2 khối "Bạn là chủ phòng..." / "Nhận ra bạn qua
-// 4 số..." cứ hiện sẵn mỗi lần vào trang dù người chơi chỉ đang muốn tạo ván mới, gây rối.
-// Giờ 2 khối này CHỈ được kiểm tra khi người chơi chủ động gõ đủ 4 số cuối SĐT (xem
-// wirePhoneSuffixLiveCheck bên dưới) — đúng ý muốn "chỉ khi cần vào lại mới gõ số".
+// mật khẩu đã nhớ từ lần trước), nên 2 khối "Bạn là chủ phòng..." / "Nhận ra bạn qua
+// mật khẩu..." cứ hiện sẵn mỗi lần vào trang dù người chơi chỉ đang muốn tạo ván mới, gây rối.
+// Giờ 2 khối này CHỈ được kiểm tra khi người chơi chủ động gõ đủ mật khẩu (xem
+// wirePlayerPasswordLiveCheck bên dưới) — đúng ý muốn "chỉ khi cần vào lại mới gõ mật khẩu".
 window.onload = () => { refreshPublicRooms(); checkForSavedTLSession(); watchConnectionForAutoRejoin(); };
 
 /* ---- VÀO LẠI VÁN ĐANG CHƠI (sau khi mất mạng/tắt app) ---- */
@@ -3139,25 +3221,28 @@ function checkForSavedTLSession(){
   box.classList.remove('hidden');
 }
 
-/* ---- VÀO LẠI VÁN "ĐÁNH CHẬM" TỪ THIẾT BỊ/TRÌNH DUYỆT KHÁC ----
+/* ---- VÀO LẠI VÁN "ĐÁNH CHẬM" TỪ THIẾT BỊ/TRÌNH DUYỆT KHÁC (HOẶC MÃ PHÒNG KHÁC) ----
    Khác với checkForSavedTLSession() (chỉ đọc localStorage trên CÙNG máy),
-   hàm này tra chỉ mục PLAYER_INDEX_PATH trên Firebase theo "4 số cuối SĐT"
-   đã lưu, nên hoạt động được kể cả khi mở trên máy/trình duyệt hoàn toàn khác. */
-// TỪ v2: nhận suffixOverride (số vừa gõ) để dò được NGAY trên trình duyệt/máy mới,
+   hàm này tra chỉ mục PLAYER_INDEX_PATH trên Firebase theo "mật khẩu" đã lưu, nên
+   hoạt động được kể cả khi mở trên máy/trình duyệt hoàn toàn khác. Mật khẩu không
+   bị khoá vào một mã phòng cố định: chỉ mục luôn trỏ tới phòng GẦN NHẤT mà mật khẩu
+   đó vừa dùng, nên cùng một mật khẩu có thể lần lượt được dùng ở nhiều mã phòng khác
+   nhau — mỗi lần vào phòng mới, chỉ mục sẽ tự cập nhật sang mã phòng đó. */
+// nhận passwordOverride (mật khẩu vừa gõ) để dò được NGAY trên trình duyệt/máy mới,
 // không bắt buộc phải có sẵn trong localStorage như trước (localStorage trình duyệt
 // mới thì luôn rỗng nên trước đây phải tự nhớ mã phòng rồi gõ vào ô "Vào phòng bằng mã").
-function checkCrossDeviceMatch(suffixOverride){
+function checkCrossDeviceMatch(passwordOverride){
   const box = $('tlCrossDeviceBox');
   if(!box) return;
   if(!fbDb){ box.classList.add('hidden'); return; }
-  let suffix = suffixOverride || '';
-  if(!suffix){ try{ suffix = localStorage.getItem(PHONE_SUFFIX_KEY) || ''; }catch(e){} }
-  if(!/^[0-9]{4}$/.test(suffix)){ box.classList.add('hidden'); return; }
-  box.dataset.checkingSuffix = suffix;
-  const idxId = 'ph_' + suffix;
+  let pass = passwordOverride || '';
+  if(!pass){ try{ pass = localStorage.getItem(PLAYER_PASSWORD_KEY) || ''; }catch(e){} }
+  if(!/^[A-Za-z0-9]{4,20}$/.test(pass)){ box.classList.add('hidden'); return; }
+  box.dataset.checkingPassword = pass;
+  const idxId = 'pw_' + pass;
   fbDb.ref(PLAYER_INDEX_PATH + '/' + idxId).once('value').then(snap => {
-    // Người dùng có thể đã gõ tiếp/xoá số trong lúc đợi Firebase trả lời — bỏ kết quả cũ.
-    if(box.dataset.checkingSuffix !== suffix) return;
+    // Người dùng có thể đã gõ tiếp/xoá mật khẩu trong lúc đợi Firebase trả lời — bỏ kết quả cũ.
+    if(box.dataset.checkingPassword !== pass) return;
     const entry = snap.val();
     if(!entry || !entry.roomCode){ box.classList.add('hidden'); return; }
     const local = loadTLSession();
@@ -3172,27 +3257,27 @@ if($('btnCrossDeviceJoin')) $('btnCrossDeviceJoin').onclick = () => {
   const code = box && box.dataset.roomCode;
   if(code) joinExistingRoom(code);
 };
-// Gõ tới đâu, dò tới đó: vừa nhập đủ 4 số là tự kiểm tra ngay (chờ 400ms để khỏi dò
-// liên tục từng ký tự), không cần chờ tải lại trang hay tự nhớ mã phòng nữa.
-(function wirePhoneSuffixLiveCheck(){
-  const el = document.getElementById('phoneSuffixInput');
+// Gõ tới đâu, dò tới đó: vừa nhập đủ mật khẩu hợp lệ là tự kiểm tra ngay (chờ 400ms để
+// khỏi dò liên tục từng ký tự), không cần chờ tải lại trang hay tự nhớ mã phòng nữa.
+(function wirePlayerPasswordLiveCheck(){
+  const el = document.getElementById('playerPasswordInput');
   if(!el) return;
   let t = null;
   el.addEventListener('input', () => {
     const v = el.value.trim();
     clearTimeout(t);
-    if(!/^[0-9]{4}$/.test(v)){
+    if(!/^[A-Za-z0-9]{4,20}$/.test(v)){
       const box = $('tlCrossDeviceBox');
-      if(box){ box.classList.add('hidden'); box.dataset.checkingSuffix = ''; }
+      if(box){ box.classList.add('hidden'); box.dataset.checkingPassword = ''; }
       const hostBox = $('tlHostReconnectBox');
       if(hostBox) hostBox.classList.add('hidden');
       return;
     }
-    try{ localStorage.setItem(PHONE_SUFFIX_KEY, v); }catch(e){}
-    // Gõ đủ 4 số = tín hiệu "tôi muốn vào lại ván đang treo" — nhân tiện kiểm tra luôn
-    // phiên chủ phòng đã lưu trên MÁY NÀY (không phụ thuộc số vừa gõ, vì phiên chủ phòng
-    // vốn lưu theo trình duyệt chứ không theo SĐT), gộp chung một hành động cho gọn thay
-    // vì tách rời 2 lần tự động hiện như trước.
+    try{ localStorage.setItem(PLAYER_PASSWORD_KEY, v); }catch(e){}
+    // Gõ đủ mật khẩu hợp lệ = tín hiệu "tôi muốn vào lại ván đang treo" — nhân tiện
+    // kiểm tra luôn phiên chủ phòng đã lưu trên MÁY NÀY (không phụ thuộc mật khẩu vừa
+    // gõ, vì phiên chủ phòng vốn lưu theo trình duyệt chứ không theo mật khẩu), gộp
+    // chung một hành động cho gọn thay vì tách rời 2 lần tự động hiện như trước.
     t = setTimeout(() => { checkCrossDeviceMatch(v); checkForSavedHostSession(); }, 400);
   });
 })();
@@ -3217,7 +3302,7 @@ function publishRoomToPublic(code, hostName, forceStatus){
   if(!fbDb || !code) return;
   // status: 'PLAYING' khi ván đã bắt đầu chia bài (gameState tồn tại và chưa kết thúc),
   // ngược lại là 'LOBBY' (đang ở phòng chờ). Dùng để tách 2 danh sách trên trang chủ:
-  // "Phòng đang mở" (vào thẳng, không cần gì) và "Ván đang diễn ra" (vào lại cần 4 số SĐT).
+  // "Phòng đang mở" (vào thẳng, không cần gì) và "Ván đang diễn ra" (vào lại cần mật khẩu).
   // forceStatus cho phép nơi gọi khẳng định luôn trạng thái đúng ngay tại thời điểm gọi
   // (vd dealNewGame() gọi hàm này TRƯỚC khi gán gameState mới cho ván sắp chia).
   const status = forceStatus || ((gameState && !gameState.isEnded) ? 'PLAYING' : 'LOBBY');
@@ -3381,7 +3466,7 @@ function onHostMessage(fromId, msg, token){
       sendToPlayer(msg.id, {t:'session', token:playerTokens[msg.id]});
       publishRoomToPublic(roomCode, players[0].name);
     } else if(existing){
-      // NGƯỜI CŨ VÀO LẠI (cùng myId — ví dụ cùng "4 số cuối SĐT" nên trùng myId dù đổi
+      // NGƯỜI CŨ VÀO LẠI (cùng myId — ví dụ cùng "mật khẩu" nên trùng myId dù đổi
       // hẳn sang thiết bị/trình duyệt khác, không chỉ riêng trường hợp mất mạng trên
       // CÙNG máy). Luôn cấp lại token mới cho lần vào này để họ thao tác được tiếp,
       // và nếu đang bị đánh dấu mất mạng thì gỡ cờ đó, trả lại quyền điều khiển ngay —
@@ -3473,6 +3558,10 @@ function isStaleQueuedMessage(msg){
 function onClientMessage(msg){
   if(!msg || !msg.t){ console.error('⚠️ Message nhận được không hợp lệ:', msg); return; }
   try{
+    if(msg.t==='roomDissolved'){
+      handleRoomDissolved();
+      return;
+    }
     if(msg.t==='session'){
       if(typeof msg.token === 'string' && msg.token.length >= 32){
         sessionToken = msg.token;
@@ -4153,6 +4242,8 @@ function updateInGameSettingsUI(){
   const used=!!(currentState && currentState.pauseUsed && currentState.pauseUsed[myId]);
   const active=!!(currentState && currentState.pauseState && currentState.pauseState.active);
   if(p){ p.disabled=used||active||!!(currentState&&currentState.isEnded); p.textContent=used?'⏸ Đã dùng lượt tạm dừng':(active?'⏸ Đang tạm dừng':'⏸ Tạm dừng 30 giây'); }
+  const dissolveBtn=$('btnDissolveRoomInGame');
+  if(dissolveBtn) dissolveBtn.classList.toggle('hidden', !(isHost && !isBotMode));
 }
 function updatePauseOverlay(st){
   const ov=$('pauseOverlay'); if(!ov) return;
