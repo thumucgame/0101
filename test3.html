@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -1165,11 +1166,18 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 
     <div class="public-rooms-box">
       <label style="margin:8px 0 4px;display:flex;justify-content:space-between;align-items:center;">
-        <span>🏠 Phòng gần đây (chỉ trên máy này)</span>
+        <span>🌐 Phòng đang mở (vào ngay, không cần mã)</span>
         <button class="btn btn-outline" id="btnRefreshRooms" style="font-size:10px;padding:2px 6px;">🔄 Làm mới</button>
       </label>
       <div class="public-rooms-list" id="publicRoomsList">
         <div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">Đang tìm phòng trực tuyến...</div>
+      </div>
+    </div>
+
+    <div class="public-rooms-box">
+      <label style="margin:8px 0 4px;">🎮 Ván đang diễn ra trên server (vào lại — cần 4 số cuối SĐT)</label>
+      <div class="public-rooms-list" id="activeRoomsList">
+        <div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">Đang tìm ván đang chơi...</div>
       </div>
     </div>
 
@@ -2241,6 +2249,10 @@ function resumeAsHost(){
       if(gameState){
         showLobby(); // đảm bảo #homeScreen ẩn / khung sườn sẵn sàng trước khi applyState() mở #tableScreen
         broadcastState();
+        // Đăng lại phòng công khai với status PLAYING: mục cũ có thể đã bị Firebase tự xoá
+        // (onDisconnect) lúc chủ phòng vừa mất kết nối — cần đăng lại để phòng này hiện lại
+        // trong danh sách "Ván đang diễn ra" và onDisconnect được gắn lại cho lần rớt mạng sau.
+        if(!isBotMode) publishRoomToPublic(roomCode, myName, 'PLAYING');
       } else {
         publishRoomToPublic(roomCode, myName);
         showLobby();
@@ -2380,6 +2392,8 @@ function attemptTakeoverAsHost(){
       stopWatchingHostPresence();
       if(gameState){
         broadcastState();
+        // Đăng lại (xem giải thích ở resumeAsHost()) để phòng hiện lại trong "Ván đang diễn ra".
+        publishRoomToPublic(roomCode, myName, 'PLAYING');
       } else {
         publishRoomToPublic(roomCode, myName);
         showLobby();
@@ -3008,29 +3022,86 @@ let publicRoomsListenerAttached = false;
 
 function renderPublicRoomsList(){
   const listEl = $('publicRoomsList');
-  listEl.innerHTML = '';
-  if(publicRooms.length === 0){
-    listEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">Chưa có phòng nào mở. Hãy bấm "Tạo phòng"!</div>';
+  const activeEl = $('activeRoomsList');
+
+  // Danh sách 1: phòng còn ở PHÒNG CHỜ (chưa chia bài) — vào thẳng, không cần gì.
+  const lobbyRooms = publicRooms.filter(r => r.status !== 'PLAYING');
+  if(listEl){
+    listEl.innerHTML = '';
+    if(lobbyRooms.length === 0){
+      listEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">Chưa có phòng chờ nào mở. Hãy bấm "Tạo phòng"!</div>';
+    } else {
+      lobbyRooms.slice().sort((a,b)=>b.time-a.time).forEach(r => {
+        const item = document.createElement('div');
+        item.className = 'public-room-item';
+        item.innerHTML = `
+          <div><b>Phòng ${escapeHtml(r.code)}</b><br><small style="color:rgba(250,246,238,0.6)">Chủ phòng: ${escapeHtml(r.hostName)} (${r.count}/4)</small></div>
+          <button class="btn btn-gold" style="padding:4px 10px;font-size:12px;" onclick="joinExistingRoom('${escapeHtml(r.code)}')">Vào</button>
+        `;
+        listEl.appendChild(item);
+      });
+    }
+  }
+
+  // Danh sách 2: phòng ĐANG CHƠI (đã chia bài). Vào lại phải nhập đúng 4 số cuối SĐT
+  // từng dùng ở phòng đó — tránh người lạ click "Vào" chiếm ghế của người đang chơi dở.
+  const playingRooms = publicRooms.filter(r => r.status === 'PLAYING');
+  if(activeEl){
+    activeEl.innerHTML = '';
+    if(playingRooms.length === 0){
+      activeEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">Hiện không có ván nào đang diễn ra.</div>';
+    } else {
+      playingRooms.slice().sort((a,b)=>b.time-a.time).forEach(r => {
+        const item = document.createElement('div');
+        item.className = 'public-room-item';
+        const inputId = 'reenter_' + r.code;
+        item.innerHTML = `
+          <div style="width:100%;">
+            <div><b>🎮 Phòng ${escapeHtml(r.code)}</b><br><small style="color:rgba(250,246,238,0.6)">Chủ phòng: ${escapeHtml(r.hostName)} (${r.count}/4) — đang chơi</small></div>
+            <div class="row" style="margin-top:6px;">
+              <input type="text" id="${escapeHtml(inputId)}" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="4 số cuối SĐT" style="letter-spacing:2px;">
+              <button class="btn btn-gold" style="flex:0 0 auto;" onclick="reenterPlayingRoom('${escapeHtml(r.code)}','${escapeHtml(inputId)}')">Vào lại</button>
+            </div>
+            <div class="err" id="err_${escapeHtml(inputId)}" style="font-size:11px;margin-top:2px;"></div>
+          </div>
+        `;
+        activeEl.appendChild(item);
+      });
+    }
+  }
+}
+
+// Vào lại một ván ĐANG CHƠI từ danh sách công khai: bắt buộc đúng 4 số cuối SĐT đã
+// dùng để chơi ván đó, để không cho người lạ tự ý chiếm chỗ của người chơi thật.
+// 4 số này chính là cái tạo ra myId cố định 'ph_xxxx' (xem generatePlayerId()), nên
+// nhập đúng số sẽ tự động được host nhận ra là người chơi cũ và cho vào lại đúng ghế.
+window.reenterPlayingRoom = function(code, inputId){
+  const el = document.getElementById(inputId);
+  const errEl = document.getElementById('err_' + inputId);
+  const v = el ? el.value.trim() : '';
+  if(!/^[0-9]{4}$/.test(v)){
+    if(errEl) errEl.textContent = 'Nhập đủ 4 số cuối SĐT bạn đã dùng lúc chơi ván này.';
+    if(el) el.focus();
     return;
   }
-  publicRooms.slice().sort((a,b)=>b.time-a.time).forEach(r => {
-    const item = document.createElement('div');
-    item.className = 'public-room-item';
-    item.innerHTML = `
-      <div><b>Phòng ${escapeHtml(r.code)}</b><br><small style="color:rgba(250,246,238,0.6)">Chủ phòng: ${escapeHtml(r.hostName)} (${r.count}/4)</small></div>
-      <button class="btn btn-gold" style="padding:4px 10px;font-size:12px;" onclick="joinExistingRoom('${escapeHtml(r.code)}')">Vào</button>
-    `;
-    listEl.appendChild(item);
-  });
-}
+  if(errEl) errEl.textContent = '';
+  // Điền vào ô SĐT chính ở màn hình chủ để generatePlayerId() lấy đúng myId='ph_xxxx'.
+  const mainSuffixEl = document.getElementById('phoneSuffixInput');
+  if(mainSuffixEl) mainSuffixEl.value = v;
+  try{ localStorage.setItem(PHONE_SUFFIX_KEY, v); }catch(e){}
+  joinExistingRoom(code);
+};
 
 function refreshPublicRooms(){
   const listEl = $('publicRoomsList');
+  const activeEl = $('activeRoomsList');
   if(!fbDb){
-    listEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">⚠️ Không kết nối được máy chủ danh sách phòng.</div>';
+    if(listEl) listEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">⚠️ Không kết nối được máy chủ danh sách phòng.</div>';
+    if(activeEl) activeEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">⚠️ Không kết nối được máy chủ.</div>';
     return;
   }
-  listEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">Đang quét phòng...</div>';
+  if(listEl) listEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">Đang quét phòng...</div>';
+  if(activeEl) activeEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">Đang quét phòng...</div>';
 
   if(!publicRoomsListenerAttached){
     publicRoomsListenerAttached = true;
@@ -3041,7 +3112,8 @@ function refreshPublicRooms(){
       renderPublicRoomsList();
     }, err => {
       console.error('Lỗi lắng nghe danh sách phòng:', err);
-      listEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">⚠️ Không tải được danh sách phòng.</div>';
+      if(listEl) listEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">⚠️ Không tải được danh sách phòng.</div>';
+      if(activeEl) activeEl.innerHTML = '<div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">⚠️ Không tải được danh sách phòng.</div>';
     });
   } else {
     renderPublicRoomsList();
@@ -3141,10 +3213,16 @@ function rejoinSavedSession(){
 if($('btnReconnectSaved')) $('btnReconnectSaved').onclick = rejoinSavedSession;
 if($('btnHostReconnectSaved')) $('btnHostReconnectSaved').onclick = resumeAsHost;
 
-function publishRoomToPublic(code, hostName){
+function publishRoomToPublic(code, hostName, forceStatus){
   if(!fbDb || !code) return;
+  // status: 'PLAYING' khi ván đã bắt đầu chia bài (gameState tồn tại và chưa kết thúc),
+  // ngược lại là 'LOBBY' (đang ở phòng chờ). Dùng để tách 2 danh sách trên trang chủ:
+  // "Phòng đang mở" (vào thẳng, không cần gì) và "Ván đang diễn ra" (vào lại cần 4 số SĐT).
+  // forceStatus cho phép nơi gọi khẳng định luôn trạng thái đúng ngay tại thời điểm gọi
+  // (vd dealNewGame() gọi hàm này TRƯỚC khi gán gameState mới cho ván sắp chia).
+  const status = forceStatus || ((gameState && !gameState.isEnded) ? 'PLAYING' : 'LOBBY');
   const roomRef = fbDb.ref(PUBLIC_ROOMS_PATH + '/' + code);
-  roomRef.set(sanitizeForFirebase({ code, hostName: hostName || 'Người chơi', count: players.length, time: Date.now() }))
+  roomRef.set(sanitizeForFirebase({ code, hostName: hostName || 'Người chơi', count: players.length, status, time: Date.now() }))
     .catch(e => console.error('Lỗi đăng phòng công khai:', e));
   roomRef.onDisconnect().remove();
 }
@@ -4145,7 +4223,9 @@ function dealNewGame(){
     if(Object.keys(persisted).length) matchScores = {...matchScores, ...persisted};
   }
   ensureMatchLedger(players.map(p=>p.id));
-  if(isHost && !isBotMode) publishRoomToPublic(roomCode, players[0] ? players[0].name : myName);
+  // forceStatus='PLAYING': ván sắp chia bài ngay bên dưới, dù gameState hiện tại (ván trước,
+  // hoặc null nếu đây là ván đầu) chưa phản ánh đúng — tránh bị đăng nhầm là 'LOBBY'.
+  if(isHost && !isBotMode) publishRoomToPublic(roomCode, players[0] ? players[0].name : myName, 'PLAYING');
   consecutivePlayCount = 0;
   lastNotifiedTurnId = null;
   let hands;
