@@ -2817,9 +2817,11 @@ function findMaxPairRuns(handCards){
   const runs = [];
   let r = 0;
   while (r <= 11) { // rank 12 (lá 2/heo) không được tính vào đôi thông theo luật
-    if ((rankCount[r]||0) >= 2) {
+    // Hạng có đủ 4 lá (tứ quý) KHÔNG được coi là một "đôi" trong chuỗi đôi thông —
+    // tứ quý luôn là 1 bộ độc lập, không được mượn 2/4 lá để nối đôi thông.
+    if ((rankCount[r]||0) === 2 || (rankCount[r]||0) === 3) {
       let start = r;
-      while (r <= 11 && (rankCount[r]||0) >= 2) r++;
+      while (r <= 11 && ((rankCount[r]||0) === 2 || (rankCount[r]||0) === 3)) r++;
       const count = r - start;
       if (count >= 3) runs.push({ count, fromR: start, toR: r - 1 });
     } else {
@@ -4769,26 +4771,41 @@ function calculateCongSettlement(congIdsInput){
   const order = gameState ? safeArray(gameState.order) : [];
   const congIds = new Set(safeArray(congIdsInput).filter(id => order.includes(id)));
   const receivers = order.filter(id => !congIds.has(id));
+  // CHẾ ĐỘ TÍNH ĐIỂM dùng luật Cóng RIÊNG (xem bên dưới) — không dùng chung với
+  // NHATANCA/CHATCHEM/WATER nữa dù trước đây chia sẻ cùng congPerReceiver.
+  const isPointsMode = !!(gameState && gameState.gameMode === 'POINTS');
+  const winnerId = gameState ? (safeArray(gameState.finished)[0] || null) : null;
 
   // LUẬT CÓNG:
-  // - CHẾ ĐỘ TÍNH ĐIỂM: mỗi người Cóng đền 1 điểm cho MỖI người còn lại.
-  //   Bàn 4, 1 Cóng -> người Cóng -3; mỗi người còn lại +1.
-  //   Bàn 4, 3 Cóng -> mỗi người Cóng -1; người duy nhất còn lại +3.
-  // - CHẾ ĐỘ ĐÁNH NƯỚC: giữ nguyên mức Cóng hiện tại (4 Nước/người nhận).
-  const congPerReceiver = gameState && (gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM') ? 1 : 4;
+  // - CHẾ ĐỘ TÍNH ĐIỂM (POINTS): mỗi người Cóng đền CỐ ĐỊNH 6 điểm (không nhân theo
+  //   số người còn lại), và toàn bộ khoản đó dồn 100% về NGƯỜI VỀ NHẤT — không chia
+  //   cho Nhì/Ba. Cóng cả bàn = 6 × số người Cóng, vẫn dồn hết về người về Nhất.
+  // - NHATANCA / CHATCHEM: giữ nguyên luật cũ — mỗi người Cóng đền 1 điểm cho MỖI
+  //   người còn lại, chia đều.
+  // - CHẾ ĐỘ ĐÁNH NƯỚC (WATER): giữ nguyên mức Cóng hiện tại (4 Nước/người nhận).
+  const congPerReceiver = isPointsMode
+    ? 6
+    : (gameState && (gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM') ? 1 : 4);
   const debtByCong = {};
   const receiveByPlayer = {};
   let totalDebt = 0;
 
   congIds.forEach(id => {
-    const debt = congPerReceiver * receivers.length;
+    // POINTS: mỗi người Cóng chỉ nợ đúng 6 (không nhân số người nhận, vì không chia đều).
+    const debt = isPointsMode ? congPerReceiver : congPerReceiver * receivers.length;
     debtByCong[id] = debt;
     totalDebt += debt;
   });
 
   if(receivers.length > 0 && totalDebt > 0){
-    const shareEach = totalDebt / receivers.length;
-    receivers.forEach(id => { receiveByPlayer[id] = shareEach; });
+    if(isPointsMode && winnerId && receivers.includes(winnerId)){
+      // LUẬT MỚI: toàn bộ tiền Cóng (kể cả Cóng cả bàn, 6 × số người Cóng) đổ hết
+      // về một mình người về Nhất, Nhì/Ba (nếu có, không bị Cóng) không nhận gì.
+      receiveByPlayer[winnerId] = totalDebt;
+    } else {
+      const shareEach = totalDebt / receivers.length;
+      receivers.forEach(id => { receiveByPlayer[id] = shareEach; });
+    }
   }
 
   return {
@@ -4798,6 +4815,8 @@ function calculateCongSettlement(congIdsInput){
     debtByCong,
     receiveByPlayer,
     totalDebt,
+    isPointsMode,
+    winnerId,
     // Chỉ có 1 người không Cóng khi có 3 người Cóng trong bàn 4.
     isAllTableCong: order.length > 1 && receivers.length === 1 && congIds.size === order.length - 1
   };
@@ -6390,6 +6409,7 @@ function endGame(){
       applyCongSettlementLive(cong);
     }
 
+    const isPointsMode = gameState.gameMode === 'POINTS';
     const lastPlaceId = gameState.finished[gameState.finished.length - 1];
     const secondLastPlaceId = gameState.finished.length >= 2
       ? gameState.finished[gameState.finished.length - 2]
@@ -6399,11 +6419,18 @@ function endGame(){
     let foulPenaltiesToSecondLast = 0;
 
     gameState.order.forEach(id => {
-      if(congIdSet.has(id)) return;
+      const isCong = congIdSet.has(id);
+      // CHẾ ĐỘ TÍNH ĐIỂM: người bị Cóng vẫn bị xét Thối trên tay (Heo/Tứ Quý/Đôi Thông...);
+      // khoản Thối này dồn thẳng về người về Nhất, giống hệt khoản Cóng — KHÔNG còn bỏ qua
+      // như luật cũ. CHATCHEM vẫn giữ luật cũ: Cóng thì bỏ qua Thối.
+      if(isCong && !isPointsMode) return;
       const foulInfo = checkFoulPunishment(safeArray(gameState.hands[id]));
       if(foulInfo.totalPenalty <= 0) return;
       foulDetailsMap[id] = foulInfo;
-      if(id === lastPlaceId && secondLastPlaceId !== lastPlaceId){
+      if(isCong){
+        foulPenaltiesTotal += foulInfo.totalPenalty;
+        gameState.roundLog.push({ icon:'🐷', text:`${gameState.names[id]} (bị Cóng) bị Thối bài → đền ${foulInfo.totalPenalty} điểm cho ${gameState.names[winnerId]} (${foulInfo.details.join(', ')}).` });
+      } else if(id === lastPlaceId && secondLastPlaceId !== lastPlaceId){
         foulPenaltiesToSecondLast += foulInfo.totalPenalty;
         gameState.roundLog.push({ icon:'🐷', text:`${gameState.names[id]} (về Bét) bị Thối bài → đền ${foulInfo.totalPenalty} điểm cho ${gameState.names[secondLastPlaceId]} (${foulInfo.details.join(', ')}).` });
       } else {
@@ -6420,12 +6447,21 @@ function endGame(){
         : Number(cong.receiveByPlayer[id] || 0);
       const chopAward = isCong ? 0 : Number((gameState.liveChopAwards || {})[id] || 0);
 
-      // Người Cóng chỉ chịu khoản Cóng, không ăn điểm hạng/chặt.
+      // Người Cóng chỉ chịu khoản Cóng (+ Thối của chính mình nếu ở chế độ Tính Điểm),
+      // không ăn điểm hạng/chặt.
       if(isCong){
-        const total = congAward;
+        let total = congAward;
+        let ownFoulText = '';
+        if(isPointsMode && foulDetailsMap[id]){
+          total -= foulDetailsMap[id].totalPenalty;
+          ownFoulText = ` | Thối: -${foulDetailsMap[id].totalPenalty} (${foulDetailsMap[id].details.join(', ')})`;
+        }
+        const congNote = isPointsMode
+          ? `🧊 CÓNG: -${Math.abs(congAward)} điểm (${cong.congPerReceiver} điểm, dồn hết về người về Nhất)`
+          : `🧊 CÓNG: -${Math.abs(congAward)} điểm (${cong.congPerReceiver} điểm/người còn lại)`;
         results[id] = {
           rank, score: total, basePoints: 0, modifierPoints: total,
-          note:`🧊 CÓNG: -${Math.abs(total)} điểm (${cong.congPerReceiver} điểm/người còn lại)`,
+          note:`${congNote}${ownFoulText}`,
           name:gameState.names[id],
           playedCards:(finalHandsSnapshot[id] && finalHandsSnapshot[id].played) || [],
           remainingCards:(finalHandsSnapshot[id] && finalHandsSnapshot[id].remaining) || [],
