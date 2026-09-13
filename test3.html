@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -1124,10 +1123,10 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 <!-- HOME SCREEN -->
 <div class="wrap" id="homeScreen">
   <div class="card-panel">
-    <label>Tên người chơi (tự đặt, đổi lúc nào cũng được)</label>
+    <label>Tên người chơi (tự đặt; nếu có đặt mật khẩu bên dưới thì vào lại nhớ gõ đúng tên này)</label>
     <input type="text" id="nameInput" maxlength="14" placeholder="Nhập tên của bạn...">
 
-    <label style="margin-top:10px;">🔑 Mật khẩu (không bắt buộc — dùng mật khẩu này để vào lại ván ở phòng khác/máy khác)</label>
+    <label style="margin-top:10px;">🔑 Mật khẩu (không bắt buộc — dùng CẢ tên lẫn mật khẩu này để vào lại đúng ván ở phòng khác/máy khác, tránh trùng với người khác)</label>
     <input type="text" id="playerPasswordInput" maxlength="20" placeholder="VD: minhkhang1234" style="letter-spacing:1px;">
 
     <div class="row" style="margin-top:16px;">
@@ -1966,11 +1965,13 @@ function describeChopTargetNice(combo){
   return describeCombo(combo);
 }
 
-// Định danh người chơi: nếu họ nhập "mật khẩu" thì dùng làm id CỐ ĐỊNH (pw_xxxx) để
-// nhận ra đúng người này dù đổi thiết bị/trình duyệt HOẶC đổi sang mã phòng khác — tên
-// hiển thị (myName) vẫn hoàn toàn tự do, không bị khoá theo mật khẩu này. Một mật khẩu
-// duy nhất có thể được dùng để tạo/vào NHIỀU mã phòng khác nhau (không giới hạn 1 phòng).
-// Không nhập thì rơi về id ngẫu nhiên như cũ (ẩn danh).
+// Định danh người chơi: nếu họ nhập "mật khẩu" thì dùng ghép CÙNG TÊN để tạo id CỐ
+// ĐỊNH (pw_ten_matkhau, xem buildPwId()) để nhận ra đúng người này dù đổi thiết bị/
+// trình duyệt HOẶC đổi sang mã phòng khác. Ghép thêm tên (đã chuẩn hoá) là để 2 người
+// lỡ gõ trùng mật khẩu không bị hệ thống coi là 1 người — đổi lại, muốn được nhận
+// đúng là người cũ thì lúc vào lại phải gõ đúng CẢ tên lẫn mật khẩu như ban đầu. Một
+// cặp tên+mật khẩu có thể được dùng để tạo/vào NHIỀU mã phòng khác nhau (không giới
+// hạn 1 phòng). Không nhập mật khẩu thì rơi về id ngẫu nhiên như cũ (ẩn danh).
 const PLAYER_PASSWORD_KEY = 'tienlen_player_password';
 const PLAYER_NAME_KEY = 'tienlen_player_name';
 function getPlayerPassword(){
@@ -1978,11 +1979,29 @@ function getPlayerPassword(){
   const v = el ? el.value.trim() : '';
   return /^[A-Za-z0-9]{4,20}$/.test(v) ? v : '';
 }
+// FIX "TRÙNG MÃ, DỄ NHẦM VỚI NGƯỜI KHÁC": trước đây id = 'pw_' + đúng y nguyên mật
+// khẩu, nên 2 người gõ trùng mật khẩu (vd cùng "1234") sẽ ra CÙNG MỘT id và bị hệ
+// thống coi là 1 người. Giờ ghép thêm TÊN (đã chuẩn hoá — bỏ dấu, chữ thường, bỏ
+// khoảng trắng/ký tự lạ) vào mã, nên phải trùng CẢ tên lẫn mật khẩu mới bị đụng id.
+// Hệ quả: khi vào lại (đổi máy/trình duyệt), phải gõ đúng CẢ tên lẫn mật khẩu như
+// lúc đầu thì mới được nhận đúng là người cũ (đây là đánh đổi được chọn để giảm nhầm).
+function normalizeNameForId(name){
+  return (name || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // bỏ dấu tiếng Việt
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, ''); // chỉ giữ chữ/số, bỏ khoảng trắng & ký tự lạ
+}
+function buildPwId(pass, name){
+  const norm = normalizeNameForId(name);
+  return 'pw_' + (norm || 'x') + '_' + pass;
+}
 function generatePlayerId(){
   const pass = getPlayerPassword();
   if(pass){
     try{ localStorage.setItem(PLAYER_PASSWORD_KEY, pass); }catch(e){}
-    return 'pw_' + pass;
+    const nameEl = document.getElementById('nameInput');
+    const rawName = nameEl ? nameEl.value.trim() : '';
+    return buildPwId(pass, rawName);
   }
   return 'p_' + Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4);
 }
@@ -3153,10 +3172,11 @@ function renderPublicRoomsList(){
 
 // Vào lại một ván ĐANG CHƠI từ danh sách công khai: bắt buộc đúng mật khẩu đã dùng để
 // chơi ván đó, để không cho người lạ tự ý chiếm chỗ của người chơi thật. Mật khẩu này
-// chính là cái tạo ra myId cố định 'pw_xxxx' (xem generatePlayerId()), nên nhập đúng
-// mật khẩu sẽ tự động được host nhận ra là người chơi cũ và cho vào lại đúng ghế — và
-// vì mật khẩu không bị khoá theo phòng, cùng một mật khẩu này có thể dùng ở các mã
-// phòng khác nhau vào những lúc khác.
+// ghép cùng TÊN ở ô "Tên người chơi" trên màn hình chính để tạo ra myId cố định
+// (xem buildPwId()/generatePlayerId()), nên phải còn nguyên đúng tên ĐÃ DÙNG lúc chơi
+// ván này trong ô tên thì nhập đúng mật khẩu mới được host nhận ra là người chơi cũ
+// và cho vào lại đúng ghế — nếu đổi tên thì sẽ bị coi là người khác. Cặp tên+mật khẩu
+// không bị khoá theo phòng, có thể dùng ở các mã phòng khác nhau vào những lúc khác.
 window.reenterPlayingRoom = function(code, inputId){
   const el = document.getElementById(inputId);
   const errEl = document.getElementById('err_' + inputId);
@@ -3231,18 +3251,24 @@ function checkForSavedTLSession(){
 // nhận passwordOverride (mật khẩu vừa gõ) để dò được NGAY trên trình duyệt/máy mới,
 // không bắt buộc phải có sẵn trong localStorage như trước (localStorage trình duyệt
 // mới thì luôn rỗng nên trước đây phải tự nhớ mã phòng rồi gõ vào ô "Vào phòng bằng mã").
-function checkCrossDeviceMatch(passwordOverride){
+function checkCrossDeviceMatch(passwordOverride, nameOverride){
   const box = $('tlCrossDeviceBox');
   if(!box) return;
   if(!fbDb){ box.classList.add('hidden'); return; }
   let pass = passwordOverride || '';
   if(!pass){ try{ pass = localStorage.getItem(PLAYER_PASSWORD_KEY) || ''; }catch(e){} }
   if(!/^[A-Za-z0-9]{4,20}$/.test(pass)){ box.classList.add('hidden'); return; }
-  box.dataset.checkingPassword = pass;
-  const idxId = 'pw_' + pass;
+  let name = nameOverride;
+  if(name === undefined){
+    const nameEl = document.getElementById('nameInput');
+    name = nameEl ? nameEl.value.trim() : '';
+    if(!name){ try{ name = localStorage.getItem(PLAYER_NAME_KEY) || ''; }catch(e){} }
+  }
+  const idxId = buildPwId(pass, name);
+  box.dataset.checkingPassword = idxId;
   fbDb.ref(PLAYER_INDEX_PATH + '/' + idxId).once('value').then(snap => {
-    // Người dùng có thể đã gõ tiếp/xoá mật khẩu trong lúc đợi Firebase trả lời — bỏ kết quả cũ.
-    if(box.dataset.checkingPassword !== pass) return;
+    // Người dùng có thể đã gõ tiếp/xoá mật khẩu hoặc tên trong lúc đợi Firebase trả lời — bỏ kết quả cũ.
+    if(box.dataset.checkingPassword !== idxId) return;
     const entry = snap.val();
     if(!entry || !entry.roomCode){ box.classList.add('hidden'); return; }
     const local = loadTLSession();
@@ -3261,9 +3287,10 @@ if($('btnCrossDeviceJoin')) $('btnCrossDeviceJoin').onclick = () => {
 // khỏi dò liên tục từng ký tự), không cần chờ tải lại trang hay tự nhớ mã phòng nữa.
 (function wirePlayerPasswordLiveCheck(){
   const el = document.getElementById('playerPasswordInput');
+  const nameEl = document.getElementById('nameInput');
   if(!el) return;
   let t = null;
-  el.addEventListener('input', () => {
+  const run = () => {
     const v = el.value.trim();
     clearTimeout(t);
     if(!/^[A-Za-z0-9]{4,20}$/.test(v)){
@@ -3274,12 +3301,16 @@ if($('btnCrossDeviceJoin')) $('btnCrossDeviceJoin').onclick = () => {
       return;
     }
     try{ localStorage.setItem(PLAYER_PASSWORD_KEY, v); }catch(e){}
+    const n = nameEl ? nameEl.value.trim() : '';
     // Gõ đủ mật khẩu hợp lệ = tín hiệu "tôi muốn vào lại ván đang treo" — nhân tiện
     // kiểm tra luôn phiên chủ phòng đã lưu trên MÁY NÀY (không phụ thuộc mật khẩu vừa
     // gõ, vì phiên chủ phòng vốn lưu theo trình duyệt chứ không theo mật khẩu), gộp
     // chung một hành động cho gọn thay vì tách rời 2 lần tự động hiện như trước.
-    t = setTimeout(() => { checkCrossDeviceMatch(v); checkForSavedHostSession(); }, 400);
-  });
+    // Vì mã định danh giờ ghép CẢ tên lẫn mật khẩu, đổi tên cũng phải dò lại.
+    t = setTimeout(() => { checkCrossDeviceMatch(v, n); checkForSavedHostSession(); }, 400);
+  };
+  el.addEventListener('input', run);
+  if(nameEl) nameEl.addEventListener('input', run);
 })();
 
 function rejoinSavedSession(){
@@ -3352,7 +3383,8 @@ $('btnCreate').onclick=()=>{
   players = [{id:myId, name:myName}];
   playerTokens = {};
   botList = [];
-  publishRoomToPublic(roomCode, myName);
+  gameState = null; currentState = null; // tránh gameState cũ (từ phiên trước) làm publishRoomToPublic tính nhầm trạng thái
+  publishRoomToPublic(roomCode, myName, 'LOBBY'); // ép trạng thái LOBBY để phòng mới luôn hiện trong "Phòng đang mở"
   listenAsHost();
   claimActiveHost();
   saveTLHostSession();
