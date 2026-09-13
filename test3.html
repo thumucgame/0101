@@ -1129,6 +1129,9 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     <label style="margin-top:10px;">🔑 Mật khẩu (không bắt buộc — dùng CẢ tên lẫn mật khẩu này để vào lại đúng ván ở phòng khác/máy khác, tránh trùng với người khác)</label>
     <input type="text" id="playerPasswordInput" maxlength="20" placeholder="VD: minhkhang1234" style="letter-spacing:1px;">
 
+    <label style="margin-top:10px;">🏷️ Tên phòng khi tạo (không bắt buộc — hiện trong danh sách phòng cho dễ nhận ra)</label>
+    <input type="text" id="roomNameInput" maxlength="24" placeholder="VD: Phòng của Khang, Bàn tám dóc...">
+
     <div class="row" style="margin-top:16px;">
       <button class="btn btn-gold" id="btnCreate">Tạo phòng</button>
       <button class="btn btn-outline" id="btnBotGame">🤖 Đánh với Bot</button>
@@ -1165,7 +1168,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 
     <div class="public-rooms-box">
       <label style="margin:8px 0 4px;display:flex;justify-content:space-between;align-items:center;">
-        <span>🌐 Phòng đang mở (vào ngay, không cần mã)</span>
+        <span>🌐 Phòng đang mở (vào ngay, không cần mã) <span id="lobbyRoomsCount" style="opacity:.7;">(0)</span></span>
         <button class="btn btn-outline" id="btnRefreshRooms" style="font-size:10px;padding:2px 6px;">🔄 Làm mới</button>
       </label>
       <div class="public-rooms-list" id="publicRoomsList">
@@ -1174,7 +1177,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     </div>
 
     <div class="public-rooms-box">
-      <label style="margin:8px 0 4px;">🎮 Ván đang diễn ra trên server (vào lại — cần mật khẩu)</label>
+      <label style="margin:8px 0 4px;">🎮 Ván đang diễn ra trên server (vào lại — cần mật khẩu) <span id="playingRoomsCount" style="opacity:.7;">(0)</span></label>
       <div class="public-rooms-list" id="activeRoomsList">
         <div style="font-size:12px;color:rgba(250,246,238,0.5);text-align:center;padding:10px;">Đang tìm ván đang chơi...</div>
       </div>
@@ -2936,7 +2939,10 @@ function requestRuleAdminAccess(target){
   return false;
 }
 
-let roomSettings = { gameMode: 'WATER', turnSeconds: 30, stakeUnit: 'Nước', hideCardCount: true, slowMode: false };
+// roomName: tên phòng do chủ phòng tự đặt lúc tạo (tuỳ chọn) — nằm trong roomSettings để
+// tự động được lưu/khôi phục qua cơ chế snapshot (resumeAsHost) và broadcastLobby() sẵn có,
+// không cần thêm đường dây riêng.
+let roomSettings = { gameMode: 'WATER', turnSeconds: 30, stakeUnit: 'Nước', hideCardCount: true, slowMode: false, roomName: '' };
 let kneelingTracker = {};
 let matchScores = {};
 let matchHistory = [];
@@ -3125,6 +3131,13 @@ function renderPublicRoomsList(){
 
   // Danh sách 1: phòng còn ở PHÒNG CHỜ (chưa chia bài) — vào thẳng, không cần gì.
   const lobbyRooms = publicRooms.filter(r => r.status !== 'PLAYING');
+  // Đếm tổng số phòng đang "treo" trên server (cả phòng chờ lẫn ván đang chơi),
+  // hiện ngay cạnh 2 tiêu đề danh sách để không phải đếm tay.
+  const playingRoomsCount = publicRooms.filter(r => r.status === 'PLAYING').length;
+  const lobbyCountEl = $('lobbyRoomsCount');
+  const playingCountEl = $('playingRoomsCount');
+  if(lobbyCountEl) lobbyCountEl.textContent = '(' + lobbyRooms.length + ')';
+  if(playingCountEl) playingCountEl.textContent = '(' + playingRoomsCount + ')';
   if(listEl){
     listEl.innerHTML = '';
     if(lobbyRooms.length === 0){
@@ -3134,7 +3147,7 @@ function renderPublicRoomsList(){
         const item = document.createElement('div');
         item.className = 'public-room-item';
         item.innerHTML = `
-          <div><b>Phòng ${escapeHtml(r.code)}</b><br><small style="color:rgba(250,246,238,0.6)">Chủ phòng: ${escapeHtml(r.hostName)} (${r.count}/4)</small></div>
+          <div><b>${r.roomName ? escapeHtml(r.roomName) : 'Phòng ' + escapeHtml(r.code)}</b><br><small style="color:rgba(250,246,238,0.6)">${r.roomName ? 'Mã: ' + escapeHtml(r.code) + ' • ' : ''}Chủ phòng: ${escapeHtml(r.hostName)} (${r.count}/4)</small></div>
           <button class="btn btn-gold" style="padding:4px 10px;font-size:12px;" onclick="joinExistingRoom('${escapeHtml(r.code)}')">Vào</button>
         `;
         listEl.appendChild(item);
@@ -3156,7 +3169,7 @@ function renderPublicRoomsList(){
         const inputId = 'reenter_' + r.code;
         item.innerHTML = `
           <div style="width:100%;">
-            <div><b>🎮 Phòng ${escapeHtml(r.code)}</b><br><small style="color:rgba(250,246,238,0.6)">Chủ phòng: ${escapeHtml(r.hostName)} (${r.count}/4) — đang chơi</small></div>
+            <div><b>🎮 ${r.roomName ? escapeHtml(r.roomName) : 'Phòng ' + escapeHtml(r.code)}</b><br><small style="color:rgba(250,246,238,0.6)">${r.roomName ? 'Mã: ' + escapeHtml(r.code) + ' • ' : ''}Chủ phòng: ${escapeHtml(r.hostName)} (${r.count}/4) — đang chơi</small></div>
             <div class="row" style="margin-top:6px;">
               <input type="text" id="${escapeHtml(inputId)}" maxlength="20" placeholder="Mật khẩu" style="letter-spacing:1px;">
               <button class="btn btn-gold" style="flex:0 0 auto;" onclick="reenterPlayingRoom('${escapeHtml(r.code)}','${escapeHtml(inputId)}')">Vào lại</button>
@@ -3338,7 +3351,9 @@ function publishRoomToPublic(code, hostName, forceStatus){
   // (vd dealNewGame() gọi hàm này TRƯỚC khi gán gameState mới cho ván sắp chia).
   const status = forceStatus || ((gameState && !gameState.isEnded) ? 'PLAYING' : 'LOBBY');
   const roomRef = fbDb.ref(PUBLIC_ROOMS_PATH + '/' + code);
-  roomRef.set(sanitizeForFirebase({ code, hostName: hostName || 'Người chơi', count: players.length, status, time: Date.now() }))
+  // roomName lấy từ roomSettings (chủ phòng đặt lúc tạo, nếu có) để hiện kèm trong danh sách,
+  // đọc trực tiếp ở đây thay vì thêm tham số riêng — mọi nơi gọi hàm này không cần sửa gì thêm.
+  roomRef.set(sanitizeForFirebase({ code, hostName: hostName || 'Người chơi', roomName: (roomSettings && roomSettings.roomName) || '', count: players.length, status, time: Date.now() }))
     .catch(e => console.error('Lỗi đăng phòng công khai:', e));
   roomRef.onDisconnect().remove();
 }
@@ -3384,6 +3399,10 @@ $('btnCreate').onclick=()=>{
   playerTokens = {};
   botList = [];
   gameState = null; currentState = null; // tránh gameState cũ (từ phiên trước) làm publishRoomToPublic tính nhầm trạng thái
+  // Tên phòng tự đặt (tuỳ chọn) — reset về giá trị ô nhập lúc này, tránh dính tên phòng cũ
+  // còn sót lại trong roomSettings từ ván trước nếu lần này bỏ trống.
+  const roomNameEl = $('roomNameInput');
+  roomSettings.roomName = roomNameEl ? roomNameEl.value.trim().slice(0, 24) : '';
   publishRoomToPublic(roomCode, myName, 'LOBBY'); // ép trạng thái LOBBY để phòng mới luôn hiện trong "Phòng đang mở"
   listenAsHost();
   claimActiveHost();
@@ -3828,7 +3847,9 @@ function showLobby(){
 }
 
 function setLobbySettingsInteractive(enabled){
-  ['gameModeSelect','turnSecondsSelect','stakeSelect','hideCardCountCheck'].forEach(id => {
+  // FIX: 'slowModeCheck' (Đánh chậm) bị bỏ sót khỏi danh sách này, nên trước đây khách
+  // trong phòng chờ vẫn tích/bỏ tích được — chỉ chủ phòng mới được quyền bật/tắt.
+  ['gameModeSelect','turnSecondsSelect','stakeSelect','hideCardCountCheck','slowModeCheck'].forEach(id => {
     $(id).disabled = !enabled;
   });
 }
@@ -3858,7 +3879,10 @@ function renderLobby(){
   $('hideCardCountCheck').checked = !!roomSettings.hideCardCount;
   $('slowModeCheck').checked = !!roomSettings.slowMode;
   // Đánh chậm tính điểm = không đếm giờ mỗi lượt -> vô hiệu ô chọn thời gian lượt vì không dùng tới.
-  $('turnSecondsSelect').disabled = !!roomSettings.slowMode;
+  // FIX: dòng này trước đây tự bật lại turnSecondsSelect cho KHÁCH mỗi khi phòng chờ
+  // render lại (mỗi lần nhận broadcastLobby), đè mất khoá đã đặt ở setLobbySettingsInteractive
+  // khi slowMode đang tắt — nay chỉ bật cho chủ phòng, khách luôn bị khoá ô này.
+  $('turnSecondsSelect').disabled = !isHost || !!roomSettings.slowMode;
   $('turnSecondsSelect').style.opacity = roomSettings.slowMode ? '0.45' : '1';
   if(roomSettings.gameMode !== 'WATER'){
     $('stakeSelect').style.display = 'none';
@@ -3893,8 +3917,9 @@ $('turnSecondsSelect').onchange = e => { roomSettings.turnSeconds = parseInt(e.t
 $('stakeSelect').onchange = e => { roomSettings.stakeUnit = e.target.value; broadcastLobby(); };
 $('hideCardCountCheck').onchange = e => { roomSettings.hideCardCount = e.target.checked; broadcastLobby(); };
 $('slowModeCheck').onchange = e => {
+  if(!isHost){ e.target.checked = !!roomSettings.slowMode; return; } // chốt chặn thêm: chỉ chủ phòng được đổi
   roomSettings.slowMode = e.target.checked;
-  $('turnSecondsSelect').disabled = roomSettings.slowMode;
+  $('turnSecondsSelect').disabled = !isHost || roomSettings.slowMode;
   $('turnSecondsSelect').style.opacity = roomSettings.slowMode ? '0.45' : '1';
   broadcastLobby();
 };
