@@ -1535,11 +1535,12 @@ const SOUND_URLS = {
   'CHOP': 'https://www.myinstants.com/media/sounds/explosion_1.mp3', // Giữ lại làm âm dự phòng (fallback); âm CHOP thật giờ random trong CHOP_1..CHOP_4 bên dưới
   // BỘ ÂM "CHẶT" NGẪU NHIÊN: mỗi lần có người bị chặt (BOM), random 1 trong 4 âm này,
   // đồng bộ để cả bàn cùng nghe chung 1 âm trong lần chặt đó (xem broadcastChopSound()).
-  // (Cơ chế riêng, có checkbox bật/tắt từng âm ở trang Cấu Hình — KHÔNG dùng hệ mảng chung ở trên.)
-  'CHOP_1': 'https://www.myinstants.com/media/sounds/khoc-di.mp3', // Khóc đi
-  'CHOP_2': 'https://www.myinstants.com/media/sounds/thay-huan-oi-gioi-oi.mp3', // thầy huấn ối giồi ôi
-  'CHOP_3': 'https://www.myinstants.com/media/sounds/cbvn-troi-dat-oi-coi-de-thuong-hong.mp3', // CBVN Trời Đất Ơi Coi Dễ Thương Hong
-  'CHOP_4': 'https://www.myinstants.com/media/sounds/goi-goi-may-xong-goi.mp3', // goi goi may xong goi
+  // (Có checkbox bật/tắt từng ô ở trang Cấu Hình; mỗi ô giờ CŨNG dùng hệ mảng chung ở trên,
+  // nên có thể thêm nhiều link/ô, random thêm 1 lớp nữa BÊN TRONG ô đó nếu có >1 link.)
+  'CHOP_1': ['https://www.myinstants.com/media/sounds/khoc-di.mp3'], // Khóc đi
+  'CHOP_2': ['https://www.myinstants.com/media/sounds/thay-huan-oi-gioi-oi.mp3'], // thầy huấn ối giồi ôi
+  'CHOP_3': ['https://www.myinstants.com/media/sounds/cbvn-troi-dat-oi-coi-de-thuong-hong.mp3'], // CBVN Trời Đất Ơi Coi Dễ Thương Hong
+  'CHOP_4': ['https://www.myinstants.com/media/sounds/goi-goi-may-xong-goi.mp3'], // goi goi may xong goi
   'CRY': ['https://www.myinstants.com/media/sounds/anime-wow-sound-effect.mp3'],
   'PLAY_CARD': ['https://www.myinstants.com/media/sounds/card-flip.mp3'],
   'MY_TURN': ['https://www.myinstants.com/media/sounds/level-up-1-199577.mp3'],
@@ -8814,8 +8815,10 @@ function safeIdFor(key){
   return 'cfgUrl_' + key.split('').map(ch => ch.charCodeAt(0)).join('_');
 }
 // Key nào đang ở dạng MẢNG (cho phép nhiều biến thể, random mỗi lần phát) trong SOUND_URLS gốc.
-// CHOP_1..CHOP_4 và CHOP KHÔNG thuộc nhóm này — chúng dùng cơ chế pool riêng (chopPool) để cả
-// bàn nghe đồng bộ cùng 1 âm mỗi lần Chặt, nên vẫn giữ nguyên dạng 1 link/dòng như cũ.
+// CHOP_1..CHOP_4 giờ CŨNG ở dạng mảng (mỗi ô cho thêm nhiều link, random bên trong ô đó) —
+// riêng cơ chế chọn Ô NÀO trong 4 ô (đồng bộ cả bàn cùng nghe 1 ô mỗi lần Chặt) vẫn giữ
+// nguyên qua chopPool/CHOP_SOUND_KEYS, không đổi. Chỉ 'CHOP' (âm dự phòng, ít dùng) là còn
+// dạng 1 link đơn.
 function isMultiSoundKey(key){
   return Array.isArray(DEFAULT_SOUND_URLS[key]);
 }
@@ -9065,6 +9068,11 @@ $('btnSaveConfig').onclick = ()=>{
     collectConfigFromForm();
     saveGameConfig();
     saveSoundConfig();
+    saveSoundUrls();      // FIX: link âm thanh (CHOP_1..4, FINISH_1ST, FINISH_23, ...) trước đây
+                           // chỉ được cập nhật vào biến SOUND_URLS trong bộ nhớ (collectConfigFromForm)
+                           // nhưng KHÔNG được ghi xuống localStorage, nên bấm "Lưu cấu hình" xong tưởng
+                           // đã lưu nhưng tải lại trang / mở lại là mất, quay về link mặc định.
+    refreshSoundCache();  // nạp lại cache Audio theo link mới để nghe thử/về sau phát đúng link vừa lưu.
     renderConfigForm();
     showConfigMsg('✅ Đã lưu cấu hình. Áp dụng ngay cho ván tiếp theo.');
   }catch(err){
@@ -9079,9 +9087,20 @@ $('btnResetConfig').onclick = ()=>{
   SOUND_CONFIG = JSON.parse(JSON.stringify(DEFAULT_SOUND_CONFIG));
   saveGameConfig();
   saveSoundConfig();
+  resetSoundUrlsToDefault(); // FIX: khôi phục mặc định cũng cần trả luôn LINK âm thanh về gốc + xoá key đã lưu.
   renderConfigForm();
   showConfigMsg('↩️ Đã khôi phục mặc định.');
 };
+// FIX: nút "Khôi phục toàn bộ LINK âm thanh về mặc định" trước đây không có handler nào cả (bấm không có tác dụng).
+const _btnResetSoundUrls = $('btnResetSoundUrls');
+if(_btnResetSoundUrls){
+  _btnResetSoundUrls.onclick = ()=>{
+    if(!ruleAdminUnlocked){ alert('🔐 Chưa được cấp quyền cấu hình.'); return; }
+    if(!confirm('Khôi phục toàn bộ LINK âm thanh (Chặt, Về Nhất, Ném đồ...) về đúng mặc định gốc?')) return;
+    resetSoundUrlsToDefault();
+    showConfigMsg('↩️ Đã khôi phục toàn bộ link âm thanh mặc định.');
+  };
+}
 
 })();
 </script>
