@@ -5115,7 +5115,7 @@ function describeInstantTarget(combo){
 function findBestThamGiaChatCardsForHand(hand, curr){
   if(!curr || !isChoppableSpecialTarget(curr)) return null;
   const out=[];
-  // VŨ KHÍ đăng ký Tham Gia Chặt vẫn CHỈ cho phép 4+ Đôi Thông (và Tứ Quý bên dưới).
+  // VŨ KHÍ đăng ký Tham Gia Chặt CHỈ cho phép 4+ Đôi Thông (Tứ Quý KHÔNG còn được dùng làm vũ khí).
   // 3 Đôi Thông trong tay KHÔNG được dùng làm vũ khí chặt ngoài lượt — dù bây giờ
   // 3 Đôi Thông TRÊN BÀN đã có thể là đối tượng (target) bị chặt (xem isChoppableSpecialTarget).
   // Muốn dùng 3 Đôi Thông để chặt, người chơi phải đánh bình thường vào đúng lượt của mình.
@@ -5131,17 +5131,9 @@ function findBestThamGiaChatCardsForHand(hand, curr){
     const combo=classify(cards);
     if(combo && combo.type==='pairs_run' && combo.count>=4 && canBeat(combo,curr)) out.push({cards,combo,weight:1000+combo.count});
   }
-  // BOM TỨ QUÝ TRONG TAY: nếu người chơi có sẵn 1 bộ Tứ Quý, đây cũng là 1 lựa chọn
-  // chặt ngay hợp lệ — trước đây hàm này chỉ tìm Đôi Thông nên bỏ sót Tứ Quý.
-  const rankCounts = {};
-  safeArray(hand).forEach(c => { (rankCounts[c.r] = rankCounts[c.r]||[]).push(c); });
-  Object.values(rankCounts).forEach(cardsOfRank => {
-    if(cardsOfRank.length >= 4){
-      const cards = cardsOfRank.slice(0,4);
-      const combo = classify(cards);
-      if(combo && combo.type==='quad' && canBeat(combo,curr)) out.push({cards,combo,weight:1});
-    }
-  });
+  // ĐÃ BỎ: Tứ Quý trong tay KHÔNG còn được dùng làm vũ khí đăng ký Tham Gia Chặt nữa.
+  // Vũ khí đăng ký giờ CHỈ CÒN 4+ Đôi Thông (khối phía trên). Tứ Quý trên bàn vẫn có thể
+  // là MỤC TIÊU bị chặt (xem isChoppableSpecialTarget), chỉ không được dùng để chặt người khác.
   if(!out.length) return null;
   out.sort((a,b)=> a.weight-b.weight || (a.combo.count||0)-(b.combo.count||0) || (a.combo.highR||0)-(b.combo.highR||0));
   return out[0] || null;
