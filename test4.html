@@ -1090,6 +1090,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
       <div class="rule-test-card">
         <h4>🔊 Âm các sự kiện khác trong ván</h4>
         <div class="cfg-row"><span class="cfg-evt">⏰ Tới lượt bạn (MY_TURN)</span><span class="cfg-evt"><input id="cfgEnMyTurn" type="checkbox"><input id="cfgVolMyTurn" type="range" min="0" max="1" step="0.05"></span></div>
+        <div class="cfg-row"><span class="cfg-evt">⏱ Còn 20s cuối chưa đánh (TIME_20S)</span><span class="cfg-evt"><input id="cfgEnTime20s" type="checkbox"><input id="cfgVolTime20s" type="range" min="0" max="1" step="0.05"></span></div>
         <div class="cfg-row"><span class="cfg-evt">🃏 Đánh bài xuống bàn (PLAY_CARD)</span><span class="cfg-evt"><input id="cfgEnPlayCard" type="checkbox"><input id="cfgVolPlayCard" type="range" min="0" max="1" step="0.05"></span></div>
         <div class="cfg-row"><span class="cfg-evt">🏆 Về Nhất (FINISH_1ST)</span><span class="cfg-evt"><input id="cfgEnFinish1st" type="checkbox"><input id="cfgVolFinish1st" type="range" min="0" max="1" step="0.05"></span></div>
         <div class="cfg-row"><span class="cfg-evt">🥈 Về Nhì / Ba (FINISH_23)</span><span class="cfg-evt"><input id="cfgEnFinish23" type="checkbox"><input id="cfgVolFinish23" type="range" min="0" max="1" step="0.05"></span></div>
@@ -1544,6 +1545,8 @@ const SOUND_URLS = {
   'CRY': ['https://www.myinstants.com/media/sounds/anime-wow-sound-effect.mp3'],
   'PLAY_CARD': ['https://www.myinstants.com/media/sounds/card-flip.mp3'],
   'MY_TURN': ['https://www.myinstants.com/media/sounds/level-up-1-199577.mp3'],
+  // Âm nhắc còn 20 GIÂY CUỐI mà vẫn chưa đánh (tự phát 1 lần khi đồng hồ lượt của bạn chạm mốc 20s)
+  'TIME_20S': ['https://www.myinstants.com/media/sounds/20s-cuoi.mp3'],
   // REACTION KHÓC/CƯỜI: bấm vào chính mình để chọn 1 trong các icon này
   'CRY1': ['https://www.myinstants.com/media/sounds/best-cry-ever-trimmed.mp3'],
   'CRY2': ['https://www.myinstants.com/media/sounds/why-you-crying-vine.mp3'],
@@ -1556,7 +1559,7 @@ const SOUND_URLS = {
   'TAUNT1': ['https://www.myinstants.com/media/sounds/khong-lam-ma-oi-co-an-thi-an-cut-mp3cut.mp3'], // huấn rose
   'TAUNT2': ['https://www.myinstants.com/media/sounds/thoi-ong-im-me-cai-mom-i-_-tuan-tien-ti_8as8efd6f5k.mp3'], // Thôi ông im mẹ nó mồm đi
   // ÂM "VỀ ĐÍCH": phát khi có người hết bài. Hạng 1 dùng FINISH_1ST, hạng 2-3 dùng FINISH_23.
-  'FINISH_1ST': ['https://www.myinstants.com/media/sounds/day-no-phai-the-chu-li-thang-nay-kha-va-gioi.mp3'], // Đấy nó phải thế chứ lị, thằng này khá và giỏi
+  'FINISH_1ST': ['https://www.myinstants.com/media/sounds/day-no-phai-the-chu-li-thang-nay-kha-va-gioi.mp3', 'https://www.myinstants.com/media/sounds/chao-mung-moi-nguoi-co-mat.mp3', 'https://www.myinstants.com/media/sounds/cena.mp3'], // Đấy nó phải thế chứ lị / Chào mừng mọi người có mặt / John Cena entrance
   'FINISH_23': ['https://www.myinstants.com/media/sounds/kids-saying-yay-sound-effect_3.mp3'], // YAAAAAAAAY
   // Âm TỚI TRẮNG. Người dùng nhập link MP3/WAV tại Cài đặt.
   // Nếu để trống, game fallback sang SpeechSynthesis 'Tất cả quỳ xuống'.
@@ -1704,6 +1707,7 @@ const DEFAULT_SOUND_CONFIG = {
   enabled: {
     chop:true,      // Âm khi CHẶT (BOM nổ)
     myTurn:true,    // Âm báo tới lượt mình
+    time20s:true,   // Âm nhắc còn 20s cuối mà chưa đánh
     playCard:true,  // Âm đánh bài (mỗi lá đặt xuống bàn)
     finish1st:true, // Âm khi có người về Nhất
     finish23:true,  // Âm khi có người về Nhì/Ba
@@ -1713,7 +1717,7 @@ const DEFAULT_SOUND_CONFIG = {
     throwItem:true  // Âm khi ném vật phẩm (dép, trứng, cà chua...) vào người khác
   },
   volumes: {
-    chop:0.9, myTurn:1.0, playCard:0.5, finish1st:0.9, finish23:0.9,
+    chop:0.9, myTurn:1.0, time20s:1.0, playCard:0.5, finish1st:0.9, finish23:0.9,
     winCry:0.95, instantWhite:1.0, reaction:0.9, throwItem:0.9
   }
 };
@@ -1743,6 +1747,7 @@ loadSoundConfig();
 function getSoundCategory(item){
   if(item === 'CHOP' || (typeof item === 'string' && item.indexOf('CHOP_') === 0)) return 'chop';
   if(item === 'MY_TURN') return 'myTurn';
+  if(item === 'TIME_20S') return 'time20s';
   if(item === 'PLAY_CARD') return 'playCard';
   if(item === 'FINISH_1ST') return 'finish1st';
   if(item === 'FINISH_23') return 'finish23';
@@ -1934,6 +1939,7 @@ function playGlobalSound(item, customVolume = 0.9){
 
 let consecutivePlayCount = 0;
 let lastNotifiedTurnId = null;
+let last20sWarnTurnId = null; // Chặn phát lặp lại nhiều lần âm "còn 20s cuối" trong cùng 1 lượt
 let lastGameWinnerId = null; // Lưu vết người thắng ván trước
 let globalActorSeq = 0; // Đếm tăng dần mỗi khi có hành động mới, để client biết khi nào bật bong bóng thông báo mới
 function bumpActor(playerId, shortMsg){
@@ -4036,6 +4042,7 @@ function finalizeInstantWin(){
   if(timerLoop) clearInterval(timerLoop);
   consecutivePlayCount = 0;
   lastNotifiedTurnId = null;
+  last20sWarnTurnId = null;
 
   lastGameWinnerId = winnerId;
   gameState.finished = [winnerId, ...gameState.order.filter(id => id !== winnerId)];
@@ -4379,6 +4386,7 @@ function dealNewGame(){
   if(isHost && !isBotMode) publishRoomToPublic(roomCode, players[0] ? players[0].name : myName, 'PLAYING');
   consecutivePlayCount = 0;
   lastNotifiedTurnId = null;
+  last20sWarnTurnId = null;
   let hands;
   if(roomSettings.gameMode === 'CHATCHEM'){
     // CHẶT CHÉM: đảm bảo mỗi người có sẵn 1 Bom (3-5 Đôi Thông hoặc Tứ Quý) để chọi nhau.
@@ -5158,17 +5166,21 @@ function compareThamGiaChatStrength(a, b){
   return (b.highR - a.highR) || (b.highS - a.highS);
 }
 
-// PHẦN E — XÉT DANH SÁCH ĐĂNG KÝ LÚC ĐÓNG LOẠT: lọc bỏ đăng ký không còn đủ sức chặt
-// mục tiêu CUỐI CÙNG hiện tại trên bàn, rồi trả về TOÀN BỘ chuỗi đăng ký còn hợp lệ, sắp
-// xếp YẾU → MẠNH (hoặc null nếu không ai đủ điều kiện — khi đó luồng gốc settleChopChain
-// xử lý như cũ). executeThamGiaChatWin() sẽ duyệt tuần tự chuỗi này.
+// PHẦN E — XÉT DANH SÁCH ĐĂNG KÝ LÚC ĐÓNG LOẠT: trả về TOÀN BỘ chuỗi đăng ký hợp lệ (còn
+// combo/cards), sắp xếp YẾU → MẠNH (hoặc null nếu không ai đăng ký). executeThamGiaChatWin()
+// sẽ duyệt tuần tự chuỗi này.
+// FIX "ĐĂNG KÝ BỊ VÔ HIỆU LẶNG LẼ KHI CÓ BỘ MẠNH HƠN VỪA ĐƯỢC ĐÁNH BÌNH THƯỜNG": trước đây
+// hàm này tự lọc bỏ mọi đăng ký không đủ sức chặt mục tiêu CUỐI CÙNG hiện tại trên bàn
+// (gameState.currentCombo) — nghĩa là nếu ai đó đánh bình thường ra 1 bộ còn mạnh hơn TẤT CẢ
+// đăng ký đang chờ, toàn bộ đăng ký biến mất không dấu vết, không mất bài, không cộng Bom. Nay
+// việc "đăng ký còn đủ sức chặt mục tiêu mới nhất hay không" được xét RIÊNG ở nơi gọi hàm này
+// (checkNextTurn()) — nếu KHÔNG đủ, các đăng ký vẫn được coi là đã chặt lẫn nhau rồi bị người
+// đang dẫn đầu chặt đè (xem mergeThamGiaChatChainIntoCurrentLeader()) thay vì bị xoá sạch.
 function resolveThamGiaChatRegistrations(){
   if(!gameState) return null;
   const regs = safeArray(gameState.thamGiaChatRegistrations);
   if(!regs.length) return null;
-  const finalTarget = gameState.currentCombo;
-  if(!finalTarget) return null;
-  const valid = regs.filter(r => r && r.combo && r.cards && canBeat(r.combo, finalTarget));
+  const valid = regs.filter(r => r && r.combo && r.cards);
   if(!valid.length) return null;
   // FIX "MẤT MẮT XÍCH TRUNG GIAN TRONG THAM GIA CHẶT": trước đây hàm này chỉ trả về NGƯỜI
   // MẠNH NHẤT (valid[0]) và âm thầm loại bỏ mọi đăng ký khác dù chúng cũng đủ sức chặt
@@ -5465,6 +5477,96 @@ function executeThamGiaChatWin(chain){
 
   // Round mới do người thắng dẫn (PHẦN C/F): reset sạch vé + đăng ký cũ.
   resetThamGiaChatRoundState();
+}
+
+// THAM GIA CHẶT — GỘP ĐĂNG KÝ KHÔNG ĐỦ SỨC CHẶT MỤC TIÊU MỚI NHẤT (PHẦN E MỞ RỘNG):
+// Được gọi từ checkNextTurn() khi resolveThamGiaChatRegistrations() có đăng ký, nhưng đăng ký
+// MẠNH NHẤT trong số đó vẫn KHÔNG đủ sức chặt gameState.currentCombo hiện tại (ví dụ ai đó vừa
+// đánh bình thường, đúng lượt, ra một bộ còn mạnh hơn mọi đăng ký đang chờ). Trước fix này, toàn
+// bộ đăng ký trong tình huống đó bị lọc bỏ âm thầm ở resolveThamGiaChatRegistrations() — coi như
+// chưa từng đăng ký. Nay các đăng ký đó vẫn được coi là ĐÃ CHẶT LẪN NHAU theo đúng thứ tự yếu →
+// mạnh (y hệt một chuỗi Chặt Chồng), rồi bị người đang dẫn đầu (chủ của currentCombo, tức
+// gameState.leaderId — KHÔNG đổi bởi hàm này) chặt đè ở mắt xích cuối cùng. Chỉ người đăng ký
+// MẠNH NHẤT trong nhóm (mắt xích áp chót) phải gánh TOÀN BỘ phần Bom phát sinh thêm; các đăng ký
+// yếu hơn chỉ là mắt xích trung gian — mất bộ bài đã đăng ký (coi như đã đánh) nhưng không bị
+// trừ Nước riêng, đúng quy tắc Chặt Chồng đã áp dụng cho executeThamGiaChatWin().
+// Hàm này CHỈ cộng dồn gameState.chopChainValue/chopChainPayer/chopChainReceiver và trừ bài của
+// CÁC ĐĂNG KÝ — không đụng tới gameState.currentCombo/leaderId/turnIdx (người đang dẫn đầu vẫn
+// giữ nguyên, y hệt như khi không có đăng ký nào); phần settle Bom + mở vòng mới cho người dẫn
+// đầu vẫn do settleChopChain() ở nhánh gốc trong checkNextTurn() đảm nhiệm ngay sau khi hàm này
+// chạy xong (không return sớm ở nơi gọi).
+function mergeThamGiaChatChainIntoCurrentLeader(chain){
+  if(!gameState || !Array.isArray(chain) || !chain.length) return;
+  const activeCount = gameState.order.length;
+  const winnerId = gameState.leaderId; // người đang thực sự dẫn đầu (chủ currentCombo) — giữ nguyên.
+  const winnerName = gameState.names[winnerId];
+  if(!gameState.roundLog) gameState.roundLog = [];
+
+  // LUẬT AN TOÀN SAU KHI VỀ: nếu người đang dẫn đầu đã hết bài ngay khi vừa đặt combo này lên
+  // bàn (về luôn), họ đã an toàn — mọi mắt xích đăng ký gộp vào đây đều = 0 Nước, y hệt
+  // targetAlreadyFinished trong executeThamGiaChatWin().
+  const winnerAlreadyFinished = gameState.finished.includes(winnerId);
+
+  let prevCombo = gameState.currentCombo; // mốc tính Nước cho mắt xích đăng ký đầu tiên.
+
+  chain.forEach((link, idx) => {
+    const isFirstLink = idx === 0;
+    const directReward = winnerAlreadyFinished ? 0 : calculateChopReward(link.combo, prevCombo, activeCount);
+    const stackIncrement = winnerAlreadyFinished ? 0 : (isFirstLink
+      ? (Number(gameState.chopStackValue || 0) || getSpecialStackValue(prevCombo))
+      : getSpecialStackValue(prevCombo));
+    const linkReward = winnerAlreadyFinished ? 0 : Math.max(directReward, stackIncrement);
+    gameState.chopChainValue = (gameState.chopChainValue || 0) + linkReward;
+
+    const linkPName = gameState.names[link.playerId];
+    const safeSuffix = winnerAlreadyFinished
+      ? ` (0 Nước — ${winnerName} đã về, được an toàn)`
+      : ` → +${linkReward} Nước dồn vào Bom, không được lên đánh.`;
+    gameState.roundLog.push({
+      icon: winnerAlreadyFinished ? '🛡️' : '🔗',
+      text: `${linkPName} đăng ký Tham Gia Chặt ${describeCombo(link.combo)} nhưng không đủ sức chặt bộ mới nhất của ${winnerName}${safeSuffix}`
+    });
+    debugActionEvent('CHOP', link.playerId,
+      `${linkPName} đăng ký Tham Gia Chặt ${debugComboText(link.combo)} bị gộp làm mắt xích trung gian (bị ${winnerName} chặt đè) → +${linkReward} Nước${winnerAlreadyFinished ? ' (miễn — đã về)' : ''}`,
+      { cards:debugCardText(link.cards), target:debugComboText(prevCombo), chainLink:idx+1, chainTotal:chain.length, intermediate:true, mergedIntoLeader:winnerId, safeAlreadyFinished:winnerAlreadyFinished }
+    );
+
+    // "Chặt" là hành động đã cam kết: đăng ký bị chặt đè coi như đã đánh, phải mất bộ bài đó
+    // dù không được lên làm leader — giống hệt mắt xích trung gian trong executeThamGiaChatWin().
+    const linkHandBefore = safeArray(gameState.hands[link.playerId]);
+    gameState.hands[link.playerId] = linkHandBefore.filter(c => !link.cards.some(sc => sc.r === c.r && sc.s === c.s));
+    gameState.playedCardsCount[link.playerId] = (gameState.playedCardsCount[link.playerId] || 0) + link.cards.length;
+    if(!gameState.revealedCards) gameState.revealedCards = {};
+    if(!gameState.revealedCards[link.playerId]) gameState.revealedCards[link.playerId] = [];
+    gameState.revealedCards[link.playerId].push(...link.cards.map(c => ({ r:c.r, s:c.s })));
+    if(gameState.hands[link.playerId].length === 0 && !gameState.finished.includes(link.playerId)){
+      gameState.finished.push(link.playerId);
+      awardLiveBaseScore(link.playerId, gameState.finished.length, true);
+      foldColdPlayers();
+    }
+
+    prevCombo = link.combo;
+  });
+
+  // Người đăng ký MẠNH NHẤT trong nhóm (mắt xích áp chót) là người phải trả toàn bộ Bom cho
+  // người đang dẫn đầu — cập nhật payer/receiver của chuỗi đang treo để settleChopChain() sắp
+  // chạy ngay sau đây (ở checkNextTurn()) kết sổ đúng người, thay vì đổ về leader gốc trước đó.
+  const lastLink = chain[chain.length - 1];
+  if(!winnerAlreadyFinished && (gameState.gameMode === 'WATER' || gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM')){
+    gameState.chopChainPayer = lastLink.playerId;
+    gameState.chopChainReceiver = winnerId;
+    gameState.chopChainHistory = Array.isArray(gameState.chopChainHistory) ? gameState.chopChainHistory : [];
+    gameState.chopChainHistory.push({
+      payer: lastLink.playerId,
+      receiver: winnerId,
+      amount: gameState.chopChainValue,
+      target: describeCombo(prevCombo),
+      at: Date.now()
+    });
+  }
+  gameState.log = winnerAlreadyFinished
+    ? `${winnerName} đã về — các đăng ký Tham Gia Chặt không đủ sức chặt bộ cuối của họ đều được miễn Nước.`
+    : `${gameState.names[lastLink.playerId]} đăng ký Tham Gia Chặt mạnh nhất nhưng vẫn không đủ sức chặt bộ mới nhất của ${winnerName} — gánh chịu toàn bộ Bom phát sinh thêm từ các đăng ký.`;
 }
 
 // ================================================================
@@ -6129,10 +6231,22 @@ function checkNextTurn(){
       // đã gom được so với mục tiêu CUỐI CÙNG hiện đang trên bàn (gameState.currentCombo).
       const thamGiaChatChain = resolveThamGiaChatRegistrations();
       if(thamGiaChatChain && thamGiaChatChain.length){
-        executeThamGiaChatWin(thamGiaChatChain);
-        return;
+        const strongestReg = thamGiaChatChain[thamGiaChatChain.length - 1];
+        if(canBeat(strongestReg.combo, gameState.currentCombo)){
+          executeThamGiaChatWin(thamGiaChatChain);
+          return;
+        }
+        // FIX "ĐĂNG KÝ CHẶT BỊ VÔ HIỆU LẶNG LẼ KHI CÓ BỘ MẠNH HƠN VỪA ĐƯỢC ĐÁNH BÌNH THƯỜNG":
+        // không đăng ký nào đủ sức chặt mục tiêu MỚI NHẤT trên bàn (ví dụ ai đó vừa đánh bình
+        // thường, đúng lượt, ra bộ còn mạnh hơn mọi đăng ký) — các đăng ký này KHÔNG bị xoá sạch
+        // vô hiệu như trước nữa, mà được gộp thành mắt xích trung gian (xem
+        // mergeThamGiaChatChainIntoCurrentLeader()): người đăng ký mạnh nhất trong nhóm gánh
+        // trọn Bom phát sinh thêm, các đăng ký yếu hơn chỉ mất bài, không mất Nước riêng. Sau
+        // đó RƠI TIẾP xuống nhánh gốc bên dưới để settleChopChain() kết sổ và mở vòng mới cho
+        // người đang dẫn đầu — không return ở đây.
+        mergeThamGiaChatChainIntoCurrentLeader(thamGiaChatChain);
       }
-      // Không ai đăng ký hợp lệ → xử lý y hệt luật gốc (mắt xích cuối tự settle).
+      // Không ai đăng ký hợp lệ (hoặc vừa gộp xong ở trên) → xử lý y hệt luật gốc (mắt xích cuối tự settle).
       // ĐÁNH CHẬM: lượt vừa kết thúc. Giữ lastRoundReview để vẫn xem được lượt vừa đánh;
       // xoá bộ đệm để nước đánh đầu tiên tiếp theo bắt đầu một lượt mới.
       gameState.roundReview = [];
@@ -6228,6 +6342,7 @@ function endGame(){
   if(timerLoop) clearInterval(timerLoop);
   consecutivePlayCount = 0;
   lastNotifiedTurnId = null;
+  last20sWarnTurnId = null;
 
   // Đưa những người bị loại vì CÓNG vào cuối bảng xếp hạng (họ chưa từng đánh lá nào nên luôn xếp hạng chót)
   if(gameState.coldFolded){
@@ -7511,6 +7626,14 @@ setInterval(()=>{
   const rem = Math.max(0, Math.ceil((currentState.turnDeadline - Date.now())/1000));
   el.textContent = rem;
   el.classList.toggle('low', rem <= 5);
+
+  // ÂM "CÒN 20S CUỐI CHƯA ĐÁNH": chỉ phát cho đúng người đang tới lượt, đúng 1 lần
+  // mỗi lượt, ngay khi đồng hồ của họ chạm mốc còn 20 giây mà vẫn chưa đánh (chưa hết lượt).
+  if(currentState.turnId === myId && !isSpectator && !currentState.isEnded &&
+     rem <= 20 && rem > 0 && last20sWarnTurnId !== currentState.turnId){
+    last20sWarnTurnId = currentState.turnId;
+    playGlobalSound('TIME_20S', 1.0);
+  }
 }, 250);
 
 // GHI CHÚ: nút "⚡ THAM GIA CHẶT" không còn đếm ngược (đã bỏ hẳn cửa sổ 3 giây) — nhãn nút
@@ -8778,6 +8901,7 @@ const SOUND_KEY_META = [
   { key:'CHOP_4', label:'📣 CHOP 4 — Gọi gọi mày xông gọi' },
   { key:'CHOP', label:'💥 CHOP dự phòng (ít khi dùng tới)' },
   { key:'MY_TURN', label:'⏰ Tới lượt bạn' },
+  { key:'TIME_20S', label:'⏱ Còn 20s cuối chưa đánh' },
   { key:'PLAY_CARD', label:'🃏 Đánh bài xuống bàn' },
   { key:'FINISH_1ST', label:'🏆 Về Nhất' },
   { key:'FINISH_23', label:'🥈 Về Nhì / Ba' },
@@ -8958,6 +9082,7 @@ function renderConfigForm(){
   });
   // --- ÂM SỰ KIỆN KHÁC ---
   $('cfgEnMyTurn').checked = SOUND_CONFIG.enabled.myTurn;     $('cfgVolMyTurn').value = SOUND_CONFIG.volumes.myTurn;
+  $('cfgEnTime20s').checked = SOUND_CONFIG.enabled.time20s;   $('cfgVolTime20s').value = SOUND_CONFIG.volumes.time20s;
   $('cfgEnPlayCard').checked = SOUND_CONFIG.enabled.playCard; $('cfgVolPlayCard').value = SOUND_CONFIG.volumes.playCard;
   $('cfgEnFinish1st').checked = SOUND_CONFIG.enabled.finish1st; $('cfgVolFinish1st').value = SOUND_CONFIG.volumes.finish1st;
   $('cfgEnFinish23').checked = SOUND_CONFIG.enabled.finish23; $('cfgVolFinish23').value = SOUND_CONFIG.volumes.finish23;
@@ -9000,6 +9125,7 @@ function collectConfigFromForm(){
   });
 
   SOUND_CONFIG.enabled.myTurn = $('cfgEnMyTurn').checked;     SOUND_CONFIG.volumes.myTurn = clampCfgVol($('cfgVolMyTurn').value);
+  SOUND_CONFIG.enabled.time20s = $('cfgEnTime20s').checked;   SOUND_CONFIG.volumes.time20s = clampCfgVol($('cfgVolTime20s').value);
   SOUND_CONFIG.enabled.playCard = $('cfgEnPlayCard').checked; SOUND_CONFIG.volumes.playCard = clampCfgVol($('cfgVolPlayCard').value);
   SOUND_CONFIG.enabled.finish1st = $('cfgEnFinish1st').checked; SOUND_CONFIG.volumes.finish1st = clampCfgVol($('cfgVolFinish1st').value);
   SOUND_CONFIG.enabled.finish23 = $('cfgEnFinish23').checked; SOUND_CONFIG.volumes.finish23 = clampCfgVol($('cfgVolFinish23').value);
