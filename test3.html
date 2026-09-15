@@ -1208,15 +1208,6 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     </div>
     <ul class="player-list" id="lobbyPlayers"></ul>
 
-    <div id="slowCheckinPanel" class="hidden" style="margin-top:10px;padding:10px;border:1px solid var(--panel-line);border-radius:10px;background:#0003;">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-        <div style="font-size:12px;color:var(--gold);font-weight:800;">🐢 CHECK-IN ĐÁNH CHẬM</div>
-        <span id="slowCheckinCount" style="font-size:11px;opacity:.75;">0/4</span>
-      </div>
-      <div id="slowCheckinStatus" style="font-size:11px;color:rgba(250,246,238,.65);margin:6px 0 8px;line-height:1.45;"></div>
-      <button class="btn btn-gold" id="btnSlowCheckin" style="width:100%;">✅ CHECK-IN</button>
-    </div>
-
     <div class="hidden" id="hostSettings">
       <label>⚙️ CHẾ ĐỘ CHƠI (CHỌN 1 TRƯỚC TRẬN)</label>
       <select class="sel" id="gameModeSelect">
@@ -2219,7 +2210,6 @@ function buildHostSnapshotPayload(){
     roomSettings: roomSettings ? {...roomSettings} : {},
     botList: safeArray(botList),
     playerTokens: playerTokens ? {...playerTokens} : {},
-    slowCheckIns: slowCheckIns ? {...slowCheckIns} : {},
     gameState: serializeGameStateForFirebase(gameState),
     stateVersion: hostStateVersion,
     savedAt: Date.now()
@@ -2265,6 +2255,7 @@ function resumeAsHost(){
       players = safeArray(snapshot.players);
       roomSettings = snapshot.roomSettings || roomSettings;
       botList = safeArray(snapshot.botList);
+        slowCheckIns = new Set(safeArray(snapshot.slowCheckIns));
       playerTokens = (snapshot.playerTokens && typeof snapshot.playerTokens === 'object') ? snapshot.playerTokens : {};
       gameState = deserializeGameStateFromFirebase(snapshot.gameState);
       hostStateVersion = Number(snapshot.stateVersion || gameState?.stateVersion || 0) || 0;
@@ -2423,7 +2414,7 @@ function attemptTakeoverAsHost(){
         players = safeArray(snapshot.players);
         roomSettings = snapshot.roomSettings || roomSettings;
         botList = safeArray(snapshot.botList);
-        slowCheckIns = (snapshot.slowCheckIns && typeof snapshot.slowCheckIns === 'object') ? snapshot.slowCheckIns : {};
+        slowCheckIns = new Set(safeArray(snapshot.slowCheckIns));
       playerTokens = (snapshot.playerTokens && typeof snapshot.playerTokens === 'object') ? snapshot.playerTokens : {};
         gameState = deserializeGameStateFromFirebase(snapshot.gameState);
         hostStateVersion = Number(snapshot.stateVersion || gameState?.stateVersion || 0) || 0;
@@ -2962,8 +2953,9 @@ let kneelingTracker = {};
 let matchScores = {};
 let matchHistory = [];
 let matchStartedAt = null;
-// CHECK-IN riêng cho CHẾ ĐỘ ĐÁNH CHẬM. true = đã đăng ký tham gia; OFFLINE vẫn giữ chỗ/lượt.
-let slowCheckIns = {}; 
+// CHECK-IN ĐÁNH CHẬM: đăng ký tham gia độc lập với trạng thái ONLINE/OFFLINE.
+// Set này chỉ có ý nghĩa cho slowMode; người đã CHECK-IN không bị mất chỗ khi rớt mạng.
+let slowCheckIns = new Set();
 
 const $=id=>document.getElementById(id);
 
@@ -3413,8 +3405,6 @@ $('btnCreate').onclick=()=>{
   roomCode = Math.random().toString(36).substring(2,8).toUpperCase();
   myId = generatePlayerId();
   players = [{id:myId, name:myName}];
-  // Chủ phòng mặc định đã CHECK-IN; khách tự CHECK-IN khi vào.
-  slowCheckIns = {[myId]: true};
   playerTokens = {};
   botList = [];
   gameState = null; currentState = null; // tránh gameState cũ (từ phiên trước) làm publishRoomToPublic tính nhầm trạng thái
@@ -3427,6 +3417,7 @@ $('btnCreate').onclick=()=>{
   claimActiveHost();
   saveTLHostSession();
   updatePlayerIndexEntry(myId, roomCode, myName);
+  slowCheckIns = new Set([myId]);
   showLobby();
 };
 
@@ -3442,7 +3433,7 @@ $('btnBotGame').onclick = () => {
     { id: 'bot_3', name: botNames[2] }
   ];
   botList = ['bot_1', 'bot_2', 'bot_3'];
-  slowCheckIns = Object.fromEntries(players.map(p=>[p.id,true]));
+  slowCheckIns = new Set(players.map(p=>p.id));
   showLobby();
   $('btnStart').disabled = false;
 };
@@ -3466,7 +3457,7 @@ $('btnAddBotInLobby').onclick = () => {
   const newBotId = 'bot_' + Date.now().toString(36).slice(-4) + Math.floor(Math.random()*100);
   players.push({ id: newBotId, name: botName });
   botList.push(newBotId);
-  if(roomSettings.slowMode) slowCheckIns[newBotId] = true;
+  if(roomSettings.slowMode) slowCheckIns.add(newBotId);
 
   if (!isBotMode) {
     publishRoomToPublic(roomCode, players[0].name);
@@ -3480,7 +3471,6 @@ function removeBotInLobby(botId) {
   if (!isHost) return;
   players = players.filter(p => p.id !== botId);
   botList = botList.filter(id => id !== botId);
-  delete slowCheckIns[botId];
   if (!isBotMode) {
     publishRoomToPublic(roomCode, players[0].name);
     broadcastLobby();
@@ -3493,8 +3483,15 @@ function markPlayerDisconnected(disconnectedId){
   if(!gameState || gameState.isEnded) return;
   if(!gameState.disconnected) gameState.disconnected = new Set();
   gameState.disconnected.add(disconnectedId);
-  gameState.log = `⚠️ ${gameState.names[disconnectedId] || 'Người chơi'} đã mất mạng — AI sẽ đánh hộ tạm thời!`;
-  bumpActor(disconnectedId, '⚠️ Mất mạng (AI đánh hộ)');
+  if(gameState.slowMode){
+    // Đánh chậm: OFFLINE chỉ là tạm ngắt kết nối. Tuyệt đối không AI đánh hộ, không PASS,
+    // không xóa người, không đổi order; nếu đúng lượt thì giữ nguyên lượt cho tới khi quay lại.
+    gameState.log = `🔴 ${gameState.names[disconnectedId] || 'Người chơi'} đang OFFLINE — giữ nguyên lượt/chỗ.`;
+    bumpActor(disconnectedId, '🔴 OFFLINE — giữ lượt');
+  }else{
+    gameState.log = `⚠️ ${gameState.names[disconnectedId] || 'Người chơi'} đã mất mạng — AI sẽ đánh hộ tạm thời!`;
+    bumpActor(disconnectedId, '⚠️ Mất mạng (AI đánh hộ)');
+  }
   broadcastState();
 }
 
@@ -3535,8 +3532,6 @@ function onHostMessage(fromId, msg, token){
     const existing = players.find(p=>p.id===msg.id);
     if(!existing && players.length<4){
       players.push({id:msg.id, name:String(msg.name || 'Người chơi').slice(0,30)});
-      // Khách mới phải tự CHECK-IN nếu đây là Đánh Chậm. Không tự chen vào ván hiện tại.
-      if(roomSettings.slowMode) slowCheckIns[msg.id] = false;
       playerTokens[msg.id] = generateSessionToken();
       sendToPlayer(msg.id, {t:'session', token:playerTokens[msg.id]});
       publishRoomToPublic(roomCode, players[0].name);
@@ -3575,21 +3570,32 @@ function onHostMessage(fromId, msg, token){
     return;
   }
 
+  // CHECK-IN ĐÁNH CHẬM: đăng ký tham gia độc lập với kết nối mạng.
+  if(msg.t === 'slow_checkin') {
+    if(!roomSettings.slowMode || !fromId || !players.some(p=>p.id===fromId)) return;
+    slowCheckIns.add(fromId);
+    broadcastLobby();
+    if(gameState && !gameState.isEnded && !gameState.order.includes(fromId)){
+      // Người mới CHECK-IN giữa ván chỉ được xếp vào VÁN KẾ TIẾP, không chèn vào order hiện tại.
+      sendToPlayer(fromId, {t:'state', state:getViewStateForPlayer(fromId)});
+    }
+    return;
+  }
+
   if(msg.t === '__disconnect__'){
     if(gameState && !gameState.isEnded){
       markPlayerDisconnected(fromId);
     } else {
-      players = players.filter(p=>p.id!==fromId);
-      delete playerTokens[fromId];
-      broadcastLobby();
+      // Đánh chậm: CHECK-IN đã là đăng ký tham gia, OFFLINE không đồng nghĩa rời trận.
+      // Giữ nguyên player + token + CHECK-IN để người chơi quay lại đúng ID.
+      if(roomSettings.slowMode && slowCheckIns.has(fromId)){
+        broadcastLobby();
+      } else {
+        players = players.filter(p=>p.id!==fromId);
+        delete playerTokens[fromId];
+        broadcastLobby();
+      }
     }
-    return;
-  }
-  if(msg.t==='slowCheckin'){
-    if(!roomSettings.slowMode) return;
-    if(!players.some(p=>p.id===fromId)) return;
-    slowCheckIns[fromId] = !!msg.checked;
-    broadcastLobby();
     return;
   }
   if(msg.t==='action'){
@@ -3681,9 +3687,9 @@ function onClientMessage(msg){
       return;
     } else if(msg.t==='lobby'){
       if(onFirstLobbyMessage){ onFirstLobbyMessage(); onFirstLobbyMessage = null; }
-      players = safeArray(msg.players || players); 
+      players = safeArray(msg.players || players);
       roomSettings = msg.settings || roomSettings;
-      slowCheckIns = (msg.slowCheckIns && typeof msg.slowCheckIns === 'object') ? msg.slowCheckIns : slowCheckIns;
+      if(Array.isArray(msg.slowCheckIns)) slowCheckIns = new Set(msg.slowCheckIns);
       renderLobby();
     } else if(msg.t==='actionResult'){
       const pending = pendingActionRequests.get(msg.requestId);
@@ -3763,7 +3769,7 @@ function onClientMessage(msg){
 }
 
 function broadcastLobby(){
-  sendToAll({t:'lobby', players, settings: roomSettings, slowCheckIns: slowCheckIns});
+  sendToAll({t:'lobby', players, settings: roomSettings, slowCheckIns:[...slowCheckIns]});
   renderLobby();
   persistHostSnapshot();
 }
@@ -3888,26 +3894,22 @@ function setLobbySettingsInteractive(enabled){
 
 function renderLobby(){
   const ul = $('lobbyPlayers'); ul.innerHTML = '';
-  const isSlow = !!roomSettings.slowMode;
-  const checkedCount = players.filter(p => !!slowCheckIns[p.id]).length;
-
   players.forEach((p,i)=>{
     const isBot = botList.includes(p.id);
-    const checked = !!slowCheckIns[p.id];
+    const checked = isBot || slowCheckIns.has(p.id);
+    const online = !(gameState && gameState.disconnected && gameState.disconnected.has(p.id));
     let removeBtn = '';
     if (isHost && isBot) {
-      removeBtn = `<button class="btn btn-outline" style="font-size:10px; padding:2px 6px; color:#ff7777; border-color:#ff7777;" onclick="removeBotInLobby('${p.id}')">Xóa</button>`;
+      removeBtn = `<button class="btn btn-outline" style="font-size:10px;padding:2px 6px;color:#ff7777;border-color:#ff7777;" onclick="removeBotInLobby('${p.id}')">Xóa</button>`;
     }
-    const checkBadge = isSlow
-      ? `<span class="crown" style="color:${checked?'#55c987':'#999'}">${checked?'✅ CHECK-IN':'⏳ Chưa CHECK-IN'}</span>`
-      : '';
     ul.innerHTML += `
       <li>
         <div class="player-info">
-          <span class="dot"></span>
+          <span class="dot ${online?'':'off'}"></span>
           <span>${escapeHtml(p.name)}</span>
           ${i===0?'<span class="crown">♛ Host</span>':''}
-          ${checkBadge}
+          ${roomSettings.slowMode ? `<span class="badge">${checked?'✅ CHECK-IN':'⏳ Chưa CHECK-IN'}</span>` : ''}
+          ${roomSettings.slowMode && !online ? '<span class="badge" style="background:#3a3a3a;color:#bbb">🔴 OFFLINE</span>' : ''}
         </div>
         ${removeBtn}
       </li>`;
@@ -3921,53 +3923,39 @@ function renderLobby(){
   $('turnSecondsSelect').disabled = !isHost || !!roomSettings.slowMode;
   $('turnSecondsSelect').style.opacity = roomSettings.slowMode ? '0.45' : '1';
   if(roomSettings.gameMode !== 'WATER'){
-    $('stakeSelect').style.display = 'none';
-    $('stakeLabel').style.display = 'none';
+    $('stakeSelect').style.display = 'none'; $('stakeLabel').style.display = 'none';
   } else {
-    $('stakeSelect').style.display = '';
-    $('stakeLabel').style.display = '';
+    $('stakeSelect').style.display = ''; $('stakeLabel').style.display = '';
   }
 
-  const checkPanel = $('slowCheckinPanel');
-  const checkBtn = $('btnSlowCheckin');
-  if(checkPanel) checkPanel.classList.toggle('hidden', !isSlow);
-  if(isSlow){
-    const mine = !!slowCheckIns[myId];
-    $('slowCheckinCount').textContent = `${checkedCount}/${players.length}`;
-    $('slowCheckinStatus').textContent = mine
-      ? 'Bạn đã CHECK-IN. Nếu tắt máy/mất mạng, chỗ và lượt vẫn được giữ; khi quay lại sẽ tiếp tục.'
-      : 'Bạn chưa CHECK-IN. Bấm CHECK-IN để đăng ký tham gia; không cần chờ đủ 4 người.';
-    if(checkBtn){
-      checkBtn.textContent = mine ? '↩️ HỦY CHECK-IN' : '✅ CHECK-IN';
-      checkBtn.classList.toggle('btn-danger', mine);
-      checkBtn.classList.toggle('btn-gold', !mine);
+  // CHECK-IN: mỗi người tự đăng ký, không phụ thuộc ONLINE.
+  let checkBox = document.getElementById('slowCheckinBox');
+  if(roomSettings.slowMode){
+    if(!checkBox){
+      checkBox=document.createElement('div'); checkBox.id='slowCheckinBox';
+      checkBox.style.cssText='margin-top:12px;padding:10px;border:1px solid var(--panel-line);border-radius:10px;background:#0004;text-align:center;';
+      $('guestSettingsView').parentNode.insertBefore(checkBox, $('guestSettingsView').nextSibling);
     }
-  }
+    const checked = slowCheckIns.has(myId) || botList.includes(myId);
+    checkBox.innerHTML = `<div style="font-size:12px;color:rgba(250,246,238,.72);margin-bottom:8px">🐢 Đánh chậm • ${slowCheckIns.size}/${players.length} người CHECK-IN</div>`
+      + (isBotMode || botList.includes(myId) ? '<div style="color:var(--green);font-weight:700">✅ Đã CHECK-IN</div>'
+      : `<button id="btnSlowCheckin" class="btn ${checked?'btn-outline':'btn-gold'}" style="width:100%">${checked?'✅ ĐÃ CHECK-IN':'✅ CHECK-IN'}</button>`)
+      + `<div style="font-size:10px;color:rgba(250,246,238,.5);margin-top:6px">CHECK-IN rồi OFFLINE vẫn giữ chỗ và giữ lượt; chỉ khi quay lại mới đánh tiếp.</div>`;
+    const cb=$('btnSlowCheckin');
+    if(cb) cb.onclick=()=>{
+      if(checked) return;
+      sendToHost({t:'slow_checkin'});
+      slowCheckIns.add(myId); renderLobby();
+    };
+  }else if(checkBox){ checkBox.remove(); }
 
   if(isHost){
-    $('btnStart').disabled = isSlow ? checkedCount < 2 : players.length < 2;
-    $('btnStart').textContent = isSlow ? `Bắt đầu (${checkedCount}/4 CHECK-IN)` : 'Bắt đầu (2-4 người)';
-    if (players.length >= 4) {
-      $('btnAddBotInLobby').disabled = true;
-    } else {
-      $('btnAddBotInLobby').disabled = false;
-    }
+    const checkedCount = roomSettings.slowMode ? slowCheckIns.size : players.length;
+    $('btnStart').disabled = checkedCount < 2;
+    $('btnStart').textContent = roomSettings.slowMode ? `Bắt đầu (${checkedCount}/4 CHECK-IN)` : 'Bắt đầu (2-4 người)';
+    $('btnAddBotInLobby').disabled = players.length >= 4;
   }
 }
-
-function toggleSlowCheckIn(){
-  if(!roomSettings.slowMode || !myId) return;
-  const next = !slowCheckIns[myId];
-  slowCheckIns[myId] = next;
-  if(isHost){
-    broadcastLobby();
-  }else{
-    sendToHost({t:'slowCheckin', checked:next});
-  }
-  renderLobby();
-}
-
-if($('btnSlowCheckin')) $('btnSlowCheckin').onclick = toggleSlowCheckIn;
 
 $('gameModeSelect').onchange = e => {
   roomSettings.gameMode = e.target.value;
@@ -3986,28 +3974,21 @@ $('hideCardCountCheck').onchange = e => { roomSettings.hideCardCount = e.target.
 $('slowModeCheck').onchange = e => {
   if(!isHost){ e.target.checked = !!roomSettings.slowMode; return; } // chốt chặn thêm: chỉ chủ phòng được đổi
   roomSettings.slowMode = e.target.checked;
-  if(roomSettings.slowMode){
-    // Host tự CHECK-IN; khách phải tự bấm CHECK-IN.
-    slowCheckIns[myId] = true;
-  }
+  if(roomSettings.slowMode && isHost) slowCheckIns.add(myId);
   $('turnSecondsSelect').disabled = !isHost || roomSettings.slowMode;
   $('turnSecondsSelect').style.opacity = roomSettings.slowMode ? '0.45' : '1';
   broadcastLobby();
 };
 
-$('btnStart').onclick = () => {
-  if(!isHost) return;
-  if(roomSettings.slowMode){
-    const checkedCount = players.filter(p=>!!slowCheckIns[p.id]).length;
-    if(checkedCount < 2){
-      $('lobbyErr').textContent = '❌ Cần ít nhất 2 người CHECK-IN để bắt đầu.';
-      return;
-    }
-  }
-  broadcastCountdownAndStart();
-};
+$('btnStart').onclick = () => { if(isHost) broadcastCountdownAndStart(); };
 
 function broadcastCountdownAndStart(){
+  if(!isHost) return;
+  if(roomSettings.slowMode && slowCheckIns.size < 2){
+    $('lobbyErr').textContent = 'Cần ít nhất 2 người CHECK-IN trước khi bắt đầu.';
+    renderLobby();
+    return;
+  }
   sendToAll({t: 'countdown_start'});
   triggerCountdownAnimation(() => dealNewGame());
 }
@@ -4029,25 +4010,25 @@ function triggerCountdownAnimation(onComplete){
   }, 1000);
 }
 
-function revealInstantWin(hands, winnerId, info){
-  ensureMatchLedger(players.map(p=>p.id));
-  const winnerName = players.find(p=>p.id===winnerId).name;
+function revealInstantWin(hands, winnerId, info, dealPlayers = players){
+  ensureMatchLedger(dealPlayers.map(p=>p.id));
+  const winnerName = dealPlayers.find(p=>p.id===winnerId).name;
   gameState = {
-    hands, order: players.map(p=>p.id), names: Object.fromEntries(players.map(p=>[p.id, p.name])),
-    hostId: players[0].id,
+    hands, order: dealPlayers.map(p=>p.id), names: Object.fromEntries(dealPlayers.map(p=>[p.id, p.name])),
+    hostId: dealPlayers[0].id,
     turnIdx: 0, leaderId: winnerId, currentCombo: null, firstMove: true, requiredCard: null,
     finished: [], passed: new Set(), disconnected: new Set(), coldFolded: new Set(),
-    scores: Object.fromEntries(players.map(p=>[p.id, 0])),
+    scores: Object.fromEntries(dealPlayers.map(p=>[p.id, 0])),
     matchScores: {...matchScores},
     matchHistory: matchHistory.map(x=>({roundNo:x.roundNo,at:x.at,players:{...x.players}})),
     matchScoreApplied: false,
     roundNo: matchHistory.length + 1,
-    liveScores: Object.fromEntries(players.map(p=>[p.id, 0])),
+    liveScores: Object.fromEntries(dealPlayers.map(p=>[p.id, 0])),
     liveBaseAwards: {},
     liveCongAwards: {},
     liveChopAwards: {},
     liveWinnerAwarded: false,
-    playedCardsCount: Object.fromEntries(players.map(p=>[p.id, 0])),
+    playedCardsCount: Object.fromEntries(dealPlayers.map(p=>[p.id, 0])),
     revealedCards: Object.fromEntries(players.map(p=>[p.id, safeArray(hands[p.id]).map(c=>({r:c.r,s:c.s}))])),
     kneelingStatus: { ...kneelingTracker },
     roundReview: [],
@@ -4434,16 +4415,6 @@ function handleHostUtilityRequest(playerId, req){
 function dealNewGame(){
   if(isRuleTestMode){ startRuleTestGame(); return; }
 
-  // Đánh chậm CHECK-IN: chỉ những người đã đăng ký mới được chia bài cho VÁN MỚI.
-  // Người vào/check-in giữa ván hiện tại sẽ chờ tới ván kế tiếp; không phá lượt đang chạy.
-  const roundPlayers = roomSettings.slowMode
-    ? players.filter(p => !!slowCheckIns[p.id])
-    : players.slice();
-  if(roomSettings.slowMode && roundPlayers.length < 2){
-    console.warn('⚠️ Đánh chậm: chưa đủ người CHECK-IN để chia ván mới.');
-    return;
-  }
-
   // Nếu ván trước không chỉnh điểm, chốt proposedScores vào sổ điểm
   // trước khi chia ván mới. Nếu đã bấm Điều chỉnh, bắt buộc đi qua xác nhận.
   if(isHost && gameState && (gameState.gameMode==='POINTS'||gameState.gameMode==='NHATANCA'||gameState.gameMode==='CHATCHEM') && gameState.pendingRound && !gameState.pendingRound.scoreEditActive){
@@ -4455,11 +4426,20 @@ function dealNewGame(){
   // Trước khi chia ván mới, đảm bảo ledger không bị rơi về 0.
   if(gameState && (gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM') && gameState.matchScores){
     const persisted = {};
-    safeArray(roundPlayers).forEach(p=>{
+    safeArray(players).forEach(p=>{
       const v = Number(gameState.matchScores[p.id]);
       if(Number.isFinite(v)) persisted[p.id] = v;
     });
     if(Object.keys(persisted).length) matchScores = {...matchScores, ...persisted};
+  }
+  // Đánh chậm + CHECK-IN: chỉ người đã CHECK-IN mới được chia bài cho ván mới.
+  // Người CHECK-IN sau khi ván đã bắt đầu sẽ vào order từ VÁN KẾ TIẾP.
+  const roundPlayers = roomSettings.slowMode
+    ? players.filter(p => slowCheckIns.has(p.id) || botList.includes(p.id))
+    : players.slice();
+  if(roundPlayers.length < 2){
+    if(isHost) $('lobbyErr').textContent = 'Cần ít nhất 2 người CHECK-IN để bắt đầu ván.';
+    return;
   }
   ensureMatchLedger(roundPlayers.map(p=>p.id));
   // forceStatus='PLAYING': ván sắp chia bài ngay bên dưới, dù gameState hiện tại (ván trước,
@@ -4495,7 +4475,7 @@ function dealNewGame(){
   }
 
   if (instantWinnerId) {
-    revealInstantWin(hands, instantWinnerId, instantWinInfo);
+    revealInstantWin(hands, instantWinnerId, instantWinInfo, roundPlayers);
     return;
   }
 
@@ -4547,7 +4527,7 @@ function dealNewGame(){
     coldFolded: new Set(), // LUẬT CÓNG: người chưa đánh được lá nào khi đã có người về Nhất -> bị loại (úp bài) ngay
     scores: Object.fromEntries(roundPlayers.map(p=>[p.id, 0])),
     matchScores: {...matchScores},
-    matchHistory: matchHistory.map(x=>({roundNo:x.roundNo,at:x.at,roundPlayers:{...x.roundPlayers}})),
+    matchHistory: matchHistory.map(x=>({roundNo:x.roundNo,at:x.at,players:{...x.players}})),
     matchScoreApplied: false,
     roundNo: matchHistory.length + 1,
     liveScores: Object.fromEntries(roundPlayers.map(p=>[p.id, 0])),
@@ -4555,7 +4535,7 @@ function dealNewGame(){
     liveCongAwards: {},
     liveChopAwards: {},
     playedCardsCount: Object.fromEntries(roundPlayers.map(p=>[p.id, 0])),
-    revealedCards: Object.fromEntries(roundPlayers.map(p=>[p.id, []])),
+    revealedCards: Object.fromEntries(players.map(p=>[p.id, []])),
     kneelingStatus: { ...kneelingTracker },
     roundReview: [],
     lastRoundReview: gameState && Array.isArray(gameState.lastRoundReview) ? gameState.lastRoundReview.map(x=>({...x, cards:Array.isArray(x.cards)?x.cards.map(c=>({r:c.r,s:c.s})):[]})) : [],
@@ -4602,7 +4582,7 @@ function startTimerLoop(){
     // rồi đuổi (kickPlayerNow), để ván không bị "lỗi, đứng" và bài không bị tính sai.
     // Họ vẫn còn nguyên trong players[]/gameState.order; hễ kết nối lại (xem onHostMessage
     // 'join'), gameState.disconnected sẽ được gỡ và họ lấy lại quyền điều khiển ngay lượt sau.
-    const isAutoPlayed = botList.includes(currId) || (gameState.disconnected && gameState.disconnected.has(currId));
+    const isAutoPlayed = botList.includes(currId) || (!gameState.slowMode && gameState.disconnected && gameState.disconnected.has(currId));
     if(isAutoPlayed){
       if(!gameState.botThinking){
         gameState.botThinking = true;
@@ -4634,7 +4614,7 @@ function startTimerLoop(){
           }
           // Nếu người mất mạng vừa kết nối lại đúng lúc này (gameState.disconnected đã được
           // gỡ), KHÔNG đánh hộ nữa — để nhường lại quyền điều khiển thật cho họ.
-          const stillAutoPlayed = botList.includes(scheduledBotId) || (gameState.disconnected && gameState.disconnected.has(scheduledBotId));
+          const stillAutoPlayed = botList.includes(scheduledBotId) || (!gameState.slowMode && gameState.disconnected && gameState.disconnected.has(scheduledBotId));
           if(stillAutoPlayed && gameState.order[gameState.turnIdx] === scheduledBotId) makeBotMove(scheduledBotId);
           gameState.botThinking = false;
         }, 2000);
@@ -4800,6 +4780,8 @@ function makeBotMove(botId){
 
 function autoForceTurn(playerId){
   if(!gameState || gameState.isEnded) return;
+  // Đánh chậm: không bao giờ tự động xử lý lượt của người thật, kể cả họ OFFLINE.
+  if(gameState.slowMode && !botList.includes(playerId)) return;
   // V5 HARD LOCK: timeout/callback của Bot cũ cũng không được vượt qua quyền sau chặt.
   if(gameState.lastChopWinnerId && String(playerId) !== String(gameState.lastChopWinnerId)) return;
   if(gameState.forcedNextTurnId && String(playerId) !== String(gameState.forcedNextTurnId)) return;
@@ -4815,7 +4797,10 @@ function autoForceTurn(playerId){
   // Không đuổi ngay khi mất mạng nữa — đánh hộ bằng AI (giống Bot) để ván tiếp tục
   // bình thường, tránh làm sai điểm/số lá do trước đây kickPlayerNow() ép họ thành
   // "đã về" dù bài trên tay chưa hết.
-  if(gameState.disconnected && gameState.disconnected.has(playerId)){ makeBotMove(playerId); return; }
+  if(gameState.disconnected && gameState.disconnected.has(playerId)){
+    if(gameState.slowMode && !botList.includes(playerId)) return;
+    makeBotMove(playerId); return;
+  }
 
   if(gameState.currentCombo){
     handleAction(playerId, {kind:'pass'}, true);
@@ -6765,6 +6750,7 @@ function getViewStateForPlayer(id){
     myHand: isPlayerInGame ? playerHand : [],
     counts: Object.fromEntries(orderArr.map(p => [p, gameState.hands && gameState.hands[p] ? safeArray(gameState.hands[p]).length : 0])),
     order: orderArr,
+    slowCheckIns: [...slowCheckIns],
     names: gameState.names || {},
     hostId: gameState.hostId || null,
     // Đồng bộ đầy đủ người đang có quyền đánh. turnIdx được gửi kèm để UI không phải
@@ -6962,6 +6948,7 @@ function applyState(st){
   
   const prevRoundToken = currentRoundToken;
   currentState = st;
+  if(Array.isArray(st.slowCheckIns)) slowCheckIns = new Set(st.slowCheckIns);
   updatePauseOverlay(st);
   currentState.order = safeArray(st.order);
   currentState.finished = safeArray(st.finished);
@@ -7069,6 +7056,26 @@ function applyState(st){
   try{ renderOpponents(); } catch(err){ console.error('❌ Lỗi renderOpponents:', err); }
   try{ renderCenter(); } catch(err){ console.error('❌ Lỗi renderCenter:', err); }
   try{ renderHand(); } catch(err){ console.error('❌ Lỗi renderHand:', err); }
+  // Người vào sau trong Đánh Chậm được xem bàn như spectator. Có thể CHECK-IN ngay tại bàn;
+  // không chèn họ vào ván đang chạy, chỉ tham gia từ ván kế tiếp.
+  let spectatorBtn = document.getElementById('btnSlowSpectatorCheckin');
+  if(st.slowMode && isSpectator && !slowCheckIns.has(myId)){
+    if(!spectatorBtn){
+      spectatorBtn=document.createElement('button');
+      spectatorBtn.id='btnSlowSpectatorCheckin';
+      spectatorBtn.className='btn btn-gold';
+      spectatorBtn.style.cssText='position:fixed;left:50%;bottom:82px;transform:translateX(-50%);z-index:30;width:min(260px,80vw);';
+      spectatorBtn.textContent='🐢 CHECK-IN VÁN TIẾP';
+      document.body.appendChild(spectatorBtn);
+      spectatorBtn.onclick=()=>{
+        sendToHost({t:'slow_checkin'});
+        spectatorBtn.disabled=true; spectatorBtn.textContent='⏳ Đang CHECK-IN...';
+      };
+    }
+    spectatorBtn.classList.remove('hidden');
+  }else if(spectatorBtn){
+    spectatorBtn.classList.add('hidden');
+  }
   try{ if(isRuleTestMode) syncTestInstantChopUI(); } catch(err){ console.error('❌ Lỗi sync CHẶT NGAY:', err); }
   try{ showSeatBubble(st); } catch(err){ console.error('❌ Lỗi showSeatBubble:', err); }
   try{ showChopBanner(st); } catch(err){ console.error('❌ Lỗi showChopBanner:', err); }
@@ -8693,7 +8700,7 @@ function startRuleTestGame(){
     $('btnExitRuleTest').classList.remove('hidden');
 
     if(instantWinnerId){
-      revealInstantWin(hands, instantWinnerId, instantWinInfo);
+      revealInstantWin(hands, instantWinnerId, instantWinInfo, roundPlayers);
       return;
     }
 
