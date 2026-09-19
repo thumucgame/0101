@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -4149,7 +4148,18 @@ function finalizeInstantWin(){
 
 function ensureMatchLedger(order){const ids=safeArray(order);const next={};ids.forEach(id=>{next[id]=Number.isFinite(Number(matchScores[id]))?Number(matchScores[id]):0;});matchScores=next;if(!matchStartedAt)matchStartedAt=Date.now();return matchScores;}
 function resetMatchLedger(){matchScores={};matchHistory=[];matchStartedAt=null;}
-function getPointsRankValue(rank){return ({1:3,2:2,3:1,4:0})[Number(rank)]??0;}
+// FIX (MỤC 1 - Bét = 0 khi không đủ 4 người): trước đây hàm này dùng bảng cố định
+// {1:3,2:2,3:1,4:0} theo ĐÚNG SỐ THỨ TỰ hạng, không quan tâm số người chơi thật (activeCount).
+// Hệ quả: bàn chỉ có 3 người (hoặc 2 người) chơi Tính Điểm thì người về Bét (hạng cuối cùng
+// trong SỐ NGƯỜI THẬT đang đấu, ví dụ hạng 3/3 hoặc hạng 2/2) vẫn bị tính là Ba (+1) hay Nhì (+2)
+// thay vì phải luôn = 0 điểm. Giờ truyền thêm activeCount: hễ rank là hạng CHÓT trong số người
+// thật (rank >= activeCount) thì luôn trả về 0, bất kể activeCount là 2/3/4 người.
+function getPointsRankValue(rank, activeCount){
+  const r = Number(rank);
+  const ac = Number(activeCount);
+  if(Number.isFinite(ac) && ac > 0 && r >= ac) return 0;
+  return ({1:3,2:2,3:1,4:0})[r] ?? 0;
+}
 function applyPointsRoundToMatch(results){
   if(!gameState||(gameState.gameMode!=='POINTS'&&gameState.gameMode!=='NHATANCA'&&gameState.gameMode!=='CHATCHEM')||gameState.matchScoreApplied) return;
   ensureMatchLedger(gameState.order);
@@ -5411,8 +5421,18 @@ function executeThamGiaChatWin(chain){
   const activePlayers = gameState.order.filter(id => !gameState.finished.includes(id) && !gameState.coldFolded.has(id));
   if(activePlayers.length <= 1){
     if(activePlayers.length === 1){
-      gameState.finished.push(activePlayers[0]);
-      awardLiveBaseScore(activePlayers[0], gameState.finished.length, true);
+      const justFinishedId = activePlayers[0];
+      gameState.finished.push(justFinishedId);
+      awardLiveBaseScore(justFinishedId, gameState.finished.length, true);
+      // MỤC 3: nếu người này KHÔNG bị Cóng nhưng mọi người khác (trừ người về Nhất) đều
+      // đã bị Cóng — tức ván kết thúc chỉ vì đối thủ Cóng hết, không phải vì họ thật sự
+      // chơi hết bài — đánh dấu để cuối ván bỏ qua xét Thối bài cho họ (chỉ chế độ Tính Điểm).
+      const winnerIdNow = gameState.finished[0];
+      const allOthersCong = gameState.order.every(id => id === winnerIdNow || id === justFinishedId || (gameState.coldFolded && gameState.coldFolded.has(id)));
+      if(allOthersCong && gameState.coldFolded && gameState.coldFolded.size > 0){
+        gameState.autoFinishedViaCong = gameState.autoFinishedViaCong || {};
+        gameState.autoFinishedViaCong[justFinishedId] = true;
+      }
     }
     settleChopChain('ván kết thúc');
     endGame();
@@ -6178,10 +6198,20 @@ function handleAction(playerId, action, isAuto=false){
     const activePlayers = gameState.order.filter(id => !gameState.finished.includes(id) && !gameState.coldFolded.has(id));
     if(activePlayers.length <= 1){
       if(activePlayers.length === 1){
-        gameState.finished.push(activePlayers[0]);
+        const justFinishedId = activePlayers[0];
+        gameState.finished.push(justFinishedId);
         // Người bét cuối cùng được ghép hạng tự động ngay trước endGame() → luôn bỏ qua
         // FINISH_x, CRY sắp phát ngay sau đó rồi.
-        awardLiveBaseScore(activePlayers[0], gameState.finished.length, true);
+        awardLiveBaseScore(justFinishedId, gameState.finished.length, true);
+        // MỤC 3: nếu người này KHÔNG bị Cóng nhưng mọi người khác (trừ người về Nhất) đều
+        // đã bị Cóng — tức ván kết thúc chỉ vì đối thủ Cóng hết, không phải vì họ thật sự
+        // chơi hết bài — đánh dấu để cuối ván bỏ qua xét Thối bài cho họ (chỉ chế độ Tính Điểm).
+        const winnerIdNow = gameState.finished[0];
+        const allOthersCong = gameState.order.every(id => id === winnerIdNow || id === justFinishedId || (gameState.coldFolded && gameState.coldFolded.has(id)));
+        if(allOthersCong && gameState.coldFolded && gameState.coldFolded.size > 0){
+          gameState.autoFinishedViaCong = gameState.autoFinishedViaCong || {};
+          gameState.autoFinishedViaCong[justFinishedId] = true;
+        }
       }
       settleChopChain('ván kết thúc');
       acceptTrackedAction(playerId,action,{combo:debugComboText(combo),final:true});
@@ -6307,7 +6337,7 @@ function awardLiveBaseScore(playerId, forcedRank, suppressFinishSound){
 
   const activeCount = gameState.order.length;
   let baseAward = 0;
-  if(gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM') baseAward = getPointsRankValue(rank);
+  if(gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM') baseAward = getPointsRankValue(rank, activeCount);
   else if(activeCount === 2){ if(rank === 1) baseAward = 1; else return; }
   else if(activeCount === 3){ baseAward = rank === 1 ? 2 : 0; }
   else { if(rank === 1) baseAward = 2; else if(rank === 2) baseAward = 1; }
@@ -6529,6 +6559,12 @@ function endGame(){
 
     gameState.order.forEach(id => {
       const isCong = congIdSet.has(id);
+      // MỤC 3: người này KHÔNG bị Cóng, nhưng ván kết thúc chỉ vì mọi đối thủ khác (trừ
+      // người về Nhất) đều đã bị Cóng trước đó — họ chưa hề thật sự chơi hết bài tới cuối,
+      // chỉ được tự động ghép hạng Nhì/Ba. Ở chế độ Tính Điểm: bỏ qua hoàn toàn việc xét
+      // Thối bài trên tay của họ (không trừ điểm họ, không cộng khoản này cho người về Nhất) —
+      // chỉ giữ đúng điểm vị trí họ đã nhận. CHATCHEM không thuộc phạm vi mục 3 nên giữ nguyên.
+      if(isPointsMode && !isCong && gameState.autoFinishedViaCong && gameState.autoFinishedViaCong[id]) return;
       // CHẾ ĐỘ TÍNH ĐIỂM: người bị Cóng vẫn bị xét Thối trên tay (Heo/Tứ Quý/Đôi Thông...);
       // khoản Thối này dồn thẳng về người về Nhất, giống hệt khoản Cóng — KHÔNG còn bỏ qua
       // như luật cũ. CHATCHEM vẫn giữ luật cũ: Cóng thì bỏ qua Thối.
@@ -6579,7 +6615,7 @@ function endGame(){
         return;
       }
 
-      const base = getPointsRankValue(rank);
+      const base = getPointsRankValue(rank, activeCount);
       let foulScore = 0;
       let foulText = '';
       if(id === winnerId && foulPenaltiesTotal > 0){
