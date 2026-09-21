@@ -2064,6 +2064,32 @@ function safeArray(data) {
   return Object.values(data);
 }
 
+// THÔNG BÁO HỆ THỐNG NỔI (toast): hiện một băng thông báo tạm thời ở giữa đỉnh màn hình rồi
+// tự biến mất — dùng cho các sự kiện quan trọng người chơi cần biết ngay (vd chuyển quyền chủ
+// phòng) nhưng không cần họ phải bấm gì để đóng lại. Tự tạo container/phần tử bằng JS thay vì
+// thêm sẵn trong HTML, vì cần hiện được ở MỌI màn hình (Home/Lobby/Bàn chơi) mà không phải sửa
+// từng màn hình một; nhiều thông báo cùng lúc sẽ tự xếp chồng theo thứ tự xuất hiện.
+function showSystemToast(msg, durationMs){
+  try{
+    let container = document.getElementById('systemToastContainer');
+    if(!container){
+      container = document.createElement('div');
+      container.id = 'systemToastContainer';
+      container.style.cssText = 'position:fixed;top:calc(10px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:10000;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;max-width:92vw;';
+      document.body.appendChild(container);
+    }
+    const el = document.createElement('div');
+    el.textContent = msg;
+    el.style.cssText = 'background:rgba(10,46,35,.97);border:1px solid var(--gold,#d4af37);color:var(--cream,#faf6ee);padding:10px 18px;border-radius:10px;font-size:13px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.5);text-align:center;opacity:0;transition:opacity .25s ease;';
+    container.appendChild(el);
+    requestAnimationFrame(()=>{ el.style.opacity='1'; });
+    setTimeout(()=>{
+      el.style.opacity='0';
+      setTimeout(()=>{ try{ el.remove(); }catch(e){} }, 300);
+    }, durationMs || 5000);
+  }catch(e){ console.error('❌ Lỗi hiện thông báo hệ thống:', e); }
+}
+
 function sendToPlayer(playerId, msg){
   if(isBotMode || !fbDb) return;
   try{
@@ -2269,6 +2295,7 @@ function resumeAsHost(){
         // Ai đó đã tự động thay thế trong lúc mình vắng mặt (xem HOST_TAKEOVER_GRACE_MS)
         // -> không giành nữa, tự lui về làm khách để tránh 2 người cùng xử lý song song.
         isHost = false;
+        clearTLHostSession(); // không còn là chủ phòng -> bỏ nút "Vào lại làm chủ phòng" ở lần mở sau
         $('homeErr').textContent = 'Phòng đã có người khác giữ vai trò chủ phòng (do bạn vắng mặt hơi lâu). Đang vào lại với vai trò người chơi...';
         sessionToken = null;
         listenAsClient();
@@ -2279,6 +2306,7 @@ function resumeAsHost(){
         return;
       }
       isHost = true;
+      if(gameState) gameState.hostId = myId;
       listenAsHost();
       saveTLHostSession();
       if(gameState){
@@ -2371,6 +2399,39 @@ function releaseActiveHostIfMine(){
 }
 
 let hostPresenceWatchRef = null, hostTakeoverTimer = null;
+let hostPauseBannerInterval = null;
+
+// BẢNG "TẠM DỪNG" khi chủ phòng mất kết nối: trước đây trong đúng khoảng
+// HOST_TAKEOVER_GRACE_MS (8s) chờ xác nhận chủ phòng có thực sự mất kết nối hay không,
+// giao diện của khách hoàn toàn im lặng — bấm gì cũng không thấy phản hồi (vì không còn
+// ai xử lý), trông như game bị đơ/lỗi chứ không phải "đang chờ". Hai hàm dưới đây hiện một
+// băng thông báo cố định trên đỉnh màn hình kèm đếm ngược trong suốt lúc chờ đó, và tự ẩn
+// ngay khi có người (chủ phòng cũ quay lại hoặc người khác chiếm quyền) cầm quyền trở lại.
+function showHostPauseBanner(vacantSince){
+  let el = document.getElementById('hostPauseBanner');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'hostPauseBanner';
+    el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9998;background:rgba(140,40,20,.96);color:#fff;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top,0px));text-align:center;font-size:13px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.4);';
+    document.body.appendChild(el);
+  }
+  const since = vacantSince || Date.now();
+  const update = () => {
+    const remain = Math.max(0, Math.ceil((since + HOST_TAKEOVER_GRACE_MS - Date.now()) / 1000));
+    el.textContent = remain > 0
+      ? `⏸ Ván tạm dừng — chủ phòng mất kết nối, đang chờ kết nối lại (${remain}s)...`
+      : `⏸ Ván tạm dừng — đang tự động chuyển sang chủ phòng mới...`;
+  };
+  update();
+  clearInterval(hostPauseBannerInterval);
+  hostPauseBannerInterval = setInterval(update, 500);
+}
+function hideHostPauseBanner(){
+  clearInterval(hostPauseBannerInterval);
+  hostPauseBannerInterval = null;
+  const el = document.getElementById('hostPauseBanner');
+  if(el) el.remove();
+}
 
 // Khách gọi hàm này ngay sau khi vào phòng để theo dõi "có đúng 1 chủ phòng đang hoạt
 // động không". Nếu activeHost trống quá HOST_TAKEOVER_GRACE_MS thì tự thử chiếm quyền.
@@ -2384,14 +2445,15 @@ function watchHostPresenceForTakeover(){
       try{
         const v = snap.val();
         clearTimeout(hostTakeoverTimer);
-        if(isHost) return; // tôi chính là chủ phòng, không cần tự chiếm quyền của mình
-        if(v && v.id){ return; } // đang có người giữ quyền chủ phòng -> yên tâm chờ
+        if(isHost){ hideHostPauseBanner(); return; } // tôi chính là chủ phòng, không cần tự chiếm quyền của mình
+        if(v && v.id){ hideHostPauseBanner(); return; } // đang có người giữ quyền chủ phòng -> yên tâm chờ, ẩn băng thông báo nếu còn hiện
         // activeHost trống -> tính grace period theo ĐÚNG thời điểm phòng bắt đầu trống
         // (v.since, do onDisconnect ghi lại lúc chủ phòng thực sự mất kết nối), KHÔNG phải
         // lúc client này mới mở app lên phát hiện ra. Nhờ vậy, kiểu chơi "đánh chậm" — cả bàn
         // hay off không cùng lúc, có khi off hết cả bàn rồi ai đó quay lại sau nhiều giờ —
         // sẽ được chiếm quyền NGAY khi mở app, thay vì phải chờ thêm 8 giây vô ích mỗi lần.
         const vacantSince = (v && v.since) || 0;
+        showHostPauseBanner(vacantSince);
         const remaining = Math.max(0, HOST_TAKEOVER_GRACE_MS - (Date.now() - vacantSince));
         hostTakeoverTimer = setTimeout(attemptTakeoverAsHost, remaining);
       }catch(e){ console.error('Lỗi xử lý activeHost value:', e); }
@@ -2404,6 +2466,7 @@ function watchHostPresenceForTakeover(){
 function stopWatchingHostPresence(){
   clearTimeout(hostTakeoverTimer);
   if(hostPresenceWatchRef){ try{ hostPresenceWatchRef.off('value'); }catch(e){} hostPresenceWatchRef = null; }
+  hideHostPauseBanner();
 }
 
 function attemptTakeoverAsHost(){
@@ -2412,6 +2475,12 @@ function attemptTakeoverAsHost(){
     if(!success) return; // không thắng -> người khác đã lo, tiếp tục giữ vai khách
     // Thắng quyền chiếm chủ phòng: khôi phục từ snapshot gần nhất rồi tiếp quản xử lý.
     isHost = true;
+    // Nếu chính người này vừa bấm "Vào lại" (đang có bộ đếm chờ phản hồi 'lobby' từ chủ phòng
+    // cũ) mà lại thắng luôn quyền chủ phòng do chờ quá lâu, huỷ bộ đếm đó ngay — họ sẽ không
+    // bao giờ tự nhận được 'lobby' của chính mình (broadcastLobby() bỏ qua gửi cho bản thân),
+    // nên nếu không huỷ, bộ đếm cũ sẽ vẫn chạy tới hết giờ rồi đá nhầm họ về Trang chủ.
+    clearPendingJoinTimeout();
+    onFirstLobbyMessage = null;
     fbDb.ref('tienlen_rooms/' + roomCode + '/hostSnapshot').once('value').then(snap => {
       const snapshot = snap.val();
       if(snapshot){
@@ -2422,10 +2491,19 @@ function attemptTakeoverAsHost(){
         gameState = deserializeGameStateFromFirebase(snapshot.gameState);
         hostStateVersion = Number(snapshot.stateVersion || gameState?.stateVersion || 0) || 0;
       }
+      // Quyền "chủ phòng" trong ván (xác nhận/hủy Tới Trắng...) phải chuyển sang người mới,
+      // nếu không chủ mới bị từ chối còn chủ cũ (giờ là khách) lại giữ quyền.
+      if(gameState) gameState.hostId = myId;
       listenAsHost();
       saveTLHostSession();
       stopWatchingHostPresence();
+      // THÔNG BÁO CHUYỂN CHỦ PHÒNG: trước đây quá trình này chạy hoàn toàn im lặng, người vừa
+      // lên thay không hiểu vì sao giao diện đột nhiên đổi sang vai trò chủ phòng. Báo rõ ngay
+      // cho họ bằng toast; nếu ván đang chơi dở, ghi thêm vào action-log để MỌI người trong bàn
+      // cũng biết vừa có chuyển quyền (tránh hoang mang khi thấy "chủ phòng" đổi tên giữa ván).
+      showSystemToast('🔄 Chủ phòng cũ mất mạng — bạn đã trở thành chủ phòng mới');
       if(gameState){
+        gameState.log = `🔄 Chủ phòng cũ mất mạng — ${myName} đã trở thành chủ phòng mới.`;
         broadcastState();
         // Đăng lại (xem giải thích ở resumeAsHost()) để phòng hiện lại trong "Ván đang diễn ra".
         publishRoomToPublic(roomCode, myName, 'PLAYING');
@@ -2436,6 +2514,51 @@ function attemptTakeoverAsHost(){
       }
     });
   });
+}
+
+// CHỦ PHÒNG RỚT MẠNG RỒI TỰ NỐI LẠI TRONG CÙNG TAB (không tải lại trang):
+// onDisconnect đã đặt activeHost = trống trên server, nhưng tab này vẫn isHost=true. Nếu không
+// làm gì, sau 8s khách sẽ chiếm quyền -> 2 máy cùng làm chủ phòng. Nên khi mạng về phải
+// giành lại activeHost (nếu chưa ai lấy) hoặc lui về làm khách (nếu đã có người thay).
+function reclaimHostAfterReconnect(){
+  claimActiveHost(success => {
+    if(!isHost) return; // trong lúc chờ đã rời phòng / đổi vai
+    if(success){
+      // claimActiveHost đã đăng ký lại onDisconnect cho activeHost; đăng lại các thứ đã bị
+      // onDisconnect xoá lúc rớt mạng (mục phòng công khai, snapshot backup).
+      if(gameState){
+        publishRoomToPublic(roomCode, myName, 'PLAYING');
+        broadcastState();
+      } else {
+        publishRoomToPublic(roomCode, myName);
+        broadcastLobby();
+      }
+      showSystemToast('✅ Đã kết nối lại — bạn vẫn là chủ phòng');
+    } else {
+      stepDownFromHost();
+    }
+  });
+}
+
+// Người khác đã thay làm chủ phòng lúc mình vắng mặt: bỏ hết vai trò chủ phòng trên máy này
+// (listener toHost, timer, phiên chủ phòng) rồi vào lại như khách bằng đúng myId cũ.
+function stepDownFromHost(){
+  if(!isHost || isBotMode) return;
+  stopListeningAsHost();
+  if(typeof timerLoop !== 'undefined' && timerLoop){ clearInterval(timerLoop); timerLoop = null; }
+  isHost = false;
+  clearTLHostSession();
+  playerTokens = {};
+  gameState = null;      // khách không giữ gameState gốc; currentState sẽ được chủ mới gửi về
+  sessionToken = null;
+  // Huỷ các onDisconnect do vai chủ phòng cũ đăng ký, kẻo lần rớt mạng sau ghi đè snapshot
+  // mới hoặc xoá mất mục phòng công khai của chủ phòng mới.
+  try{ fbDb.ref('tienlen_rooms/' + roomCode + '/hostSnapshot').onDisconnect().cancel(); }catch(e){}
+  try{ fbDb.ref(PUBLIC_ROOMS_PATH + '/' + roomCode).onDisconnect().cancel(); }catch(e){}
+  showSystemToast('ℹ️ Phòng đã có chủ phòng mới — bạn tiếp tục chơi với vai người chơi');
+  listenAsClient();
+  sendToHost({t:'join', name:myName, id:myId});
+  watchHostPresenceForTakeover();
 }
 
 /* NGƯỜI CHƠI VẪN Ở TRONG BÀN, CHỈ RỚT MẠNG VÀI GIÂY RỒI TỰ NỐI LẠI (không tải lại trang):
@@ -2450,6 +2573,10 @@ function watchConnectionForAutoRejoin(){
     if(!connected){ hadDropped = true; return; }
     if(!hadDropped) return; // lần "connected" đầu tiên lúc mới mở trang (chưa từng rớt) -> bỏ qua
     hadDropped = false;
+    if(roomCode && myId && isHost && !isBotMode){
+      reclaimHostAfterReconnect();
+      return;
+    }
     if(roomCode && myId && !isHost && !isBotMode){
       try{ registerDisconnectNotice(); }catch(e){}
       sendToHost({t:'join', name:myName, id:myId});
@@ -2468,8 +2595,14 @@ function sendToHost(msg){
   }
 }
 
+let hostToHostListenerRef = null;
+function stopListeningAsHost(){
+  if(hostToHostListenerRef){ try{ hostToHostListenerRef.off('child_added'); }catch(e){} hostToHostListenerRef = null; }
+}
 function listenAsHost(){
+  stopListeningAsHost(); // tránh gắn trùng listener nếu bị gọi 2 lần
   const ref = fbDb.ref('tienlen_rooms/' + roomCode + '/toHost');
+  hostToHostListenerRef = ref;
   ref.on('child_added', snap => {
     const data = snap.val();
     snap.ref.remove();
@@ -2905,6 +3038,40 @@ function makeActionRequestId(){
 }
 function isTrackedSelectionAction(action){
   return !!(action && (action.kind === 'play' || action.kind === 'interrupt_chop') && action.requestId);
+}
+// FIX "MÁY CHỦ CHƯA XÁC NHẬN NƯỚC ĐI" (đôi khi báo lỗi oan):
+// Trước đây chỉ có 1 setTimeout cứng 4.5s cho mỗi request. Hai tình huống khiến nó
+// báo lỗi dù ván vẫn ổn: (1) tab/app đang ở NỀN (khoá màn hình, chuyển app trên di
+// động) khiến trình duyệt tạm dừng JS, nên 4.5s "trôi qua" trong lúc tin nhắn thực ra
+// vẫn đang trên đường về; (2) rớt đúng 1 gói tin thoáng qua trên Firebase, không phải
+// lỗi hệ thống thật. scheduleActionTimeout()/onActionTimeout() thay thế các setTimeout
+// rời rạc cũ bằng một luồng dùng chung: không tính giờ khi tab đang ẩn, và tự gửi lại
+// ĐÚNG 1 lần trước khi mới báo lỗi cho người chơi.
+function scheduleActionTimeout(requestId, delayMs){
+  const pending = pendingActionRequests.get(requestId);
+  if(!pending) return;
+  clearTimeout(pending.timer);
+  pending.timer = setTimeout(()=>onActionTimeout(requestId), delayMs!=null ? delayMs : 4500);
+}
+function onActionTimeout(requestId){
+  const pending = pendingActionRequests.get(requestId);
+  if(!pending) return;
+  if(typeof document !== 'undefined' && document.hidden){
+    // Tab đang ở nền: chưa kết luận gì, chỉ hẹn kiểm tra lại sớm thay vì báo lỗi ngay.
+    scheduleActionTimeout(requestId, 800);
+    return;
+  }
+  if(!pending.retried){
+    pending.retried = true;
+    try{
+      if(isHost) handleAction(myId, pending.action); else sendToHost({t:'action', id:myId, action:pending.action});
+      debugActionEvent('RETRY', myId, 'Tự động thử lại sau khi chờ xác nhận quá lâu', {requestId});
+    }catch(e){ console.warn('⚠️ Không thể tự gửi lại action sau timeout:', e); }
+    scheduleActionTimeout(requestId, 4500);
+    return;
+  }
+  pendingActionRequests.delete(requestId);
+  showHandSelectMsg(formatActionRejectMessage('REQUEST_TIMEOUT')); updateHandActionButtonsOnly();
 }
 function sendActionResult(playerId, status, action, reason='', details={}){
   if(!action || !action.requestId) return;
@@ -3346,6 +3513,18 @@ function rejoinSavedSession(){
   sendToHost({t:'join', name:myName, id:myId});
   watchHostPresenceForTakeover();
   showLobby();
+
+  // Chờ tối đa 10s cho phản hồi 'lobby' từ chủ phòng (hoặc từ chính mình nếu vừa thắng quyền
+  // chủ phòng luôn — xem clearPendingJoinTimeout() trong attemptTakeoverAsHost()). Hết giờ mà
+  // vẫn im lặng -> phòng coi như không còn tồn tại thật sự (kể cả cơ chế tự chuyển chủ phòng
+  // cũng không cứu được), xoá phiên đã lưu để nút "Vào lại" không hiện lại y hệt lần sau.
+  let rejoined = false;
+  clearPendingJoinTimeout();
+  pendingJoinTimeoutId = setTimeout(() => {
+    if(rejoined) return;
+    abandonJoinAttempt('Không vào lại được phòng ' + s.roomCode + ' — phòng có thể đã đóng hoặc không còn ai giữ vai trò chủ phòng. Vui lòng tạo phòng mới.', true);
+  }, 10000);
+  onFirstLobbyMessage = () => { rejoined = true; clearPendingJoinTimeout(); };
 }
 
 if($('btnReconnectSaved')) $('btnReconnectSaved').onclick = rejoinSavedSession;
@@ -3372,6 +3551,30 @@ function removeRoomFromPublic(code){
   fbDb.ref(PUBLIC_ROOMS_PATH + '/' + code).remove().catch(()=>{});
 }
 
+// FIX "NÚT VÀO LẠI SAU KHI ĐÃ THOÁT BỊ TREO": trước đây joinExistingRoom() có timeout 10s
+// nhưng chỉ cập nhật text trên #homeErr — lúc đó showLobby() đã ẩn hẳn màn Home rồi nên KHÔNG
+// AI THẤY ĐƯỢC dòng lỗi đó; người chơi bị kẹt vĩnh viễn ở màn "Phòng Chờ" trống trơn (không có
+// dữ liệu phòng thật, mọi nút đều vô nghĩa). Còn rejoinSavedSession() (nút "Vào lại ván đang
+// chơi") thì HOÀN TOÀN không có timeout — nếu phòng/chủ phòng đã không còn tồn tại thật sự
+// (không ai chiếm quyền thay), người chơi kẹt mãi ở "Đang vào lại phòng..." mà không có lỗi gì,
+// và phiên đã lưu vẫn còn nguyên nên lần mở app sau vẫn hiện y hệt nút "Vào lại", bấm lại vẫn
+// treo tiếp y như vậy. abandonJoinAttempt() dọn dẹp sạch trạng thái + quay về đúng màn Home
+// (nơi #homeErr thực sự hiển thị được) kèm thông báo rõ ràng khi hết giờ chờ mà không có phản
+// hồi 'lobby' nào từ chủ phòng.
+function abandonJoinAttempt(errMsg, clearSavedSession){
+  try{ if(fbDb && roomCode && myId) fbDb.ref('tienlen_rooms/' + roomCode + '/toClient/' + myId).off(); }catch(e){}
+  stopWatchingHostPresence();
+  if(clearSavedSession) clearTLSession();
+  onFirstLobbyMessage = null;
+  isHost=false; isBotMode=false; roomCode=null; myId=null; sessionToken=null;
+  gameState=null; currentState=null; players=[];
+  const lobby=$('lobbyScreen'); if(lobby) lobby.classList.add('hidden');
+  const home=$('homeScreen'); if(home) home.classList.remove('hidden');
+  $('homeErr').textContent = errMsg;
+  try{ checkForSavedTLSession(); }catch(e){}
+  try{ checkForSavedHostSession(); }catch(e){}
+}
+
 window.joinExistingRoom = function(code){
   code = (code || '').trim().toUpperCase();
   if(!code){ $('homeErr').textContent = 'Vui lòng nhập mã phòng!'; return; }
@@ -3383,12 +3586,14 @@ window.joinExistingRoom = function(code){
   $('homeErr').textContent = 'Đang kết nối tới phòng ' + code + '...';
 
   let joined = false;
-  const joinTimeout = setTimeout(() => {
-    if(!joined) $('homeErr').textContent = 'Không nối được phòng này. Kiểm tra lại mã phòng...';
+  clearPendingJoinTimeout();
+  pendingJoinTimeoutId = setTimeout(() => {
+    if(joined) return;
+    abandonJoinAttempt('Không nối được phòng "' + code + '". Kiểm tra lại mã phòng hoặc thử lại sau.', false);
   }, 10000);
 
   listenAsClient();
-  onFirstLobbyMessage = () => { joined = true; clearTimeout(joinTimeout); };
+  onFirstLobbyMessage = () => { joined = true; clearPendingJoinTimeout(); };
   sendToHost({t:'join', name:myName, id:myId});
   updatePlayerIndexEntry(myId, roomCode, myName);
   watchHostPresenceForTakeover();
@@ -3457,7 +3662,7 @@ $('btnAddBotInLobby').onclick = () => {
   botList.push(newBotId);
 
   if (!isBotMode) {
-    publishRoomToPublic(roomCode, players[0].name);
+    publishRoomToPublic(roomCode, myName);
     broadcastLobby();
   } else {
     renderLobby();
@@ -3469,7 +3674,7 @@ function removeBotInLobby(botId) {
   players = players.filter(p => p.id !== botId);
   botList = botList.filter(id => id !== botId);
   if (!isBotMode) {
-    publishRoomToPublic(roomCode, players[0].name);
+    publishRoomToPublic(roomCode, myName);
     broadcastLobby();
   } else {
     renderLobby();
@@ -3524,7 +3729,7 @@ function onHostMessage(fromId, msg, token){
       players.push({id:msg.id, name:String(msg.name || 'Người chơi').slice(0,30)});
       playerTokens[msg.id] = generateSessionToken();
       sendToPlayer(msg.id, {t:'session', token:playerTokens[msg.id]});
-      publishRoomToPublic(roomCode, players[0].name);
+      publishRoomToPublic(roomCode, myName);
     } else if(existing){
       // NGƯỜI CŨ VÀO LẠI (cùng myId — ví dụ cùng "mật khẩu" nên trùng myId dù đổi
       // hẳn sang thiết bị/trình duyệt khác, không chỉ riêng trường hợp mất mạng trên
@@ -3604,6 +3809,14 @@ function onHostMessage(fromId, msg, token){
 }
 
 let onFirstLobbyMessage = null;
+// FIX "NÚT VÀO LẠI SAU KHI ĐÃ THOÁT KHÔNG PHẢN HỒI GÌ": joinExistingRoom()/rejoinSavedSession()
+// chờ chủ phòng phản hồi (tin 'lobby') để biết mình đã vào phòng thành công. pendingJoinTimeoutId
+// giữ ID của bộ đếm chờ đó — dùng chung 1 biến để attemptTakeoverAsHost() (nếu chính người bấm
+// "Vào lại" lại thắng luôn quyền chủ phòng do vắng mặt quá lâu) cũng huỷ được đúng bộ đếm đang treo.
+let pendingJoinTimeoutId = null;
+function clearPendingJoinTimeout(){
+  if(pendingJoinTimeoutId){ clearTimeout(pendingJoinTimeoutId); pendingJoinTimeoutId = null; }
+}
 // FIX "ÂM THANH VANG LÊN MẤT KIỂM SOÁT": khi 1 người bị rớt mạng/chuyển app một lúc rồi
 // quay lại, Firebase sẽ đẩy dồn TOÀN BỘ tin nhắn còn tồn đọng (child_added bắn hàng loạt
 // gần như cùng lúc). Nếu vẫn phát âm cho từng tin nhắn cũ đó, người chơi sẽ nghe một tràng
@@ -3641,19 +3854,14 @@ function onClientMessage(msg){
         pendingEntries.forEach(([requestId, pending])=>{
           if(!pending || !pending.action || pending.retriedAfterTokenRefresh) return;
           pending.retriedAfterTokenRefresh = true;
-          clearTimeout(pending.timer);
-          pending.timer = setTimeout(()=>{
-            const live = pendingActionRequests.get(requestId);
-            if(!live) return;
-            pendingActionRequests.delete(requestId);
-            showHandSelectMsg(formatActionRejectMessage('REQUEST_TIMEOUT')); updateHandActionButtonsOnly();
-          },4500);
+          pending.retried = true; // lần gửi lại này đã tính là lượt retry -> lần timeout kế tiếp báo lỗi luôn, không chờ retry thêm
           try{
             sendToHost({t:'action', id:myId, action:pending.action});
             debugActionEvent('RETRY', myId, 'Retry action sau khi refresh session token', {requestId});
           }catch(e){
             console.warn('⚠️ Không thể retry action sau TOKEN_REFRESH:', e);
           }
+          scheduleActionTimeout(requestId, 4500);
         });
       }
       return;
@@ -3962,7 +4170,7 @@ function revealInstantWin(hands, winnerId, info){
   const winnerName = players.find(p=>p.id===winnerId).name;
   gameState = {
     hands, order: players.map(p=>p.id), names: Object.fromEntries(players.map(p=>[p.id, p.name])),
-    hostId: players[0].id,
+    hostId: myId, // luôn là chủ phòng HIỆN TẠI (players[0] có thể là chủ cũ sau khi chuyển quyền)
     turnIdx: 0, leaderId: winnerId, currentCombo: null, firstMove: true, requiredCard: null,
     finished: [], passed: new Set(), disconnected: new Set(), coldFolded: new Set(),
     scores: Object.fromEntries(players.map(p=>[p.id, 0])),
@@ -4394,7 +4602,7 @@ function dealNewGame(){
   ensureMatchLedger(players.map(p=>p.id));
   // forceStatus='PLAYING': ván sắp chia bài ngay bên dưới, dù gameState hiện tại (ván trước,
   // hoặc null nếu đây là ván đầu) chưa phản ánh đúng — tránh bị đăng nhầm là 'LOBBY'.
-  if(isHost && !isBotMode) publishRoomToPublic(roomCode, players[0] ? players[0].name : myName, 'PLAYING');
+  if(isHost && !isBotMode) publishRoomToPublic(roomCode, myName, 'PLAYING');
   consecutivePlayCount = 0;
   lastNotifiedTurnId = null;
   last20sWarnTurnId = null;
@@ -4466,7 +4674,7 @@ function dealNewGame(){
     hands,
     order: players.map(p=>p.id),
     names: Object.fromEntries(players.map(p=>[p.id, p.name])),
-    hostId: players[0].id,
+    hostId: myId, // luôn là chủ phòng HIỆN TẠI (players[0] có thể là chủ cũ sau khi chuyển quyền)
     turnIdx: leadIdx,
     leaderId: players[leadIdx].id,
     currentCombo: null,
@@ -7852,12 +8060,8 @@ function sendAction(act){
   if(tracked){
     if(pendingActionRequests.size){showHandSelectMsg('⏳ Đang chờ máy chủ xác nhận nước đi trước.');return;}
     const requestId=makeActionRequestId(); act={...act,requestId};
-    const timer=setTimeout(()=>{
-      const pending=pendingActionRequests.get(requestId); if(!pending) return;
-      pendingActionRequests.delete(requestId);
-      showHandSelectMsg(formatActionRejectMessage('REQUEST_TIMEOUT')); updateHandActionButtonsOnly();
-    },4500);
-    pendingActionRequests.set(requestId,{action:act,timer,sentAt:Date.now()});
+    pendingActionRequests.set(requestId,{action:act,timer:null,sentAt:Date.now(),retried:false});
+    scheduleActionTimeout(requestId, 4500);
     window._tokenRefreshRetry = {action:act};
   }
   if(isHost) handleAction(myId,act); else sendToHost({t:'action',id:myId,action:act});
