@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -1073,6 +1072,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
         <div class="cfg-row"><span>🐉 Sảnh Rồng (3 → A)</span><input id="cfgWinDragon" type="number" min="0" max="99"></div>
         <div class="cfg-row"><span>🐷 Tứ Quý Heo (4 quân 2)</span><input id="cfgWinQuadHeo" type="number" min="0" max="99"></div>
         <div class="cfg-row"><span>🃏 Tứ Quý 3 (ván đầu)</span><input id="cfgWinQuad3" type="number" min="0" max="99"></div>
+        <div class="cfg-row"><span>🔗 3 Đôi Thông có 3♠ (ván đầu)</span><input id="cfgWinPairs3Spade" type="number" min="0" max="99"></div>
         <div class="cfg-row"><span>👥 Lục Đôi (6 đôi)</span><input id="cfgWinSixPairs" type="number" min="0" max="99"></div>
         <div class="cfg-row"><span>🔗 Ngũ Đôi Thông (5 đôi)</span><input id="cfgWinFivePairsRun" type="number" min="0" max="99"></div>
       </div>
@@ -1091,6 +1091,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
       <div class="rule-test-card">
         <h4>🔊 Âm các sự kiện khác trong ván</h4>
         <div class="cfg-row"><span class="cfg-evt">⏰ Tới lượt bạn (MY_TURN)</span><span class="cfg-evt"><input id="cfgEnMyTurn" type="checkbox"><input id="cfgVolMyTurn" type="range" min="0" max="1" step="0.05"></span></div>
+        <div class="cfg-row"><span class="cfg-evt">⏱ Còn 20s cuối chưa đánh (TIME_20S)</span><span class="cfg-evt"><input id="cfgEnTime20s" type="checkbox"><input id="cfgVolTime20s" type="range" min="0" max="1" step="0.05"></span></div>
         <div class="cfg-row"><span class="cfg-evt">🃏 Đánh bài xuống bàn (PLAY_CARD)</span><span class="cfg-evt"><input id="cfgEnPlayCard" type="checkbox"><input id="cfgVolPlayCard" type="range" min="0" max="1" step="0.05"></span></div>
         <div class="cfg-row"><span class="cfg-evt">🏆 Về Nhất (FINISH_1ST)</span><span class="cfg-evt"><input id="cfgEnFinish1st" type="checkbox"><input id="cfgVolFinish1st" type="range" min="0" max="1" step="0.05"></span></div>
         <div class="cfg-row"><span class="cfg-evt">🥈 Về Nhì / Ba (FINISH_23)</span><span class="cfg-evt"><input id="cfgEnFinish23" type="checkbox"><input id="cfgVolFinish23" type="range" min="0" max="1" step="0.05"></span></div>
@@ -1545,6 +1546,8 @@ const SOUND_URLS = {
   'CRY': ['https://www.myinstants.com/media/sounds/anime-wow-sound-effect.mp3'],
   'PLAY_CARD': ['https://www.myinstants.com/media/sounds/card-flip.mp3'],
   'MY_TURN': ['https://www.myinstants.com/media/sounds/level-up-1-199577.mp3'],
+  // Âm nhắc còn 20 GIÂY CUỐI mà vẫn chưa đánh (tự phát 1 lần khi đồng hồ lượt của bạn chạm mốc 20s)
+  'TIME_20S': ['https://www.myinstants.com/media/sounds/20s-cuoi.mp3'],
   // REACTION KHÓC/CƯỜI: bấm vào chính mình để chọn 1 trong các icon này
   'CRY1': ['https://www.myinstants.com/media/sounds/best-cry-ever-trimmed.mp3'],
   'CRY2': ['https://www.myinstants.com/media/sounds/why-you-crying-vine.mp3'],
@@ -1557,7 +1560,7 @@ const SOUND_URLS = {
   'TAUNT1': ['https://www.myinstants.com/media/sounds/khong-lam-ma-oi-co-an-thi-an-cut-mp3cut.mp3'], // huấn rose
   'TAUNT2': ['https://www.myinstants.com/media/sounds/thoi-ong-im-me-cai-mom-i-_-tuan-tien-ti_8as8efd6f5k.mp3'], // Thôi ông im mẹ nó mồm đi
   // ÂM "VỀ ĐÍCH": phát khi có người hết bài. Hạng 1 dùng FINISH_1ST, hạng 2-3 dùng FINISH_23.
-  'FINISH_1ST': ['https://www.myinstants.com/media/sounds/day-no-phai-the-chu-li-thang-nay-kha-va-gioi.mp3'], // Đấy nó phải thế chứ lị, thằng này khá và giỏi
+  'FINISH_1ST': ['https://www.myinstants.com/media/sounds/day-no-phai-the-chu-li-thang-nay-kha-va-gioi.mp3', 'https://www.myinstants.com/media/sounds/chao-mung-moi-nguoi-co-mat.mp3', 'https://www.myinstants.com/media/sounds/cena.mp3'], // Đấy nó phải thế chứ lị / Chào mừng mọi người có mặt / John Cena entrance
   'FINISH_23': ['https://www.myinstants.com/media/sounds/kids-saying-yay-sound-effect_3.mp3'], // YAAAAAAAAY
   // Âm TỚI TRẮNG. Người dùng nhập link MP3/WAV tại Cài đặt.
   // Nếu để trống, game fallback sang SpeechSynthesis 'Tất cả quỳ xuống'.
@@ -1662,7 +1665,8 @@ const DEFAULT_GAME_CONFIG = {
     tuQuyHeo: 4,          // Tứ Quý Heo (đủ 4 quân 2)
     tuQuy3DauVan: 4,      // Tứ Quý 3 — chỉ tính ván đầu tiên của trận
     lucDoi: 4,            // Lục Đôi (6 đôi bất kỳ)
-    nguDoiThong: 3        // Ngũ Đôi Thông (5 đôi liên tiếp)
+    nguDoiThong: 3,       // Ngũ Đôi Thông (5 đôi liên tiếp)
+    baDoiThong3Bich: 3    // 3 Đôi Thông 33-44-55 có 3♠ — chỉ tính ván đầu (hoặc ván chia lại sau Tới Trắng)
   },
   cong: {           // Phạt CÓNG (không đánh được lá nào suốt ván)
     perReceiver: 4   // CÓNG = gấp đôi mức Bét (-2): -4 cho MỖI người không Cóng
@@ -1705,6 +1709,7 @@ const DEFAULT_SOUND_CONFIG = {
   enabled: {
     chop:true,      // Âm khi CHẶT (BOM nổ)
     myTurn:true,    // Âm báo tới lượt mình
+    time20s:true,   // Âm nhắc còn 20s cuối mà chưa đánh
     playCard:true,  // Âm đánh bài (mỗi lá đặt xuống bàn)
     finish1st:true, // Âm khi có người về Nhất
     finish23:true,  // Âm khi có người về Nhì/Ba
@@ -1714,7 +1719,7 @@ const DEFAULT_SOUND_CONFIG = {
     throwItem:true  // Âm khi ném vật phẩm (dép, trứng, cà chua...) vào người khác
   },
   volumes: {
-    chop:0.9, myTurn:1.0, playCard:0.5, finish1st:0.9, finish23:0.9,
+    chop:0.9, myTurn:1.0, time20s:1.0, playCard:0.5, finish1st:0.9, finish23:0.9,
     winCry:0.95, instantWhite:1.0, reaction:0.9, throwItem:0.9
   }
 };
@@ -1744,6 +1749,7 @@ loadSoundConfig();
 function getSoundCategory(item){
   if(item === 'CHOP' || (typeof item === 'string' && item.indexOf('CHOP_') === 0)) return 'chop';
   if(item === 'MY_TURN') return 'myTurn';
+  if(item === 'TIME_20S') return 'time20s';
   if(item === 'PLAY_CARD') return 'playCard';
   if(item === 'FINISH_1ST') return 'finish1st';
   if(item === 'FINISH_23') return 'finish23';
@@ -1935,6 +1941,7 @@ function playGlobalSound(item, customVolume = 0.9){
 
 let consecutivePlayCount = 0;
 let lastNotifiedTurnId = null;
+let last20sWarnTurnId = null; // Chặn phát lặp lại nhiều lần âm "còn 20s cuối" trong cùng 1 lượt
 let lastGameWinnerId = null; // Lưu vết người thắng ván trước
 let globalActorSeq = 0; // Đếm tăng dần mỗi khi có hành động mới, để client biết khi nào bật bong bóng thông báo mới
 function bumpActor(playerId, shortMsg){
@@ -2057,6 +2064,32 @@ function safeArray(data) {
   if (!data) return [];
   if (Array.isArray(data)) return data;
   return Object.values(data);
+}
+
+// THÔNG BÁO HỆ THỐNG NỔI (toast): hiện một băng thông báo tạm thời ở giữa đỉnh màn hình rồi
+// tự biến mất — dùng cho các sự kiện quan trọng người chơi cần biết ngay (vd chuyển quyền chủ
+// phòng) nhưng không cần họ phải bấm gì để đóng lại. Tự tạo container/phần tử bằng JS thay vì
+// thêm sẵn trong HTML, vì cần hiện được ở MỌI màn hình (Home/Lobby/Bàn chơi) mà không phải sửa
+// từng màn hình một; nhiều thông báo cùng lúc sẽ tự xếp chồng theo thứ tự xuất hiện.
+function showSystemToast(msg, durationMs){
+  try{
+    let container = document.getElementById('systemToastContainer');
+    if(!container){
+      container = document.createElement('div');
+      container.id = 'systemToastContainer';
+      container.style.cssText = 'position:fixed;top:calc(10px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:10000;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;max-width:92vw;';
+      document.body.appendChild(container);
+    }
+    const el = document.createElement('div');
+    el.textContent = msg;
+    el.style.cssText = 'background:rgba(10,46,35,.97);border:1px solid var(--gold,#d4af37);color:var(--cream,#faf6ee);padding:10px 18px;border-radius:10px;font-size:13px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.5);text-align:center;opacity:0;transition:opacity .25s ease;';
+    container.appendChild(el);
+    requestAnimationFrame(()=>{ el.style.opacity='1'; });
+    setTimeout(()=>{
+      el.style.opacity='0';
+      setTimeout(()=>{ try{ el.remove(); }catch(e){} }, 300);
+    }, durationMs || 5000);
+  }catch(e){ console.error('❌ Lỗi hiện thông báo hệ thống:', e); }
 }
 
 function sendToPlayer(playerId, msg){
@@ -2255,7 +2288,6 @@ function resumeAsHost(){
       players = safeArray(snapshot.players);
       roomSettings = snapshot.roomSettings || roomSettings;
       botList = safeArray(snapshot.botList);
-        slowCheckIns = new Set(safeArray(snapshot.slowCheckIns));
       playerTokens = (snapshot.playerTokens && typeof snapshot.playerTokens === 'object') ? snapshot.playerTokens : {};
       gameState = deserializeGameStateFromFirebase(snapshot.gameState);
       hostStateVersion = Number(snapshot.stateVersion || gameState?.stateVersion || 0) || 0;
@@ -2265,6 +2297,7 @@ function resumeAsHost(){
         // Ai đó đã tự động thay thế trong lúc mình vắng mặt (xem HOST_TAKEOVER_GRACE_MS)
         // -> không giành nữa, tự lui về làm khách để tránh 2 người cùng xử lý song song.
         isHost = false;
+        clearTLHostSession(); // không còn là chủ phòng -> bỏ nút "Vào lại làm chủ phòng" ở lần mở sau
         $('homeErr').textContent = 'Phòng đã có người khác giữ vai trò chủ phòng (do bạn vắng mặt hơi lâu). Đang vào lại với vai trò người chơi...';
         sessionToken = null;
         listenAsClient();
@@ -2275,6 +2308,7 @@ function resumeAsHost(){
         return;
       }
       isHost = true;
+      if(gameState) gameState.hostId = myId;
       listenAsHost();
       saveTLHostSession();
       if(gameState){
@@ -2367,6 +2401,39 @@ function releaseActiveHostIfMine(){
 }
 
 let hostPresenceWatchRef = null, hostTakeoverTimer = null;
+let hostPauseBannerInterval = null;
+
+// BẢNG "TẠM DỪNG" khi chủ phòng mất kết nối: trước đây trong đúng khoảng
+// HOST_TAKEOVER_GRACE_MS (8s) chờ xác nhận chủ phòng có thực sự mất kết nối hay không,
+// giao diện của khách hoàn toàn im lặng — bấm gì cũng không thấy phản hồi (vì không còn
+// ai xử lý), trông như game bị đơ/lỗi chứ không phải "đang chờ". Hai hàm dưới đây hiện một
+// băng thông báo cố định trên đỉnh màn hình kèm đếm ngược trong suốt lúc chờ đó, và tự ẩn
+// ngay khi có người (chủ phòng cũ quay lại hoặc người khác chiếm quyền) cầm quyền trở lại.
+function showHostPauseBanner(vacantSince){
+  let el = document.getElementById('hostPauseBanner');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'hostPauseBanner';
+    el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9998;background:rgba(140,40,20,.96);color:#fff;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top,0px));text-align:center;font-size:13px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.4);';
+    document.body.appendChild(el);
+  }
+  const since = vacantSince || Date.now();
+  const update = () => {
+    const remain = Math.max(0, Math.ceil((since + HOST_TAKEOVER_GRACE_MS - Date.now()) / 1000));
+    el.textContent = remain > 0
+      ? `⏸ Ván tạm dừng — chủ phòng mất kết nối, đang chờ kết nối lại (${remain}s)...`
+      : `⏸ Ván tạm dừng — đang tự động chuyển sang chủ phòng mới...`;
+  };
+  update();
+  clearInterval(hostPauseBannerInterval);
+  hostPauseBannerInterval = setInterval(update, 500);
+}
+function hideHostPauseBanner(){
+  clearInterval(hostPauseBannerInterval);
+  hostPauseBannerInterval = null;
+  const el = document.getElementById('hostPauseBanner');
+  if(el) el.remove();
+}
 
 // Khách gọi hàm này ngay sau khi vào phòng để theo dõi "có đúng 1 chủ phòng đang hoạt
 // động không". Nếu activeHost trống quá HOST_TAKEOVER_GRACE_MS thì tự thử chiếm quyền.
@@ -2380,14 +2447,15 @@ function watchHostPresenceForTakeover(){
       try{
         const v = snap.val();
         clearTimeout(hostTakeoverTimer);
-        if(isHost) return; // tôi chính là chủ phòng, không cần tự chiếm quyền của mình
-        if(v && v.id){ return; } // đang có người giữ quyền chủ phòng -> yên tâm chờ
+        if(isHost){ hideHostPauseBanner(); return; } // tôi chính là chủ phòng, không cần tự chiếm quyền của mình
+        if(v && v.id){ hideHostPauseBanner(); return; } // đang có người giữ quyền chủ phòng -> yên tâm chờ, ẩn băng thông báo nếu còn hiện
         // activeHost trống -> tính grace period theo ĐÚNG thời điểm phòng bắt đầu trống
         // (v.since, do onDisconnect ghi lại lúc chủ phòng thực sự mất kết nối), KHÔNG phải
         // lúc client này mới mở app lên phát hiện ra. Nhờ vậy, kiểu chơi "đánh chậm" — cả bàn
         // hay off không cùng lúc, có khi off hết cả bàn rồi ai đó quay lại sau nhiều giờ —
         // sẽ được chiếm quyền NGAY khi mở app, thay vì phải chờ thêm 8 giây vô ích mỗi lần.
         const vacantSince = (v && v.since) || 0;
+        showHostPauseBanner(vacantSince);
         const remaining = Math.max(0, HOST_TAKEOVER_GRACE_MS - (Date.now() - vacantSince));
         hostTakeoverTimer = setTimeout(attemptTakeoverAsHost, remaining);
       }catch(e){ console.error('Lỗi xử lý activeHost value:', e); }
@@ -2400,6 +2468,7 @@ function watchHostPresenceForTakeover(){
 function stopWatchingHostPresence(){
   clearTimeout(hostTakeoverTimer);
   if(hostPresenceWatchRef){ try{ hostPresenceWatchRef.off('value'); }catch(e){} hostPresenceWatchRef = null; }
+  hideHostPauseBanner();
 }
 
 function attemptTakeoverAsHost(){
@@ -2408,21 +2477,35 @@ function attemptTakeoverAsHost(){
     if(!success) return; // không thắng -> người khác đã lo, tiếp tục giữ vai khách
     // Thắng quyền chiếm chủ phòng: khôi phục từ snapshot gần nhất rồi tiếp quản xử lý.
     isHost = true;
+    // Nếu chính người này vừa bấm "Vào lại" (đang có bộ đếm chờ phản hồi 'lobby' từ chủ phòng
+    // cũ) mà lại thắng luôn quyền chủ phòng do chờ quá lâu, huỷ bộ đếm đó ngay — họ sẽ không
+    // bao giờ tự nhận được 'lobby' của chính mình (broadcastLobby() bỏ qua gửi cho bản thân),
+    // nên nếu không huỷ, bộ đếm cũ sẽ vẫn chạy tới hết giờ rồi đá nhầm họ về Trang chủ.
+    clearPendingJoinTimeout();
+    onFirstLobbyMessage = null;
     fbDb.ref('tienlen_rooms/' + roomCode + '/hostSnapshot').once('value').then(snap => {
       const snapshot = snap.val();
       if(snapshot){
         players = safeArray(snapshot.players);
         roomSettings = snapshot.roomSettings || roomSettings;
         botList = safeArray(snapshot.botList);
-        slowCheckIns = new Set(safeArray(snapshot.slowCheckIns));
       playerTokens = (snapshot.playerTokens && typeof snapshot.playerTokens === 'object') ? snapshot.playerTokens : {};
         gameState = deserializeGameStateFromFirebase(snapshot.gameState);
         hostStateVersion = Number(snapshot.stateVersion || gameState?.stateVersion || 0) || 0;
       }
+      // Quyền "chủ phòng" trong ván (xác nhận/hủy Tới Trắng...) phải chuyển sang người mới,
+      // nếu không chủ mới bị từ chối còn chủ cũ (giờ là khách) lại giữ quyền.
+      if(gameState) gameState.hostId = myId;
       listenAsHost();
       saveTLHostSession();
       stopWatchingHostPresence();
+      // THÔNG BÁO CHUYỂN CHỦ PHÒNG: trước đây quá trình này chạy hoàn toàn im lặng, người vừa
+      // lên thay không hiểu vì sao giao diện đột nhiên đổi sang vai trò chủ phòng. Báo rõ ngay
+      // cho họ bằng toast; nếu ván đang chơi dở, ghi thêm vào action-log để MỌI người trong bàn
+      // cũng biết vừa có chuyển quyền (tránh hoang mang khi thấy "chủ phòng" đổi tên giữa ván).
+      showSystemToast('🔄 Chủ phòng cũ mất mạng — bạn đã trở thành chủ phòng mới');
       if(gameState){
+        gameState.log = `🔄 Chủ phòng cũ mất mạng — ${myName} đã trở thành chủ phòng mới.`;
         broadcastState();
         // Đăng lại (xem giải thích ở resumeAsHost()) để phòng hiện lại trong "Ván đang diễn ra".
         publishRoomToPublic(roomCode, myName, 'PLAYING');
@@ -2433,6 +2516,51 @@ function attemptTakeoverAsHost(){
       }
     });
   });
+}
+
+// CHỦ PHÒNG RỚT MẠNG RỒI TỰ NỐI LẠI TRONG CÙNG TAB (không tải lại trang):
+// onDisconnect đã đặt activeHost = trống trên server, nhưng tab này vẫn isHost=true. Nếu không
+// làm gì, sau 8s khách sẽ chiếm quyền -> 2 máy cùng làm chủ phòng. Nên khi mạng về phải
+// giành lại activeHost (nếu chưa ai lấy) hoặc lui về làm khách (nếu đã có người thay).
+function reclaimHostAfterReconnect(){
+  claimActiveHost(success => {
+    if(!isHost) return; // trong lúc chờ đã rời phòng / đổi vai
+    if(success){
+      // claimActiveHost đã đăng ký lại onDisconnect cho activeHost; đăng lại các thứ đã bị
+      // onDisconnect xoá lúc rớt mạng (mục phòng công khai, snapshot backup).
+      if(gameState){
+        publishRoomToPublic(roomCode, myName, 'PLAYING');
+        broadcastState();
+      } else {
+        publishRoomToPublic(roomCode, myName);
+        broadcastLobby();
+      }
+      showSystemToast('✅ Đã kết nối lại — bạn vẫn là chủ phòng');
+    } else {
+      stepDownFromHost();
+    }
+  });
+}
+
+// Người khác đã thay làm chủ phòng lúc mình vắng mặt: bỏ hết vai trò chủ phòng trên máy này
+// (listener toHost, timer, phiên chủ phòng) rồi vào lại như khách bằng đúng myId cũ.
+function stepDownFromHost(){
+  if(!isHost || isBotMode) return;
+  stopListeningAsHost();
+  if(typeof timerLoop !== 'undefined' && timerLoop){ clearInterval(timerLoop); timerLoop = null; }
+  isHost = false;
+  clearTLHostSession();
+  playerTokens = {};
+  gameState = null;      // khách không giữ gameState gốc; currentState sẽ được chủ mới gửi về
+  sessionToken = null;
+  // Huỷ các onDisconnect do vai chủ phòng cũ đăng ký, kẻo lần rớt mạng sau ghi đè snapshot
+  // mới hoặc xoá mất mục phòng công khai của chủ phòng mới.
+  try{ fbDb.ref('tienlen_rooms/' + roomCode + '/hostSnapshot').onDisconnect().cancel(); }catch(e){}
+  try{ fbDb.ref(PUBLIC_ROOMS_PATH + '/' + roomCode).onDisconnect().cancel(); }catch(e){}
+  showSystemToast('ℹ️ Phòng đã có chủ phòng mới — bạn tiếp tục chơi với vai người chơi');
+  listenAsClient();
+  sendToHost({t:'join', name:myName, id:myId});
+  watchHostPresenceForTakeover();
 }
 
 /* NGƯỜI CHƠI VẪN Ở TRONG BÀN, CHỈ RỚT MẠNG VÀI GIÂY RỒI TỰ NỐI LẠI (không tải lại trang):
@@ -2447,6 +2575,10 @@ function watchConnectionForAutoRejoin(){
     if(!connected){ hadDropped = true; return; }
     if(!hadDropped) return; // lần "connected" đầu tiên lúc mới mở trang (chưa từng rớt) -> bỏ qua
     hadDropped = false;
+    if(roomCode && myId && isHost && !isBotMode){
+      reclaimHostAfterReconnect();
+      return;
+    }
     if(roomCode && myId && !isHost && !isBotMode){
       try{ registerDisconnectNotice(); }catch(e){}
       sendToHost({t:'join', name:myName, id:myId});
@@ -2465,8 +2597,14 @@ function sendToHost(msg){
   }
 }
 
+let hostToHostListenerRef = null;
+function stopListeningAsHost(){
+  if(hostToHostListenerRef){ try{ hostToHostListenerRef.off('child_added'); }catch(e){} hostToHostListenerRef = null; }
+}
 function listenAsHost(){
+  stopListeningAsHost(); // tránh gắn trùng listener nếu bị gọi 2 lần
   const ref = fbDb.ref('tienlen_rooms/' + roomCode + '/toHost');
+  hostToHostListenerRef = ref;
   ref.on('child_added', snap => {
     const data = snap.val();
     snap.ref.remove();
@@ -2878,6 +3016,12 @@ function checkInstantWin(handCards, options = {}) {
     return { type: 'five_pairs_run', label: 'Ngũ Đôi Thông (5 đôi thông)', reward: GAME_CONFIG.instantWin.nguDoiThong };
   }
 
+  // 6. Ván đầu (hoặc ván chia lại sau Tới Trắng): 3 Đôi Thông 33-44-55 có chứa 3♠ -> Tới Trắng.
+  if (options.isFirstGame && cs.some(isThreeSpade) &&
+      (rankCount[0]||0) >= 2 && (rankCount[1]||0) >= 2 && (rankCount[2]||0) >= 2) {
+    return { type: 'three_pairs_run_3spade', label: '3 Đôi Thông 3♠-44-55 (ván đầu)', reward: GAME_CONFIG.instantWin.baDoiThong3Bich || GAME_CONFIG.instantWin.nguDoiThong };
+  }
+
   return null;
 }
 
@@ -2902,6 +3046,40 @@ function makeActionRequestId(){
 }
 function isTrackedSelectionAction(action){
   return !!(action && (action.kind === 'play' || action.kind === 'interrupt_chop') && action.requestId);
+}
+// FIX "MÁY CHỦ CHƯA XÁC NHẬN NƯỚC ĐI" (đôi khi báo lỗi oan):
+// Trước đây chỉ có 1 setTimeout cứng 4.5s cho mỗi request. Hai tình huống khiến nó
+// báo lỗi dù ván vẫn ổn: (1) tab/app đang ở NỀN (khoá màn hình, chuyển app trên di
+// động) khiến trình duyệt tạm dừng JS, nên 4.5s "trôi qua" trong lúc tin nhắn thực ra
+// vẫn đang trên đường về; (2) rớt đúng 1 gói tin thoáng qua trên Firebase, không phải
+// lỗi hệ thống thật. scheduleActionTimeout()/onActionTimeout() thay thế các setTimeout
+// rời rạc cũ bằng một luồng dùng chung: không tính giờ khi tab đang ẩn, và tự gửi lại
+// ĐÚNG 1 lần trước khi mới báo lỗi cho người chơi.
+function scheduleActionTimeout(requestId, delayMs){
+  const pending = pendingActionRequests.get(requestId);
+  if(!pending) return;
+  clearTimeout(pending.timer);
+  pending.timer = setTimeout(()=>onActionTimeout(requestId), delayMs!=null ? delayMs : 4500);
+}
+function onActionTimeout(requestId){
+  const pending = pendingActionRequests.get(requestId);
+  if(!pending) return;
+  if(typeof document !== 'undefined' && document.hidden){
+    // Tab đang ở nền: chưa kết luận gì, chỉ hẹn kiểm tra lại sớm thay vì báo lỗi ngay.
+    scheduleActionTimeout(requestId, 800);
+    return;
+  }
+  if(!pending.retried){
+    pending.retried = true;
+    try{
+      if(isHost) handleAction(myId, pending.action); else sendToHost({t:'action', id:myId, action:pending.action});
+      debugActionEvent('RETRY', myId, 'Tự động thử lại sau khi chờ xác nhận quá lâu', {requestId});
+    }catch(e){ console.warn('⚠️ Không thể tự gửi lại action sau timeout:', e); }
+    scheduleActionTimeout(requestId, 4500);
+    return;
+  }
+  pendingActionRequests.delete(requestId);
+  showHandSelectMsg(formatActionRejectMessage('REQUEST_TIMEOUT')); updateHandActionButtonsOnly();
 }
 function sendActionResult(playerId, status, action, reason='', details={}){
   if(!action || !action.requestId) return;
@@ -2952,10 +3130,7 @@ let roomSettings = { gameMode: 'WATER', turnSeconds: 30, stakeUnit: 'Nước', h
 let kneelingTracker = {};
 let matchScores = {};
 let matchHistory = [];
-let matchStartedAt = null;
-// CHECK-IN ĐÁNH CHẬM: đăng ký tham gia độc lập với trạng thái ONLINE/OFFLINE.
-// Set này chỉ có ý nghĩa cho slowMode; người đã CHECK-IN không bị mất chỗ khi rớt mạng.
-let slowCheckIns = new Set();
+let matchStartedAt = null; 
 
 const $=id=>document.getElementById(id);
 
@@ -3346,6 +3521,18 @@ function rejoinSavedSession(){
   sendToHost({t:'join', name:myName, id:myId});
   watchHostPresenceForTakeover();
   showLobby();
+
+  // Chờ tối đa 10s cho phản hồi 'lobby' từ chủ phòng (hoặc từ chính mình nếu vừa thắng quyền
+  // chủ phòng luôn — xem clearPendingJoinTimeout() trong attemptTakeoverAsHost()). Hết giờ mà
+  // vẫn im lặng -> phòng coi như không còn tồn tại thật sự (kể cả cơ chế tự chuyển chủ phòng
+  // cũng không cứu được), xoá phiên đã lưu để nút "Vào lại" không hiện lại y hệt lần sau.
+  let rejoined = false;
+  clearPendingJoinTimeout();
+  pendingJoinTimeoutId = setTimeout(() => {
+    if(rejoined) return;
+    abandonJoinAttempt('Không vào lại được phòng ' + s.roomCode + ' — phòng có thể đã đóng hoặc không còn ai giữ vai trò chủ phòng. Vui lòng tạo phòng mới.', true);
+  }, 10000);
+  onFirstLobbyMessage = () => { rejoined = true; clearPendingJoinTimeout(); };
 }
 
 if($('btnReconnectSaved')) $('btnReconnectSaved').onclick = rejoinSavedSession;
@@ -3372,6 +3559,30 @@ function removeRoomFromPublic(code){
   fbDb.ref(PUBLIC_ROOMS_PATH + '/' + code).remove().catch(()=>{});
 }
 
+// FIX "NÚT VÀO LẠI SAU KHI ĐÃ THOÁT BỊ TREO": trước đây joinExistingRoom() có timeout 10s
+// nhưng chỉ cập nhật text trên #homeErr — lúc đó showLobby() đã ẩn hẳn màn Home rồi nên KHÔNG
+// AI THẤY ĐƯỢC dòng lỗi đó; người chơi bị kẹt vĩnh viễn ở màn "Phòng Chờ" trống trơn (không có
+// dữ liệu phòng thật, mọi nút đều vô nghĩa). Còn rejoinSavedSession() (nút "Vào lại ván đang
+// chơi") thì HOÀN TOÀN không có timeout — nếu phòng/chủ phòng đã không còn tồn tại thật sự
+// (không ai chiếm quyền thay), người chơi kẹt mãi ở "Đang vào lại phòng..." mà không có lỗi gì,
+// và phiên đã lưu vẫn còn nguyên nên lần mở app sau vẫn hiện y hệt nút "Vào lại", bấm lại vẫn
+// treo tiếp y như vậy. abandonJoinAttempt() dọn dẹp sạch trạng thái + quay về đúng màn Home
+// (nơi #homeErr thực sự hiển thị được) kèm thông báo rõ ràng khi hết giờ chờ mà không có phản
+// hồi 'lobby' nào từ chủ phòng.
+function abandonJoinAttempt(errMsg, clearSavedSession){
+  try{ if(fbDb && roomCode && myId) fbDb.ref('tienlen_rooms/' + roomCode + '/toClient/' + myId).off(); }catch(e){}
+  stopWatchingHostPresence();
+  if(clearSavedSession) clearTLSession();
+  onFirstLobbyMessage = null;
+  isHost=false; isBotMode=false; roomCode=null; myId=null; sessionToken=null;
+  gameState=null; currentState=null; players=[];
+  const lobby=$('lobbyScreen'); if(lobby) lobby.classList.add('hidden');
+  const home=$('homeScreen'); if(home) home.classList.remove('hidden');
+  $('homeErr').textContent = errMsg;
+  try{ checkForSavedTLSession(); }catch(e){}
+  try{ checkForSavedHostSession(); }catch(e){}
+}
+
 window.joinExistingRoom = function(code){
   code = (code || '').trim().toUpperCase();
   if(!code){ $('homeErr').textContent = 'Vui lòng nhập mã phòng!'; return; }
@@ -3383,12 +3594,14 @@ window.joinExistingRoom = function(code){
   $('homeErr').textContent = 'Đang kết nối tới phòng ' + code + '...';
 
   let joined = false;
-  const joinTimeout = setTimeout(() => {
-    if(!joined) $('homeErr').textContent = 'Không nối được phòng này. Kiểm tra lại mã phòng...';
+  clearPendingJoinTimeout();
+  pendingJoinTimeoutId = setTimeout(() => {
+    if(joined) return;
+    abandonJoinAttempt('Không nối được phòng "' + code + '". Kiểm tra lại mã phòng hoặc thử lại sau.', false);
   }, 10000);
 
   listenAsClient();
-  onFirstLobbyMessage = () => { joined = true; clearTimeout(joinTimeout); };
+  onFirstLobbyMessage = () => { joined = true; clearPendingJoinTimeout(); };
   sendToHost({t:'join', name:myName, id:myId});
   updatePlayerIndexEntry(myId, roomCode, myName);
   watchHostPresenceForTakeover();
@@ -3417,7 +3630,6 @@ $('btnCreate').onclick=()=>{
   claimActiveHost();
   saveTLHostSession();
   updatePlayerIndexEntry(myId, roomCode, myName);
-  slowCheckIns = new Set([myId]);
   showLobby();
 };
 
@@ -3433,7 +3645,6 @@ $('btnBotGame').onclick = () => {
     { id: 'bot_3', name: botNames[2] }
   ];
   botList = ['bot_1', 'bot_2', 'bot_3'];
-  slowCheckIns = new Set(players.map(p=>p.id));
   showLobby();
   $('btnStart').disabled = false;
 };
@@ -3457,10 +3668,9 @@ $('btnAddBotInLobby').onclick = () => {
   const newBotId = 'bot_' + Date.now().toString(36).slice(-4) + Math.floor(Math.random()*100);
   players.push({ id: newBotId, name: botName });
   botList.push(newBotId);
-  if(roomSettings.slowMode) slowCheckIns.add(newBotId);
 
   if (!isBotMode) {
-    publishRoomToPublic(roomCode, players[0].name);
+    publishRoomToPublic(roomCode, myName);
     broadcastLobby();
   } else {
     renderLobby();
@@ -3472,7 +3682,7 @@ function removeBotInLobby(botId) {
   players = players.filter(p => p.id !== botId);
   botList = botList.filter(id => id !== botId);
   if (!isBotMode) {
-    publishRoomToPublic(roomCode, players[0].name);
+    publishRoomToPublic(roomCode, myName);
     broadcastLobby();
   } else {
     renderLobby();
@@ -3483,15 +3693,8 @@ function markPlayerDisconnected(disconnectedId){
   if(!gameState || gameState.isEnded) return;
   if(!gameState.disconnected) gameState.disconnected = new Set();
   gameState.disconnected.add(disconnectedId);
-  if(gameState.slowMode){
-    // Đánh chậm: OFFLINE chỉ là tạm ngắt kết nối. Tuyệt đối không AI đánh hộ, không PASS,
-    // không xóa người, không đổi order; nếu đúng lượt thì giữ nguyên lượt cho tới khi quay lại.
-    gameState.log = `🔴 ${gameState.names[disconnectedId] || 'Người chơi'} đang OFFLINE — giữ nguyên lượt/chỗ.`;
-    bumpActor(disconnectedId, '🔴 OFFLINE — giữ lượt');
-  }else{
-    gameState.log = `⚠️ ${gameState.names[disconnectedId] || 'Người chơi'} đã mất mạng — AI sẽ đánh hộ tạm thời!`;
-    bumpActor(disconnectedId, '⚠️ Mất mạng (AI đánh hộ)');
-  }
+  gameState.log = `⚠️ ${gameState.names[disconnectedId] || 'Người chơi'} đã mất mạng — AI sẽ đánh hộ tạm thời!`;
+  bumpActor(disconnectedId, '⚠️ Mất mạng (AI đánh hộ)');
   broadcastState();
 }
 
@@ -3534,7 +3737,7 @@ function onHostMessage(fromId, msg, token){
       players.push({id:msg.id, name:String(msg.name || 'Người chơi').slice(0,30)});
       playerTokens[msg.id] = generateSessionToken();
       sendToPlayer(msg.id, {t:'session', token:playerTokens[msg.id]});
-      publishRoomToPublic(roomCode, players[0].name);
+      publishRoomToPublic(roomCode, myName);
     } else if(existing){
       // NGƯỜI CŨ VÀO LẠI (cùng myId — ví dụ cùng "mật khẩu" nên trùng myId dù đổi
       // hẳn sang thiết bị/trình duyệt khác, không chỉ riêng trường hợp mất mạng trên
@@ -3570,31 +3773,13 @@ function onHostMessage(fromId, msg, token){
     return;
   }
 
-  // CHECK-IN ĐÁNH CHẬM: đăng ký tham gia độc lập với kết nối mạng.
-  if(msg.t === 'slow_checkin') {
-    if(!roomSettings.slowMode || !fromId || !players.some(p=>p.id===fromId)) return;
-    slowCheckIns.add(fromId);
-    broadcastLobby();
-    if(gameState && !gameState.isEnded && !gameState.order.includes(fromId)){
-      // Người mới CHECK-IN giữa ván chỉ được xếp vào VÁN KẾ TIẾP, không chèn vào order hiện tại.
-      sendToPlayer(fromId, {t:'state', state:getViewStateForPlayer(fromId)});
-    }
-    return;
-  }
-
   if(msg.t === '__disconnect__'){
     if(gameState && !gameState.isEnded){
       markPlayerDisconnected(fromId);
     } else {
-      // Đánh chậm: CHECK-IN đã là đăng ký tham gia, OFFLINE không đồng nghĩa rời trận.
-      // Giữ nguyên player + token + CHECK-IN để người chơi quay lại đúng ID.
-      if(roomSettings.slowMode && slowCheckIns.has(fromId)){
-        broadcastLobby();
-      } else {
-        players = players.filter(p=>p.id!==fromId);
-        delete playerTokens[fromId];
-        broadcastLobby();
-      }
+      players = players.filter(p=>p.id!==fromId);
+      delete playerTokens[fromId];
+      broadcastLobby();
     }
     return;
   }
@@ -3632,6 +3817,14 @@ function onHostMessage(fromId, msg, token){
 }
 
 let onFirstLobbyMessage = null;
+// FIX "NÚT VÀO LẠI SAU KHI ĐÃ THOÁT KHÔNG PHẢN HỒI GÌ": joinExistingRoom()/rejoinSavedSession()
+// chờ chủ phòng phản hồi (tin 'lobby') để biết mình đã vào phòng thành công. pendingJoinTimeoutId
+// giữ ID của bộ đếm chờ đó — dùng chung 1 biến để attemptTakeoverAsHost() (nếu chính người bấm
+// "Vào lại" lại thắng luôn quyền chủ phòng do vắng mặt quá lâu) cũng huỷ được đúng bộ đếm đang treo.
+let pendingJoinTimeoutId = null;
+function clearPendingJoinTimeout(){
+  if(pendingJoinTimeoutId){ clearTimeout(pendingJoinTimeoutId); pendingJoinTimeoutId = null; }
+}
 // FIX "ÂM THANH VANG LÊN MẤT KIỂM SOÁT": khi 1 người bị rớt mạng/chuyển app một lúc rồi
 // quay lại, Firebase sẽ đẩy dồn TOÀN BỘ tin nhắn còn tồn đọng (child_added bắn hàng loạt
 // gần như cùng lúc). Nếu vẫn phát âm cho từng tin nhắn cũ đó, người chơi sẽ nghe một tràng
@@ -3669,27 +3862,21 @@ function onClientMessage(msg){
         pendingEntries.forEach(([requestId, pending])=>{
           if(!pending || !pending.action || pending.retriedAfterTokenRefresh) return;
           pending.retriedAfterTokenRefresh = true;
-          clearTimeout(pending.timer);
-          pending.timer = setTimeout(()=>{
-            const live = pendingActionRequests.get(requestId);
-            if(!live) return;
-            pendingActionRequests.delete(requestId);
-            showHandSelectMsg(formatActionRejectMessage('REQUEST_TIMEOUT')); updateHandActionButtonsOnly();
-          },4500);
+          pending.retried = true; // lần gửi lại này đã tính là lượt retry -> lần timeout kế tiếp báo lỗi luôn, không chờ retry thêm
           try{
             sendToHost({t:'action', id:myId, action:pending.action});
             debugActionEvent('RETRY', myId, 'Retry action sau khi refresh session token', {requestId});
           }catch(e){
             console.warn('⚠️ Không thể retry action sau TOKEN_REFRESH:', e);
           }
+          scheduleActionTimeout(requestId, 4500);
         });
       }
       return;
     } else if(msg.t==='lobby'){
       if(onFirstLobbyMessage){ onFirstLobbyMessage(); onFirstLobbyMessage = null; }
-      players = safeArray(msg.players || players);
-      roomSettings = msg.settings || roomSettings;
-      if(Array.isArray(msg.slowCheckIns)) slowCheckIns = new Set(msg.slowCheckIns);
+      players = safeArray(msg.players || players); 
+      roomSettings = msg.settings || roomSettings; 
       renderLobby();
     } else if(msg.t==='actionResult'){
       const pending = pendingActionRequests.get(msg.requestId);
@@ -3769,7 +3956,7 @@ function onClientMessage(msg){
 }
 
 function broadcastLobby(){
-  sendToAll({t:'lobby', players, settings: roomSettings, slowCheckIns:[...slowCheckIns]});
+  sendToAll({t:'lobby', players, settings: roomSettings});
   renderLobby();
   persistHostSnapshot();
 }
@@ -3896,20 +4083,16 @@ function renderLobby(){
   const ul = $('lobbyPlayers'); ul.innerHTML = '';
   players.forEach((p,i)=>{
     const isBot = botList.includes(p.id);
-    const checked = isBot || slowCheckIns.has(p.id);
-    const online = !(gameState && gameState.disconnected && gameState.disconnected.has(p.id));
     let removeBtn = '';
     if (isHost && isBot) {
-      removeBtn = `<button class="btn btn-outline" style="font-size:10px;padding:2px 6px;color:#ff7777;border-color:#ff7777;" onclick="removeBotInLobby('${p.id}')">Xóa</button>`;
+      removeBtn = `<button class="btn btn-outline" style="font-size:10px; padding:2px 6px; color:#ff7777; border-color:#ff7777;" onclick="removeBotInLobby('${p.id}')">Xóa</button>`;
     }
     ul.innerHTML += `
       <li>
         <div class="player-info">
-          <span class="dot ${online?'':'off'}"></span>
+          <span class="dot"></span>
           <span>${escapeHtml(p.name)}</span>
           ${i===0?'<span class="crown">♛ Host</span>':''}
-          ${roomSettings.slowMode ? `<span class="badge">${checked?'✅ CHECK-IN':'⏳ Chưa CHECK-IN'}</span>` : ''}
-          ${roomSettings.slowMode && !online ? '<span class="badge" style="background:#3a3a3a;color:#bbb">🔴 OFFLINE</span>' : ''}
         </div>
         ${removeBtn}
       </li>`;
@@ -3920,40 +4103,27 @@ function renderLobby(){
   $('stakeSelect').value = roomSettings.stakeUnit;
   $('hideCardCountCheck').checked = !!roomSettings.hideCardCount;
   $('slowModeCheck').checked = !!roomSettings.slowMode;
+  // Đánh chậm tính điểm = không đếm giờ mỗi lượt -> vô hiệu ô chọn thời gian lượt vì không dùng tới.
+  // FIX: dòng này trước đây tự bật lại turnSecondsSelect cho KHÁCH mỗi khi phòng chờ
+  // render lại (mỗi lần nhận broadcastLobby), đè mất khoá đã đặt ở setLobbySettingsInteractive
+  // khi slowMode đang tắt — nay chỉ bật cho chủ phòng, khách luôn bị khoá ô này.
   $('turnSecondsSelect').disabled = !isHost || !!roomSettings.slowMode;
   $('turnSecondsSelect').style.opacity = roomSettings.slowMode ? '0.45' : '1';
   if(roomSettings.gameMode !== 'WATER'){
-    $('stakeSelect').style.display = 'none'; $('stakeLabel').style.display = 'none';
+    $('stakeSelect').style.display = 'none';
+    $('stakeLabel').style.display = 'none';
   } else {
-    $('stakeSelect').style.display = ''; $('stakeLabel').style.display = '';
+    $('stakeSelect').style.display = '';
+    $('stakeLabel').style.display = '';
   }
 
-  // CHECK-IN: mỗi người tự đăng ký, không phụ thuộc ONLINE.
-  let checkBox = document.getElementById('slowCheckinBox');
-  if(roomSettings.slowMode){
-    if(!checkBox){
-      checkBox=document.createElement('div'); checkBox.id='slowCheckinBox';
-      checkBox.style.cssText='margin-top:12px;padding:10px;border:1px solid var(--panel-line);border-radius:10px;background:#0004;text-align:center;';
-      $('guestSettingsView').parentNode.insertBefore(checkBox, $('guestSettingsView').nextSibling);
-    }
-    const checked = slowCheckIns.has(myId) || botList.includes(myId);
-    checkBox.innerHTML = `<div style="font-size:12px;color:rgba(250,246,238,.72);margin-bottom:8px">🐢 Đánh chậm • ${slowCheckIns.size}/${players.length} người CHECK-IN</div>`
-      + (isBotMode || botList.includes(myId) ? '<div style="color:var(--green);font-weight:700">✅ Đã CHECK-IN</div>'
-      : `<button id="btnSlowCheckin" class="btn ${checked?'btn-outline':'btn-gold'}" style="width:100%">${checked?'✅ ĐÃ CHECK-IN':'✅ CHECK-IN'}</button>`)
-      + `<div style="font-size:10px;color:rgba(250,246,238,.5);margin-top:6px">CHECK-IN rồi OFFLINE vẫn giữ chỗ và giữ lượt; chỉ khi quay lại mới đánh tiếp.</div>`;
-    const cb=$('btnSlowCheckin');
-    if(cb) cb.onclick=()=>{
-      if(checked) return;
-      sendToHost({t:'slow_checkin'});
-      slowCheckIns.add(myId); renderLobby();
-    };
-  }else if(checkBox){ checkBox.remove(); }
-
   if(isHost){
-    const checkedCount = roomSettings.slowMode ? slowCheckIns.size : players.length;
-    $('btnStart').disabled = checkedCount < 2;
-    $('btnStart').textContent = roomSettings.slowMode ? `Bắt đầu (${checkedCount}/4 CHECK-IN)` : 'Bắt đầu (2-4 người)';
-    $('btnAddBotInLobby').disabled = players.length >= 4;
+    $('btnStart').disabled = players.length < 2;
+    if (players.length >= 4) {
+      $('btnAddBotInLobby').disabled = true;
+    } else {
+      $('btnAddBotInLobby').disabled = false;
+    }
   }
 }
 
@@ -3974,7 +4144,6 @@ $('hideCardCountCheck').onchange = e => { roomSettings.hideCardCount = e.target.
 $('slowModeCheck').onchange = e => {
   if(!isHost){ e.target.checked = !!roomSettings.slowMode; return; } // chốt chặn thêm: chỉ chủ phòng được đổi
   roomSettings.slowMode = e.target.checked;
-  if(roomSettings.slowMode && isHost) slowCheckIns.add(myId);
   $('turnSecondsSelect').disabled = !isHost || roomSettings.slowMode;
   $('turnSecondsSelect').style.opacity = roomSettings.slowMode ? '0.45' : '1';
   broadcastLobby();
@@ -3983,12 +4152,6 @@ $('slowModeCheck').onchange = e => {
 $('btnStart').onclick = () => { if(isHost) broadcastCountdownAndStart(); };
 
 function broadcastCountdownAndStart(){
-  if(!isHost) return;
-  if(roomSettings.slowMode && slowCheckIns.size < 2){
-    $('lobbyErr').textContent = 'Cần ít nhất 2 người CHECK-IN trước khi bắt đầu.';
-    renderLobby();
-    return;
-  }
   sendToAll({t: 'countdown_start'});
   triggerCountdownAnimation(() => dealNewGame());
 }
@@ -4010,25 +4173,25 @@ function triggerCountdownAnimation(onComplete){
   }, 1000);
 }
 
-function revealInstantWin(hands, winnerId, info, dealPlayers = players){
-  ensureMatchLedger(dealPlayers.map(p=>p.id));
-  const winnerName = dealPlayers.find(p=>p.id===winnerId).name;
+function revealInstantWin(hands, winnerId, info){
+  ensureMatchLedger(players.map(p=>p.id));
+  const winnerName = players.find(p=>p.id===winnerId).name;
   gameState = {
-    hands, order: dealPlayers.map(p=>p.id), names: Object.fromEntries(dealPlayers.map(p=>[p.id, p.name])),
-    hostId: dealPlayers[0].id,
+    hands, order: players.map(p=>p.id), names: Object.fromEntries(players.map(p=>[p.id, p.name])),
+    hostId: myId, // luôn là chủ phòng HIỆN TẠI (players[0] có thể là chủ cũ sau khi chuyển quyền)
     turnIdx: 0, leaderId: winnerId, currentCombo: null, firstMove: true, requiredCard: null,
     finished: [], passed: new Set(), disconnected: new Set(), coldFolded: new Set(),
-    scores: Object.fromEntries(dealPlayers.map(p=>[p.id, 0])),
+    scores: Object.fromEntries(players.map(p=>[p.id, 0])),
     matchScores: {...matchScores},
     matchHistory: matchHistory.map(x=>({roundNo:x.roundNo,at:x.at,players:{...x.players}})),
     matchScoreApplied: false,
     roundNo: matchHistory.length + 1,
-    liveScores: Object.fromEntries(dealPlayers.map(p=>[p.id, 0])),
+    liveScores: Object.fromEntries(players.map(p=>[p.id, 0])),
     liveBaseAwards: {},
     liveCongAwards: {},
     liveChopAwards: {},
     liveWinnerAwarded: false,
-    playedCardsCount: Object.fromEntries(dealPlayers.map(p=>[p.id, 0])),
+    playedCardsCount: Object.fromEntries(players.map(p=>[p.id, 0])),
     revealedCards: Object.fromEntries(players.map(p=>[p.id, safeArray(hands[p.id]).map(c=>({r:c.r,s:c.s}))])),
     kneelingStatus: { ...kneelingTracker },
     roundReview: [],
@@ -4095,8 +4258,10 @@ function finalizeInstantWin(){
   if(timerLoop) clearInterval(timerLoop);
   consecutivePlayCount = 0;
   lastNotifiedTurnId = null;
+  last20sWarnTurnId = null;
 
-  lastGameWinnerId = winnerId;
+  // Tới Trắng = ván bị huỷ và chia lại như VÁN ĐẦU: đặt null để dealNewGame() bắt người giữ 3♠ đánh đầu.
+  lastGameWinnerId = null;
   gameState.finished = [winnerId, ...gameState.order.filter(id => id !== winnerId)];
   gameState.roundLog.push({ icon:'✅', text: `${winnerName} thắng Tới Trắng với ${label} — ván kết thúc.` });
 
@@ -4137,7 +4302,8 @@ function finalizeInstantWin(){
     // (bài của họ vẫn còn nguyên vì chưa ai kịp đánh) → đền thêm cho người Tới Trắng.
     let foulBonusTotal = 0;
     const foulDetailsById = {};
-    if(mode === 'NHATANCA'){
+    // CHỈ xét Thối (heo, 3 đôi thông, 4+ đôi thông, tứ quý) khi người thắng Tới Trắng bằng NGŨ ĐÔI THÔNG.
+    if(gameState.instantWin.type === 'five_pairs_run'){
       gameState.order.forEach(id => {
         if(id === winnerId) return;
         const foulInfo = checkFoulPunishment(safeArray(gameState.hands[id]));
@@ -4200,7 +4366,18 @@ function finalizeInstantWin(){
 
 function ensureMatchLedger(order){const ids=safeArray(order);const next={};ids.forEach(id=>{next[id]=Number.isFinite(Number(matchScores[id]))?Number(matchScores[id]):0;});matchScores=next;if(!matchStartedAt)matchStartedAt=Date.now();return matchScores;}
 function resetMatchLedger(){matchScores={};matchHistory=[];matchStartedAt=null;}
-function getPointsRankValue(rank){return ({1:3,2:2,3:1,4:0})[Number(rank)]??0;}
+// FIX (MỤC 1 - Bét = 0 khi không đủ 4 người): trước đây hàm này dùng bảng cố định
+// {1:3,2:2,3:1,4:0} theo ĐÚNG SỐ THỨ TỰ hạng, không quan tâm số người chơi thật (activeCount).
+// Hệ quả: bàn chỉ có 3 người (hoặc 2 người) chơi Tính Điểm thì người về Bét (hạng cuối cùng
+// trong SỐ NGƯỜI THẬT đang đấu, ví dụ hạng 3/3 hoặc hạng 2/2) vẫn bị tính là Ba (+1) hay Nhì (+2)
+// thay vì phải luôn = 0 điểm. Giờ truyền thêm activeCount: hễ rank là hạng CHÓT trong số người
+// thật (rank >= activeCount) thì luôn trả về 0, bất kể activeCount là 2/3/4 người.
+function getPointsRankValue(rank, activeCount){
+  const r = Number(rank);
+  const ac = Number(activeCount);
+  if(Number.isFinite(ac) && ac > 0 && r >= ac) return 0;
+  return ({1:3,2:2,3:1,4:0})[r] ?? 0;
+}
 function applyPointsRoundToMatch(results){
   if(!gameState||(gameState.gameMode!=='POINTS'&&gameState.gameMode!=='NHATANCA'&&gameState.gameMode!=='CHATCHEM')||gameState.matchScoreApplied) return;
   ensureMatchLedger(gameState.order);
@@ -4432,29 +4609,21 @@ function dealNewGame(){
     });
     if(Object.keys(persisted).length) matchScores = {...matchScores, ...persisted};
   }
-  // Đánh chậm + CHECK-IN: chỉ người đã CHECK-IN mới được chia bài cho ván mới.
-  // Người CHECK-IN sau khi ván đã bắt đầu sẽ vào order từ VÁN KẾ TIẾP.
-  const roundPlayers = roomSettings.slowMode
-    ? players.filter(p => slowCheckIns.has(p.id) || botList.includes(p.id))
-    : players.slice();
-  if(roundPlayers.length < 2){
-    if(isHost) $('lobbyErr').textContent = 'Cần ít nhất 2 người CHECK-IN để bắt đầu ván.';
-    return;
-  }
-  ensureMatchLedger(roundPlayers.map(p=>p.id));
+  ensureMatchLedger(players.map(p=>p.id));
   // forceStatus='PLAYING': ván sắp chia bài ngay bên dưới, dù gameState hiện tại (ván trước,
   // hoặc null nếu đây là ván đầu) chưa phản ánh đúng — tránh bị đăng nhầm là 'LOBBY'.
-  if(isHost && !isBotMode) publishRoomToPublic(roomCode, roundPlayers[0] ? roundPlayers[0].name : myName, 'PLAYING');
+  if(isHost && !isBotMode) publishRoomToPublic(roomCode, myName, 'PLAYING');
   consecutivePlayCount = 0;
   lastNotifiedTurnId = null;
+  last20sWarnTurnId = null;
   let hands;
   if(roomSettings.gameMode === 'CHATCHEM'){
     // CHẶT CHÉM: đảm bảo mỗi người có sẵn 1 Bom (3-5 Đôi Thông hoặc Tứ Quý) để chọi nhau.
-    hands = dealChatChemHands(roundPlayers.map(p=>p.id));
+    hands = dealChatChemHands(players.map(p=>p.id));
   } else {
     const deck = shuffle(buildDeck());
     hands = {};
-    roundPlayers.forEach((p,i) => { hands[p.id] = sortHand(deck.slice(i*13, (i+1)*13)); });
+    players.forEach((p,i) => { hands[p.id] = sortHand(deck.slice(i*13, (i+1)*13)); });
   }
 
   // LUẬT TỚI TRẮNG: kiểm tra ngay sau khi chia bài.
@@ -4467,7 +4636,7 @@ function dealNewGame(){
   const isFirstGame = (lastGameWinnerId === null);
   let instantWinnerId = null, instantWinInfo = null;
   if(roomSettings.gameMode !== 'CHATCHEM'){
-    roundPlayers.forEach(p => {
+    players.forEach(p => {
       if (instantWinnerId) return;
       const info = checkInstantWin(hands[p.id], {isFirstGame});
       if (info) { instantWinnerId = p.id; instantWinInfo = info; }
@@ -4475,7 +4644,7 @@ function dealNewGame(){
   }
 
   if (instantWinnerId) {
-    revealInstantWin(hands, instantWinnerId, instantWinInfo, roundPlayers);
+    revealInstantWin(hands, instantWinnerId, instantWinInfo);
     return;
   }
 
@@ -4486,7 +4655,7 @@ function dealNewGame(){
 
   if (isFirstGame) {
     // VÁN ĐẦU TIÊN: Bắt buộc áp dụng bài có lá 3 bích
-    roundPlayers.forEach((p, i) => {
+    players.forEach((p, i) => {
       hands[p.id].forEach(c => {
         if (isThreeSpade(c)) {
           leadIdx = i;
@@ -4494,18 +4663,18 @@ function dealNewGame(){
         }
       });
     });
-    logText = `🎮 Ván đầu tiên: ${roundPlayers[leadIdx].name} giữ 3 Bích (3♠) và phải ra 3 Bích đầu tiên!`;
+    logText = `🎮 Ván đầu tiên: ${players[leadIdx].name} giữ 3 Bích (3♠) và phải ra 3 Bích đầu tiên!`;
     leadShortMsg = '🎮 Giữ 3♠, đánh đầu';
   } else {
     // VÁN TIẾP THEO: Tự do ra bài, người về Nhất ván trước đánh đầu tiên
-    let winnerIdx = roundPlayers.findIndex(p => p.id === lastGameWinnerId);
+    let winnerIdx = players.findIndex(p => p.id === lastGameWinnerId);
     if (winnerIdx !== -1) {
       leadIdx = winnerIdx;
-      logText = `🎮 Ván mới: ${roundPlayers[leadIdx].name} về Nhất ván trước nên được đánh đầu tiên (Tự do)!`;
+      logText = `🎮 Ván mới: ${players[leadIdx].name} về Nhất ván trước nên được đánh đầu tiên (Tự do)!`;
       leadShortMsg = '🎮 Về Nhất, đánh đầu';
     } else {
       // Người thắng ván trước không còn trong bàn (đã rời/mất mạng) -> báo rõ lý do thay vì âm thầm mặc định
-      logText = `🎮 Ván mới: người về Nhất ván trước đã rời bàn, ${roundPlayers[leadIdx].name} đánh đầu tiên (Tự do)!`;
+      logText = `🎮 Ván mới: người về Nhất ván trước đã rời bàn, ${players[leadIdx].name} đánh đầu tiên (Tự do)!`;
       leadShortMsg = '🎮 Đánh đầu (thay thế)';
     }
   }
@@ -4513,11 +4682,11 @@ function dealNewGame(){
   gameState = {
     roundToken: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`,
     hands,
-    order: roundPlayers.map(p=>p.id),
-    names: Object.fromEntries(roundPlayers.map(p=>[p.id, p.name])),
-    hostId: roundPlayers[0].id,
+    order: players.map(p=>p.id),
+    names: Object.fromEntries(players.map(p=>[p.id, p.name])),
+    hostId: myId, // luôn là chủ phòng HIỆN TẠI (players[0] có thể là chủ cũ sau khi chuyển quyền)
     turnIdx: leadIdx,
-    leaderId: roundPlayers[leadIdx].id,
+    leaderId: players[leadIdx].id,
     currentCombo: null,
     firstMove: true,
     requiredCard: requiredCard, // Chỉ bắt buộc ở ván đầu tiên
@@ -4525,16 +4694,16 @@ function dealNewGame(){
     passed: new Set(),
     disconnected: new Set(),
     coldFolded: new Set(), // LUẬT CÓNG: người chưa đánh được lá nào khi đã có người về Nhất -> bị loại (úp bài) ngay
-    scores: Object.fromEntries(roundPlayers.map(p=>[p.id, 0])),
+    scores: Object.fromEntries(players.map(p=>[p.id, 0])),
     matchScores: {...matchScores},
     matchHistory: matchHistory.map(x=>({roundNo:x.roundNo,at:x.at,players:{...x.players}})),
     matchScoreApplied: false,
     roundNo: matchHistory.length + 1,
-    liveScores: Object.fromEntries(roundPlayers.map(p=>[p.id, 0])),
+    liveScores: Object.fromEntries(players.map(p=>[p.id, 0])),
     liveBaseAwards: {},
     liveCongAwards: {},
     liveChopAwards: {},
-    playedCardsCount: Object.fromEntries(roundPlayers.map(p=>[p.id, 0])),
+    playedCardsCount: Object.fromEntries(players.map(p=>[p.id, 0])),
     revealedCards: Object.fromEntries(players.map(p=>[p.id, []])),
     kneelingStatus: { ...kneelingTracker },
     roundReview: [],
@@ -4560,7 +4729,7 @@ function dealNewGame(){
     chopTicketHolders: {}, // {playerId: true}
     thamGiaChatRegistrations: [] // [{playerId, cards, combo, registeredAt}]
   };
-  bumpActor(roundPlayers[leadIdx].id, leadShortMsg); // Hiện rõ bong bóng "đánh đầu" ngay tại vị trí người được quyền ra bài trước
+  bumpActor(players[leadIdx].id, leadShortMsg); // Hiện rõ bong bóng "đánh đầu" ngay tại vị trí người được quyền ra bài trước
 
   isSpectator = false;
   startTimerLoop();
@@ -4582,7 +4751,7 @@ function startTimerLoop(){
     // rồi đuổi (kickPlayerNow), để ván không bị "lỗi, đứng" và bài không bị tính sai.
     // Họ vẫn còn nguyên trong players[]/gameState.order; hễ kết nối lại (xem onHostMessage
     // 'join'), gameState.disconnected sẽ được gỡ và họ lấy lại quyền điều khiển ngay lượt sau.
-    const isAutoPlayed = botList.includes(currId) || (!gameState.slowMode && gameState.disconnected && gameState.disconnected.has(currId));
+    const isAutoPlayed = botList.includes(currId) || (gameState.disconnected && gameState.disconnected.has(currId));
     if(isAutoPlayed){
       if(!gameState.botThinking){
         gameState.botThinking = true;
@@ -4614,7 +4783,7 @@ function startTimerLoop(){
           }
           // Nếu người mất mạng vừa kết nối lại đúng lúc này (gameState.disconnected đã được
           // gỡ), KHÔNG đánh hộ nữa — để nhường lại quyền điều khiển thật cho họ.
-          const stillAutoPlayed = botList.includes(scheduledBotId) || (!gameState.slowMode && gameState.disconnected && gameState.disconnected.has(scheduledBotId));
+          const stillAutoPlayed = botList.includes(scheduledBotId) || (gameState.disconnected && gameState.disconnected.has(scheduledBotId));
           if(stillAutoPlayed && gameState.order[gameState.turnIdx] === scheduledBotId) makeBotMove(scheduledBotId);
           gameState.botThinking = false;
         }, 2000);
@@ -4780,8 +4949,6 @@ function makeBotMove(botId){
 
 function autoForceTurn(playerId){
   if(!gameState || gameState.isEnded) return;
-  // Đánh chậm: không bao giờ tự động xử lý lượt của người thật, kể cả họ OFFLINE.
-  if(gameState.slowMode && !botList.includes(playerId)) return;
   // V5 HARD LOCK: timeout/callback của Bot cũ cũng không được vượt qua quyền sau chặt.
   if(gameState.lastChopWinnerId && String(playerId) !== String(gameState.lastChopWinnerId)) return;
   if(gameState.forcedNextTurnId && String(playerId) !== String(gameState.forcedNextTurnId)) return;
@@ -4797,10 +4964,7 @@ function autoForceTurn(playerId){
   // Không đuổi ngay khi mất mạng nữa — đánh hộ bằng AI (giống Bot) để ván tiếp tục
   // bình thường, tránh làm sai điểm/số lá do trước đây kickPlayerNow() ép họ thành
   // "đã về" dù bài trên tay chưa hết.
-  if(gameState.disconnected && gameState.disconnected.has(playerId)){
-    if(gameState.slowMode && !botList.includes(playerId)) return;
-    makeBotMove(playerId); return;
-  }
+  if(gameState.disconnected && gameState.disconnected.has(playerId)){ makeBotMove(playerId); return; }
 
   if(gameState.currentCombo){
     handleAction(playerId, {kind:'pass'}, true);
@@ -5231,17 +5395,21 @@ function compareThamGiaChatStrength(a, b){
   return (b.highR - a.highR) || (b.highS - a.highS);
 }
 
-// PHẦN E — XÉT DANH SÁCH ĐĂNG KÝ LÚC ĐÓNG LOẠT: lọc bỏ đăng ký không còn đủ sức chặt
-// mục tiêu CUỐI CÙNG hiện tại trên bàn, rồi trả về TOÀN BỘ chuỗi đăng ký còn hợp lệ, sắp
-// xếp YẾU → MẠNH (hoặc null nếu không ai đủ điều kiện — khi đó luồng gốc settleChopChain
-// xử lý như cũ). executeThamGiaChatWin() sẽ duyệt tuần tự chuỗi này.
+// PHẦN E — XÉT DANH SÁCH ĐĂNG KÝ LÚC ĐÓNG LOẠT: trả về TOÀN BỘ chuỗi đăng ký hợp lệ (còn
+// combo/cards), sắp xếp YẾU → MẠNH (hoặc null nếu không ai đăng ký). executeThamGiaChatWin()
+// sẽ duyệt tuần tự chuỗi này.
+// FIX "ĐĂNG KÝ BỊ VÔ HIỆU LẶNG LẼ KHI CÓ BỘ MẠNH HƠN VỪA ĐƯỢC ĐÁNH BÌNH THƯỜNG": trước đây
+// hàm này tự lọc bỏ mọi đăng ký không đủ sức chặt mục tiêu CUỐI CÙNG hiện tại trên bàn
+// (gameState.currentCombo) — nghĩa là nếu ai đó đánh bình thường ra 1 bộ còn mạnh hơn TẤT CẢ
+// đăng ký đang chờ, toàn bộ đăng ký biến mất không dấu vết, không mất bài, không cộng Bom. Nay
+// việc "đăng ký còn đủ sức chặt mục tiêu mới nhất hay không" được xét RIÊNG ở nơi gọi hàm này
+// (checkNextTurn()) — nếu KHÔNG đủ, các đăng ký vẫn được coi là đã chặt lẫn nhau rồi bị người
+// đang dẫn đầu chặt đè (xem mergeThamGiaChatChainIntoCurrentLeader()) thay vì bị xoá sạch.
 function resolveThamGiaChatRegistrations(){
   if(!gameState) return null;
   const regs = safeArray(gameState.thamGiaChatRegistrations);
   if(!regs.length) return null;
-  const finalTarget = gameState.currentCombo;
-  if(!finalTarget) return null;
-  const valid = regs.filter(r => r && r.combo && r.cards && canBeat(r.combo, finalTarget));
+  const valid = regs.filter(r => r && r.combo && r.cards);
   if(!valid.length) return null;
   // FIX "MẤT MẮT XÍCH TRUNG GIAN TRONG THAM GIA CHẶT": trước đây hàm này chỉ trả về NGƯỜI
   // MẠNH NHẤT (valid[0]) và âm thầm loại bỏ mọi đăng ký khác dù chúng cũng đủ sức chặt
@@ -5471,8 +5639,18 @@ function executeThamGiaChatWin(chain){
   const activePlayers = gameState.order.filter(id => !gameState.finished.includes(id) && !gameState.coldFolded.has(id));
   if(activePlayers.length <= 1){
     if(activePlayers.length === 1){
-      gameState.finished.push(activePlayers[0]);
-      awardLiveBaseScore(activePlayers[0], gameState.finished.length, true);
+      const justFinishedId = activePlayers[0];
+      gameState.finished.push(justFinishedId);
+      awardLiveBaseScore(justFinishedId, gameState.finished.length, true);
+      // MỤC 3: nếu người này KHÔNG bị Cóng nhưng mọi người khác (trừ người về Nhất) đều
+      // đã bị Cóng — tức ván kết thúc chỉ vì đối thủ Cóng hết, không phải vì họ thật sự
+      // chơi hết bài — đánh dấu để cuối ván bỏ qua xét Thối bài cho họ (chỉ chế độ Tính Điểm).
+      const winnerIdNow = gameState.finished[0];
+      const allOthersCong = gameState.order.every(id => id === winnerIdNow || id === justFinishedId || (gameState.coldFolded && gameState.coldFolded.has(id)));
+      if(allOthersCong && gameState.coldFolded && gameState.coldFolded.size > 0){
+        gameState.autoFinishedViaCong = gameState.autoFinishedViaCong || {};
+        gameState.autoFinishedViaCong[justFinishedId] = true;
+      }
     }
     settleChopChain('ván kết thúc');
     endGame();
@@ -5538,6 +5716,96 @@ function executeThamGiaChatWin(chain){
 
   // Round mới do người thắng dẫn (PHẦN C/F): reset sạch vé + đăng ký cũ.
   resetThamGiaChatRoundState();
+}
+
+// THAM GIA CHẶT — GỘP ĐĂNG KÝ KHÔNG ĐỦ SỨC CHẶT MỤC TIÊU MỚI NHẤT (PHẦN E MỞ RỘNG):
+// Được gọi từ checkNextTurn() khi resolveThamGiaChatRegistrations() có đăng ký, nhưng đăng ký
+// MẠNH NHẤT trong số đó vẫn KHÔNG đủ sức chặt gameState.currentCombo hiện tại (ví dụ ai đó vừa
+// đánh bình thường, đúng lượt, ra một bộ còn mạnh hơn mọi đăng ký đang chờ). Trước fix này, toàn
+// bộ đăng ký trong tình huống đó bị lọc bỏ âm thầm ở resolveThamGiaChatRegistrations() — coi như
+// chưa từng đăng ký. Nay các đăng ký đó vẫn được coi là ĐÃ CHẶT LẪN NHAU theo đúng thứ tự yếu →
+// mạnh (y hệt một chuỗi Chặt Chồng), rồi bị người đang dẫn đầu (chủ của currentCombo, tức
+// gameState.leaderId — KHÔNG đổi bởi hàm này) chặt đè ở mắt xích cuối cùng. Chỉ người đăng ký
+// MẠNH NHẤT trong nhóm (mắt xích áp chót) phải gánh TOÀN BỘ phần Bom phát sinh thêm; các đăng ký
+// yếu hơn chỉ là mắt xích trung gian — mất bộ bài đã đăng ký (coi như đã đánh) nhưng không bị
+// trừ Nước riêng, đúng quy tắc Chặt Chồng đã áp dụng cho executeThamGiaChatWin().
+// Hàm này CHỈ cộng dồn gameState.chopChainValue/chopChainPayer/chopChainReceiver và trừ bài của
+// CÁC ĐĂNG KÝ — không đụng tới gameState.currentCombo/leaderId/turnIdx (người đang dẫn đầu vẫn
+// giữ nguyên, y hệt như khi không có đăng ký nào); phần settle Bom + mở vòng mới cho người dẫn
+// đầu vẫn do settleChopChain() ở nhánh gốc trong checkNextTurn() đảm nhiệm ngay sau khi hàm này
+// chạy xong (không return sớm ở nơi gọi).
+function mergeThamGiaChatChainIntoCurrentLeader(chain){
+  if(!gameState || !Array.isArray(chain) || !chain.length) return;
+  const activeCount = gameState.order.length;
+  const winnerId = gameState.leaderId; // người đang thực sự dẫn đầu (chủ currentCombo) — giữ nguyên.
+  const winnerName = gameState.names[winnerId];
+  if(!gameState.roundLog) gameState.roundLog = [];
+
+  // LUẬT AN TOÀN SAU KHI VỀ: nếu người đang dẫn đầu đã hết bài ngay khi vừa đặt combo này lên
+  // bàn (về luôn), họ đã an toàn — mọi mắt xích đăng ký gộp vào đây đều = 0 Nước, y hệt
+  // targetAlreadyFinished trong executeThamGiaChatWin().
+  const winnerAlreadyFinished = gameState.finished.includes(winnerId);
+
+  let prevCombo = gameState.currentCombo; // mốc tính Nước cho mắt xích đăng ký đầu tiên.
+
+  chain.forEach((link, idx) => {
+    const isFirstLink = idx === 0;
+    const directReward = winnerAlreadyFinished ? 0 : calculateChopReward(link.combo, prevCombo, activeCount);
+    const stackIncrement = winnerAlreadyFinished ? 0 : (isFirstLink
+      ? (Number(gameState.chopStackValue || 0) || getSpecialStackValue(prevCombo))
+      : getSpecialStackValue(prevCombo));
+    const linkReward = winnerAlreadyFinished ? 0 : Math.max(directReward, stackIncrement);
+    gameState.chopChainValue = (gameState.chopChainValue || 0) + linkReward;
+
+    const linkPName = gameState.names[link.playerId];
+    const safeSuffix = winnerAlreadyFinished
+      ? ` (0 Nước — ${winnerName} đã về, được an toàn)`
+      : ` → +${linkReward} Nước dồn vào Bom, không được lên đánh.`;
+    gameState.roundLog.push({
+      icon: winnerAlreadyFinished ? '🛡️' : '🔗',
+      text: `${linkPName} đăng ký Tham Gia Chặt ${describeCombo(link.combo)} nhưng không đủ sức chặt bộ mới nhất của ${winnerName}${safeSuffix}`
+    });
+    debugActionEvent('CHOP', link.playerId,
+      `${linkPName} đăng ký Tham Gia Chặt ${debugComboText(link.combo)} bị gộp làm mắt xích trung gian (bị ${winnerName} chặt đè) → +${linkReward} Nước${winnerAlreadyFinished ? ' (miễn — đã về)' : ''}`,
+      { cards:debugCardText(link.cards), target:debugComboText(prevCombo), chainLink:idx+1, chainTotal:chain.length, intermediate:true, mergedIntoLeader:winnerId, safeAlreadyFinished:winnerAlreadyFinished }
+    );
+
+    // "Chặt" là hành động đã cam kết: đăng ký bị chặt đè coi như đã đánh, phải mất bộ bài đó
+    // dù không được lên làm leader — giống hệt mắt xích trung gian trong executeThamGiaChatWin().
+    const linkHandBefore = safeArray(gameState.hands[link.playerId]);
+    gameState.hands[link.playerId] = linkHandBefore.filter(c => !link.cards.some(sc => sc.r === c.r && sc.s === c.s));
+    gameState.playedCardsCount[link.playerId] = (gameState.playedCardsCount[link.playerId] || 0) + link.cards.length;
+    if(!gameState.revealedCards) gameState.revealedCards = {};
+    if(!gameState.revealedCards[link.playerId]) gameState.revealedCards[link.playerId] = [];
+    gameState.revealedCards[link.playerId].push(...link.cards.map(c => ({ r:c.r, s:c.s })));
+    if(gameState.hands[link.playerId].length === 0 && !gameState.finished.includes(link.playerId)){
+      gameState.finished.push(link.playerId);
+      awardLiveBaseScore(link.playerId, gameState.finished.length, true);
+      foldColdPlayers();
+    }
+
+    prevCombo = link.combo;
+  });
+
+  // Người đăng ký MẠNH NHẤT trong nhóm (mắt xích áp chót) là người phải trả toàn bộ Bom cho
+  // người đang dẫn đầu — cập nhật payer/receiver của chuỗi đang treo để settleChopChain() sắp
+  // chạy ngay sau đây (ở checkNextTurn()) kết sổ đúng người, thay vì đổ về leader gốc trước đó.
+  const lastLink = chain[chain.length - 1];
+  if(!winnerAlreadyFinished && (gameState.gameMode === 'WATER' || gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM')){
+    gameState.chopChainPayer = lastLink.playerId;
+    gameState.chopChainReceiver = winnerId;
+    gameState.chopChainHistory = Array.isArray(gameState.chopChainHistory) ? gameState.chopChainHistory : [];
+    gameState.chopChainHistory.push({
+      payer: lastLink.playerId,
+      receiver: winnerId,
+      amount: gameState.chopChainValue,
+      target: describeCombo(prevCombo),
+      at: Date.now()
+    });
+  }
+  gameState.log = winnerAlreadyFinished
+    ? `${winnerName} đã về — các đăng ký Tham Gia Chặt không đủ sức chặt bộ cuối của họ đều được miễn Nước.`
+    : `${gameState.names[lastLink.playerId]} đăng ký Tham Gia Chặt mạnh nhất nhưng vẫn không đủ sức chặt bộ mới nhất của ${winnerName} — gánh chịu toàn bộ Bom phát sinh thêm từ các đăng ký.`;
 }
 
 // ================================================================
@@ -6148,10 +6416,20 @@ function handleAction(playerId, action, isAuto=false){
     const activePlayers = gameState.order.filter(id => !gameState.finished.includes(id) && !gameState.coldFolded.has(id));
     if(activePlayers.length <= 1){
       if(activePlayers.length === 1){
-        gameState.finished.push(activePlayers[0]);
+        const justFinishedId = activePlayers[0];
+        gameState.finished.push(justFinishedId);
         // Người bét cuối cùng được ghép hạng tự động ngay trước endGame() → luôn bỏ qua
         // FINISH_x, CRY sắp phát ngay sau đó rồi.
-        awardLiveBaseScore(activePlayers[0], gameState.finished.length, true);
+        awardLiveBaseScore(justFinishedId, gameState.finished.length, true);
+        // MỤC 3: nếu người này KHÔNG bị Cóng nhưng mọi người khác (trừ người về Nhất) đều
+        // đã bị Cóng — tức ván kết thúc chỉ vì đối thủ Cóng hết, không phải vì họ thật sự
+        // chơi hết bài — đánh dấu để cuối ván bỏ qua xét Thối bài cho họ (chỉ chế độ Tính Điểm).
+        const winnerIdNow = gameState.finished[0];
+        const allOthersCong = gameState.order.every(id => id === winnerIdNow || id === justFinishedId || (gameState.coldFolded && gameState.coldFolded.has(id)));
+        if(allOthersCong && gameState.coldFolded && gameState.coldFolded.size > 0){
+          gameState.autoFinishedViaCong = gameState.autoFinishedViaCong || {};
+          gameState.autoFinishedViaCong[justFinishedId] = true;
+        }
       }
       settleChopChain('ván kết thúc');
       acceptTrackedAction(playerId,action,{combo:debugComboText(combo),final:true});
@@ -6202,10 +6480,22 @@ function checkNextTurn(){
       // đã gom được so với mục tiêu CUỐI CÙNG hiện đang trên bàn (gameState.currentCombo).
       const thamGiaChatChain = resolveThamGiaChatRegistrations();
       if(thamGiaChatChain && thamGiaChatChain.length){
-        executeThamGiaChatWin(thamGiaChatChain);
-        return;
+        const strongestReg = thamGiaChatChain[thamGiaChatChain.length - 1];
+        if(canBeat(strongestReg.combo, gameState.currentCombo)){
+          executeThamGiaChatWin(thamGiaChatChain);
+          return;
+        }
+        // FIX "ĐĂNG KÝ CHẶT BỊ VÔ HIỆU LẶNG LẼ KHI CÓ BỘ MẠNH HƠN VỪA ĐƯỢC ĐÁNH BÌNH THƯỜNG":
+        // không đăng ký nào đủ sức chặt mục tiêu MỚI NHẤT trên bàn (ví dụ ai đó vừa đánh bình
+        // thường, đúng lượt, ra bộ còn mạnh hơn mọi đăng ký) — các đăng ký này KHÔNG bị xoá sạch
+        // vô hiệu như trước nữa, mà được gộp thành mắt xích trung gian (xem
+        // mergeThamGiaChatChainIntoCurrentLeader()): người đăng ký mạnh nhất trong nhóm gánh
+        // trọn Bom phát sinh thêm, các đăng ký yếu hơn chỉ mất bài, không mất Nước riêng. Sau
+        // đó RƠI TIẾP xuống nhánh gốc bên dưới để settleChopChain() kết sổ và mở vòng mới cho
+        // người đang dẫn đầu — không return ở đây.
+        mergeThamGiaChatChainIntoCurrentLeader(thamGiaChatChain);
       }
-      // Không ai đăng ký hợp lệ → xử lý y hệt luật gốc (mắt xích cuối tự settle).
+      // Không ai đăng ký hợp lệ (hoặc vừa gộp xong ở trên) → xử lý y hệt luật gốc (mắt xích cuối tự settle).
       // ĐÁNH CHẬM: lượt vừa kết thúc. Giữ lastRoundReview để vẫn xem được lượt vừa đánh;
       // xoá bộ đệm để nước đánh đầu tiên tiếp theo bắt đầu một lượt mới.
       gameState.roundReview = [];
@@ -6265,7 +6555,7 @@ function awardLiveBaseScore(playerId, forcedRank, suppressFinishSound){
 
   const activeCount = gameState.order.length;
   let baseAward = 0;
-  if(gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM') baseAward = getPointsRankValue(rank);
+  if(gameState.gameMode === 'POINTS' || gameState.gameMode === 'NHATANCA' || gameState.gameMode === 'CHATCHEM') baseAward = getPointsRankValue(rank, activeCount);
   else if(activeCount === 2){ if(rank === 1) baseAward = 1; else return; }
   else if(activeCount === 3){ baseAward = rank === 1 ? 2 : 0; }
   else { if(rank === 1) baseAward = 2; else if(rank === 2) baseAward = 1; }
@@ -6301,6 +6591,7 @@ function endGame(){
   if(timerLoop) clearInterval(timerLoop);
   consecutivePlayCount = 0;
   lastNotifiedTurnId = null;
+  last20sWarnTurnId = null;
 
   // Đưa những người bị loại vì CÓNG vào cuối bảng xếp hạng (họ chưa từng đánh lá nào nên luôn xếp hạng chót)
   if(gameState.coldFolded){
@@ -6486,6 +6777,12 @@ function endGame(){
 
     gameState.order.forEach(id => {
       const isCong = congIdSet.has(id);
+      // MỤC 3: người này KHÔNG bị Cóng, nhưng ván kết thúc chỉ vì mọi đối thủ khác (trừ
+      // người về Nhất) đều đã bị Cóng trước đó — họ chưa hề thật sự chơi hết bài tới cuối,
+      // chỉ được tự động ghép hạng Nhì/Ba. Ở chế độ Tính Điểm: bỏ qua hoàn toàn việc xét
+      // Thối bài trên tay của họ (không trừ điểm họ, không cộng khoản này cho người về Nhất) —
+      // chỉ giữ đúng điểm vị trí họ đã nhận. CHATCHEM không thuộc phạm vi mục 3 nên giữ nguyên.
+      if(isPointsMode && !isCong && gameState.autoFinishedViaCong && gameState.autoFinishedViaCong[id]) return;
       // CHẾ ĐỘ TÍNH ĐIỂM: người bị Cóng vẫn bị xét Thối trên tay (Heo/Tứ Quý/Đôi Thông...);
       // khoản Thối này dồn thẳng về người về Nhất, giống hệt khoản Cóng — KHÔNG còn bỏ qua
       // như luật cũ. CHATCHEM vẫn giữ luật cũ: Cóng thì bỏ qua Thối.
@@ -6536,7 +6833,7 @@ function endGame(){
         return;
       }
 
-      const base = getPointsRankValue(rank);
+      const base = getPointsRankValue(rank, activeCount);
       let foulScore = 0;
       let foulText = '';
       if(id === winnerId && foulPenaltiesTotal > 0){
@@ -6750,7 +7047,6 @@ function getViewStateForPlayer(id){
     myHand: isPlayerInGame ? playerHand : [],
     counts: Object.fromEntries(orderArr.map(p => [p, gameState.hands && gameState.hands[p] ? safeArray(gameState.hands[p]).length : 0])),
     order: orderArr,
-    slowCheckIns: [...slowCheckIns],
     names: gameState.names || {},
     hostId: gameState.hostId || null,
     // Đồng bộ đầy đủ người đang có quyền đánh. turnIdx được gửi kèm để UI không phải
@@ -6948,7 +7244,6 @@ function applyState(st){
   
   const prevRoundToken = currentRoundToken;
   currentState = st;
-  if(Array.isArray(st.slowCheckIns)) slowCheckIns = new Set(st.slowCheckIns);
   updatePauseOverlay(st);
   currentState.order = safeArray(st.order);
   currentState.finished = safeArray(st.finished);
@@ -7056,26 +7351,6 @@ function applyState(st){
   try{ renderOpponents(); } catch(err){ console.error('❌ Lỗi renderOpponents:', err); }
   try{ renderCenter(); } catch(err){ console.error('❌ Lỗi renderCenter:', err); }
   try{ renderHand(); } catch(err){ console.error('❌ Lỗi renderHand:', err); }
-  // Người vào sau trong Đánh Chậm được xem bàn như spectator. Có thể CHECK-IN ngay tại bàn;
-  // không chèn họ vào ván đang chạy, chỉ tham gia từ ván kế tiếp.
-  let spectatorBtn = document.getElementById('btnSlowSpectatorCheckin');
-  if(st.slowMode && isSpectator && !slowCheckIns.has(myId)){
-    if(!spectatorBtn){
-      spectatorBtn=document.createElement('button');
-      spectatorBtn.id='btnSlowSpectatorCheckin';
-      spectatorBtn.className='btn btn-gold';
-      spectatorBtn.style.cssText='position:fixed;left:50%;bottom:82px;transform:translateX(-50%);z-index:30;width:min(260px,80vw);';
-      spectatorBtn.textContent='🐢 CHECK-IN VÁN TIẾP';
-      document.body.appendChild(spectatorBtn);
-      spectatorBtn.onclick=()=>{
-        sendToHost({t:'slow_checkin'});
-        spectatorBtn.disabled=true; spectatorBtn.textContent='⏳ Đang CHECK-IN...';
-      };
-    }
-    spectatorBtn.classList.remove('hidden');
-  }else if(spectatorBtn){
-    spectatorBtn.classList.add('hidden');
-  }
   try{ if(isRuleTestMode) syncTestInstantChopUI(); } catch(err){ console.error('❌ Lỗi sync CHẶT NGAY:', err); }
   try{ showSeatBubble(st); } catch(err){ console.error('❌ Lỗi showSeatBubble:', err); }
   try{ showChopBanner(st); } catch(err){ console.error('❌ Lỗi showChopBanner:', err); }
@@ -7606,6 +7881,14 @@ setInterval(()=>{
   const rem = Math.max(0, Math.ceil((currentState.turnDeadline - Date.now())/1000));
   el.textContent = rem;
   el.classList.toggle('low', rem <= 5);
+
+  // ÂM "CÒN 20S CUỐI CHƯA ĐÁNH": chỉ phát cho đúng người đang tới lượt, đúng 1 lần
+  // mỗi lượt, ngay khi đồng hồ của họ chạm mốc còn 20 giây mà vẫn chưa đánh (chưa hết lượt).
+  if(currentState.turnId === myId && !isSpectator && !currentState.isEnded &&
+     rem <= 20 && rem > 0 && last20sWarnTurnId !== currentState.turnId){
+    last20sWarnTurnId = currentState.turnId;
+    playGlobalSound('TIME_20S', 1.0);
+  }
 }, 250);
 
 // GHI CHÚ: nút "⚡ THAM GIA CHẶT" không còn đếm ngược (đã bỏ hẳn cửa sổ 3 giây) — nhãn nút
@@ -7787,12 +8070,8 @@ function sendAction(act){
   if(tracked){
     if(pendingActionRequests.size){showHandSelectMsg('⏳ Đang chờ máy chủ xác nhận nước đi trước.');return;}
     const requestId=makeActionRequestId(); act={...act,requestId};
-    const timer=setTimeout(()=>{
-      const pending=pendingActionRequests.get(requestId); if(!pending) return;
-      pendingActionRequests.delete(requestId);
-      showHandSelectMsg(formatActionRejectMessage('REQUEST_TIMEOUT')); updateHandActionButtonsOnly();
-    },4500);
-    pendingActionRequests.set(requestId,{action:act,timer,sentAt:Date.now()});
+    pendingActionRequests.set(requestId,{action:act,timer:null,sentAt:Date.now(),retried:false});
+    scheduleActionTimeout(requestId, 4500);
     window._tokenRefreshRetry = {action:act};
   }
   if(isHost) handleAction(myId,act); else sendToHost({t:'action',id:myId,action:act});
@@ -8700,7 +8979,7 @@ function startRuleTestGame(){
     $('btnExitRuleTest').classList.remove('hidden');
 
     if(instantWinnerId){
-      revealInstantWin(hands, instantWinnerId, instantWinInfo, roundPlayers);
+      revealInstantWin(hands, instantWinnerId, instantWinInfo);
       return;
     }
 
@@ -8873,6 +9152,7 @@ const SOUND_KEY_META = [
   { key:'CHOP_4', label:'📣 CHOP 4 — Gọi gọi mày xông gọi' },
   { key:'CHOP', label:'💥 CHOP dự phòng (ít khi dùng tới)' },
   { key:'MY_TURN', label:'⏰ Tới lượt bạn' },
+  { key:'TIME_20S', label:'⏱ Còn 20s cuối chưa đánh' },
   { key:'PLAY_CARD', label:'🃏 Đánh bài xuống bàn' },
   { key:'FINISH_1ST', label:'🏆 Về Nhất' },
   { key:'FINISH_23', label:'🥈 Về Nhì / Ba' },
@@ -9041,6 +9321,7 @@ function renderConfigForm(){
   $('cfgWinDragon').value = GAME_CONFIG.instantWin.sanhRong;
   $('cfgWinQuadHeo').value = GAME_CONFIG.instantWin.tuQuyHeo;
   $('cfgWinQuad3').value = GAME_CONFIG.instantWin.tuQuy3DauVan;
+  $('cfgWinPairs3Spade').value = GAME_CONFIG.instantWin.baDoiThong3Bich;
   $('cfgWinSixPairs').value = GAME_CONFIG.instantWin.lucDoi;
   $('cfgWinFivePairsRun').value = GAME_CONFIG.instantWin.nguDoiThong;
   // --- ÂM THANH TỔNG + BỘ ÂM CHẶT ---
@@ -9053,6 +9334,7 @@ function renderConfigForm(){
   });
   // --- ÂM SỰ KIỆN KHÁC ---
   $('cfgEnMyTurn').checked = SOUND_CONFIG.enabled.myTurn;     $('cfgVolMyTurn').value = SOUND_CONFIG.volumes.myTurn;
+  $('cfgEnTime20s').checked = SOUND_CONFIG.enabled.time20s;   $('cfgVolTime20s').value = SOUND_CONFIG.volumes.time20s;
   $('cfgEnPlayCard').checked = SOUND_CONFIG.enabled.playCard; $('cfgVolPlayCard').value = SOUND_CONFIG.volumes.playCard;
   $('cfgEnFinish1st').checked = SOUND_CONFIG.enabled.finish1st; $('cfgVolFinish1st').value = SOUND_CONFIG.volumes.finish1st;
   $('cfgEnFinish23').checked = SOUND_CONFIG.enabled.finish23; $('cfgVolFinish23').value = SOUND_CONFIG.volumes.finish23;
@@ -9083,6 +9365,7 @@ function collectConfigFromForm(){
   GAME_CONFIG.instantWin.sanhRong = clampCfgInt($('cfgWinDragon').value, dw.sanhRong);
   GAME_CONFIG.instantWin.tuQuyHeo = clampCfgInt($('cfgWinQuadHeo').value, dw.tuQuyHeo);
   GAME_CONFIG.instantWin.tuQuy3DauVan = clampCfgInt($('cfgWinQuad3').value, dw.tuQuy3DauVan);
+  GAME_CONFIG.instantWin.baDoiThong3Bich = clampCfgInt($('cfgWinPairs3Spade').value, dw.baDoiThong3Bich);
   GAME_CONFIG.instantWin.lucDoi = clampCfgInt($('cfgWinSixPairs').value, dw.lucDoi);
   GAME_CONFIG.instantWin.nguDoiThong = clampCfgInt($('cfgWinFivePairsRun').value, dw.nguDoiThong);
 
@@ -9095,6 +9378,7 @@ function collectConfigFromForm(){
   });
 
   SOUND_CONFIG.enabled.myTurn = $('cfgEnMyTurn').checked;     SOUND_CONFIG.volumes.myTurn = clampCfgVol($('cfgVolMyTurn').value);
+  SOUND_CONFIG.enabled.time20s = $('cfgEnTime20s').checked;   SOUND_CONFIG.volumes.time20s = clampCfgVol($('cfgVolTime20s').value);
   SOUND_CONFIG.enabled.playCard = $('cfgEnPlayCard').checked; SOUND_CONFIG.volumes.playCard = clampCfgVol($('cfgVolPlayCard').value);
   SOUND_CONFIG.enabled.finish1st = $('cfgEnFinish1st').checked; SOUND_CONFIG.volumes.finish1st = clampCfgVol($('cfgVolFinish1st').value);
   SOUND_CONFIG.enabled.finish23 = $('cfgEnFinish23').checked; SOUND_CONFIG.volumes.finish23 = clampCfgVol($('cfgVolFinish23').value);
