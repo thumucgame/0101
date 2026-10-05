@@ -1072,7 +1072,6 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
         <div class="cfg-row"><span>🐉 Sảnh Rồng (3 → A)</span><input id="cfgWinDragon" type="number" min="0" max="99"></div>
         <div class="cfg-row"><span>🐷 Tứ Quý Heo (4 quân 2)</span><input id="cfgWinQuadHeo" type="number" min="0" max="99"></div>
         <div class="cfg-row"><span>🃏 Tứ Quý 3 (ván đầu)</span><input id="cfgWinQuad3" type="number" min="0" max="99"></div>
-        <div class="cfg-row"><span>🔗 3 Đôi Thông có 3♠ (ván đầu)</span><input id="cfgWinPairs3Spade" type="number" min="0" max="99"></div>
         <div class="cfg-row"><span>👥 Lục Đôi (6 đôi)</span><input id="cfgWinSixPairs" type="number" min="0" max="99"></div>
         <div class="cfg-row"><span>🔗 Ngũ Đôi Thông (5 đôi)</span><input id="cfgWinFivePairsRun" type="number" min="0" max="99"></div>
       </div>
@@ -1665,8 +1664,7 @@ const DEFAULT_GAME_CONFIG = {
     tuQuyHeo: 4,          // Tứ Quý Heo (đủ 4 quân 2)
     tuQuy3DauVan: 4,      // Tứ Quý 3 — chỉ tính ván đầu tiên của trận
     lucDoi: 4,            // Lục Đôi (6 đôi bất kỳ)
-    nguDoiThong: 3,       // Ngũ Đôi Thông (5 đôi liên tiếp)
-    baDoiThong3Bich: 3    // 3 Đôi Thông 33-44-55 có 3♠ — chỉ tính ván đầu (hoặc ván chia lại sau Tới Trắng)
+    nguDoiThong: 3        // Ngũ Đôi Thông (5 đôi liên tiếp)
   },
   cong: {           // Phạt CÓNG (không đánh được lá nào suốt ván)
     perReceiver: 4   // CÓNG = gấp đôi mức Bét (-2): -4 cho MỖI người không Cóng
@@ -3016,12 +3014,6 @@ function checkInstantWin(handCards, options = {}) {
     return { type: 'five_pairs_run', label: 'Ngũ Đôi Thông (5 đôi thông)', reward: GAME_CONFIG.instantWin.nguDoiThong };
   }
 
-  // 6. Ván đầu (hoặc ván chia lại sau Tới Trắng): 3 Đôi Thông 33-44-55 có chứa 3♠ -> Tới Trắng.
-  if (options.isFirstGame && cs.some(isThreeSpade) &&
-      (rankCount[0]||0) >= 2 && (rankCount[1]||0) >= 2 && (rankCount[2]||0) >= 2) {
-    return { type: 'three_pairs_run_3spade', label: '3 Đôi Thông 3♠-44-55 (ván đầu)', reward: GAME_CONFIG.instantWin.baDoiThong3Bich || GAME_CONFIG.instantWin.nguDoiThong };
-  }
-
   return null;
 }
 
@@ -4260,8 +4252,7 @@ function finalizeInstantWin(){
   lastNotifiedTurnId = null;
   last20sWarnTurnId = null;
 
-  // Tới Trắng = ván bị huỷ và chia lại như VÁN ĐẦU: đặt null để dealNewGame() bắt người giữ 3♠ đánh đầu.
-  lastGameWinnerId = null;
+  lastGameWinnerId = winnerId;
   gameState.finished = [winnerId, ...gameState.order.filter(id => id !== winnerId)];
   gameState.roundLog.push({ icon:'✅', text: `${winnerName} thắng Tới Trắng với ${label} — ván kết thúc.` });
 
@@ -4302,8 +4293,7 @@ function finalizeInstantWin(){
     // (bài của họ vẫn còn nguyên vì chưa ai kịp đánh) → đền thêm cho người Tới Trắng.
     let foulBonusTotal = 0;
     const foulDetailsById = {};
-    // CHỈ xét Thối (heo, 3 đôi thông, 4+ đôi thông, tứ quý) khi người thắng Tới Trắng bằng NGŨ ĐÔI THÔNG.
-    if(gameState.instantWin.type === 'five_pairs_run'){
+    if(mode === 'NHATANCA'){
       gameState.order.forEach(id => {
         if(id === winnerId) return;
         const foulInfo = checkFoulPunishment(safeArray(gameState.hands[id]));
@@ -9321,7 +9311,6 @@ function renderConfigForm(){
   $('cfgWinDragon').value = GAME_CONFIG.instantWin.sanhRong;
   $('cfgWinQuadHeo').value = GAME_CONFIG.instantWin.tuQuyHeo;
   $('cfgWinQuad3').value = GAME_CONFIG.instantWin.tuQuy3DauVan;
-  $('cfgWinPairs3Spade').value = GAME_CONFIG.instantWin.baDoiThong3Bich;
   $('cfgWinSixPairs').value = GAME_CONFIG.instantWin.lucDoi;
   $('cfgWinFivePairsRun').value = GAME_CONFIG.instantWin.nguDoiThong;
   // --- ÂM THANH TỔNG + BỘ ÂM CHẶT ---
@@ -9365,7 +9354,6 @@ function collectConfigFromForm(){
   GAME_CONFIG.instantWin.sanhRong = clampCfgInt($('cfgWinDragon').value, dw.sanhRong);
   GAME_CONFIG.instantWin.tuQuyHeo = clampCfgInt($('cfgWinQuadHeo').value, dw.tuQuyHeo);
   GAME_CONFIG.instantWin.tuQuy3DauVan = clampCfgInt($('cfgWinQuad3').value, dw.tuQuy3DauVan);
-  GAME_CONFIG.instantWin.baDoiThong3Bich = clampCfgInt($('cfgWinPairs3Spade').value, dw.baDoiThong3Bich);
   GAME_CONFIG.instantWin.lucDoi = clampCfgInt($('cfgWinSixPairs').value, dw.lucDoi);
   GAME_CONFIG.instantWin.nguDoiThong = clampCfgInt($('cfgWinFivePairsRun').value, dw.nguDoiThong);
 
