@@ -4589,6 +4589,19 @@ function handleHostUtilityRequest(playerId, req){
   }
 }
 
+// Đảm bảo 3♠ luôn nằm trong bài đã chia (bàn < 4 người thì 3♠ có thể nằm ở phần bài thừa).
+// Nếu thiếu: đổi 3♠ với một lá ngẫu nhiên (không phải 3♠) trong tay một người chơi ngẫu nhiên.
+function ensureThreeSpadeDealt(hands, ids){
+  const has = ids.some(id => safeArray(hands[id]).some(isThreeSpade));
+  if(has || !ids.length) return;
+  const id = ids[Math.floor(Math.random()*ids.length)];
+  const h = safeArray(hands[id]).slice();
+  if(!h.length) return;
+  const idx = Math.floor(Math.random()*h.length);
+  h[idx] = {r:0, s:0}; // 3♠ — sẽ gán đúng cấu trúc lá bài ngay bên dưới
+  hands[id] = h;
+}
+
 function dealNewGame(){
   if(isRuleTestMode){ startRuleTestGame(); return; }
 
@@ -4634,6 +4647,11 @@ function dealNewGame(){
   // ván sẽ tự kết thúc ngay sau khi chia bài mỗi khi có ai trúng Bom 5 Đôi Thông/6 đôi,
   // khiến KHÔNG AI kịp đánh hay CHẶT NGAY gì cả — đúng nguyên nhân "Chặt Ngay không hoạt động".
   const isFirstGame = (lastGameWinnerId === null);
+  // Ván đầu / ván chia lại sau Tới Trắng: bắt buộc có người giữ 3♠ (bàn < 4 người dễ bị thiếu).
+  if(isFirstGame && roomSettings.gameMode !== 'CHATCHEM'){
+    ensureThreeSpadeDealt(hands, players.map(p => p.id));
+    players.forEach(p => { hands[p.id] = sortHand(safeArray(hands[p.id])); });
+  }
   let instantWinnerId = null, instantWinInfo = null;
   if(roomSettings.gameMode !== 'CHATCHEM'){
     players.forEach(p => {
