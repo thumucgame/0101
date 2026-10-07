@@ -1375,6 +1375,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     <p><b>Luật Tới Trắng (Ù ngay khi chia bài):</b> Ngay sau khi chia đủ 13 lá, hệ thống kiểm tra bài Tới Trắng trước khi bắt đầu lượt. Nếu có người sở hữu <b>Sảnh Rồng (3→A)</b>, <b>Tứ Quý Heo (đủ 4 quân 2)</b>, <b>Lục Đôi (6 đôi)</b> hoặc <b>Ngũ Đôi Thông (5 đôi liên tiếp)</b>, ván đấu kết thúc ngay lập tức, người đó thắng trắng và nhận thưởng cố định từ tất cả người chơi còn lại, không đánh tiếp.</p>
     <p><b>Tứ Quý 3 — Tới Trắng ván đầu tiên:</b> Chỉ ở <b>ván đầu tiên của trận đấu</b>, nếu một người cầm đủ <b>4 quân 3</b> (3♠, 3♣, 3♦, 3♥) thì được <b>Tới Trắng</b> ngay khi chia bài. Từ ván thứ hai trở đi, Tứ Quý 3 <b>không</b> còn là điều kiện Tới Trắng.</p>
     <p><b>Luật Phạt Cóng/Đốt:</b> Người không đánh được lá nào trong suốt ván sẽ bị Cóng và đền cho <b>tất cả người chơi còn lại</b> giống cơ chế Tới Trắng nhưng ngược chiều: Bàn 4 người đền <b>2 Nước/người × 3 = 6 Nước</b>; Bàn 3 người <b>2 × 2 = 4 Nước</b>; Bàn 2 người <b>2 × 1 = 2 Nước</b>. Khoản Cóng được chia đều cho toàn bộ người còn lại. <b>Thối bài là khoản riêng</b>: Heo/Tứ Quý/Đôi Thông... vẫn đền trực tiếp cho người đã ép/chặn người Cóng.</p>
+    <p><b>Luật Giết Cóng bằng 5 Đôi Thông:</b> Ai có sẵn 5 Đôi Thông trên tay lúc chia bài thì hệ thống <b>tự xét luôn, không cần đánh</b> (nếu đã chia mà chưa ai về mà người nào đánh ra, cũng tính tương tự). Khi chưa ai về, người nào <b>đánh ra 5 Đôi Thông trở lên</b> sẽ <b>về Nhất ngay</b> (dù còn bài trên tay) và <b>TẤT CẢ người còn lại bị Cóng</b>, kể cả đã đánh lá nào rồi. Ván kết thúc tức thì, tiền Cóng tính như Cóng cả bàn. Người bị Cóng vẫn bị <b>xét Thối đầy đủ</b> (Heo, Tứ Quý, Đôi Thông...) trên tay và đền thẳng cho người Giết. Người Giết không bị xét Thối.</p>
     <p><b>Luật Tham Gia Chặt (ngoài lượt):</b> Khi trên bàn đang có Heo đơn/đôi, Tứ Quý, hoặc 3+ Đôi Thông (kể cả đúng 3 Đôi Thông) bị lộ, người KHÔNG có lượt vẫn có thể chen vào chặt bằng nút "⚡ THAM GIA CHẶT" — nhưng chỉ khi đang <b>giữ vé</b>: vé được cấp khi bấm <b>Bỏ</b> đúng lượt của mình lúc bàn còn là bài cơ bản (chưa đặc biệt); nếu bấm Bỏ khi bàn ĐÃ đặc biệt thì mất quyền này vĩnh viễn cho ván (round) đó. Vé chỉ có hiệu lực trong round hiện tại, hết round là reset sạch. Bấm nút chỉ <b>đăng ký</b> — khi mọi phản ứng đã dừng (không ai đánh tiếp được), hệ thống xét 1 lần duy nhất: ai đăng ký mạnh nhất so với mục tiêu cuối cùng trên bàn là người thắng, được đá làm leader mới. <b>3 Đôi Thông chỉ có thể là ĐỐI TƯỢNG bị chặt theo cơ chế này (bởi 4+ Đôi Thông hoặc Tứ Quý), KHÔNG được dùng làm VŨ KHÍ để đăng ký chặt ngoài lượt</b> — muốn dùng 3 Đôi Thông để chặt thì chỉ cần đánh bình thường vào đúng lượt của mình như một nước đi thường (không cần vé, không cần nút riêng). Thứ bậc chặt cụ thể:</p>
     <table>
       <thead><tr><th>Bị chặt</th><th>Được chặt bởi</th></tr></thead>
@@ -3001,6 +3002,12 @@ function checkInstantWin(handCards, options = {}) {
     return { type: 'quad_three_first_game', label: 'Tứ Quý 3 — Tới Trắng ván đầu tiên', reward: GAME_CONFIG.instantWin.tuQuy3DauVan };
   }
 
+  // ƯU TIÊN: có 5+ Đôi Thông là tự xét GIẾT CÓNG ngay, kể cả khi 3 lá còn lại tạo thêm đôi (Lục Đôi).
+  const combos5 = getAllPossibleCombos(cs).filter(cb => cb.type === 'pairs_run' && cb.count >= 5);
+  if (combos5.length > 0) {
+    return { type: 'five_pairs_run', label: 'Ngũ Đôi Thông (5 đôi thông)', reward: GAME_CONFIG.instantWin.nguDoiThong };
+  }
+
   // 4. Lục Đôi: có đúng 6 đôi trong tay (bất kỳ rank nào)
   const rankCount = {};
   cs.forEach(c => { rankCount[c.r] = (rankCount[c.r]||0) + 1; });
@@ -3008,12 +3015,6 @@ function checkInstantWin(handCards, options = {}) {
   Object.values(rankCount).forEach(cnt => { pairCount += Math.floor(cnt/2); });
   if (pairCount >= 6) {
     return { type: 'six_pairs', label: 'Lục Đôi (6 đôi)', reward: GAME_CONFIG.instantWin.lucDoi };
-  }
-
-  // 5. Ngũ Đôi Thông: 5 đôi liên tiếp (10 lá) nằm trong tay, không chứa đôi 2
-  const combos5 = getAllPossibleCombos(cs).filter(cb => cb.type === 'pairs_run' && cb.count >= 5);
-  if (combos5.length > 0) {
-    return { type: 'five_pairs_run', label: 'Ngũ Đôi Thông (5 đôi thông)', reward: GAME_CONFIG.instantWin.nguDoiThong };
   }
 
   // 6. Ván đầu (hoặc ván chia lại sau Tới Trắng): 3 Đôi Thông 33-44-55 có chứa 3♠ -> Tới Trắng.
@@ -4247,6 +4248,22 @@ function broadcastInstantWinCelebration(winnerId, winnerName, label, reward, sta
 
 function finalizeInstantWin(){
   const { winnerId, label, reward } = gameState.instantWin;
+
+  // GIẾT CÓNG TỰ ĐỘNG: có Ngũ Đôi Thông (5+ đôi thông) trên tay lúc chia -> KHÔNG cần đánh,
+  // hệ thống tự xét luôn: người đó về Nhất, TẤT CẢ người còn lại bị Cóng, và xét Thối
+  // (Heo/Tứ Quý/Đôi Thông...) đầy đủ trên bài của từng người bị Cóng. Mọi chế độ đều dùng
+  // chung endGame() (một nguồn tính Cóng + Thối duy nhất).
+  if(gameState.instantWin.type === 'five_pairs_run'){
+    gameState.fivePairKill = { winnerId, label, auto:true };
+    gameState.revealedCards = Object.fromEntries(gameState.order.map(id => [id, []])); // chưa đánh lá nào -> bài hiện là "còn trên tay"
+    gameState.finished = [winnerId];
+    gameState.log = `⚔️ ${gameState.names[winnerId]} có ${label} → GIẾT CÓNG cả bàn (tự xét, không cần đánh).`;
+    gameState.roundLog = [{ icon:'⚔️', text:`${gameState.names[winnerId]} có ${label} → GIẾT CÓNG cả bàn, ván kết thúc ngay!` }];
+    awardLiveBaseScore(winnerId, 1, true);
+    foldColdPlayers(true);
+    endGame();
+    return;
+  }
   const activeCount = gameState.order.length;
   const mode = gameState.gameMode;
   const winnerName = gameState.names[winnerId];
@@ -5156,14 +5173,14 @@ function applyCongSettlementLive(settlement){
   }
 }
 
-function foldColdPlayers(){
+function foldColdPlayers(forceAll=false){
   if(!gameState || gameState.finished.length !== 1) return;
 
   const newlyCongIds = [];
   gameState.order.forEach(pid => {
     if(gameState.finished.includes(pid)) return;
     if(gameState.coldFolded.has(pid)) return;
-    if(getActualPlayedCount(pid) === 0){
+    if(forceAll || getActualPlayedCount(pid) === 0){
       gameState.coldFolded.add(pid);
       newlyCongIds.push(pid);
       gameState.log += ` | ❄️ ${gameState.names[pid]} bị loại vì CÓNG (không đánh được lá nào).`;
@@ -6282,7 +6299,10 @@ function handleAction(playerId, action, isAuto=false){
     const playWillFinishSelf = playRemainingAfterPlay === 0 && !gameState.finished.includes(playerId);
     const playProjectedFinished = playWillFinishSelf ? [...gameState.finished, playerId] : gameState.finished;
     const playProjectedActive = gameState.order.filter(id => !playProjectedFinished.includes(id) && !gameState.coldFolded.has(id));
-    const playWillEndGame = playProjectedActive.length <= 1;
+    // LUẬT GIẾT CÓNG: đánh ra 5+ Đôi Thông (khi chưa ai về) = ván kết thúc ngay, cả bàn bị Cóng.
+    const playIsFivePairKill = combo.type === 'pairs_run' && Number(combo.count) >= 5 &&
+      safeArray(gameState.finished).length === 0 && safeArray(gameState.order).length >= 2;
+    const playWillEndGame = playProjectedActive.length <= 1 || playIsFivePairKill;
 
     if(!playWillEndGame) broadcastSoundEvent('PLAY_CARD', 0.8);
 
@@ -6408,6 +6428,24 @@ function handleAction(playerId, action, isAuto=false){
       : getSpecialStackValue(combo);
     gameState.leaderId = playerId;
     gameState.firstMove = false;
+
+    if(playIsFivePairKill){
+      // GIẾT CÓNG BẰNG 5+ ĐÔI THÔNG: người đánh về Nhất ngay (dù còn bài trên tay),
+      // TẤT CẢ người còn lại bị Cóng dù đã đánh lá nào hay chưa. Cóng tính như luật Cóng
+      // cả bàn; Thối Heo/Tứ Quý/Đôi Thông trên tay từng người bị Cóng được xét ĐẦY ĐỦ
+      // (xem endGame) và đền thẳng cho người Giết.
+      gameState.fivePairKill = { winnerId: playerId, label: `${combo.count} Đôi Thông` };
+      gameState.finished.push(playerId);
+      gameState.log += ` | ⚔️ ${pName} đánh ${combo.count} ĐÔI THÔNG — GIẾT CÓNG cả bàn!`;
+      if(!gameState.roundLog) gameState.roundLog = [];
+      gameState.roundLog.push({ icon:'⚔️', text:`${pName} đánh ${combo.count} Đôi Thông → GIẾT CÓNG cả bàn, ván kết thúc ngay!` });
+      awardLiveBaseScore(playerId, 1, true);
+      foldColdPlayers(true);
+      settleChopChain('ván kết thúc (Giết Cóng bằng Đôi Thông)');
+      acceptTrackedAction(playerId,action,{combo:debugComboText(combo),final:true});
+      endGame();
+      return;
+    }
 
     if(gameState.hands[playerId].length === 0 && !gameState.finished.includes(playerId)){
       gameState.finished.push(playerId);
@@ -6675,13 +6713,14 @@ function endGame(){
     const foulDetailsMap = {};
 
     gameState.order.forEach(id => {
-      if(congIdSet.has(id)) return; // Cóng không xét Thối.
+      if(gameState.fivePairKill && id === winnerId) return; // người Giết Cóng không bị xét Thối.
+      if(congIdSet.has(id) && !gameState.fivePairKill) return; // Cóng thường không xét Thối; Giết Cóng bằng Đôi Thông xét ĐẦY ĐỦ.
       const pHand = safeArray(gameState.hands[id]);
       const foulInfo = checkFoulPunishment(pHand);
       if(foulInfo.totalPenalty <= 0) return;
       foulDetailsMap[id] = foulInfo;
 
-      if(id === lastPlaceId && secondLastPlaceId !== lastPlaceId){
+      if(!gameState.fivePairKill && id === lastPlaceId && secondLastPlaceId !== lastPlaceId){
         foulPenaltiesToSecondLast += foulInfo.totalPenalty;
         gameState.roundLog.push({ icon:'🐷', text:`${gameState.names[id]} (về Bét) bị Thối bài trên tay: ${foulInfo.details.join(', ')} → đền ${foulInfo.totalPenalty} nước cho ${gameState.names[secondLastPlaceId]} (hạng kế Bét).` });
       } else {
@@ -6701,10 +6740,15 @@ function endGame(){
 
       // Người Cóng chỉ có đúng khoản Cóng. Không giữ +Chặt, +Vị trí hay khoản dương trước đó.
       if(isCong){
-        const total = congAward;
+        let total = congAward;
+        let killFoulText = '';
+        if(foulDetailsMap[id]){
+          total -= foulDetailsMap[id].totalPenalty;
+          killFoulText = ` | 🐷 Thối bài: -${foulDetailsMap[id].totalPenalty} (${foulDetailsMap[id].details.join(', ')})`;
+        }
         results[id] = {
           rank, score: total,
-          note:`Vị trí: 0 | Chặt: +0 | 🧊 Bị Cóng: -${Math.abs(total)} Nước (${cong.congPerReceiver}/người không Cóng)`,
+          note:`Vị trí: 0 | Chặt: +0 | 🧊 Bị Cóng: -${Math.abs(congAward)} Nước (${cong.congPerReceiver}/người không Cóng)${killFoulText}`,
           name:gameState.names[id],
           playedCards:(finalHandsSnapshot[id] && finalHandsSnapshot[id].played) || [],
           remainingCards:(finalHandsSnapshot[id] && finalHandsSnapshot[id].remaining) || [],
@@ -6800,11 +6844,12 @@ function endGame(){
       // chỉ được tự động ghép hạng Nhì/Ba. Ở chế độ Tính Điểm: bỏ qua hoàn toàn việc xét
       // Thối bài trên tay của họ (không trừ điểm họ, không cộng khoản này cho người về Nhất) —
       // chỉ giữ đúng điểm vị trí họ đã nhận. CHATCHEM không thuộc phạm vi mục 3 nên giữ nguyên.
+      if(gameState.fivePairKill && id === winnerId) return; // người Giết Cóng không bị xét Thối.
       if(isPointsMode && !isCong && gameState.autoFinishedViaCong && gameState.autoFinishedViaCong[id]) return;
       // CHẾ ĐỘ TÍNH ĐIỂM: người bị Cóng vẫn bị xét Thối trên tay (Heo/Tứ Quý/Đôi Thông...);
       // khoản Thối này dồn thẳng về người về Nhất, giống hệt khoản Cóng — KHÔNG còn bỏ qua
       // như luật cũ. CHATCHEM vẫn giữ luật cũ: Cóng thì bỏ qua Thối.
-      if(isCong && !isPointsMode) return;
+      if(isCong && !isPointsMode && !gameState.fivePairKill) return;
       const foulInfo = checkFoulPunishment(safeArray(gameState.hands[id]));
       if(foulInfo.totalPenalty <= 0) return;
       foulDetailsMap[id] = foulInfo;
@@ -6833,7 +6878,7 @@ function endGame(){
       if(isCong){
         let total = congAward;
         let ownFoulText = '';
-        if(isPointsMode && foulDetailsMap[id]){
+        if((isPointsMode || gameState.fivePairKill) && foulDetailsMap[id]){
           total -= foulDetailsMap[id].totalPenalty;
           ownFoulText = ` | Thối: -${foulDetailsMap[id].totalPenalty} (${foulDetailsMap[id].details.join(', ')})`;
         }
@@ -6903,7 +6948,7 @@ function endGame(){
     let foulPenaltiesTotal = 0;
 
     gameState.order.forEach(id => {
-      if(id === winnerId || congIdSet.has(id)) return;
+      if(id === winnerId || (congIdSet.has(id) && !gameState.fivePairKill)) return;
       const foulInfo = checkFoulPunishment(safeArray(gameState.hands[id]));
       if(foulInfo.totalPenalty <= 0) return;
       foulDetailsMap[id] = foulInfo;
@@ -6921,10 +6966,15 @@ function endGame(){
       const chopAward = isCong ? 0 : Number((gameState.liveChopAwards || {})[id] || 0);
 
       if(isCong){
-        const total = congAward;
+        let total = congAward;
+        let killFoulText = '';
+        if(foulDetailsMap[id]){
+          total -= foulDetailsMap[id].totalPenalty;
+          killFoulText = ` | 🐷 Thối: -${foulDetailsMap[id].totalPenalty} (${foulDetailsMap[id].details.join(', ')})`;
+        }
         results[id] = {
           rank, score: total, basePoints: 0, modifierPoints: total,
-          note:`🧊 CÓNG: -${Math.abs(total)} điểm (${cong.congPerReceiver} điểm/người còn lại)`,
+          note:`🧊 CÓNG: -${Math.abs(congAward)} điểm (${cong.congPerReceiver} điểm/người còn lại)${killFoulText}`,
           name:gameState.names[id],
           playedCards:(finalHandsSnapshot[id] && finalHandsSnapshot[id].played) || [],
           remainingCards:(finalHandsSnapshot[id] && finalHandsSnapshot[id].remaining) || [],
