@@ -279,9 +279,10 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
 #btnChopInterrupt{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.15;padding-top:6px;padding-bottom:6px;}
 #btnChopInterrupt .chop-btn-main{font-size:13px;font-weight:800;}
 #btnChopInterrupt .chop-btn-target{font-size:10px;font-weight:700;color:#fff3a0;opacity:.92;white-space:normal;text-align:center;}
-#btnChopInterrupt.chop-btn-registered{border-color:#3ecf6e!important;color:#3ecf6e!important;opacity:.75;cursor:default;}
-#btnChopInterrupt.chop-btn-registered .chop-btn-main{color:#3ecf6e;}
-#btnChopInterrupt.chop-btn-registered .chop-btn-target{color:#a8f0bd;opacity:.85;}
+#btnChopInterrupt.chop-btn-registered{flex:1 1 100%;order:-1;min-height:48px;background:#c0392b!important;border:2px solid #ffd2cc!important;color:#fff!important;opacity:1;cursor:pointer;box-shadow:0 0 14px rgba(255,80,60,.75);animation:cancelChopPulse 1.1s infinite alternate;}
+#btnChopInterrupt.chop-btn-registered .chop-btn-main{color:#fff;font-size:15px;}
+#btnChopInterrupt.chop-btn-registered .chop-btn-target{color:#ffe3df;opacity:1;}
+@keyframes cancelChopPulse{from{box-shadow:0 0 6px rgba(255,80,60,.5);}to{box-shadow:0 0 18px rgba(255,80,60,.95);}}
 .timer-sec.low{color:var(--bad);}
 
 .live-score-sticker {
@@ -1376,7 +1377,7 @@ input[type=text]:focus, select.sel:focus{border-color:var(--gold);}
     <p><b>Tứ Quý 3 — Tới Trắng ván đầu tiên:</b> Chỉ ở <b>ván đầu tiên của trận đấu</b>, nếu một người cầm đủ <b>4 quân 3</b> (3♠, 3♣, 3♦, 3♥) thì được <b>Tới Trắng</b> ngay khi chia bài. Từ ván thứ hai trở đi, Tứ Quý 3 <b>không</b> còn là điều kiện Tới Trắng.</p>
     <p><b>Luật Phạt Cóng/Đốt:</b> Người không đánh được lá nào trong suốt ván sẽ bị Cóng và đền cho <b>tất cả người chơi còn lại</b> giống cơ chế Tới Trắng nhưng ngược chiều: Bàn 4 người đền <b>2 Nước/người × 3 = 6 Nước</b>; Bàn 3 người <b>2 × 2 = 4 Nước</b>; Bàn 2 người <b>2 × 1 = 2 Nước</b>. Khoản Cóng được chia đều cho toàn bộ người còn lại. <b>Thối bài là khoản riêng</b>: Heo/Tứ Quý/Đôi Thông... vẫn đền trực tiếp cho người đã ép/chặn người Cóng.</p>
     <p><b>Luật Giết Cóng bằng 5 Đôi Thông:</b> Ai có sẵn 5 Đôi Thông trên tay lúc chia bài thì hệ thống <b>tự xét luôn, không cần đánh</b> (nếu đã chia mà chưa ai về mà người nào đánh ra, cũng tính tương tự). Khi chưa ai về, người nào <b>đánh ra 5 Đôi Thông trở lên</b> sẽ <b>về Nhất ngay</b> (dù còn bài trên tay) và <b>TẤT CẢ người còn lại bị Cóng</b>, kể cả đã đánh lá nào rồi. Ván kết thúc tức thì, tiền Cóng tính như Cóng cả bàn. Người bị Cóng vẫn bị <b>xét Thối đầy đủ</b> (Heo, Tứ Quý, Đôi Thông...) trên tay và đền thẳng cho người Giết. Người Giết không bị xét Thối.</p>
-    <p><b>Luật Tham Gia Chặt (ngoài lượt):</b> Khi trên bàn đang có Heo đơn/đôi, Tứ Quý, hoặc 3+ Đôi Thông (kể cả đúng 3 Đôi Thông) bị lộ, người KHÔNG có lượt vẫn có thể chen vào chặt bằng nút "⚡ THAM GIA CHẶT" — nhưng chỉ khi đang <b>giữ vé</b>: vé được cấp khi bấm <b>Bỏ</b> đúng lượt của mình lúc bàn còn là bài cơ bản (chưa đặc biệt); nếu bấm Bỏ khi bàn ĐÃ đặc biệt thì mất quyền này vĩnh viễn cho ván (round) đó. Vé chỉ có hiệu lực trong round hiện tại, hết round là reset sạch. Bấm nút chỉ <b>đăng ký</b> — khi mọi phản ứng đã dừng (không ai đánh tiếp được), hệ thống xét 1 lần duy nhất: ai đăng ký mạnh nhất so với mục tiêu cuối cùng trên bàn là người thắng, được đá làm leader mới. <b>3 Đôi Thông chỉ có thể là ĐỐI TƯỢNG bị chặt theo cơ chế này (bởi 4+ Đôi Thông hoặc Tứ Quý), KHÔNG được dùng làm VŨ KHÍ để đăng ký chặt ngoài lượt</b> — muốn dùng 3 Đôi Thông để chặt thì chỉ cần đánh bình thường vào đúng lượt của mình như một nước đi thường (không cần vé, không cần nút riêng). Thứ bậc chặt cụ thể:</p>
+    <p><b>Luật Tham Gia Chặt (ngoài lượt):</b> Khi trên bàn đang có Heo đơn/đôi, Tứ Quý, hoặc 3+ Đôi Thông (kể cả đúng 3 Đôi Thông) bị lộ, người KHÔNG có lượt vẫn có thể chen vào chặt bằng nút "⚡ THAM GIA CHẶT" — nhưng chỉ khi đang <b>giữ vé</b>: vé được cấp khi bấm <b>Bỏ</b> đúng lượt của mình (kể cả khi bàn đã là Heo/bài đặc biệt). Vé chỉ có hiệu lực trong round hiện tại; nếu sau đó không ai đánh thêm thì round đóng lại và vé mất, hết round là reset sạch. Bấm nút chỉ <b>đăng ký</b> — khi mọi phản ứng đã dừng (không ai đánh tiếp được), hệ thống xét 1 lần duy nhất: ai đăng ký mạnh nhất so với mục tiêu cuối cùng trên bàn là người thắng, được đá làm leader mới. <b>3 Đôi Thông chỉ có thể là ĐỐI TƯỢNG bị chặt theo cơ chế này (bởi 4+ Đôi Thông hoặc Tứ Quý), KHÔNG được dùng làm VŨ KHÍ để đăng ký chặt ngoài lượt</b> — muốn dùng 3 Đôi Thông để chặt thì chỉ cần đánh bình thường vào đúng lượt của mình như một nước đi thường (không cần vé, không cần nút riêng). Thứ bậc chặt cụ thể:</p>
     <table>
       <thead><tr><th>Bị chặt</th><th>Được chặt bởi</th></tr></thead>
       <tbody>
@@ -3892,11 +3893,8 @@ function onClientMessage(msg){
         // báo thì chỉ ẩn đi, im lặng y hệt lúc chưa bấm. Người chơi không cách nào phân biệt
         // "đã đăng ký thành công" với "chưa bấm được" nên hay bấm lại nhiều lần. Giờ báo rõ
         // bằng thông báo xanh xác nhận, hiển thị lâu hơn thông báo lỗi thường.
-        if(pending.action && pending.action.kind === 'interrupt_chop'){
-          showHandSelectMsg('✅ Đã đăng ký Tham Gia Chặt thành công — chờ loạt phản ứng đóng lại.', 'ok');
-        } else {
-          hideHandSelectMsg();
-        }
+        // ẨN thông báo xanh "Đã đăng ký thành công": đã có huy hiệu + nút Hủy nổi bật xác nhận.
+        hideHandSelectMsg();
       } else {
         showHandSelectMsg(formatActionRejectMessage(msg.reason, msg.details));
       }
@@ -6140,8 +6138,7 @@ function handleAction(playerId, action, isAuto=false){
     gameState.thamGiaChatRegistrations = safeArray(gameState.thamGiaChatRegistrations)
       .filter(r => r && String(r.playerId) !== String(playerId));
     const pName = gameState.names[playerId];
-    gameState.log = `🚫 ${pName} đã hủy đăng ký Tham Gia Chặt.`;
-    bumpActor(playerId, '🚫 Đã hủy đăng ký');
+    // (ẩn thông báo công khai khi hủy đăng ký, cùng lý do không lộ bài)
     debugActionEvent('CHOP', playerId, `${pName} hủy đăng ký Tham Gia Chặt`, {cancelled:true});
     acceptTrackedAction(playerId,action,{cancelled:true});
     broadcastState();
@@ -6193,8 +6190,9 @@ function handleAction(playerId, action, isAuto=false){
     gameState.thamGiaChatRegistrations = gameState.thamGiaChatRegistrations.filter(r=>r && r.playerId!==playerId);
     gameState.thamGiaChatRegistrations.push({playerId,cards,combo,registeredAt:Date.now()});
     const pName=gameState.names[playerId];
-    gameState.log = `⚡ ${pName} đã đăng ký Tham Gia Chặt (${describeCombo(combo)}) — chờ loạt phản ứng đóng lại.`;
-    bumpActor(playerId, '⚡ Đã đăng ký Tham Gia Chặt');
+    // ẨN THÔNG BÁO CÔNG KHAI: không ghi gameState.log, không bumpActor — tránh lộ người ngoài
+    // vòng đang giữ 4+ đôi thông. Chỉ chính người đăng ký tự thấy (huy hiệu + nút Hủy). Cú chặt
+    // chỉ được công bố khi loạt phản ứng đóng lại và chặt thật.
     debugActionEvent('CHOP', playerId, `${pName} đăng ký Tham Gia Chặt ${debugComboText(combo)}`, {
       cards:debugCardText(cards), target:debugComboText(curr), registered:true
     });
@@ -6259,9 +6257,9 @@ function handleAction(playerId, action, isAuto=false){
     // quay lại). Vé chỉ sống trong round hiện tại — resetThamGiaChatRoundState() xoá sạch khi
     // round mới bắt đầu (leader mới đánh lá đầu tiên).
     if(!gameState.chopTicketHolders) gameState.chopTicketHolders = {};
-    if(!isChoppableSpecialTarget(gameState.currentCombo)){
-      gameState.chopTicketHolders[playerId] = true;
-    }
+    // SỬA: bỏ lượt LÚC NÀO cũng được cấp vé (kể cả khi bàn đã là Heo/bài đặc biệt) — vé vẫn
+    // chỉ sống trong round hiện tại; nếu sau đó không ai đánh thêm, round đóng lại và vé bị reset.
+    gameState.chopTicketHolders[playerId] = true;
     gameState.passed.add(playerId);
     gameState.log = `${prefix}${pName} đã bỏ lượt.`;
     debugActionEvent('PASS', playerId, `${pName} bỏ lượt${isAuto?' (auto/bot)':''}`, {auto:!!isAuto});
@@ -7133,6 +7131,10 @@ function getViewStateForPlayer(id){
     // THAM GIA CHẶT (PHẦN C/D): gửi xuống client ai đang giữ vé cho round hiện tại, để nút
     // "⚡ THAM GIA CHẶT" hiện đúng điều kiện (giữ vé + đủ sức chặt mục tiêu hiện tại).
     chopTicketHolders: gameState.chopTicketHolders || {},
+    // SỬA LỖI "không thấy nút Hủy / huy hiệu đăng ký": trước đây danh sách đăng ký KHÔNG được gửi
+    // xuống client nên client luôn tưởng chưa đăng ký. Chỉ gửi playerId (KHÔNG gửi bài/combo) để
+    // không lộ bộ bài; UI chỉ hiện huy hiệu + nút Hủy cho chính người đăng ký.
+    thamGiaChatRegistrations: safeArray(gameState.thamGiaChatRegistrations).filter(r=>r).map(r=>({playerId:r.playerId})),
     coldFolded: gameState.coldFolded ? Array.from(gameState.coldFolded) : [], // LUẬT CÓNG: danh sách người bị loại vì chưa đánh được lá nào
     liveScores: gameState.liveScores || {},
     kneelingStatus: gameState.kneelingStatus || {},
@@ -7490,9 +7492,8 @@ function renderOpponents(){
     let chopRegisteredSticker = '';
     const hasChopRegistered = safeArray(currentState.thamGiaChatRegistrations)
       .some(r => r && String(r.playerId) === String(pId));
-    if(hasChopRegistered && !isFinished && !isColdFolded){
-      chopRegisteredSticker = `<div class="chop-registered-badge">✅ Đã đăng ký</div>`;
-    }
+    // ẨN với người khác: không hiện huy hiệu đăng ký trên ghế đối thủ (tránh lộ 4+ đôi thông).
+    // Huy hiệu của CHÍNH MÌNH vẫn hiện ở #myChopRegisteredBadge.
 
     slotDiv.innerHTML = `
       <div class="avatar" id="avatar-${pId}">👤</div>
