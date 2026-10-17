@@ -89,14 +89,21 @@ const firebaseRooms=async()=>{let {db,conn}=await firebaseSDK();const s=await db
 async function firebaseConnect(onmessage,onclose){const {db,conn,uid}=await firebaseSDK();const rid=random(),unsubs=[],notify=m=>onmessage({data:JSON.stringify(m)});let room='',seat=-1,mode=2,open=true,started=false,host=false;const ref=p=>db.ref(conn,p);const deliver=m=>queueMicrotask(()=>{if(open)notify(m)});let lastSeq=0;
 const watch=(r,cb)=>unsubs.push(db.onValue(r,cb));
 function roster(r){return [{name:r.hostName||'Chủ phòng',ready:!!r.hostReady},{name:r.mode===1?'BOT đồng đội':r.guestName||'Đang chờ người vào',ready:r.mode===1||!!r.guestReady,bot:r.mode===1}, {name:'BOT 1',ready:true,bot:true},{name:'BOT 2',ready:true,bot:true}]}
-function attach(){let r=ref('rooms/'+room);watch(r,s=>{if(!open)return;let a=s.val();if(!a){deliver({type:'hostDisconnected'});return}if(!host&&a.started&&!started){started=true;deliver({type:'start',mode:a.mode})}deliver({type:'lobby',mode:a.mode,seats:roster(a)})});if(host){unsubs.push(db.onChildAdded(ref('actions/'+room),s=>{let m=s.val();if(m?.from!==rid&&m?.kind==='action'){deliver({type:'relayAction',seat:1,id:m.id,action:m.action});db.remove(s.ref).catch(()=>{})}}));}
+function attach(){let r=ref('rooms/'+room);watch(r,s=>{if(!open)return;let a=s.val();if(!a){deliver({type:'hostDisconnected'});return}if(a.started&&!started){started=true;deliver({type:'start',mode:a.mode})}if(!a.started)deliver({type:'lobby',mode:a.mode,seats:roster(a)})});if(host){unsubs.push(db.onChildAdded(ref('actions/'+room),s=>{let m=s.val();if(m?.from!==rid&&m?.kind==='action'){deliver({type:'relayAction',seat:1,id:m.id,action:m.action});db.remove(s.ref).catch(()=>{})}}));}
 else{watch(ref('snapshots/'+room),s=>{let m=s.val();if(m?.seq>lastSeq){lastSeq=m.seq;deliver(m)}});unsubs.push(db.onChildAdded(ref('acks/'+room),s=>{let a=s.val();if(a&&a.to===1){deliver({...a,type:'actionAck'});db.remove(s.ref).catch(()=>{})}}));}}
 function close(){if(!open)return;open=false;for(let u of unsubs)try{u()}catch{};if(host&&room)db.remove(ref('rooms/'+room)).catch(()=>{});else if(room)db.update(ref('rooms/'+room),{guest:null,guestName:null,guestReady:false}).catch(()=>{});onclose?.()}
 const socket={readyState:1,bufferedAmount:0,close,send(data){let m;try{m=JSON.parse(data)}catch{return} const run=async()=>{
 if(m.type==='create'){room='G'+random().slice(0,5).toUpperCase();mode=m.mode===1?1:2;seat=0;host=true;await db.set(ref('rooms/'+room),{host:uid+'-'+rid,hostName:m.name||'Chủ phòng',hostReady:false,mode,started:false,last:Date.now()});db.onDisconnect(ref('rooms/'+room)).remove();deliver({type:'joined',room,seat});attach()}
 else if(m.type==='join'){room=m.room;const r=ref('rooms/'+room);let tx=await db.runTransaction(r,v=>{if(!v||v.started||v.guest||v.mode===1)return;v.guest=uid+'-'+rid;v.guestName=m.name||'Đồng đội';v.guestReady=false;return v});if(!tx.committed){deliver({type:'error',message:'Phòng đã đủ hoặc không tồn tại'});return}seat=1;db.onDisconnect(ref('rooms/'+room+'/guest')).remove();deliver({type:'joined',room,seat});attach()}
 else if(m.type==='ready'){await db.update(ref('rooms/'+room),{[host?'hostReady':'guestReady']:!!m.ready,last:Date.now()})}
-else if(m.type==='start'&&host){const v=(await db.get(ref('rooms/'+room))).val();if(v?.hostReady&&(v.mode===1||v.guest&&v.guestReady)){started=true;await db.update(ref('rooms/'+room),{started:true,last:Date.now()});deliver({type:'start',mode:v.mode})}else deliver({type:'error',message:'Chưa đủ người sẵn sàng'})}
+else if(m.type==='start'&&host){
+ const tx=await db.runTransaction(ref('rooms/'+room),v=>{
+  if(!v||v.started||!v.hostReady||!(v.mode===1||(v.guest&&v.guestReady)))return;
+  v.started=true;v.last=Date.now();return v;
+ },{applyLocally:false});
+ if(tx.committed){started=true;deliver({type:'start',mode:tx.snapshot.val().mode})}
+ else {const v=tx.snapshot.val();deliver({type:'error',message:!v?'Phòng không còn tồn tại':v.started?'Trận đã bắt đầu':'Chưa đủ hai người sẵn sàng. Hãy thử lại'})}
+}
 else if(m.type==='snapshot'&&host){ // latest state replaces previous state, no unbounded history
 await db.set(ref('snapshots/'+room),m)}
 else if(m.type==='action'&&!host){await db.push(ref('actions/'+room),{kind:'action',from:rid,id:m.id,action:m.action});}
@@ -244,11 +251,11 @@ function netSay(message){$('#lobbyStatus').textContent=message}
 function showLobby(message){$('#onlineLobby').hidden=false;document.body.classList.add('online');if(message)netSay(message)}
 function aTeam(s){return s<2?0:1}
 function receiveNet(m,sourceSeat=-1){
- if(m.type==='error'){netSay('⚠ '+m.message);return}
+ if(m.type==='error'){startPendingAt=0;netSay('⚠ '+m.message);if(netHost&&!netStarted)$('#startRoom').disabled=false;return}
  if(m.type==='actionAck'&&!netHost){const o=pendingActions.get(m.id);if(o){if(!m.ok){pendingActions.delete(m.id);toast('Không thể thực hiện lệnh: '+(m.reason||'Không hợp lệ'))}else{o.ackSeq=m.seq||netLastSeq+1}refreshPending()}return}
  if(m.type==='joined'){netReady=false;online=true;netRoom=m.room;netSeat=m.seat;netHost=netSeat===0;$('#lobbyEntry').hidden=true;$('#lobbyWaiting').hidden=false;$('#addPlayer').hidden=!netHost;$('#roomCode').textContent=netRoom;document.body.classList.add('online');netSay('Đã vào phòng · Ghế '+(netSeat+1));sendNet({type:'hello',name:$('#lobbyName').value});$('#p2pConnect').hidden=true;return}
  if(m.type==='lobby'){if(m.mode)gameMode=m.mode;let grid=$('#seatList');grid.innerHTML='';m.seats.forEach((s,i)=>{let box=document.createElement('div');box.className='seat-card';box.innerHTML='<b>'+(i<2?'🟢 Đội xanh':'🔴 Đội đỏ')+' · Người '+(i+1)+'</b>';let sub=document.createElement('small');sub.textContent=s?s.name+(s.bot?' · 🤖 Tự động sẵn sàng':s.ready?' · ✓ Sẵn sàng':' · Chưa sẵn sàng'):'Đang chờ người vào';box.append(sub);if(i===netSeat)box.style.outline='2px solid #ffdb7c';grid.append(box)});let ready=m.seats.filter(s=>s?.ready).length;$('#startRoom').hidden=!netHost;$('#startRoom').disabled=ready!==4||!netHost;$('#toggleReady').textContent=netReady?'✓ Đã sẵn sàng (bấm để hủy)':'○ Bấm Sẵn sàng';netSay(ready+'/4 ghế sẵn sàng · '+gameMode+' người thật'+(ready===4?' · Có thể bắt đầu':''));return}
- if(m.type==='start'){if(m.mode)gameMode=m.mode;localBotTeams=gameMode===4?[]:gameMode===2?[1]:[0,1];netStarted=true;netSeq=0;netLastSeq=-1;netSnapshots=0;visualUnits.clear();guestHistory.clear();guestLastSample=0;fogDirty=true;pendingActions.clear();refreshPending();lastGuestUI=0;coop=true;$('#teams').value='coop';setup();seat=netSeat;active=netSeat<2?0:1;h=2;coop=true;mode=null;selected=[];selectedBuilding=null;document.body.classList.add('online');$('#privateCamera').hidden=false;$('#privateCamera').textContent='📷 Camera riêng · Người '+(netSeat+1);$('#onlineLobby').hidden=true;$('#p2pConnect').hidden=true;$('#coopPanel').hidden=true;$('#next').disabled=true;$('#restart').disabled=true;$('#playAgain').disabled=true;last=0;paused=false;updateUI();const view=$('#battleViewport');view.scrollLeft=active===0?0:view.scrollWidth-view.clientWidth;view.scrollTop=active===0?0:view.scrollHeight-view.clientHeight;return}
+ if(m.type==='start'){startPendingAt=0;if(netStarted)return;if(m.mode)gameMode=m.mode;localBotTeams=gameMode===4?[]:gameMode===2?[1]:[0,1];netStarted=true;netSeq=0;netLastSeq=-1;netSnapshots=0;visualUnits.clear();guestHistory.clear();guestLastSample=0;fogDirty=true;pendingActions.clear();refreshPending();lastGuestUI=0;coop=true;$('#teams').value='coop';setup();seat=netSeat;active=netSeat<2?0:1;h=2;coop=true;mode=null;selected=[];selectedBuilding=null;document.body.classList.add('online');$('#privateCamera').hidden=false;$('#privateCamera').textContent='📷 Camera riêng · Người '+(netSeat+1);$('#onlineLobby').hidden=true;$('#p2pConnect').hidden=true;$('#coopPanel').hidden=true;$('#next').disabled=true;$('#restart').disabled=true;$('#playAgain').disabled=true;last=0;paused=false;updateUI();const view=$('#battleViewport');view.scrollLeft=active===0?0:view.scrollWidth-view.clientWidth;view.scrollTop=active===0?0:view.scrollHeight-view.clientHeight;return}
  if(m.type==='snapshot'&&netStarted&&!netHost){let w=m.world;if(!w||!Array.isArray(w.units)||!Array.isArray(w.structures)||!Array.isArray(w.players))return;let ids=new Set(selected.map(u=>u.id)),bi=selectedBuilding?.id;if(Number.isFinite(m.seq)&&m.seq<=netLastSeq)return;netLastSeq=m.seq??(netLastSeq+1);lastGuestPacket=performance.now();elapsed=w.elapsed;over=w.over;players=w.players;structures=w.structures;flags=w.flags;if(w.trees)trees=w.trees;if(w.decor)decor=w.decor;shots=w.shots||[];scorch=w.scorch||[];shells=w.shells||[];particles=w.particles||[];// Two timestamped samples per unit: draw slightly behind the network clock,
 // not chasing the newest packet with a frame-dependent easing constant.
 const stamp=lastGuestPacket;
@@ -286,7 +293,16 @@ $('#createRoom').onclick=()=>connectOnline('create');
 $('#joinRoom').onclick=()=>{const code=$('#onlineRoomInput').value.trim().toUpperCase();if(!code)return onlineStatus('Chọn phòng trong danh sách hoặc nhập mã');connectOnline('join',code)};
 $('#addPlayer').onclick=async()=>{const url=location.origin+'/?room='+encodeURIComponent(netRoom);try{await navigator.clipboard.writeText(url);onlineStatus('Đã sao chép liên kết mời đồng đội')}catch(_){onlineStatus('Mời đồng đội vào '+url)}};
 $('#toggleReady').onclick=()=>{if(netSocket?.readyState!==WebSocket.OPEN)return onlineStatus('Đã mất kết nối phòng');netReady=!netReady;sendNet({type:'ready',ready:netReady})};
-$('#startRoom').onclick=()=>sendNet({type:'start'});
+let startPendingAt=0;
+$('#startRoom').onclick=()=>{
+ if(!netHost)return onlineStatus('Chỉ chủ phòng mới được bắt đầu trận');
+ if(!netSocket||netSocket.readyState!==1)return onlineStatus('Chưa kết nối Firebase, vui lòng vào phòng lại');
+ if(netStarted)return;
+ const btn=$('#startRoom');btn.disabled=true;
+ startPendingAt=Date.now();onlineStatus('⏳ Đang xác nhận bắt đầu trận qua Firebase…');
+ sendNet({type:'start'});
+ setTimeout(()=>{if(!netStarted&&startPendingAt&&Date.now()-startPendingAt>=6000){startPendingAt=0;btn.disabled=false;onlineStatus('⚠ Chưa nhận được xác nhận từ Firebase. Kiểm tra quyền ghi rooms, kết nối mạng và thử lại.')}},6500);
+};
 $('#copyRoom').onclick=async()=>{try{await navigator.clipboard.writeText(netRoom);onlineStatus('Đã sao chép mã phòng')}catch(_){onlineStatus('Mã phòng: '+netRoom)}};
 async function loadOpenRooms(){if(netStarted||online&&netSeat>=0)return;
  try{let rooms=connectionMode()==='local'?RTS_TRANSPORT.localRooms():await RTS_TRANSPORT.firebaseRooms();
