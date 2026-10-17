@@ -70,7 +70,14 @@ else if(m.type==='join'){code=m.room;guestName=m.name||'Đồng đội';let room
 else if(m.type==='hello'&&host){hostName=m.name||hostName;broadcastLobby()}
 else if(m.type==='hello'&&!host)pub(m);
 else if(m.type==='ready'){if(host){ready=!!m.ready;broadcastLobby();if(mode===1&&ready){/* start still explicit */}}else pub(m)}
-else if(m.type==='start'&&host){if(ready&&(mode===1||guestPresent&&guestReady)){started=true;touch();pub({type:'start',mode});emit({type:'start',mode})}else emit({type:'error',message:'Chưa đủ người sẵn sàng'})}
+else if(m.type==='start'&&host){
+ const v=cur;
+ if(!v){deliver({type:'error',message:'Phòng không còn tồn tại'});return}
+ if(v.started){started=true;deliver({type:'start',mode:v.mode});return}
+ if(!v.hostReady||!(v.mode===1||(v.guest&&v.guestReady))){deliver({type:'error',message:'Chưa đủ hai người sẵn sàng. Hãy thử lại'});return}
+ await Promise.race([db.update(ref('rooms/'+room),{started:true,last:Date.now()}),new Promise((_,rej)=>setTimeout(()=>rej(Error('Hết thời gian ghi phòng — kiểm tra Rules và mạng')),8000))]);
+ started=true;deliver({type:'start',mode:v.mode});
+}
 else if(m.type==='snapshot'&&host)pub(m);
 else if(m.type==='action'&&!host)pub(m);
 else if(m.type==='actionAck'&&host)pub(m);
@@ -86,15 +93,15 @@ const fb=app.getApps().length?app.getApp():app.initializeApp(window.FIREBASE_CON
 const authentication=auth.getAuth(fb);await auth.signInAnonymously(authentication);
 return {db,conn:db.getDatabase(fb),uid:authentication.currentUser.uid};})().catch(err=>{sdkPromise=null;throw err});return sdkPromise}
 const firebaseRooms=async()=>{let {db,conn}=await firebaseSDK();const s=await db.get(db.ref(conn,'rooms'));let rooms=[];s.forEach(x=>{let r=x.val();if(r&&!r.started&&Date.now()-(r.last||0)<60000)rooms.push({code:x.key,humans:r.guest?2:1,mode:r.mode})});return rooms};
-async function firebaseConnect(onmessage,onclose){const {db,conn,uid}=await firebaseSDK();const rid=random(),unsubs=[],notify=m=>onmessage({data:JSON.stringify(m)});let room='',seat=-1,mode=2,open=true,started=false,host=false;const ref=p=>db.ref(conn,p);const deliver=m=>queueMicrotask(()=>{if(open)notify(m)});let lastSeq=0;
+async function firebaseConnect(onmessage,onclose){const {db,conn,uid}=await firebaseSDK();const rid=random(),unsubs=[],notify=m=>onmessage({data:JSON.stringify(m)});let room='',seat=-1,mode=2,open=true,started=false,host=false;const ref=p=>db.ref(conn,p);const deliver=m=>queueMicrotask(()=>{if(open)notify(m)});let lastSeq=0,cur=null;
 const watch=(r,cb)=>unsubs.push(db.onValue(r,cb));
 function roster(r){return [{name:r.hostName||'Chủ phòng',ready:!!r.hostReady},{name:r.mode===1?'BOT đồng đội':r.guestName||'Đang chờ người vào',ready:r.mode===1||!!r.guestReady,bot:r.mode===1}, {name:'BOT 1',ready:true,bot:true},{name:'BOT 2',ready:true,bot:true}]}
-function attach(){let r=ref('rooms/'+room);watch(r,s=>{if(!open)return;let a=s.val();if(!a){deliver({type:'hostDisconnected'});return}if(a.started&&!started){started=true;deliver({type:'start',mode:a.mode})}if(!a.started)deliver({type:'lobby',mode:a.mode,seats:roster(a)})});if(host){unsubs.push(db.onChildAdded(ref('actions/'+room),s=>{let m=s.val();if(m?.from!==rid&&m?.kind==='action'){deliver({type:'relayAction',seat:1,id:m.id,action:m.action});db.remove(s.ref).catch(()=>{})}}));}
+function attach(){let r=ref('rooms/'+room);watch(r,s=>{if(!open)return;let a=s.val();cur=a;if(!a){deliver({type:'hostDisconnected'});return}if(a.started&&!started){started=true;deliver({type:'start',mode:a.mode})}if(!a.started)deliver({type:'lobby',mode:a.mode,seats:roster(a)})});if(host){unsubs.push(db.onChildAdded(ref('actions/'+room),s=>{let m=s.val();if(m?.from!==rid&&m?.kind==='action'){deliver({type:'relayAction',seat:1,id:m.id,action:m.action});db.remove(s.ref).catch(()=>{})}}));}
 else{watch(ref('snapshots/'+room),s=>{let m=s.val();if(m?.seq>lastSeq){lastSeq=m.seq;deliver(m)}});unsubs.push(db.onChildAdded(ref('acks/'+room),s=>{let a=s.val();if(a&&a.to===1){deliver({...a,type:'actionAck'});db.remove(s.ref).catch(()=>{})}}));}}
 function close(){if(!open)return;open=false;for(let u of unsubs)try{u()}catch{};if(host&&room)db.remove(ref('rooms/'+room)).catch(()=>{});else if(room)db.update(ref('rooms/'+room),{guest:null,guestName:null,guestReady:false}).catch(()=>{});onclose?.()}
 const socket={readyState:1,bufferedAmount:0,close,send(data){let m;try{m=JSON.parse(data)}catch{return} const run=async()=>{
 if(m.type==='create'){room='G'+random().slice(0,5).toUpperCase();mode=m.mode===1?1:2;seat=0;host=true;await db.set(ref('rooms/'+room),{host:uid+'-'+rid,hostName:m.name||'Chủ phòng',hostReady:false,mode,started:false,last:Date.now()});db.onDisconnect(ref('rooms/'+room)).remove();deliver({type:'joined',room,seat});attach()}
-else if(m.type==='join'){room=m.room;const r=ref('rooms/'+room);let tx=await db.runTransaction(r,v=>{if(!v||v.started||v.guest||v.mode===1)return;v.guest=uid+'-'+rid;v.guestName=m.name||'Đồng đội';v.guestReady=false;return v});if(!tx.committed){deliver({type:'error',message:'Phòng đã đủ hoặc không tồn tại'});return}seat=1;db.onDisconnect(ref('rooms/'+room+'/guest')).remove();deliver({type:'joined',room,seat});attach()}
+else if(m.type==='join'){room=m.room;const r=ref('rooms/'+room);let tx=await db.runTransaction(r,v=>{if(v===null)return v;if(v.started||v.guest||v.mode===1)return;v.guest=uid+'-'+rid;v.guestName=m.name||'Đồng đội';v.guestReady=false;return v});if(!tx.committed||!tx.snapshot.val()){deliver({type:'error',message:'Phòng đã đủ hoặc không tồn tại'});return}seat=1;db.onDisconnect(ref('rooms/'+room+'/guest')).remove();deliver({type:'joined',room,seat});attach()}
 else if(m.type==='ready'){await db.update(ref('rooms/'+room),{[host?'hostReady':'guestReady']:!!m.ready,last:Date.now()})}
 else if(m.type==='start'&&host){
  const tx=await db.runTransaction(ref('rooms/'+room),v=>{
