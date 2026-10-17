@@ -86,11 +86,11 @@ const fb=app.getApps().length?app.getApp():app.initializeApp(window.FIREBASE_CON
 const authentication=auth.getAuth(fb);await auth.signInAnonymously(authentication);
 return {db,conn:db.getDatabase(fb),uid:authentication.currentUser.uid};})().catch(err=>{sdkPromise=null;throw err});return sdkPromise}
 const firebaseRooms=async()=>{let {db,conn}=await firebaseSDK();const s=await db.get(db.ref(conn,'rooms'));let rooms=[];s.forEach(x=>{let r=x.val();if(r&&!r.started&&Date.now()-(r.last||0)<60000)rooms.push({code:x.key,humans:r.guest?2:1,mode:r.mode})});return rooms};
-async function firebaseConnect(onmessage,onclose){const {db,conn,uid}=await firebaseSDK();const rid=random(),unsubs=[],notify=m=>onmessage({data:JSON.stringify(m)});let room='',seat=-1,mode=2,open=true,started=false,host=false;const ref=p=>db.ref(conn,p);const deliver=m=>queueMicrotask(()=>{if(open)notify(m)});let lastSeq=0,cur=null;
+async function firebaseConnect(onmessage,onclose){const {db,conn,uid}=await firebaseSDK();const rid=random(),unsubs=[],notify=m=>onmessage({data:JSON.stringify(m)});let room='',seat=-1,mode=2,open=true,started=false,host=false;const ref=p=>db.ref(conn,p);const deliver=m=>queueMicrotask(()=>{if(open)notify(m)});let lastSeq=0,cur=null,snapBusy=false;
 const watch=(r,cb)=>unsubs.push(db.onValue(r,cb));
 function roster(r){return [{name:r.hostName||'Chủ phòng',ready:!!r.hostReady},{name:r.mode===1?'BOT đồng đội':r.guestName||'Đang chờ người vào',ready:r.mode===1||!!r.guestReady,bot:r.mode===1}, {name:'BOT 1',ready:true,bot:true},{name:'BOT 2',ready:true,bot:true}]}
 function attach(){let r=ref('rooms/'+room);watch(r,s=>{if(!open)return;let a=s.val();cur=a;if(!a){deliver({type:'hostDisconnected'});return}if(a.started&&!started){started=true;deliver({type:'start',mode:a.mode})}if(!a.started)deliver({type:'lobby',mode:a.mode,seats:roster(a)})});if(host){unsubs.push(db.onChildAdded(ref('actions/'+room),s=>{let m=s.val();if(m?.from!==rid&&m?.kind==='action'){deliver({type:'relayAction',seat:1,id:m.id,action:m.action});db.remove(s.ref).catch(()=>{})}}));}
-else{watch(ref('snapshots/'+room),s=>{let m=s.val();if(m?.seq>lastSeq){lastSeq=m.seq;deliver(m)}});unsubs.push(db.onChildAdded(ref('acks/'+room),s=>{let a=s.val();if(a&&a.to===1){deliver({...a,type:'actionAck'});db.remove(s.ref).catch(()=>{})}}));}}
+else{watch(ref('snapshots/'+room),s=>{let m=s.val();if(m?.seq>lastSeq&&typeof m.w==='string'){let w;try{w=JSON.parse(m.w)}catch(_){return}lastSeq=m.seq;deliver({type:'snapshot',seq:m.seq,world:w})}});unsubs.push(db.onChildAdded(ref('acks/'+room),s=>{let a=s.val();if(a&&a.to===1){deliver({...a,type:'actionAck'});db.remove(s.ref).catch(()=>{})}}));}}
 function close(){if(!open)return;open=false;for(let u of unsubs)try{u()}catch{};if(host&&room)db.remove(ref('rooms/'+room)).catch(()=>{});else if(room)db.update(ref('rooms/'+room),{guest:null,guestName:null,guestReady:false}).catch(()=>{});onclose?.()}
 const socket={readyState:1,bufferedAmount:0,close,send(data){let m;try{m=JSON.parse(data)}catch{return} const run=async()=>{
 if(m.type==='create'){room='G'+random().slice(0,5).toUpperCase();mode=m.mode===1?1:2;seat=0;host=true;await db.set(ref('rooms/'+room),{host:uid+'-'+rid,hostName:m.name||'Chủ phòng',hostReady:false,mode,started:false,last:Date.now()});db.onDisconnect(ref('rooms/'+room)).remove();deliver({type:'joined',room,seat});attach()}
@@ -105,7 +105,7 @@ else if(m.type==='start'&&host){
  started=true;deliver({type:'start',mode:v.mode});
 }
 else if(m.type==='snapshot'&&host){ // latest state replaces previous state, no unbounded history
-await db.set(ref('snapshots/'+room),m)}
+if(snapBusy)return;snapBusy=true;try{await db.set(ref('snapshots/'+room),{seq:m.seq,t:Date.now(),w:JSON.stringify(m.world)})}finally{snapBusy=false}}
 else if(m.type==='action'&&!host){await db.push(ref('actions/'+room),{kind:'action',from:rid,id:m.id,action:m.action});}
 else if(m.type==='actionAck'&&host){await db.push(ref('acks/'+room),m)}
 };run().catch(err=>deliver({type:'error',message:'Firebase: '+err.message}))}};
@@ -252,7 +252,7 @@ function netSay(message){$('#lobbyStatus').textContent=message}
 function showLobby(message){$('#onlineLobby').hidden=false;document.body.classList.add('online');if(message)netSay(message)}
 function aTeam(s){return s<2?0:1}
 function receiveNet(m,sourceSeat=-1){
- if(m.type==='error'){startPendingAt=0;netSay('⚠ '+m.message);if(netHost&&!netStarted)$('#startRoom').disabled=false;return}
+ if(m.type==='error'){startPendingAt=0;netSay('⚠ '+m.message);if(netStarted){const now=Date.now();if(now-(window.__netErrAt||0)>2500){window.__netErrAt=now;toast('⚠ '+m.message)}}if(netHost&&!netStarted)$('#startRoom').disabled=false;return}
  if(m.type==='actionAck'&&!netHost){const o=pendingActions.get(m.id);if(o){if(!m.ok){pendingActions.delete(m.id);toast('Không thể thực hiện lệnh: '+(m.reason||'Không hợp lệ'))}else{o.ackSeq=m.seq||netLastSeq+1}refreshPending()}return}
  if(m.type==='joined'){netReady=false;online=true;netRoom=m.room;netSeat=m.seat;netHost=netSeat===0;$('#lobbyEntry').hidden=true;$('#lobbyWaiting').hidden=false;$('#addPlayer').hidden=!netHost;$('#roomCode').textContent=netRoom;document.body.classList.add('online');netSay('Đã vào phòng · Ghế '+(netSeat+1));sendNet({type:'hello',name:$('#lobbyName').value});$('#p2pConnect').hidden=true;return}
  if(m.type==='lobby'){if(m.mode)gameMode=m.mode;let grid=$('#seatList');grid.innerHTML='';m.seats.forEach((s,i)=>{let box=document.createElement('div');box.className='seat-card';box.innerHTML='<b>'+(i<2?'🟢 Đội xanh':'🔴 Đội đỏ')+' · Người '+(i+1)+'</b>';let sub=document.createElement('small');sub.textContent=s?s.name+(s.bot?' · 🤖 Tự động sẵn sàng':s.ready?' · ✓ Sẵn sàng':' · Chưa sẵn sàng'):'Đang chờ người vào';box.append(sub);if(i===netSeat)box.style.outline='2px solid #ffdb7c';grid.append(box)});let ready=m.seats.filter(s=>s?.ready).length;$('#startRoom').hidden=!netHost;$('#startRoom').disabled=ready!==4||!netHost;$('#toggleReady').textContent=netReady?'✓ Đã sẵn sàng (bấm để hủy)':'○ Bấm Sẵn sàng';netSay(ready+'/4 ghế sẵn sàng · '+gameMode+' người thật'+(ready===4?' · Có thể bắt đầu':''));return}
@@ -295,6 +295,7 @@ $('#joinRoom').onclick=()=>{const code=$('#onlineRoomInput').value.trim().toUppe
 $('#addPlayer').onclick=async()=>{const url=location.origin+'/?room='+encodeURIComponent(netRoom);try{await navigator.clipboard.writeText(url);onlineStatus('Đã sao chép liên kết mời đồng đội')}catch(_){onlineStatus('Mời đồng đội vào '+url)}};
 $('#toggleReady').onclick=()=>{if(netSocket?.readyState!==WebSocket.OPEN)return onlineStatus('Đã mất kết nối phòng');netReady=!netReady;sendNet({type:'ready',ready:netReady})};
 let startPendingAt=0;
+let _lp=-1,_lt=0;setInterval(()=>{if(!(online&&netStarted&&!netHost)){_lt=0;return}if(lastGuestPacket!==_lp){_lp=lastGuestPacket;_lt=performance.now();return}if(!_lt)_lt=performance.now();if(performance.now()-_lt>3000){toast('⚠ Không nhận được dữ liệu trận từ chủ phòng. Chủ phòng cần để tab game luôn hiển thị (không thu nhỏ/chuyển tab).');_lt=performance.now()}},1000);
 $('#startRoom').onclick=()=>{
  if(!netHost)return onlineStatus('Chỉ chủ phòng mới được bắt đầu trận');
  if(!netSocket||netSocket.readyState!==1)return onlineStatus('Chưa kết nối Firebase, vui lòng vào phòng lại');
