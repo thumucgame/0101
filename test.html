@@ -107,11 +107,36 @@ const firebaseRooms=async()=>{let {db,conn}=await firebaseSDK();const s=await db
 async function firebaseConnect(onmessage,onclose){const {db,conn,uid}=await firebaseSDK();const rid=random(),unsubs=[],notify=m=>onmessage({data:JSON.stringify(m)});let room='',seat=-1,mode=2,open=true,started=false,host=false;const ref=p=>db.ref(conn,p);const deliver=m=>queueMicrotask(()=>{if(open)notify(m)});let lastSeq=0,cur=null,snapBusy=0,prevPeers=[null,null,null,null];
 const errCb=e=>deliver({type:'error',message:'Firebase từ chối đọc dữ liệu ('+((e&&e.code)||e)+'). Kiểm tra Realtime Database Rules cho rooms, snapshots, actions, acks.'});
 const watch=(r,cb)=>unsubs.push(db.onValue(r,cb,errCb));
+const RTC_CFG={iceServers:[{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302','stun:stun.cloudflare.com:3478']}]};
+const hostPcs={};let gPc=null,gCtl=null,gSnap=null;
+const snapRep=(k,v)=>typeof v==='number'&&!/id$/i.test(k)?Math.round(v*100)/100:v;
+const quiet=()=>{};
+function p2pFlag(){if(host){const g=[1,2,3].filter(i=>cur&&cur['p'+i]);window.RTS_P2P=g.length>0&&g.every(i=>hostPcs[i]&&hostPcs[i].snap&&hostPcs[i].snap.readyState==='open')}else window.RTS_P2P=!!(gSnap&&gSnap.readyState==='open')}
+function sendSnapRtc(m){const g=[1,2,3].filter(i=>cur&&cur['p'+i]);if(!g.length)return false;let all=true,str=null;for(const i of g){const ch=hostPcs[i]&&hostPcs[i].snap;if(ch&&ch.readyState==='open'){if(ch.bufferedAmount>96000)continue;try{if(str===null)str=JSON.stringify({seq:m.seq,t:Date.now(),w:m.world},snapRep);ch.send(str)}catch(_){all=false}}else all=false}return all}
+function hostAccept(i){unsubs.push(db.onValue(ref('rtc/'+room+'/s'+i+'/offer'),async s=>{try{const o=s.val();if(!o||!open||typeof RTCPeerConnection==='undefined')return;const old=hostPcs[i];if(old&&old.oid===o.id)return;if(old){try{old.pc.close()}catch(_){}}
+ const pc=new RTCPeerConnection(RTC_CFG),h={pc,oid:o.id,ctl:null,snap:null};hostPcs[i]=h;
+ pc.ondatachannel=e=>{const ch=e.channel;if(ch.label==='ctl'){h.ctl=ch;ch.onmessage=ev=>{let x;try{x=JSON.parse(ev.data)}catch(_){return}if(x&&x.type==='action')deliver({type:'relayAction',seat:i,id:x.id,action:x.action})}}else if(ch.label==='snap')h.snap=ch;ch.onopen=ch.onclose=p2pFlag;p2pFlag()};
+ pc.onicecandidate=e=>{if(e.candidate)db.push(ref('rtc/'+room+'/s'+i+'/hostIce'),e.candidate.toJSON()).catch(quiet)};
+ pc.onconnectionstatechange=()=>{if(['failed','closed','disconnected'].includes(pc.connectionState))p2pFlag()};
+ await pc.setRemoteDescription({type:o.type,sdp:o.sdp});
+ unsubs.push(db.onChildAdded(ref('rtc/'+room+'/s'+i+'/guestIce'),x=>{const c=x.val();if(c&&hostPcs[i]===h)pc.addIceCandidate(c).catch(quiet)},quiet));
+ const ans=await pc.createAnswer();await pc.setLocalDescription(ans);
+ await db.set(ref('rtc/'+room+'/s'+i+'/answer'),{id:o.id,type:ans.type,sdp:ans.sdp})}catch(e){console.warn('P2P host',e)}},quiet))}
+async function guestRtc(){try{if(typeof RTCPeerConnection==='undefined')return;const base='rtc/'+room+'/s'+seat;await db.remove(ref(base)).catch(quiet);const id=random();const pc=new RTCPeerConnection(RTC_CFG);gPc=pc;
+ gCtl=pc.createDataChannel('ctl',{ordered:true});gSnap=pc.createDataChannel('snap',{ordered:false,maxRetransmits:0});
+ gCtl.onmessage=ev=>{let x;try{x=JSON.parse(ev.data)}catch(_){return}if(x&&x.type==='actionAck')deliver(x)};
+ gSnap.onmessage=ev=>{let x;try{x=JSON.parse(ev.data)}catch(_){return}if(x&&x.seq>lastSeq&&x.w){lastSeq=x.seq;deliver({type:'snapshot',seq:x.seq,ht:x.t,world:x.w})}};
+ gSnap.onopen=gSnap.onclose=p2pFlag;
+ pc.onicecandidate=e=>{if(e.candidate)db.push(ref(base+'/guestIce'),e.candidate.toJSON()).catch(quiet)};
+ const offer=await pc.createOffer();await pc.setLocalDescription(offer);
+ await db.set(ref(base+'/offer'),{id,type:offer.type,sdp:offer.sdp});
+ unsubs.push(db.onValue(ref(base+'/answer'),async s=>{try{const a=s.val();if(!a||a.id!==id||pc.remoteDescription)return;await pc.setRemoteDescription({type:a.type,sdp:a.sdp});unsubs.push(db.onChildAdded(ref(base+'/hostIce'),x=>{const c=x.val();if(c)pc.addIceCandidate(c).catch(quiet)},quiet))}catch(e){console.warn('P2P answer',e)}},quiet))}catch(e){console.warn('P2P không khả dụng, dùng relay',e)}}
+
 function roster(r){return rosterOf(r.mode,{name:r.hostName,ready:r.hostReady},[null,r.p1||null,r.p2||null,r.p3||null])}
-function attach(){let r=ref('rooms/'+room);watch(r,s=>{if(!open)return;let a=s.val();cur=a;if(!a){deliver({type:'hostDisconnected'});return}if(host&&a.started){for(let i=1;i<4;i++){if(prevPeers[i]&&!a['p'+i]){if(a.mode===22)deliver({type:'peerLeft',seat:i});else deliver({type:'ended',message:'Đối phương đã rời trận'})}}}prevPeers=[null,a.p1,a.p2,a.p3];if(a.started&&!started){started=true;deliver({type:'start',mode:a.mode})}if(!a.started)deliver({type:'lobby',mode:a.mode,seats:roster(a)})});if(host){unsubs.push(db.onChildAdded(ref('actions/'+room),s=>{let m=s.val();if(m?.from!==rid&&m?.kind==='action'){if(Number.isInteger(m.seat)&&m.seat>=1&&m.seat<=3)deliver({type:'relayAction',seat:m.seat,id:m.id,action:m.action});db.remove(s.ref).catch(()=>{})}},errCb));}
-else{watch(ref('terrain/'+room),s=>{let m=s.val();if(m&&typeof m.w==='string'){try{deliver({type:'terrain',world:JSON.parse(m.w)})}catch(_){}}});
+function attach(){let r=ref('rooms/'+room);watch(r,s=>{if(!open)return;let a=s.val();cur=a;if(!a){deliver({type:'hostDisconnected'});return}if(host&&a.started){for(let i=1;i<4;i++){if(prevPeers[i]&&!a['p'+i]){if(a.mode===22)deliver({type:'peerLeft',seat:i});else deliver({type:'ended',message:'Đối phương đã rời trận'})}}}prevPeers=[null,a.p1,a.p2,a.p3];if(a.started&&!started){started=true;deliver({type:'start',mode:a.mode})}if(!a.started)deliver({type:'lobby',mode:a.mode,seats:roster(a)})});if(host){unsubs.push(db.onChildAdded(ref('actions/'+room),s=>{let m=s.val();if(m?.from!==rid&&m?.kind==='action'){if(Number.isInteger(m.seat)&&m.seat>=1&&m.seat<=3)deliver({type:'relayAction',seat:m.seat,id:m.id,action:m.action});db.remove(s.ref).catch(()=>{})}},errCb));for(let i=1;i<4;i++)hostAccept(i)}
+else{guestRtc();watch(ref('terrain/'+room),s=>{let m=s.val();if(m&&typeof m.w==='string'){try{deliver({type:'terrain',world:JSON.parse(m.w)})}catch(_){}}});
 watch(ref('snapshots/'+room),s=>{let m=s.val();if(m?.seq>lastSeq&&typeof m.w==='string'){let w;try{w=JSON.parse(m.w)}catch(_){return}lastSeq=m.seq;deliver({type:'snapshot',seq:m.seq,ht:m.t,world:w})}});unsubs.push(db.onChildAdded(ref('acks/'+room),s=>{let a=s.val();if(a&&a.to===seat){deliver({...a,type:'actionAck'});db.remove(s.ref).catch(()=>{})}},errCb));}}
-function close(){if(!open)return;open=false;for(let u of unsubs)try{u()}catch{};if(host&&room)db.remove(ref('rooms/'+room)).catch(()=>{});else if(room&&seat>=1)db.remove(ref('rooms/'+room+'/p'+seat)).catch(()=>{});onclose?.()}
+function close(){if(!open)return;open=false;try{for(const k in hostPcs)hostPcs[k].pc.close();if(gPc)gPc.close()}catch(_){}window.RTS_P2P=false;if(host&&room)db.remove(ref('rtc/'+room)).catch(()=>{});else if(room&&seat>=1)db.remove(ref('rtc/'+room+'/s'+seat)).catch(()=>{});for(let u of unsubs)try{u()}catch{};if(host&&room)db.remove(ref('rooms/'+room)).catch(()=>{});else if(room&&seat>=1)db.remove(ref('rooms/'+room+'/p'+seat)).catch(()=>{});onclose?.()}
 const socket={readyState:1,bufferedAmount:0,close,send(data){let m;try{m=JSON.parse(data)}catch{return} const run=async()=>{
 if(m.type==='create'){room='G'+random().slice(0,5).toUpperCase();mode=normMode(m.mode);seat=0;host=true;await db.set(ref('rooms/'+room),{host:uid+'-'+rid,hostName:m.name||'Chủ phòng',hostReady:false,mode,started:false,last:Date.now()});db.onDisconnect(ref('rooms/'+room)).remove();deliver({type:'joined',room,seat});attach()}
 else if(m.type==='join'){room=m.room;const r=ref('rooms/'+room);let slot=0;let tx=await db.runTransaction(r,v=>{if(v===null)return v;slot=0;if(v.started||v.mode===1)return;const max=MAXSEATS[v.mode]||2;for(let i=1;i<max;i++){if(!v['p'+i]){slot=i;break}}if(!slot)return;v['p'+slot]={id:uid+'-'+rid,name:m.name||'Đồng đội',ready:false};return v});if(!tx.committed||!tx.snapshot.val()||!slot){deliver({type:'error',message:'Phòng đã đủ hoặc không tồn tại'});return}seat=slot;db.onDisconnect(ref('rooms/'+room+'/p'+seat)).remove();deliver({type:'joined',room,seat});attach()}
@@ -127,9 +152,9 @@ else if(m.type==='start'&&host){
 }
 else if(m.type==='snapshot'&&host){ // latest state replaces previous state, no unbounded history
 {const w0=m.world;if(w0&&w0.trees){const terr={trees:w0.trees,decor:w0.decor};delete w0.trees;delete w0.decor;db.set(ref('terrain/'+room),{w:JSON.stringify(terr)}).catch(e=>deliver({type:'error',message:'Firebase: '+e.message}))}}
-if(snapBusy>=4)return;snapBusy++;db.set(ref('snapshots/'+room),{seq:m.seq,t:Date.now(),w:JSON.stringify(m.world,(k,v)=>typeof v==='number'&&!/id$/i.test(k)?Math.round(v*100)/100:v)}).catch(e=>deliver({type:'error',message:'Firebase: '+e.message})).finally(()=>{snapBusy--})}
-else if(m.type==='action'&&!host){await db.push(ref('actions/'+room),{kind:'action',from:rid,seat,id:m.id,action:m.action});}
-else if(m.type==='actionAck'&&host){await db.push(ref('acks/'+room),m)}
+if(sendSnapRtc(m))return;if(snapBusy>=4)return;snapBusy++;db.set(ref('snapshots/'+room),{seq:m.seq,t:Date.now(),w:JSON.stringify(m.world,(k,v)=>typeof v==='number'&&!/id$/i.test(k)?Math.round(v*100)/100:v)}).catch(e=>deliver({type:'error',message:'Firebase: '+e.message})).finally(()=>{snapBusy--})}
+else if(m.type==='action'&&!host){if(gCtl&&gCtl.readyState==='open'){try{gCtl.send(JSON.stringify({type:'action',id:m.id,action:m.action}));return}catch(_){}}await db.push(ref('actions/'+room),{kind:'action',from:rid,seat,id:m.id,action:m.action});}
+else if(m.type==='actionAck'&&host){const ch=hostPcs[m.to]&&hostPcs[m.to].ctl;if(ch&&ch.readyState==='open'){try{ch.send(JSON.stringify(m));return}catch(_){}}await db.push(ref('acks/'+room),m)}
 };run().catch(err=>deliver({type:'error',message:'Firebase: '+err.message}))}};
 return socket}
 window.RTS_TRANSPORT={localConnect,firebaseConnect,localRooms,firebaseRooms,hasFirebase:()=>!!window.FIREBASE_CONFIG?.databaseURL};
@@ -385,7 +410,7 @@ $('#joinRoom').onclick=()=>{const code=$('#onlineRoomInput').value.trim().toUppe
 $('#addPlayer').onclick=async()=>{const url=location.origin+'/?room='+encodeURIComponent(netRoom);try{await navigator.clipboard.writeText(url);onlineStatus('Đã sao chép liên kết mời đồng đội')}catch(_){onlineStatus('Mời đồng đội vào '+url)}};
 $('#toggleReady').onclick=()=>{if(netSocket?.readyState!==WebSocket.OPEN)return onlineStatus('Đã mất kết nối phòng');netReady=!netReady;sendNet({type:'ready',ready:netReady})};
 let startPendingAt=0,pendingTerrain=null,netClockOff=null;
-let _lp=-1,_lt=0;setInterval(()=>{if(!(online&&netStarted&&!netHost)){_lt=0;return}{const pc=$('#privateCamera');if(pc&&!pc.hidden)pc.textContent='📷 '+(active===0?'Đội Xanh':'Đội Đỏ')+' · Người '+(netSeat+1)+' · 📡 '+(netStats.packets||0)+' gói'}if(lastGuestPacket!==_lp){_lp=lastGuestPacket;_lt=performance.now();return}if(!_lt)_lt=performance.now();if(performance.now()-_lt>3000){toast('⚠ Không nhận được dữ liệu trận từ chủ phòng. Kiểm tra mạng của chủ phòng hoặc Firebase.');_lt=performance.now()}},1000);
+let _lp=-1,_lt=0;setInterval(()=>{if(!(online&&netStarted&&!netHost)){_lt=0;return}{const pc=$('#privateCamera');if(pc&&!pc.hidden)pc.textContent='📷 '+(active===0?'Đội Xanh':'Đội Đỏ')+' · Người '+(netSeat+1)+' · 📡 '+(netStats.packets||0)+' gói'+(connectionMode()==='firebase'?(window.RTS_P2P?' · ⚡P2P':' · ☁ relay'):'')}if(lastGuestPacket!==_lp){_lp=lastGuestPacket;_lt=performance.now();return}if(!_lt)_lt=performance.now();if(performance.now()-_lt>3000){toast('⚠ Không nhận được dữ liệu trận từ chủ phòng. Kiểm tra mạng của chủ phòng hoặc Firebase.');_lt=performance.now()}},1000);
 $('#startRoom').onclick=()=>{
  if(!netHost)return onlineStatus('Chỉ chủ phòng mới được bắt đầu trận');
  if(!netSocket||netSocket.readyState!==1)return onlineStatus('Chưa kết nối Firebase, vui lòng vào phòng lại');
@@ -423,7 +448,7 @@ function applyRemote(a){if(!a||!Number.isInteger(a.team)||a.team<0||a.team>1||ov
 function simTick(t){
  if(t>last){if(last)step((t-last)/1000);last=t}
  if(online&&netStarted&&netHost){
-  const iv=connectionMode()==='firebase'?66:50,forced=netNeedSnapshot;
+  const iv=window.RTS_P2P?33:(connectionMode()==='firebase'?66:50),forced=netNeedSnapshot;
   if(forced||t-netTimer>=iv){
    netNeedSnapshot=false;netTimer=(forced||t-netTimer>iv*3)?t:netTimer+iv;
    const w={elapsed,over,players,structures,units:units.map(u=>({id:u.id,p:u.p,type:u.type,x:u.x,y:u.y,hp:u.hp,max:u.max,move:u.move,cool:u.cool,manual:u.manual})),flags,shots,shells,scorch:scorch.slice(-24),particles:particles.slice(-12)};
