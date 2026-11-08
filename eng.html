@@ -67,6 +67,25 @@ button,.chip{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .mid button{min-width:56px;min-height:56px;border-radius:16px;font-size:22px}
 .mid #btn{flex:1;font-size:20px}
 .sheet select,.sheet button,.sheet input{min-height:44px}
+/* ---- gọn: nhường chỗ cho chữ dịch ---- */
+.hd{padding:4px 12px 2px;font-size:13px;opacity:.85}
+#pair{display:flex;gap:8px}
+.prow{flex:3;gap:6px;min-width:0}.prow.g{flex:2}
+.prow b{flex:0 0 auto;font-size:12px}
+.prow .chips{gap:4px}
+.mid{gap:6px;padding:6px 10px}
+.mid .chip{min-height:38px;padding:4px 2px;font-size:clamp(14px,3.8vw,17px);border-radius:10px}
+.mid .meter{flex:0 0 50px;height:6px}
+.mid #stt{font-size:12px}
+.mrow{gap:8px}
+.mid button{min-width:46px;min-height:46px;border-radius:12px;font-size:18px}
+.mid #btn{font-size:17px}
+.list{padding:2px 10px 8px;gap:8px}
+.msg{padding:8px 12px;border-radius:14px}
+.msg .main{font-size:clamp(26px,7vw,48px)}
+.msg:first-child .main{font-size:clamp(38px,11vw,84px)}
+.msg .sub{font-size:clamp(12px,3.2vw,16px);margin-top:2px}
+.empty{font-size:clamp(18px,4.8vw,26px)}
 </style>
 </head>
 <body>
@@ -113,11 +132,12 @@ function getMap(){const {holder:h,guest:g}=side();const m={};for(const l of ['ja
 function savePair(){try{localStorage.setItem('pair2',JSON.stringify({...side(),voice:$('voice').value}))}catch(e){}}
 const NAT={vi:'Tiếng Việt',en:'English',ja:'日本語'},FL={vi:'🇻🇳',en:'🇬🇧',ja:'🇯🇵'},
   HINT={vi:'Hãy nói tiếng Việt',en:'Please speak English',ja:'日本語で話してください'};
-const chipsHtml=(who,langs,cur)=>langs.map(l=>`<button class="chip${l===cur?' on':''}" data-w="${who}" data-l="${l}">${NAT[l]}</button>`).join('');
+const SH={vi:'Việt',en:'English',ja:'日本語'};
+const chipsHtml=(who,langs,cur)=>langs.map(l=>`<button class="chip${l===cur?' on':''}" data-w="${who}" data-l="${l}">${SH[l]}</button>`).join('');
 // Chọn ngôn ngữ ngay trên màn hình: người cầm chọn 1 trong 3, khách chỉ thấy 2 ngôn ngữ còn lại.
 function heads(){
   const {holder:h,guest:g}=side(),all=['vi','en','ja'];
-  $('pair').innerHTML='<div class="prow h"><b>Tôi nói</b><div class="chips">'+chipsHtml('holder',all,h)+'</div></div><div class="prow g"><b>Khách nói</b><div class="chips">'+chipsHtml('guest',all.filter(l=>l!==h),g)+'</div></div>';
+  $('pair').innerHTML='<div class="prow h"><b>Tôi</b><div class="chips">'+chipsHtml('holder',all,h)+'</div></div><div class="prow g"><b>Khách</b><div class="chips">'+chipsHtml('guest',all.filter(l=>l!==h),g)+'</div></div>';
   $('hd_guest').textContent='🧑‍💼 Guest · お客様 · '+NAT[g];
   $('hd_holder').textContent='🧑 Tôi · '+NAT[h];
   for(const [k,X] of [['guest',g],['holder',h]]){
@@ -289,7 +309,7 @@ const wrong=(t,tg)=>tg==='ja'?!JP.test(t):tg==='en'?(VN.test(t)||JP.test(t)):(JP
 async function translateText(text,tg){
   const m=$('model').value.trim();
   const cfg=/gemini-3/.test(m)?{thinkingConfig:{thinkingLevel:'minimal'}}:/gemini-2\.5-flash/.test(m)?{thinkingConfig:{thinkingBudget:0},temperature:0}:{temperature:0};
-  const r=await fetch(`${API}models/${m}:generateContent?key=${encodeURIComponent($('key').value.trim())}`,{method:'POST',headers:{'Content-Type':'application/json'},
+  const r=await fetch(`${API}models/${m}:generateContent?key=${encodeURIComponent($('key').value.trim())}`,{signal:AbortSignal.timeout(20000),method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({contents:[{parts:[{text:`Translate into ${LN[tg]}. Output only the translation, written in ${LN[tg]}:\n${text}`}]}],generationConfig:cfg})});
   if(!r.ok)throw new Error(r.status);
   return ((await r.json()).candidates?.[0]?.content?.parts||[]).map(x=>x.text||'').join('').trim();
@@ -308,7 +328,7 @@ For none, print only: none`;
   const m=$('model').value.trim();
   const cfg=/gemini-3/.test(m)?{thinkingConfig:{thinkingLevel:'minimal'}}:/gemini-2\.5-flash/.test(m)?{thinkingConfig:{thinkingBudget:0},temperature:0}:{temperature:0};
   const res=await fetch(`${API}models/${m}:streamGenerateContent?alt=sse&key=${encodeURIComponent($('key').value.trim())}`,{
-    method:'POST',headers:{'Content-Type':'application/json'},
+    signal:AbortSignal.timeout(30000),method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({contents:[{parts:[{text:prompt},{inline_data:{mime_type:'audio/wav',data:b64}}]}],generationConfig:cfg})});
   if(!res.ok){const t=await res.text();dbg('Lỗi API '+res.status+': '+t.slice(0,150));throw new Error(res.status+' '+t.slice(0,200)+(res.status==404?' (sai tên model? bấm Kiểm tra kết nối)':''))}
   const rd=res.body.getReader(),dec=new TextDecoder();
@@ -378,8 +398,12 @@ function speak(text,lang){
     const v=speechSynthesis.getVoices().find(x=>x.lang.replace('_','-').startsWith(lang.slice(0,2)));
     if(v)u.voice=v;else dbg('⚠️ Máy không có giọng '+lang+' → có thể im lặng. '+voiceInfo());
     speechSynthesis.resume();
-    const done=()=>{pend--;if(pend<=0){pend=0;tts=false;mutedUntil=performance.now()+400}res()};
+    let fin=false,iv,to;
+    const done=()=>{if(fin)return;fin=true;clearInterval(iv);clearTimeout(to);pend--;if(pend<=0){pend=0;tts=false;mutedUntil=performance.now()+400}res()};
     u.onend=done;u.onerror=done;speechSynthesis.speak(u);
+    // điện thoại hay không bắn onend → chốt an toàn để mic không bị khoá mãi
+    const t0=performance.now();iv=setInterval(()=>{if(performance.now()-t0>1500&&!speechSynthesis.speaking&&!speechSynthesis.pending)done()},300);
+    to=setTimeout(done,Math.max(5000,text.length*220/u.rate));
   }));
   return chain;
 }
