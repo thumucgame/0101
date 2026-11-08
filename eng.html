@@ -86,6 +86,9 @@ button,.chip{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .msg:first-child .main{font-size:clamp(38px,11vw,84px)}
 .msg .sub{font-size:clamp(12px,3.2vw,16px);margin-top:2px}
 .empty{font-size:clamp(18px,4.8vw,26px)}
+.msg.draft .main{color:var(--mut)}
+.msg.draft{border-left-style:dashed}
+.msg.draft.k_tr .sub{display:none}
 </style>
 </head>
 <body>
@@ -94,7 +97,7 @@ button,.chip{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   <div class="mid">
     <div id="pair"></div>
     <div class="mrow"><div class="meter"><i id="lv"></i></div><span id="stt">Chưa chạy</span></div>
-    <div class="mrow"><button id="clr" title="Xoá chữ">🗑</button><button id="btn" class="go">▶ Bắt đầu</button><button id="fs" title="Toàn màn hình">⛶</button><button id="gear" title="Cài đặt">⚙️</button></div>
+    <div class="mrow"><button id="clr" title="Xoá chữ">🗑</button><button id="btn" class="go">▶ Bắt đầu</button><button id="snd" title="Bật/tắt đọc ra loa">🔊</button><button id="fs" title="Toàn màn hình">⛶</button><button id="gear" title="Cài đặt">⚙️</button></div>
   </div>
   <section class="half holder"><div class="hd" id="hd_holder"></div><div class="list" id="list_holder"></div></section>
 </div>
@@ -111,6 +114,7 @@ button,.chip{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 <span>🧑 Người cầm (màn dưới): <select id="lang_holder"></select></span>
 <span>🧑‍💼 Khách (màn trên, xoay ngược): <select id="lang_guest"></select></span>
 <button id="swap">⇄ Đổi bên</button></div>
+<div class="row"><span>Chế độ: <select id="mode"><option value="live">Live – chữ hiện ngay khi nói</option><option value="seg">Thường – dịch từng đoạn</option></select></span></div>
 <div class="row"><span>Đọc ra loa: <select id="voice"><option value="both">Cả hai chiều</option><option value="guest">Chỉ đọc cho khách nghe</option><option value="holder">Chỉ đọc cho người cầm nghe</option><option value="off">Tắt tiếng (chỉ hiện chữ)</option></select></span></div>
 <div class="row"><label><input type="checkbox" id="hp">🎧 Chế độ tai nghe (nghe tiếp khi đang phát, nhanh hơn)</label><span>Cắt câu: <select id="sil"><option value="300">Siêu nhanh</option><option value="450" selected>Nhanh</option><option value="600">Vừa</option><option value="900">Chậm</option></select></span><span>Độ nhạy mic: <select id="sens"><option value="0.004">Rất cao</option><option value="0.008" selected>Cao</option><option value="0.015">Vừa</option></select></span><span>Tốc độ đọc: <select id="rate"><option value="1">1x</option><option value="1.15" selected>1.15x</option><option value="1.3">1.3x</option></select></span></div>
 <div id="dbg" style="font:12px/1.4 monospace;color:var(--mut);white-space:pre-wrap;word-break:break-all">Nhật ký: (trống)</div>
@@ -170,9 +174,9 @@ function newMsg(src,tg){
     const L=$('list_'+who),emp=L.querySelector('.empty');if(emp)emp.remove();
     const el=document.createElement('div');el.className='msg '+src;
     el.innerHTML='<div class="main"></div><div class="sub"></div>';
-    L.prepend(el);L.scrollTop=0;parts.push({el,kind});
+    el.classList.add('k_'+kind);L.prepend(el);L.scrollTop=0;parts.push({el,kind});
   }
-  return{set(orig,trans){for(const p of parts){p.el.querySelector('.main').textContent=p.kind==='orig'?orig:trans;p.el.querySelector('.sub').textContent=p.kind==='orig'?trans:orig}}};
+  return{draft(on){for(const p of parts)p.el.classList.toggle('draft',on)},rm(){for(const p of parts)p.el.remove()},set(orig,trans){for(const p of parts){p.el.querySelector('.main').textContent=p.kind==='orig'?orig:trans;p.el.querySelector('.sub').textContent=p.kind==='orig'?trans:orig}}};
 }
 function say(text,tg){
   const v=$('voice').value,{holder,guest}=side();
@@ -221,22 +225,25 @@ $('btn').onclick=async()=>{
   if(running){stop();return}
   const k=$('key').value.trim();if(!k){alert('Nhập API key');return}
   try{localStorage.setItem('gk',k)}catch(e){}
+  // mở khoá âm thanh/loa NGAY trong cú chạm (điện thoại chặn nếu làm sau khi await)
+  ctx=new AudioContext();ctx.resume&&ctx.resume();
+  for(const l of ['vi-VN','en-US','ja-JP']){const u=new SpeechSynthesisUtterance('.');u.lang=l;u.volume=0;speechSynthesis.speak(u)}
   try{
     stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:1}});
-  }catch(e){alert('Không mở được mic: '+e.message);return}
-  ctx=new AudioContext();ctx.resume&&ctx.resume();
+  }catch(e){alert('Không mở được mic: '+e.message);try{ctx.close()}catch(_){}return}
+  ctx.resume&&ctx.resume();
   const src=ctx.createMediaStreamSource(stream);
   proc=ctx.createScriptProcessor(2048,1,1);
   src.connect(proc);proc.connect(ctx.destination);
   proc.onaudioprocess=onAudio;
   speechSynthesis.getVoices();
   warm();clearInterval(warmT);warmT=setInterval(warm,20000);
-  for(const l of ['vi-VN','en-US','ja-JP']){const u=new SpeechSynthesisUtterance(' ');u.lang=l;u.volume=0;speechSynthesis.speak(u)}
   running=true;$('btn').textContent='⏹ Dừng';$('btn').classList.add('on');setStatus('Đang lắng nghe…');
+  live=$('mode').value==='live';fails=0;if(live){setStatus('Đang kết nối Live…');liveOpen()}
 };
 let warmT;
 function warm(){fetch(API+'models/'+$('model').value.trim()+'?key='+encodeURIComponent($('key').value.trim())).catch(()=>{})}
-function stop(){clearInterval(warmT);
+function stop(){clearInterval(warmT);live=false;clearTimeout(rt);const w0=ws;ws=null;try{w0&&w0.close()}catch(e){}acc=[];
   running=false;proc&&proc.disconnect();stream&&stream.getTracks().forEach(t=>t.stop());ctx&&ctx.close();
   speechSynthesis.cancel();pend=0;tts=false;$('btn').textContent='▶ Bắt đầu';$('btn').classList.remove('on');setStatus('Đã dừng');$('lv').style.width=0;
 }
@@ -246,6 +253,7 @@ function onAudio(e){
   let s=0;for(let i=0;i<d.length;i++)s+=d[i]*d[i];
   const rms=Math.sqrt(s/d.length);
   $('lv').style.width=Math.min(100,rms*600)+'%';
+  if(live){pushPcm(!$('hp').checked&&(tts||performance.now()<mutedUntil)?new Float32Array(d.length):d);return}
   const dt=d.length/ctx.sampleRate*1000;
   // nửa song công: đang phát loa thì bỏ qua mic để không tự nghe lại chính mình
   if(!$('hp').checked&&(tts||performance.now()<mutedUntil)){seg=[];pre=[];speaking=false;silence=0;segLen=0;return}
@@ -310,9 +318,88 @@ async function translateText(text,tg){
   const m=$('model').value.trim();
   const cfg=/gemini-3/.test(m)?{thinkingConfig:{thinkingLevel:'minimal'}}:/gemini-2\.5-flash/.test(m)?{thinkingConfig:{thinkingBudget:0},temperature:0}:{temperature:0};
   const r=await fetch(`${API}models/${m}:generateContent?key=${encodeURIComponent($('key').value.trim())}`,{signal:AbortSignal.timeout(20000),method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({contents:[{parts:[{text:`Translate into ${LN[tg]}. Output only the translation, written in ${LN[tg]}:\n${text}`}]}],generationConfig:cfg})});
+    body:JSON.stringify({contents:[{parts:[{text:`Translate into ${LN[tg]}. The text may be an unfinished fragment of live speech: translate only the words given, never complete or add. Output only the translation, written in ${LN[tg]}:\n${text}`}]}],generationConfig:cfg})});
   if(!r.ok)throw new Error(r.status);
   return ((await r.json()).candidates?.[0]?.content?.parts||[]).map(x=>x.text||'').join('').trim();
+}
+// ===== Chế độ Live: chữ hiện ngay khi nói, dịch nháp liên tục, chốt câu rồi mới đọc =====
+const LIVE_MODEL='gemini-3.5-transcribe-live';
+let live=false,fails=0,ws=null,liveReady=false,rt,acc=[],rpos=0,fchain=Promise.resolve();
+const D={src:null,tg:null,orig:'',trans:'',bubble:null,timer:null,last:'',transFor:''};
+const detect=t=>JP.test(t)?'ja':VN.test(t)?'vi':'en';
+try{$('mode').value=localStorage.getItem('mode2')||'live'}catch(e){}
+$('mode').onchange=()=>{try{localStorage.setItem('mode2',$('mode').value)}catch(e){}};
+const sndIcon=()=>{$('snd').textContent=$('voice').value==='off'?'🔇':'🔊'};
+$('snd').onclick=()=>{const v=$('voice');if(v.value==='off')v.value=v.dataset.prev||'both';else{v.dataset.prev=v.value;v.value='off'}savePair();sndIcon()};
+$('voice').addEventListener('change',sndIcon);sndIcon();
+function liveOpen(){
+  const me=ws=new WebSocket('wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key='+encodeURIComponent($('key').value.trim()));
+  me.onopen=()=>me.send(JSON.stringify({setup:{model:'models/'+LIVE_MODEL,generationConfig:{responseModalities:['TEXT']},inputAudioTranscription:{languageCodes:[]}}}));
+  me.onmessage=async ev=>{
+    let t=ev.data;if(t instanceof Blob)t=await t.text();
+    let j;try{j=JSON.parse(t)}catch(e){return}
+    if(j.setupComplete){liveReady=true;fails=0;setStatus('Đang lắng nghe…');dbg('Live: đã kết nối');clearTimeout(rt);rt=setTimeout(cycle,9*60000);return}
+    const c=j.serverContent;if(!c)return;
+    if(c.interimInputTranscription)liveInterim(c.interimInputTranscription.text||'');
+    if(c.inputTranscription)liveFinal(c.inputTranscription.text||'');
+  };
+  me.onclose=ev=>{
+    if(me!==ws)return;
+    const was=liveReady;liveReady=false;dbg('Live đóng '+ev.code+' '+(ev.reason||'').slice(0,100));
+    if(!running||!live)return;
+    if(!was&&++fails>=2){live=false;setStatus('Live lỗi → dùng chế độ thường');$('conn').textContent='⚠️ Live không dùng được ('+ev.code+' '+(ev.reason||'').slice(0,100)+'). Đang dùng chế độ thường.';return}
+    setStatus('Đang nối lại…');setTimeout(()=>{if(running&&live)liveOpen()},600);
+  };
+}
+// phiên Live tối đa ~10 phút → tự nối lại lúc đang yên lặng
+function cycle(){if(!running||!live)return;if(D.bubble){rt=setTimeout(cycle,3000);return}try{ws.close()}catch(e){}}
+function pushPcm(d){
+  if(!liveReady||!ws||ws.readyState!==1){acc=[];rpos=0;return}
+  const r=ctx.sampleRate/16000;
+  while(rpos<d.length){const a=Math.floor(rpos),b=Math.min(d.length,Math.max(a+1,Math.floor(rpos+r)));let v=0;for(let j=a;j<b;j++)v+=d[j];v/=(b-a);acc.push(Math.max(-1,Math.min(1,v))*32767);rpos+=r}
+  rpos-=d.length;
+  if(acc.length>=1600){
+    const u=new Uint8Array(Int16Array.from(acc).buffer);acc=[];let bin='';
+    for(let i=0;i<u.length;i+=0x4000)bin+=String.fromCharCode.apply(null,u.subarray(i,i+0x4000));
+    ws.send(JSON.stringify({realtimeInput:{audio:{data:btoa(bin),mimeType:'audio/pcm;rate=16000'}}}));
+  }
+}
+function liveInterim(t){
+  t=t.trim();if(!t)return;
+  const src=detect(t),tg=getMap()[src];if(!tg)return;
+  setStatus('Đang nghe giọng nói…');
+  if(D.bubble&&D.src!==src){D.bubble.rm();D.bubble=null;D.trans=''}
+  if(!D.bubble){D.bubble=newMsg(src,tg);D.src=src;D.tg=tg}
+  D.orig=t;D.bubble.draft(true);D.bubble.set(t,D.trans||'…');
+  draftTr();
+}
+let lastSend=0,seqN=0,applied=0;
+function draftTr(){
+  const now=performance.now();
+  if(now-lastSend<350){if(!D.timer)D.timer=setTimeout(()=>{D.timer=null;draftTr()},350-(now-lastSend));return}
+  const txt=D.orig,b=D.bubble,tg=D.tg;if(!b||!txt||txt===D.last)return;
+  D.last=txt;lastSend=now;const my=++seqN;
+  translateText(txt,tg).then(tr=>{if(b===D.bubble&&my>applied){applied=my;D.trans=tr;D.transFor=txt;b.set(D.orig,tr)}}).catch(e=>dbg('Dịch nháp lỗi '+e.message));
+}
+const nz=x=>(x||'').replace(/[\s。、，．,.!?！？]/g,'');
+function sayAll(tr,tg){
+  const re=/[。！？!?\n]|\.(?=\s)/g;let a=0,m;
+  while((m=re.exec(tr))){const p=tr.slice(a,re.lastIndex).trim();a=re.lastIndex;if(p)say(p,tg)}
+  const rest=tr.slice(a).trim();if(rest)say(rest,tg);
+}
+function liveFinal(t){
+  t=t.trim();const b=D.bubble,s0=D.src,prev=D.trans,tf=D.transFor;
+  clearTimeout(D.timer);Object.assign(D,{bubble:null,orig:'',trans:'',timer:null,last:'',src:null,transFor:''});
+  const src=detect(t),tg=t&&getMap()[src];
+  if(!tg){b&&b.rm();return}
+  fchain=fchain.then(async()=>{
+    let m=b;if(m&&s0!==src){m.rm();m=null}
+    if(!m)m=newMsg(src,tg);
+    m.draft(true);m.set(t,prev||'…');setStatus('Đang dịch…');
+    let tr;if(prev&&nz(tf)===nz(t))tr=prev;else try{tr=await translateText(t,tg)}catch(e){dbg('Dịch lỗi '+e.message);tr=prev}
+    if(tr){m.set(t,tr);m.draft(false);sayAll(tr,tg)}else m.rm();
+    if(running)setStatus('Đang lắng nghe…');
+  });
 }
 async function run(b64){
   const mp=getMap();
