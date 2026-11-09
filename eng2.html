@@ -411,26 +411,45 @@ async function freeTr(text,tg,draft,sl){
     Translator.availability({sourceLanguage:sl,targetLanguage:tg}).then(av=>{if(av==='available')mkChrome(k,sl,tg,false)}).catch(()=>{})}
   return webTr(text,sl,tg,draft);
 }
+const tmo=ms=>{if(AbortSignal.timeout)return AbortSignal.timeout(ms);const c=new AbortController();setTimeout(()=>c.abort(),ms);return c.signal};
+const provDown={g:0,m:0,gem:0},usedFb={},PN={g:'Google Translate',m:'MyMemory',gem:'Gemini'};
+async function viaG(text,sl,tg){
+  const r=await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl='+sl+'&tl='+tg+'&dt=t&q='+encodeURIComponent(text),{signal:tmo(8000)});
+  if(r.status===429||r.status===403){const e=new Error('429');e.limit=true;throw e}
+  if(!r.ok)throw new Error(r.status);
+  const j=await r.json(),t=(j[0]||[]).map(x=>x[0]||'').join('').trim();
+  if(!t)throw new Error('rỗng');return t;
+}
+async function viaM(text,sl,tg){
+  const r=await fetch('https://api.mymemory.translated.net/get?q='+encodeURIComponent(text.slice(0,450))+'&langpair='+sl+'|'+tg,{signal:tmo(8000)});
+  const j=await r.json(),t=j.responseData&&j.responseData.translatedText;
+  if(j.responseStatus==200&&t&&!/MYMEMORY WARNING/i.test(t))return t.trim();
+  const e=new Error('hết hạn mức');e.limit=true;throw e;
+}
+async function viaGem(text,sl,tg){   // chỉ dùng cho bản dịch cuối, khi 2 đường miễn phí đều hỏng
+  const m=$('model').value.trim();
+  const cfg=/gemini-3/.test(m)?{thinkingConfig:{thinkingLevel:'minimal'}}:/gemini-2\.5-flash/.test(m)?{thinkingConfig:{thinkingBudget:0},temperature:0}:{temperature:0};
+  const r=await gfetch(`${API}models/${m}:generateContent?key=${encodeURIComponent($('key').value.trim())}`,JSON.stringify({contents:[{parts:[{text:`Translate into ${LN[tg]}. Output only the translation, written in ${LN[tg]}:\n${text}`}]}],generationConfig:cfg}));
+  if(!r.ok)throw new Error(r.status);
+  const t=((await r.json()).candidates?.[0]?.content?.parts||[]).map(x=>x.text||'').join('').trim();
+  if(!t)throw new Error('rỗng');return t;
+}
+// Thử lần lượt: Google Translate web → MyMemory → (chỉ bản cuối) Gemini. Đường nào lỗi thì nghỉ một lúc rồi dùng đường kế tiếp.
 async function webTr(text,sl,tg,draft){
-  if(performance.now()<coolUntil){if(draft)throw new Error('cooldown');await sleep(Math.min(coolUntil-performance.now(),3000))}
   let err;
-  for(let i=0;i<2;i++){
+  for(const k of draft?['g','m']:['g','m','gem']){
+    if(performance.now()<provDown[k])continue;
+    if(k==='gem'&&!$('key').value.trim())continue;
     try{
-      const r=await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl='+sl+'&tl='+tg+'&dt=t&q='+encodeURIComponent(text),{signal:AbortSignal.timeout(8000)});
-      if(r.status===429||r.status===403){coolUntil=performance.now()+20000;thr=Math.min(32,thr*2);showPace();dbg('⏳ Google Translate web đang giới hạn: nghỉ 20s');throw new Error(draft?'cooldown':'429')}
-      if(!r.ok)throw new Error(r.status);
-      const j=await r.json(),t=(j[0]||[]).map(x=>x[0]||'').join('').trim();
-      if(t){onOk();return t}
-      throw new Error('rỗng');
-    }catch(e){err=e;if(draft||e.message==='cooldown')break;await sleep(300)}
+      const t=await(k==='g'?viaG:k==='m'?viaM:viaGem)(text,sl,tg);
+      if(t){if(k==='g')onOk();else if(!usedFb[k]){usedFb[k]=1;dbg('↪ Dịch dự phòng bằng '+PN[k])}return t}
+    }catch(e){
+      err=e;
+      if(e.limit){provDown[k]=performance.now()+(k==='g'?20000:60000);if(k==='g'){thr=Math.min(32,thr*2);showPace()}dbg('⏳ '+PN[k]+' giới hạn → nghỉ, chuyển đường khác')}
+      else{provDown[k]=performance.now()+30000;dbg('⚠️ '+PN[k]+' lỗi ('+(e.message||e)+') → nghỉ 30s, chuyển đường khác')}
+    }
   }
-  if(draft)throw err;
-  try{
-    const r=await fetch('https://api.mymemory.translated.net/get?q='+encodeURIComponent(text.slice(0,450))+'&langpair='+sl+'|'+tg,{signal:AbortSignal.timeout(8000)});
-    const j=await r.json(),t=j.responseData&&j.responseData.translatedText;
-    if(j.responseStatus==200&&t&&!/MYMEMORY WARNING/i.test(t))return t.trim();
-  }catch(e){}
-  throw err||new Error('lỗi dịch');
+  throw err||new Error('cooldown');
 }
 
 async function translateText(text,tg,draft,sl){
@@ -493,7 +512,7 @@ async function gfetch(url,body,o={}){
   for(let i=0;;i++){
     const w=coolUntil-performance.now();
     if(w>0){if(o.optional)throw new Error('cooldown');await sleep(Math.min(w,10000))}
-    const res=await fetch(url,{signal:AbortSignal.timeout(o.timeout||20000),method:'POST',headers:{'Content-Type':'application/json'},body});
+    const res=await fetch(url,{signal:tmo(o.timeout||20000),method:'POST',headers:{'Content-Type':'application/json'},body});
     if(res.status!==429){if(res.ok)onOk();return res}
     on429(await res.text());
     if(o.optional||i>=2)throw new Error('429 – hết hạn mức API');
