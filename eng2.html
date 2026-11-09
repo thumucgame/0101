@@ -93,7 +93,6 @@ button,.chip{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 #pc:empty{display:none}
 #turn{flex:0 0 auto;min-height:38px;min-width:0;padding:4px 10px;font-size:15px}
 #turn[hidden],.meter[hidden]{display:none}
-.list{overscroll-behavior:contain}
 </style>
 </head>
 <body>
@@ -129,33 +128,6 @@ button,.chip{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 </div></div>
 <script>
 const $=id=>document.getElementById(id);
-// ---- tự co chữ vừa khung + tự cuộn theo chữ mới nhất ----
-let touchedAt=0,fitRaf=0;
-function fitList(L){
-  const first=L.querySelector('.msg');
-  L.querySelectorAll('.msg:not(:first-child) .main').forEach(m=>m.style.fontSize='');
-  if(!first)return;
-  const main=first.querySelector('.main'),cs=getComputedStyle(L);
-  const pt=parseFloat(cs.paddingTop)||0,pb=parseFloat(cs.paddingBottom)||0;
-  const avail=L.clientHeight-pt-pb;if(avail<=0)return;
-  const cap=L.querySelectorAll('.msg').length>1?avail*0.72:avail;
-  let lo=Math.max(20,Math.min(26,innerWidth*0.055)),hi=Math.max(38,Math.min(96,innerWidth*0.11));
-  main.style.fontSize=hi+'px';
-  if(first.offsetHeight>cap){
-    while(hi-lo>1){const mid=(lo+hi)/2;main.style.fontSize=mid+'px';if(first.offsetHeight>cap)hi=mid;else lo=mid}
-    main.style.fontSize=lo+'px';
-  }
-  if(Date.now()-touchedAt>4000){
-    L.scrollTop=first.offsetHeight>avail?Math.max(0,pt+first.offsetHeight-L.clientHeight+6):0;
-  }
-}
-function fitAll(){if(fitRaf)return;fitRaf=requestAnimationFrame(()=>{fitRaf=0;fitList($('list_guest'));fitList($('list_holder'))})}
-for(const id of ['list_guest','list_holder']){
-  const L=$(id);
-  for(const ev of ['wheel','touchstart'])L.addEventListener(ev,()=>{touchedAt=Date.now()},{passive:true});
-  try{new ResizeObserver(fitAll).observe(L)}catch(e){}
-}
-addEventListener('resize',fitAll);addEventListener('orientationchange',fitAll);
 try{$('key').value=localStorage.getItem('gk')||''}catch(e){}
 let ctx,stream,proc,running=false;
 let speaking=false,tts=false,mutedUntil=0,floor=0.002;
@@ -209,9 +181,9 @@ function newMsg(src,tg){
     const L=$('list_'+who),emp=L.querySelector('.empty');if(emp)emp.remove();
     const el=document.createElement('div');el.className='msg '+src;
     el.innerHTML='<div class="main"></div><div class="sub"></div>';
-    el.classList.add('k_'+kind);L.prepend(el);L.scrollTop=0;touchedAt=0;fitAll();parts.push({el,kind});
+    el.classList.add('k_'+kind);L.prepend(el);L.scrollTop=0;parts.push({el,kind});
   }
-  return{draft(on){for(const p of parts)p.el.classList.toggle('draft',on)},rm(){for(const p of parts)p.el.remove();fitAll()},set(orig,trans){for(const p of parts){p.el.querySelector('.main').textContent=p.kind==='orig'?orig:trans;p.el.querySelector('.sub').textContent=p.kind==='orig'?trans:orig}fitAll()}};
+  return{draft(on){for(const p of parts)p.el.classList.toggle('draft',on)},rm(){for(const p of parts)p.el.remove()},set(orig,trans){for(const p of parts){p.el.querySelector('.main').textContent=p.kind==='orig'?orig:trans;p.el.querySelector('.sub').textContent=p.kind==='orig'?trans:orig}}};
 }
 function say(text,tg){
   const v=$('voice').value,{holder,guest}=side();
