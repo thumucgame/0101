@@ -137,7 +137,6 @@ button,.chip{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 <div class="row"><label><input type="checkbox" id="hp">🎧 Chế độ tai nghe (nghe tiếp khi đang phát, nhanh hơn)</label><span>Cắt câu: <select id="sil"><option value="300">Siêu nhanh</option><option value="450" selected>Nhanh</option><option value="600">Vừa</option><option value="900">Chậm</option></select></span><span>Độ nhạy mic: <select id="sens"><option value="0.004">Rất cao</option><option value="0.008" selected>Cao</option><option value="0.015">Vừa</option></select></span><span>Tốc độ đọc: <select id="rate"><option value="0.9">0.9x</option><option value="1" selected>1x</option><option value="1.15">1.15x</option><option value="1.3">1.3x</option></select></span></div>
 <div class="row"><b>Giọng đọc:</b><span>English <select id="v_en"></select></span><span>中文 <select id="v_zh"></select></span><span>日本語 <select id="v_ja"></select></span><span>Việt <select id="v_vi"></select></span></div>
 <div class="row" style="color:var(--mut)">Để “Tự động” sẽ chọn giọng chuẩn nhất trên máy (ưu tiên giọng Natural/Neural/Google, đúng vùng en-US, 中文 zh-CN). Nếu vẫn khó nghe, chọn giọng khác ở đây rồi bấm 🔊 Thử loa.</div>
-<div class="row"><label><input type="checkbox" id="flip">🔁 Đảo bên báo lượt (mặc định tắt: nói xong → lượt nhảy sang bên kia)</label></div>
 <div id="dbg" style="font:12px/1.4 monospace;color:var(--mut);white-space:pre-wrap;word-break:break-all">Nhật ký: (trống)</div>
 </div></div>
 <script>
@@ -153,9 +152,7 @@ const TT={
  your:{vi:'👉 ĐẾN LƯỢT BẠN NÓI',en:'👉 YOUR TURN – SPEAK NOW',ja:'👉 あなたの番です',zh:'👉 轮到你说话了'}
 };
 let TURN={st:'off',src:null},pendingTurn=false,turnSrc=null,lastTg=null;
-try{const f=localStorage.getItem('flip2');$('flip').checked=f==='1'}catch(e){}
-$('flip').onchange=()=>{try{localStorage.setItem('flip2',$('flip').checked?'1':'0')}catch(e){}applyTurn()};
-function sideOf(l){const {holder:h,guest:g}=side();const r=l===h?'holder':'guest';return $('flip').checked?(r==='holder'?'guest':'holder'):r}
+function sideOf(l){const {holder:h,guest:g}=side();const r=l===h?'holder':'guest';return r}
 function setTurn(st,src){src=src||null;if(TURN.st===st&&TURN.src===src)return;TURN={st,src};applyTurn()}
 function applyTurn(){
   const sd=side(),st=TURN.st;
