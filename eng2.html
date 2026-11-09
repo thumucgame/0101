@@ -93,9 +93,6 @@ button,.chip{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 #pc:empty{display:none}
 #turn{flex:0 0 auto;min-height:38px;min-width:0;padding:4px 10px;font-size:15px}
 #turn[hidden],.meter[hidden]{display:none}
-input[type=range]{padding:0;border:0;background:none;min-width:140px;flex:1;accent-color:var(--b)}
-#rateV{min-width:48px;text-align:right}
-.rp{padding:4px 10px;min-height:36px!important;border-radius:8px}
 .list{overscroll-behavior:contain}
 </style>
 </head>
@@ -127,7 +124,7 @@ input[type=range]{padding:0;border:0;background:none;min-width:140px;flex:1;acce
 <div class="row"><span>Đọc ra loa: <select id="voice"><option value="both">Cả hai chiều</option><option value="guest">Chỉ đọc cho khách nghe</option><option value="holder">Chỉ đọc cho người cầm nghe</option><option value="off">Tắt tiếng (chỉ hiện chữ)</option></select></span></div>
 <div class="row"><label><input type="checkbox" id="auto" checked>⚡ Tự bám tốc độ nói (nói nhanh → chữ &amp; tiếng cũng nhanh theo)</label></div>
 <div class="row"><span>Mic khi loa đang đọc: <select id="duplex"><option value="open">Luôn mở – không mất lời (tự lọc tiếng vọng)</option><option value="mute">Tắt tạm (như cũ)</option></select></span></div>
-<div class="row"><label><input type="checkbox" id="hp">🎧 Chế độ tai nghe (nghe tiếp khi đang phát, nhanh hơn)</label><span>Cắt câu: <select id="sil"><option value="300">Siêu nhanh</option><option value="450" selected>Nhanh</option><option value="600">Vừa</option><option value="900">Chậm</option></select></span><span>Độ nhạy mic: <select id="sens"><option value="0.004">Rất cao</option><option value="0.008" selected>Cao</option><option value="0.015">Vừa</option></select></span><span style="display:flex;gap:8px;align-items:center;flex:1 1 100%;flex-wrap:wrap">Tốc độ đọc: <input id="rate" type="range" min="0.6" max="3" step="0.05" value="1.15"><b id="rateV">1.15x</b><span style="display:flex;gap:6px"><button class="rp" data-r="1">1x</button><button class="rp" data-r="1.5">1.5x</button><button class="rp" data-r="2">2x</button><button class="rp" data-r="2.5">2.5x</button><button class="rp" data-r="3">3x</button></span></span></div>
+<div class="row"><label><input type="checkbox" id="hp">🎧 Chế độ tai nghe (nghe tiếp khi đang phát, nhanh hơn)</label><span>Cắt câu: <select id="sil"><option value="300">Siêu nhanh</option><option value="450" selected>Nhanh</option><option value="600">Vừa</option><option value="900">Chậm</option></select></span><span>Độ nhạy mic: <select id="sens"><option value="0.004">Rất cao</option><option value="0.008" selected>Cao</option><option value="0.015">Vừa</option></select></span><span>Tốc độ đọc: <select id="rate"><option value="1">1x</option><option value="1.15" selected>1.15x</option><option value="1.3">1.3x</option></select></span></div>
 <div id="dbg" style="font:12px/1.4 monospace;color:var(--mut);white-space:pre-wrap;word-break:break-all">Nhật ký: (trống)</div>
 </div></div>
 <script>
@@ -141,14 +138,14 @@ function fitList(L){
   const main=first.querySelector('.main'),cs=getComputedStyle(L);
   const pt=parseFloat(cs.paddingTop)||0,pb=parseFloat(cs.paddingBottom)||0;
   const avail=L.clientHeight-pt-pb;if(avail<=0)return;
-  const cap=L.querySelectorAll('.msg').length>1?avail*0.72:avail;   // chừa chỗ cho câu trước ló ra bên dưới
+  const cap=L.querySelectorAll('.msg').length>1?avail*0.72:avail;
   let lo=Math.max(20,Math.min(26,innerWidth*0.055)),hi=Math.max(38,Math.min(96,innerWidth*0.11));
   main.style.fontSize=hi+'px';
   if(first.offsetHeight>cap){
     while(hi-lo>1){const mid=(lo+hi)/2;main.style.fontSize=mid+'px';if(first.offsetHeight>cap)hi=mid;else lo=mid}
     main.style.fontSize=lo+'px';
   }
-  if(Date.now()-touchedAt>4000){   // đang tự theo; người dùng vừa tự cuộn thì không giật lại
+  if(Date.now()-touchedAt>4000){
     L.scrollTop=first.offsetHeight>avail?Math.max(0,pt+first.offsetHeight-L.clientHeight+6):0;
   }
 }
@@ -159,12 +156,6 @@ for(const id of ['list_guest','list_holder']){
   try{new ResizeObserver(fitAll).observe(L)}catch(e){}
 }
 addEventListener('resize',fitAll);addEventListener('orientationchange',fitAll);
-// ---- tốc độ đọc tuỳ chỉnh ----
-try{const r=localStorage.getItem('rate2');if(r)$('rate').value=r}catch(e){}
-const showRate=()=>{$('rateV').textContent=String(+(+$('rate').value).toFixed(2))+'x'};
-$('rate').oninput=()=>{showRate();try{localStorage.setItem('rate2',$('rate').value)}catch(e){}};
-document.querySelectorAll('.rp').forEach(b=>b.onclick=()=>{$('rate').value=b.dataset.r;$('rate').oninput()});
-showRate();
 try{$('key').value=localStorage.getItem('gk')||''}catch(e){}
 let ctx,stream,proc,running=false;
 let speaking=false,tts=false,mutedUntil=0,floor=0.002;
@@ -411,45 +402,26 @@ async function freeTr(text,tg,draft,sl){
     Translator.availability({sourceLanguage:sl,targetLanguage:tg}).then(av=>{if(av==='available')mkChrome(k,sl,tg,false)}).catch(()=>{})}
   return webTr(text,sl,tg,draft);
 }
-const tmo=ms=>{if(AbortSignal.timeout)return AbortSignal.timeout(ms);const c=new AbortController();setTimeout(()=>c.abort(),ms);return c.signal};
-const provDown={g:0,m:0,gem:0},usedFb={},PN={g:'Google Translate',m:'MyMemory',gem:'Gemini'};
-async function viaG(text,sl,tg){
-  const r=await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl='+sl+'&tl='+tg+'&dt=t&q='+encodeURIComponent(text),{signal:tmo(8000)});
-  if(r.status===429||r.status===403){const e=new Error('429');e.limit=true;throw e}
-  if(!r.ok)throw new Error(r.status);
-  const j=await r.json(),t=(j[0]||[]).map(x=>x[0]||'').join('').trim();
-  if(!t)throw new Error('rỗng');return t;
-}
-async function viaM(text,sl,tg){
-  const r=await fetch('https://api.mymemory.translated.net/get?q='+encodeURIComponent(text.slice(0,450))+'&langpair='+sl+'|'+tg,{signal:tmo(8000)});
-  const j=await r.json(),t=j.responseData&&j.responseData.translatedText;
-  if(j.responseStatus==200&&t&&!/MYMEMORY WARNING/i.test(t))return t.trim();
-  const e=new Error('hết hạn mức');e.limit=true;throw e;
-}
-async function viaGem(text,sl,tg){   // chỉ dùng cho bản dịch cuối, khi 2 đường miễn phí đều hỏng
-  const m=$('model').value.trim();
-  const cfg=/gemini-3/.test(m)?{thinkingConfig:{thinkingLevel:'minimal'}}:/gemini-2\.5-flash/.test(m)?{thinkingConfig:{thinkingBudget:0},temperature:0}:{temperature:0};
-  const r=await gfetch(`${API}models/${m}:generateContent?key=${encodeURIComponent($('key').value.trim())}`,JSON.stringify({contents:[{parts:[{text:`Translate into ${LN[tg]}. Output only the translation, written in ${LN[tg]}:\n${text}`}]}],generationConfig:cfg}));
-  if(!r.ok)throw new Error(r.status);
-  const t=((await r.json()).candidates?.[0]?.content?.parts||[]).map(x=>x.text||'').join('').trim();
-  if(!t)throw new Error('rỗng');return t;
-}
-// Thử lần lượt: Google Translate web → MyMemory → (chỉ bản cuối) Gemini. Đường nào lỗi thì nghỉ một lúc rồi dùng đường kế tiếp.
 async function webTr(text,sl,tg,draft){
+  if(performance.now()<coolUntil){if(draft)throw new Error('cooldown');await sleep(Math.min(coolUntil-performance.now(),3000))}
   let err;
-  for(const k of draft?['g','m']:['g','m','gem']){
-    if(performance.now()<provDown[k])continue;
-    if(k==='gem'&&!$('key').value.trim())continue;
+  for(let i=0;i<2;i++){
     try{
-      const t=await(k==='g'?viaG:k==='m'?viaM:viaGem)(text,sl,tg);
-      if(t){if(k==='g')onOk();else if(!usedFb[k]){usedFb[k]=1;dbg('↪ Dịch dự phòng bằng '+PN[k])}return t}
-    }catch(e){
-      err=e;
-      if(e.limit){provDown[k]=performance.now()+(k==='g'?20000:60000);if(k==='g'){thr=Math.min(32,thr*2);showPace()}dbg('⏳ '+PN[k]+' giới hạn → nghỉ, chuyển đường khác')}
-      else{provDown[k]=performance.now()+30000;dbg('⚠️ '+PN[k]+' lỗi ('+(e.message||e)+') → nghỉ 30s, chuyển đường khác')}
-    }
+      const r=await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl='+sl+'&tl='+tg+'&dt=t&q='+encodeURIComponent(text),{signal:AbortSignal.timeout(8000)});
+      if(r.status===429||r.status===403){coolUntil=performance.now()+20000;thr=Math.min(32,thr*2);showPace();dbg('⏳ Google Translate web đang giới hạn: nghỉ 20s');throw new Error(draft?'cooldown':'429')}
+      if(!r.ok)throw new Error(r.status);
+      const j=await r.json(),t=(j[0]||[]).map(x=>x[0]||'').join('').trim();
+      if(t){onOk();return t}
+      throw new Error('rỗng');
+    }catch(e){err=e;if(draft||e.message==='cooldown')break;await sleep(300)}
   }
-  throw err||new Error('cooldown');
+  if(draft)throw err;
+  try{
+    const r=await fetch('https://api.mymemory.translated.net/get?q='+encodeURIComponent(text.slice(0,450))+'&langpair='+sl+'|'+tg,{signal:AbortSignal.timeout(8000)});
+    const j=await r.json(),t=j.responseData&&j.responseData.translatedText;
+    if(j.responseStatus==200&&t&&!/MYMEMORY WARNING/i.test(t))return t.trim();
+  }catch(e){}
+  throw err||new Error('lỗi dịch');
 }
 
 async function translateText(text,tg,draft,sl){
@@ -512,7 +484,7 @@ async function gfetch(url,body,o={}){
   for(let i=0;;i++){
     const w=coolUntil-performance.now();
     if(w>0){if(o.optional)throw new Error('cooldown');await sleep(Math.min(w,10000))}
-    const res=await fetch(url,{signal:tmo(o.timeout||20000),method:'POST',headers:{'Content-Type':'application/json'},body});
+    const res=await fetch(url,{signal:AbortSignal.timeout(o.timeout||20000),method:'POST',headers:{'Content-Type':'application/json'},body});
     if(res.status!==429){if(res.ok)onOk();return res}
     on429(await res.text());
     if(o.optional||i>=2)throw new Error('429 – hết hạn mức API');
@@ -726,7 +698,7 @@ function playNext(){
   const f=tq.shift();let text=f.text,n=0;
   while(tq.length&&tq[0].lang===f.lang){text+=(f.lang==='ja-JP'?'':' ')+tq.shift().text;n++}
   const back=n+tq.length;pend=back+1;noteSpoken(text);
-  const rate=Math.min(4,(+$('rate').value)*P()*(1+.12*Math.min(3,back)));
+  const rate=Math.min(2.5,(+$('rate').value)*P()*(1+.12*Math.min(3,back)));
   const lang=f.lang,u=new SpeechSynthesisUtterance(text);u.lang=lang;u.rate=rate;
   const v=speechSynthesis.getVoices().find(x=>x.lang.replace('_','-').startsWith(lang.slice(0,2)));
   if(v)u.voice=v;
