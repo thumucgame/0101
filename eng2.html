@@ -93,6 +93,10 @@ button,.chip{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 #pc:empty{display:none}
 #turn{flex:0 0 auto;min-height:38px;min-width:0;padding:4px 10px;font-size:15px}
 #turn[hidden],.meter[hidden]{display:none}
+input[type=range]{padding:0;border:0;background:none;min-width:140px;flex:1;accent-color:var(--b)}
+#rateV{min-width:48px;text-align:right}
+.rp{padding:4px 10px;min-height:36px!important;border-radius:8px}
+.list{overscroll-behavior:contain}
 </style>
 </head>
 <body>
@@ -123,11 +127,44 @@ button,.chip{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 <div class="row"><span>Đọc ra loa: <select id="voice"><option value="both">Cả hai chiều</option><option value="guest">Chỉ đọc cho khách nghe</option><option value="holder">Chỉ đọc cho người cầm nghe</option><option value="off">Tắt tiếng (chỉ hiện chữ)</option></select></span></div>
 <div class="row"><label><input type="checkbox" id="auto" checked>⚡ Tự bám tốc độ nói (nói nhanh → chữ &amp; tiếng cũng nhanh theo)</label></div>
 <div class="row"><span>Mic khi loa đang đọc: <select id="duplex"><option value="open">Luôn mở – không mất lời (tự lọc tiếng vọng)</option><option value="mute">Tắt tạm (như cũ)</option></select></span></div>
-<div class="row"><label><input type="checkbox" id="hp">🎧 Chế độ tai nghe (nghe tiếp khi đang phát, nhanh hơn)</label><span>Cắt câu: <select id="sil"><option value="300">Siêu nhanh</option><option value="450" selected>Nhanh</option><option value="600">Vừa</option><option value="900">Chậm</option></select></span><span>Độ nhạy mic: <select id="sens"><option value="0.004">Rất cao</option><option value="0.008" selected>Cao</option><option value="0.015">Vừa</option></select></span><span>Tốc độ đọc: <select id="rate"><option value="1">1x</option><option value="1.15" selected>1.15x</option><option value="1.3">1.3x</option></select></span></div>
+<div class="row"><label><input type="checkbox" id="hp">🎧 Chế độ tai nghe (nghe tiếp khi đang phát, nhanh hơn)</label><span>Cắt câu: <select id="sil"><option value="300">Siêu nhanh</option><option value="450" selected>Nhanh</option><option value="600">Vừa</option><option value="900">Chậm</option></select></span><span>Độ nhạy mic: <select id="sens"><option value="0.004">Rất cao</option><option value="0.008" selected>Cao</option><option value="0.015">Vừa</option></select></span><span style="display:flex;gap:8px;align-items:center;flex:1 1 100%;flex-wrap:wrap">Tốc độ đọc: <input id="rate" type="range" min="0.6" max="3" step="0.05" value="1.15"><b id="rateV">1.15x</b><span style="display:flex;gap:6px"><button class="rp" data-r="1">1x</button><button class="rp" data-r="1.5">1.5x</button><button class="rp" data-r="2">2x</button><button class="rp" data-r="2.5">2.5x</button><button class="rp" data-r="3">3x</button></span></span></div>
 <div id="dbg" style="font:12px/1.4 monospace;color:var(--mut);white-space:pre-wrap;word-break:break-all">Nhật ký: (trống)</div>
 </div></div>
 <script>
 const $=id=>document.getElementById(id);
+// ---- tự co chữ vừa khung + tự cuộn theo chữ mới nhất ----
+let touchedAt=0,fitRaf=0;
+function fitList(L){
+  const first=L.querySelector('.msg');
+  L.querySelectorAll('.msg:not(:first-child) .main').forEach(m=>m.style.fontSize='');
+  if(!first)return;
+  const main=first.querySelector('.main'),cs=getComputedStyle(L);
+  const pt=parseFloat(cs.paddingTop)||0,pb=parseFloat(cs.paddingBottom)||0;
+  const avail=L.clientHeight-pt-pb;if(avail<=0)return;
+  const cap=L.querySelectorAll('.msg').length>1?avail*0.72:avail;   // chừa chỗ cho câu trước ló ra bên dưới
+  let lo=Math.max(20,Math.min(26,innerWidth*0.055)),hi=Math.max(38,Math.min(96,innerWidth*0.11));
+  main.style.fontSize=hi+'px';
+  if(first.offsetHeight>cap){
+    while(hi-lo>1){const mid=(lo+hi)/2;main.style.fontSize=mid+'px';if(first.offsetHeight>cap)hi=mid;else lo=mid}
+    main.style.fontSize=lo+'px';
+  }
+  if(Date.now()-touchedAt>4000){   // đang tự theo; người dùng vừa tự cuộn thì không giật lại
+    L.scrollTop=first.offsetHeight>avail?Math.max(0,pt+first.offsetHeight-L.clientHeight+6):0;
+  }
+}
+function fitAll(){if(fitRaf)return;fitRaf=requestAnimationFrame(()=>{fitRaf=0;fitList($('list_guest'));fitList($('list_holder'))})}
+for(const id of ['list_guest','list_holder']){
+  const L=$(id);
+  for(const ev of ['wheel','touchstart'])L.addEventListener(ev,()=>{touchedAt=Date.now()},{passive:true});
+  try{new ResizeObserver(fitAll).observe(L)}catch(e){}
+}
+addEventListener('resize',fitAll);addEventListener('orientationchange',fitAll);
+// ---- tốc độ đọc tuỳ chỉnh ----
+try{const r=localStorage.getItem('rate2');if(r)$('rate').value=r}catch(e){}
+const showRate=()=>{$('rateV').textContent=String(+(+$('rate').value).toFixed(2))+'x'};
+$('rate').oninput=()=>{showRate();try{localStorage.setItem('rate2',$('rate').value)}catch(e){}};
+document.querySelectorAll('.rp').forEach(b=>b.onclick=()=>{$('rate').value=b.dataset.r;$('rate').oninput()});
+showRate();
 try{$('key').value=localStorage.getItem('gk')||''}catch(e){}
 let ctx,stream,proc,running=false;
 let speaking=false,tts=false,mutedUntil=0,floor=0.002;
@@ -181,9 +218,9 @@ function newMsg(src,tg){
     const L=$('list_'+who),emp=L.querySelector('.empty');if(emp)emp.remove();
     const el=document.createElement('div');el.className='msg '+src;
     el.innerHTML='<div class="main"></div><div class="sub"></div>';
-    el.classList.add('k_'+kind);L.prepend(el);L.scrollTop=0;parts.push({el,kind});
+    el.classList.add('k_'+kind);L.prepend(el);L.scrollTop=0;touchedAt=0;fitAll();parts.push({el,kind});
   }
-  return{draft(on){for(const p of parts)p.el.classList.toggle('draft',on)},rm(){for(const p of parts)p.el.remove()},set(orig,trans){for(const p of parts){p.el.querySelector('.main').textContent=p.kind==='orig'?orig:trans;p.el.querySelector('.sub').textContent=p.kind==='orig'?trans:orig}}};
+  return{draft(on){for(const p of parts)p.el.classList.toggle('draft',on)},rm(){for(const p of parts)p.el.remove();fitAll()},set(orig,trans){for(const p of parts){p.el.querySelector('.main').textContent=p.kind==='orig'?orig:trans;p.el.querySelector('.sub').textContent=p.kind==='orig'?trans:orig}fitAll()}};
 }
 function say(text,tg){
   const v=$('voice').value,{holder,guest}=side();
@@ -670,7 +707,7 @@ function playNext(){
   const f=tq.shift();let text=f.text,n=0;
   while(tq.length&&tq[0].lang===f.lang){text+=(f.lang==='ja-JP'?'':' ')+tq.shift().text;n++}
   const back=n+tq.length;pend=back+1;noteSpoken(text);
-  const rate=Math.min(2.5,(+$('rate').value)*P()*(1+.12*Math.min(3,back)));
+  const rate=Math.min(4,(+$('rate').value)*P()*(1+.12*Math.min(3,back)));
   const lang=f.lang,u=new SpeechSynthesisUtterance(text);u.lang=lang;u.rate=rate;
   const v=speechSynthesis.getVoices().find(x=>x.lang.replace('_','-').startsWith(lang.slice(0,2)));
   if(v)u.voice=v;
