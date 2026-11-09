@@ -93,17 +93,35 @@ button,.chip{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 #pc:empty{display:none}
 #turn{flex:0 0 auto;min-height:38px;min-width:0;padding:4px 10px;font-size:15px}
 #turn[hidden],.meter[hidden]{display:none}
+/* ---- cuộn mượt & dễ đọc (PC + mobile) ---- */
+html,body{overscroll-behavior:none;-webkit-text-size-adjust:100%;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+.half{position:relative}
+.list{position:relative;overflow-anchor:none;                 /* tự bù vị trí bằng JS, mọi trình duyệt đều giống nhau */
+  -webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;
+  scrollbar-width:thin;scrollbar-color:var(--bd) transparent;scrollbar-gutter:stable;  /* thanh cuộn không làm chữ xuống dòng lại */
+  padding-bottom:24px}
+.list::-webkit-scrollbar{width:6px}.list::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
+.msg{flex:0 0 auto;transition:opacity .35s ease;animation:msgIn .28s ease-out}
+@keyframes msgIn{from{opacity:0}}
+.msg .main{line-height:1.38;letter-spacing:.005em;line-break:strict}
+.msg .sub{line-height:1.4}
+.msg:not(:first-child){opacity:.82}
+.msg.draft{opacity:1}
+.topbtn{position:absolute;top:30px;right:12px;z-index:3;min-height:36px;padding:4px 12px;border-radius:18px;
+  border:0;background:var(--b);color:#fff;font-size:14px;font-weight:700;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+.topbtn[hidden]{display:none}
+@media (prefers-reduced-motion:reduce){.msg{animation:none;transition:none}}
 </style>
 </head>
 <body>
 <div id="stage">
-  <section class="half guest"><div class="hd" id="hd_guest"></div><div class="list" id="list_guest"></div></section>
+  <section class="half guest"><div class="hd" id="hd_guest"></div><button class="topbtn" data-for="list_guest" hidden>↑ Mới nhất</button><div class="list" id="list_guest"></div></section>
   <div class="mid">
     <div id="pair"></div>
     <div class="mrow"><div class="meter"><i id="lv"></i></div><span id="pc"></span><button id="turn" class="chip" hidden title="Chạm để đổi người đang nói"></button><span id="stt">Chưa chạy</span></div>
     <div class="mrow"><button id="clr" title="Xoá chữ">🗑</button><button id="btn" class="go">▶ Bắt đầu</button><button id="snd" title="Bật/tắt đọc ra loa">🔊</button><button id="fs" title="Toàn màn hình">⛶</button><button id="gear" title="Cài đặt">⚙️</button></div>
   </div>
-  <section class="half holder"><div class="hd" id="hd_holder"></div><div class="list" id="list_holder"></div></section>
+  <section class="half holder"><div class="hd" id="hd_holder"></div><button class="topbtn" data-for="list_holder" hidden>↑ Mới nhất</button><div class="list" id="list_holder"></div></section>
 </div>
 
 <div id="drawer"><div class="sheet">
@@ -173,6 +191,32 @@ document.addEventListener('click',e=>{const c=e.target.closest('.chip');if(c)set
   $('swap').onclick=()=>{const h=$('lang_holder').value;$('lang_holder').value=$('lang_guest').value;$('lang_guest').value=h;savePair();heads()};
   heads();
 })();
+// ---- cuộn mượt: giữ nguyên chỗ đang đọc, chỉ tự lên đầu khi đang ở đầu ----
+const _ro={};
+function _watch(L){
+  return _ro[L.id]||(_ro[L.id]=new ResizeObserver(es=>{
+    const top=L.scrollTop<=2;let d=0;
+    for(const e of es){
+      const el=e.target,h=el.offsetHeight,o=el._h;el._h=h;
+      if(top||o==null||o===h)continue;
+      if(el.offsetTop+o<=L.scrollTop+1)d+=h-o;      // thẻ nằm phía trên vùng đang đọc đổi chiều cao → bù lại
+    }
+    if(d)L.scrollTop+=d;
+  }));
+}
+function keepView(L,el){
+  const away=L.scrollTop>2,h0=L.scrollHeight;
+  L.prepend(el);
+  if(away)L.scrollTop+=L.scrollHeight-h0;           // đang đọc câu cũ: không giật
+  else L.scrollTop=0;                               // đang ở đầu: bám câu mới nhất
+  el._h=el.offsetHeight;_watch(L).observe(el);
+}
+document.querySelectorAll('.topbtn').forEach(b=>{
+  const L=$(b.dataset.for);let t=0;
+  const upd=()=>{t=0;b.hidden=L.scrollTop<90};
+  L.addEventListener('scroll',()=>{if(!t)t=requestAnimationFrame(upd)},{passive:true});
+  b.onclick=()=>L.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'});
+});
 // Mỗi câu = 1 thẻ ở màn nào hiểu được ngôn ngữ đó; câu mới luôn nằm trên cùng.
 function newMsg(src,tg){
   const {holder,guest}=side(),parts=[];
@@ -181,7 +225,7 @@ function newMsg(src,tg){
     const L=$('list_'+who),emp=L.querySelector('.empty');if(emp)emp.remove();
     const el=document.createElement('div');el.className='msg '+src;
     el.innerHTML='<div class="main"></div><div class="sub"></div>';
-    el.classList.add('k_'+kind);L.prepend(el);L.scrollTop=0;parts.push({el,kind});
+    el.classList.add('k_'+kind);keepView(L,el);parts.push({el,kind});
   }
   return{draft(on){for(const p of parts)p.el.classList.toggle('draft',on)},rm(){for(const p of parts)p.el.remove()},set(orig,trans){for(const p of parts){p.el.querySelector('.main').textContent=p.kind==='orig'?orig:trans;p.el.querySelector('.sub').textContent=p.kind==='orig'?trans:orig}}};
 }
@@ -385,7 +429,11 @@ async function webTr(text,sl,tg,draft){
       const j=await r.json(),t=(j[0]||[]).map(x=>x[0]||'').join('').trim();
       if(t){onOk();return t}
       throw new Error('rỗng');
-    }catch(e){err=e;if(draft||e.message==='cooldown')break;await sleep(300)}
+    }catch(e){err=e;
+      if(e instanceof TypeError){  // 429/CORS từ file:// bị trình duyệt báo thành "Failed to fetch" → coi như bị giới hạn
+        if(performance.now()>=coolUntil){coolUntil=performance.now()+20000;thr=Math.min(32,thr*2);showPace();dbg('⏳ Dịch web bị chặn/giới hạn: nghỉ 20s')}
+        err=new Error(draft?'cooldown':'429');break}
+      if(draft||e.message==='cooldown')break;await sleep(300)}
   }
   if(draft)throw err;
   try{
@@ -397,7 +445,10 @@ async function webTr(text,sl,tg,draft){
 }
 
 async function translateText(text,tg,draft,sl){
-  if(BT())return freeTr(text,tg,draft,sl);
+  if(BT()){
+    try{return await freeTr(text,tg,draft,sl)}
+    catch(e){if(draft||!$('key').value.trim())throw e;dbg('Dịch web lỗi → chuyển sang Gemini')}  // câu chốt: dự phòng bằng Gemini
+  }
   const m=$('model').value.trim();
   const cfg=/gemini-3/.test(m)?{thinkingConfig:{thinkingLevel:'minimal'}}:/gemini-2\.5-flash/.test(m)?{thinkingConfig:{thinkingBudget:0},temperature:0}:{temperature:0};
   const r=await gfetch(`${API}models/${m}:generateContent?key=${encodeURIComponent($('key').value.trim())}`,JSON.stringify({contents:[{parts:[{text:`Translate into ${LN[tg]}. The text may be an unfinished fragment of live speech: translate only the words given, never complete or add. Output only the translation, written in ${LN[tg]}:\n${text}`}]}],generationConfig:cfg}),{optional:!!draft});
