@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Phiên dịch Việt · Anh · Nhật</title>
+<title>Phiên dịch Việt · Anh · Nhật · Trung</title>
 <style>
 :root{--bg:#f6f7f9;--card:#fff;--tx:#1b1f24;--mut:#6b7280;--a:#e11d48;--b:#2563eb;--bd:#e5e7eb}
 @media (prefers-color-scheme:dark){:root{--bg:#0f1115;--card:#181b21;--tx:#e8eaed;--mut:#9aa0a6;--bd:#2a2f38}}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;overflow:hidden}
-body{font:16px/1.5 system-ui,"Noto Sans JP","Hiragino Sans",sans-serif;background:var(--bg);color:var(--tx)}
+body{font:16px/1.5 system-ui,"Noto Sans JP","Noto Sans SC","PingFang SC","Microsoft YaHei","Hiragino Sans",sans-serif;background:var(--bg);color:var(--tx)}
 input,select,button{font:inherit;padding:8px 12px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx)}
 button.go{background:var(--b);color:#fff;border:0;font-weight:600}
 button.go.on{background:var(--a)}
@@ -20,7 +20,7 @@ button.go.on{background:var(--a)}
 .list{flex:1;min-height:0;overflow-y:auto;padding:4px 12px 12px;display:flex;flex-direction:column;gap:10px}
 .empty{color:var(--mut);text-align:center;margin:auto;font-size:15px}
 .msg{padding:10px 14px;border-radius:14px;background:var(--card);border:1px solid var(--bd);border-left:6px solid #888}
-.msg.ja{border-left-color:var(--a)}.msg.vi{border-left-color:var(--b)}.msg.en{border-left-color:#16a34a}
+.msg.ja{border-left-color:var(--a)}.msg.vi{border-left-color:var(--b)}.msg.en{border-left-color:#16a34a}.msg.zh{border-left-color:#f59e0b}
 .msg .main{font-weight:700;font-size:clamp(20px,4.2vw,34px);line-height:1.3;white-space:pre-wrap;word-break:break-word}
 .msg .sub{color:var(--mut);font-size:clamp(13px,2.2vw,17px);margin-top:4px;white-space:pre-wrap;word-break:break-word}
 .msg:first-child .main{font-size:clamp(30px,7vw,64px)}   /* câu mới nhất ở trên cùng, chữ to nhất */
@@ -69,12 +69,12 @@ button,.chip{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .sheet select,.sheet button,.sheet input{min-height:44px}
 /* ---- gọn: nhường chỗ cho chữ dịch ---- */
 .hd{padding:4px 12px 2px;font-size:13px;opacity:.85}
-#pair{display:flex;gap:8px}
-.prow{flex:3;gap:6px;min-width:0}.prow.g{flex:2}
+#pair{display:flex;flex-direction:column;gap:4px}
+.prow{gap:6px;min-width:0}.prow b{flex:0 0 44px!important}
 .prow b{flex:0 0 auto;font-size:12px}
 .prow .chips{gap:4px}
 .mid{gap:6px;padding:6px 10px}
-.mid .chip{min-height:38px;padding:4px 2px;font-size:clamp(14px,3.8vw,17px);border-radius:10px}
+.mid .chip{min-height:34px;padding:4px 2px;font-size:clamp(14px,3.8vw,17px);border-radius:10px}
 .mid .meter{flex:0 0 50px;height:6px}
 .mid #stt{font-size:12px}
 .mrow{gap:8px}
@@ -93,17 +93,28 @@ button,.chip{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 #pc:empty{display:none}
 #turn{flex:0 0 auto;min-height:38px;min-width:0;padding:4px 10px;font-size:15px}
 #turn[hidden],.meter[hidden]{display:none}
+/* ---- báo lượt nói ---- */
+.tb{flex:0 0 auto;margin:2px 10px 4px;padding:8px 12px;border-radius:14px;text-align:center;font-weight:800;font-size:clamp(16px,4.8vw,24px);line-height:1.25;background:var(--card);border:2px solid var(--bd);color:var(--mut)}
+.tb[hidden]{display:none}
+.tb.hear,.tb.ready{color:var(--tx)}
+.tb.wait{opacity:.75}
+.tb.speak{background:#dc2626;border-color:#dc2626;color:#fff}
+.tb.listen{background:#2563eb;border-color:#2563eb;color:#fff}
+.tb.your{background:#16a34a;border-color:#16a34a;color:#fff;font-size:clamp(20px,6.4vw,32px);animation:pls 1s ease-in-out infinite}
+@keyframes pls{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(22,163,74,.6)}50%{transform:scale(1.02);box-shadow:0 0 0 10px rgba(22,163,74,0)}}
+.half.t-your{box-shadow:inset 0 0 0 6px #16a34a}
+.half.t-speak{box-shadow:inset 0 0 0 6px #dc2626}
 </style>
 </head>
 <body>
 <div id="stage">
-  <section class="half guest"><div class="hd" id="hd_guest"></div><div class="list" id="list_guest"></div></section>
+  <section class="half guest"><div class="hd" id="hd_guest"></div><div class="tb" id="tb_guest" hidden></div><div class="list" id="list_guest"></div></section>
   <div class="mid">
     <div id="pair"></div>
     <div class="mrow"><div class="meter"><i id="lv"></i></div><span id="pc"></span><button id="turn" class="chip" hidden title="Chạm để đổi người đang nói"></button><span id="stt">Chưa chạy</span></div>
     <div class="mrow"><button id="clr" title="Xoá chữ">🗑</button><button id="btn" class="go">▶ Bắt đầu</button><button id="snd" title="Bật/tắt đọc ra loa">🔊</button><button id="fs" title="Toàn màn hình">⛶</button><button id="gear" title="Cài đặt">⚙️</button></div>
   </div>
-  <section class="half holder"><div class="hd" id="hd_holder"></div><div class="list" id="list_holder"></div></section>
+  <section class="half holder"><div class="hd" id="hd_holder"></div><div class="tb" id="tb_holder" hidden></div><div class="list" id="list_holder"></div></section>
 </div>
 
 <div id="drawer"><div class="sheet">
@@ -123,31 +134,100 @@ button,.chip{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 <div class="row"><span>Đọc ra loa: <select id="voice"><option value="both">Cả hai chiều</option><option value="guest">Chỉ đọc cho khách nghe</option><option value="holder">Chỉ đọc cho người cầm nghe</option><option value="off">Tắt tiếng (chỉ hiện chữ)</option></select></span></div>
 <div class="row"><label><input type="checkbox" id="auto" checked>⚡ Tự bám tốc độ nói (nói nhanh → chữ &amp; tiếng cũng nhanh theo)</label></div>
 <div class="row"><span>Mic khi loa đang đọc: <select id="duplex"><option value="open">Luôn mở – không mất lời (tự lọc tiếng vọng)</option><option value="mute">Tắt tạm (như cũ)</option></select></span></div>
-<div class="row"><label><input type="checkbox" id="hp">🎧 Chế độ tai nghe (nghe tiếp khi đang phát, nhanh hơn)</label><span>Cắt câu: <select id="sil"><option value="300">Siêu nhanh</option><option value="450" selected>Nhanh</option><option value="600">Vừa</option><option value="900">Chậm</option></select></span><span>Độ nhạy mic: <select id="sens"><option value="0.004">Rất cao</option><option value="0.008" selected>Cao</option><option value="0.015">Vừa</option></select></span><span>Tốc độ đọc: <select id="rate"><option value="1">1x</option><option value="1.15" selected>1.15x</option><option value="1.3">1.3x</option></select></span></div>
+<div class="row"><label><input type="checkbox" id="hp">🎧 Chế độ tai nghe (nghe tiếp khi đang phát, nhanh hơn)</label><span>Cắt câu: <select id="sil"><option value="300">Siêu nhanh</option><option value="450" selected>Nhanh</option><option value="600">Vừa</option><option value="900">Chậm</option></select></span><span>Độ nhạy mic: <select id="sens"><option value="0.004">Rất cao</option><option value="0.008" selected>Cao</option><option value="0.015">Vừa</option></select></span><span>Tốc độ đọc: <select id="rate"><option value="0.9">0.9x</option><option value="1" selected>1x</option><option value="1.15">1.15x</option><option value="1.3">1.3x</option></select></span></div>
+<div class="row"><b>Giọng đọc:</b><span>English <select id="v_en"></select></span><span>中文 <select id="v_zh"></select></span><span>日本語 <select id="v_ja"></select></span><span>Việt <select id="v_vi"></select></span></div>
+<div class="row" style="color:var(--mut)">Để “Tự động” sẽ chọn giọng chuẩn nhất trên máy (ưu tiên giọng Natural/Neural/Google, đúng vùng en-US, 中文 zh-CN). Nếu vẫn khó nghe, chọn giọng khác ở đây rồi bấm 🔊 Thử loa.</div>
+<div class="row"><label><input type="checkbox" id="flip">🔁 Đảo bên báo lượt (mặc định tắt: nói xong → lượt nhảy sang bên kia)</label></div>
 <div id="dbg" style="font:12px/1.4 monospace;color:var(--mut);white-space:pre-wrap;word-break:break-all">Nhật ký: (trống)</div>
 </div></div>
 <script>
 const $=id=>document.getElementById(id);
+const LK=['vi','en','ja','zh'];
+// ---- báo lượt nói: mỗi màn hiện bằng ngôn ngữ của chính bên đó ----
+const TT={
+ ready:{vi:'🎙 Mời nói',en:'🎙 Please speak',ja:'🎙 お話しください',zh:'🎙 请说话'},
+ hear:{vi:'👂 Đang nghe…',en:'👂 Listening…',ja:'👂 聞いています…',zh:'👂 正在听…'},
+ speak:{vi:'🎙 Đang nói…',en:'🎙 Speaking…',ja:'🎙 話し中…',zh:'🎙 说话中…'},
+ wait:{vi:'⏳ Chờ đối phương…',en:'⏳ Please wait…',ja:'⏳ お待ちください',zh:'⏳ 请稍等…'},
+ listen:{vi:'🔊 Đang đọc bản dịch…',en:'🔊 Playing translation…',ja:'🔊 翻訳を再生中…',zh:'🔊 正在播放翻译…'},
+ your:{vi:'👉 ĐẾN LƯỢT BẠN NÓI',en:'👉 YOUR TURN – SPEAK NOW',ja:'👉 あなたの番です',zh:'👉 轮到你说话了'}
+};
+let TURN={st:'off',src:null},pendingTurn=false,turnSrc=null,lastTg=null;
+try{const f=localStorage.getItem('flip2');$('flip').checked=f==='1'}catch(e){}
+$('flip').onchange=()=>{try{localStorage.setItem('flip2',$('flip').checked?'1':'0')}catch(e){}applyTurn()};
+function sideOf(l){const {holder:h,guest:g}=side();const r=l===h?'holder':'guest';return $('flip').checked?(r==='holder'?'guest':'holder'):r}
+function setTurn(st,src){src=src||null;if(TURN.st===st&&TURN.src===src)return;TURN={st,src};applyTurn()}
+function applyTurn(){
+  const sd=side(),st=TURN.st;
+  for(const who of ['guest','holder']){
+    const tb=$('tb_'+who),half=tb.parentNode;
+    half.classList.remove('t-your','t-speak');
+    if(st==='off'){tb.hidden=true;continue}
+    let k=st;
+    if(st==='speak'||st==='listen'||st==='your'){const me=sideOf(TURN.src)===who;k=st==='speak'?(me?'speak':'wait'):(me?'wait':st)}
+    tb.hidden=false;tb.className='tb '+k;tb.textContent=TT[k][sd[who]];
+    if(k==='your'||k==='speak')half.classList.add('t-'+k);
+  }
+}
+function turnAfter(src){
+  if(!running||D.bubble||speaking)return;
+  turnSrc=src;pendingTurn=false;setTurn('your',src);
+}
+function flushTurn(){pendingTurn=false;if(!running||D.bubble||speaking)return;setTurn('your',turnSrc)}
 try{$('key').value=localStorage.getItem('gk')||''}catch(e){}
 let ctx,stream,proc,running=false;
 let speaking=false,tts=false,mutedUntil=0,floor=0.002;
 let seg=[],pre=[],silence=0,segLen=0;
 let SIL=450;$('sil').onchange=()=>SIL=+$('sil').value;SIL=+$('sil').value;
 const SR=16000,queue=[];let busy=false;
+// ---- chọn giọng đọc chuẩn nhất ----
+const vloc=v=>v.lang.replace('_','-').toLowerCase();
+const vOf=l=>speechSynthesis.getVoices().filter(v=>l==='zh'?/^(zh|cmn)/.test(vloc(v)):vloc(v).startsWith(l));
+const WANT={en:['en-us'],zh:['zh-cn','cmn-cn','cmn-hans-cn'],ja:['ja-jp'],vi:['vi-vn']};
+function vscore(v,l){
+  const n=v.name,L=vloc(v);let s=0;
+  if(WANT[l].includes(L))s+=60;else if(l==='en'&&L==='en-gb')s+=25;
+  if(l==='zh'&&/hk|tw|yue|hant/.test(L+n.toLowerCase()))s-=40;
+  if(/natural|neural|online|premium|enhanced|wavenet|siri/i.test(n))s+=40;
+  if(/google/i.test(n))s+=25;
+  if(/aria|jenny|samantha|ava|allison|xiaoxiao|xiaoyi|yunxi|yunyang|nanami|keita|kyoko|hoaimy|namminh|tingting|meijia/i.test(n))s+=15;
+  if(!v.localService)s+=8;
+  if(/compact|espeak|novelty|fred|albert|bad |zarvox|whisper|trinoids/i.test(n))s-=60;
+  return s;
+}
+const vSorted=l=>vOf(l).slice().sort((a,b)=>vscore(b,l)-vscore(a,l));
+function fillVoices(){
+  for(const l of LK){
+    const sel=$('v_'+l);if(!sel)continue;
+    let cur=sel.value;if(!cur){try{cur=localStorage.getItem('vc_'+l)||''}catch(e){}}
+    const vs=vSorted(l);sel.innerHTML='';
+    sel.add(new Option(vs.length?'Tự động (tốt nhất)':'(máy chưa có giọng)',''));
+    for(const v of vs)sel.add(new Option(v.name+' · '+v.lang,v.name));
+    sel.value=vs.some(v=>v.name===cur)?cur:'';
+    sel.onchange=()=>{try{localStorage.setItem('vc_'+l,sel.value)}catch(e){}};
+  }
+}
+function pickVoice(l){
+  const vs=vSorted(l),n=$('v_'+l)&&$('v_'+l).value;
+  return (n&&vs.find(v=>v.name===n))||vs[0]||null;
+}
+try{speechSynthesis.addEventListener('voiceschanged',fillVoices)}catch(e){}
+fillVoices();setTimeout(fillVoices,800);setTimeout(fillVoices,2500);
 
-const LC={ja:'ja-JP',vi:'vi-VN',en:'en-US'},NM={ja:'🇯🇵 Nhật',vi:'🇻🇳 Việt',en:'🇬🇧 Anh'};
-const OPTL={vi:'🇻🇳 Việt',en:'🇬🇧 Anh',ja:'🇯🇵 Nhật'};
+const LC={ja:'ja-JP',vi:'vi-VN',en:'en-US',zh:'zh-CN'},NM={ja:'🇯🇵 Nhật',vi:'🇻🇳 Việt',en:'🇬🇧 Anh',zh:'🇨🇳 Trung'};
+const OPTL={vi:'🇻🇳 Việt',en:'🇬🇧 Anh',ja:'🇯🇵 Nhật',zh:'🇨🇳 Trung'};
+const CJK=l=>l==='ja-JP'||l==='zh-CN';
 function side(){return{holder:$('lang_holder').value,guest:$('lang_guest').value}}
 // Hai bên nói chuyện qua lại; ngôn ngữ thứ ba (nếu có) cũng được dịch cho người cầm.
-function getMap(){const {holder:h,guest:g}=side();const m={};for(const l of ['ja','vi','en'])m[l]=l===h?g:l===g?h:h;return m}
+function getMap(){const {holder:h,guest:g}=side();const m={};for(const l of LK)m[l]=l===h?g:l===g?h:h;return m}
 function savePair(){try{localStorage.setItem('pair2',JSON.stringify({...side(),voice:$('voice').value}))}catch(e){}}
-const NAT={vi:'Tiếng Việt',en:'English',ja:'日本語'},FL={vi:'🇻🇳',en:'🇬🇧',ja:'🇯🇵'},
-  HINT={vi:'Hãy nói tiếng Việt',en:'Please speak English',ja:'日本語で話してください'};
-const SH={vi:'Việt',en:'English',ja:'日本語'};
+const NAT={vi:'Tiếng Việt',en:'English',ja:'日本語',zh:'中文'},FL={vi:'🇻🇳',en:'🇬🇧',ja:'🇯🇵',zh:'🇨🇳'},
+  HINT={vi:'Hãy nói tiếng Việt',en:'Please speak English',ja:'日本語で話してください',zh:'请说中文'};
+const SH={vi:'Việt',en:'English',ja:'日本語',zh:'中文'};
 const chipsHtml=(who,langs,cur)=>langs.map(l=>`<button class="chip${l===cur?' on':''}" data-w="${who}" data-l="${l}">${SH[l]}</button>`).join('');
 // Chọn ngôn ngữ ngay trên màn hình: người cầm chọn 1 trong 3, khách chỉ thấy 2 ngôn ngữ còn lại.
 function heads(){
-  const {holder:h,guest:g}=side(),all=['vi','en','ja'];
+  const {holder:h,guest:g}=side(),all=LK;
   $('pair').innerHTML='<div class="prow h"><b>Tôi</b><div class="chips">'+chipsHtml('holder',all,h)+'</div></div><div class="prow g"><b>Khách</b><div class="chips">'+chipsHtml('guest',all.filter(l=>l!==h),g)+'</div></div>';
   $('hd_guest').textContent='🧑‍💼 Guest · お客様 · '+NAT[g];
   $('hd_holder').textContent='🧑 Tôi · '+NAT[h];
@@ -155,6 +235,7 @@ function heads(){
     const L=$('list_'+k),o=L.querySelector('.empty');if(o)o.remove();
     if(!L.querySelector('.msg')){const e=document.createElement('div');e.className='empty';e.textContent='🎙 '+HINT[X];L.appendChild(e)}
   }
+  applyTurn();
 }
 function setLang(who,l){
   const a=$('lang_'+who),b=$('lang_'+(who==='holder'?'guest':'holder'));
@@ -164,9 +245,9 @@ function setLang(who,l){
 document.addEventListener('click',e=>{const c=e.target.closest('.chip');if(c)setLang(c.dataset.w,c.dataset.l)});
 (function(){
   let p={holder:'vi',guest:'ja',voice:'both'};try{p={...p,...JSON.parse(localStorage.getItem('pair2')||'{}')}}catch(e){}
-  for(const id of ['lang_holder','lang_guest'])for(const k of ['vi','en','ja'])$(id).add(new Option(OPTL[k],k));
+  for(const id of ['lang_holder','lang_guest'])for(const k of LK)$(id).add(new Option(OPTL[k],k));
   $('lang_holder').value=p.holder;$('lang_guest').value=p.guest;$('voice').value=p.voice;
-  const fix=(chg,other)=>{if($(chg).value===$(other).value)$(other).value=['vi','en','ja'].find(x=>x!==$(chg).value);savePair();heads()};
+  const fix=(chg,other)=>{if($(chg).value===$(other).value)$(other).value=LK.find(x=>x!==$(chg).value);savePair();heads()};
   $('lang_holder').onchange=()=>fix('lang_holder','lang_guest');
   $('lang_guest').onchange=()=>fix('lang_guest','lang_holder');
   $('voice').onchange=savePair;
@@ -188,7 +269,7 @@ function newMsg(src,tg){
 function say(text,tg){
   const v=$('voice').value,{holder,guest}=side();
   if(v==='off'||(v==='guest'&&tg!==guest)||(v==='holder'&&tg!==holder))return;
-  speak(text,LC[tg]);
+  lastTg=tg;speak(text,LC[tg]);
 }
 // ---- giao diện ----
 $('gear').onclick=()=>$('drawer').classList.add('open');
@@ -219,12 +300,12 @@ const dl=[];
 function dbg(t){dl.push(new Date().toTimeString().slice(0,8)+' '+t);if(dl.length>6)dl.shift();$('dbg').textContent=dl.join('\n')}
 function voiceInfo(){
   const v=speechSynthesis.getVoices();
-  return ['vi','en','ja'].map(l=>l+': '+v.filter(x=>x.lang.replace('_','-').toLowerCase().startsWith(l)).length+' giọng').join(' | ');
+  return LK.map(l=>l+': '+v.filter(x=>x.lang.replace('_','-').toLowerCase().startsWith(l)).length+' giọng').join(' | ');
 }
 $('spk').onclick=()=>{
   speechSynthesis.cancel();
   dbg('Giọng có trên máy → '+voiceInfo());
-  speak('Xin chào, đây là thử loa','vi-VN');speak('Hello, speaker test','en-US');speak('こんにちは、スピーカーテストです','ja-JP');
+  speak('Xin chào, đây là thử loa','vi-VN');speak('Hello, speaker test','en-US');speak('こんにちは、スピーカーテストです','ja-JP');speak('你好，这是扬声器测试','zh-CN');
 };
 function setStatus(s){$('stt').textContent=s}
 
@@ -234,12 +315,12 @@ $('btn').onclick=async()=>{
   try{localStorage.setItem('gk',k)}catch(e){}
   // mở khoá âm thanh/loa NGAY trong cú chạm
   ctx=new AudioContext();ctx.resume&&ctx.resume();
-  for(const l of ['vi-VN','en-US','ja-JP']){const u=new SpeechSynthesisUtterance('.');u.lang=l;u.volume=0;speechSynthesis.speak(u)}
+  for(const l of ['vi-VN','en-US','ja-JP','zh-CN']){const u=new SpeechSynthesisUtterance('.');u.lang=l;u.volume=0;speechSynthesis.speak(u)}
   if(BT())prepFree();   // xin gói dịch trên máy ngay trong cú chạm
   try{await attachMic()}catch(e){alert('Không mở được mic: '+e.message);try{ctx.close()}catch(_){}return}
   speechSynthesis.getVoices();
   warm();clearInterval(warmT);warmT=setInterval(warm,40000);clearInterval(watchT);watchT=setInterval(watch,1500);
-  running=true;$('btn').textContent='⏹ Dừng';$('btn').classList.add('on');setStatus('Đang lắng nghe…');
+  running=true;setTurn('ready');$('btn').textContent='⏹ Dừng';$('btn').classList.add('on');setStatus('Đang lắng nghe…');
   live=$('mode').value==='live';fails=0;if(live){setStatus('Đang kết nối Live…');liveOpen()}
 };
 let warmT,watchT,msrc,lastAudio=0,zeroStart=0,recovering=false,lastRec=0,wasMuted=false;
@@ -272,7 +353,7 @@ function watch(){
 }
 document.addEventListener('visibilitychange',()=>{if(running&&!document.hidden){try{ctx.resume()}catch(e){}watch()}});
 function warm(){if(performance.now()<coolUntil)return;fetch(API+'models/'+$('model').value.trim()+'?key='+encodeURIComponent($('key').value.trim())).catch(()=>{})}
-function stop(){$('turn').hidden=true;document.querySelector('.meter').hidden=false;clearInterval(warmT);clearInterval(watchT);try{msrc&&msrc.disconnect()}catch(e){}live=false;clearTimeout(rt);const w0=ws;ws=null;try{w0&&w0.close()}catch(e){}acc=[];
+function stop(){setTurn('off');pendingTurn=false;$('turn').hidden=true;document.querySelector('.meter').hidden=false;clearInterval(warmT);clearInterval(watchT);try{msrc&&msrc.disconnect()}catch(e){}live=false;clearTimeout(rt);const w0=ws;ws=null;try{w0&&w0.close()}catch(e){}acc=[];
   running=false;proc&&proc.disconnect();stream&&stream.getTracks().forEach(t=>t.stop());ctx&&ctx.close();
   tq.length=0;tplay=false;spoken.length=0;ttsEnd=0;riskSeg=false;speechSynthesis.cancel();pend=0;tts=false;pace=1;thr=1;coolUntil=0;showPace();$('btn').textContent='▶ Bắt đầu';$('btn').classList.remove('on');setStatus('Đã dừng');$('lv').style.width=0;
 }
@@ -293,7 +374,7 @@ function onAudio(e){
   const thr=Math.max(+$('sens').value,floor*3.5)*(eRisk?1.6:1);
   const frame=new Float32Array(d);
   if(rms>thr){
-    if(!speaking){speaking=true;seg=pre.slice();segLen=0;setStatus('Đang nghe giọng nói…')}
+    if(!speaking){speaking=true;seg=pre.slice();segLen=0;setStatus('Đang nghe giọng nói…');setTurn('hear')}
     seg.push(frame);silence=0;segLen+=dt;if(eRisk)riskSeg=true;
   }else{
     if(!eRisk)floor=floor*0.97+rms*0.03;
@@ -341,9 +422,10 @@ async function pump(){
   busy=false;if(running)setStatus('Đang lắng nghe…');
 }
 
-const LN={vi:'Vietnamese',en:'English',ja:'Japanese'};
+const LN={vi:'Vietnamese',en:'English',ja:'Japanese',zh:'Simplified Chinese (Mandarin)'};
+const KANA=/[\u3040-\u30ff]/,HAN=/[\u3400-\u9fff]/;
 const JP=/[\u3040-\u30ff\u3400-\u9fff]/,VN=/[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i;
-const wrong=(t,tg)=>tg==='ja'?!JP.test(t):tg==='en'?(VN.test(t)||JP.test(t)):(JP.test(t)||(t.length>15&&!VN.test(t)));
+const wrong=(t,tg)=>tg==='ja'?!JP.test(t):tg==='zh'?(!HAN.test(t)||KANA.test(t)):tg==='en'?(VN.test(t)||JP.test(t)):(JP.test(t)||(t.length>15&&!VN.test(t)));
 
 const BT=()=>$('tr').value==='browser';
 try{$('tr').value=localStorage.getItem('tr2')||'browser'}catch(e){}
@@ -374,12 +456,13 @@ async function freeTr(text,tg,draft,sl){
     Translator.availability({sourceLanguage:sl,targetLanguage:tg}).then(av=>{if(av==='available')mkChrome(k,sl,tg,false)}).catch(()=>{})}
   return webTr(text,sl,tg,draft);
 }
+const GC=l=>l==='zh'?'zh-CN':l;
 async function webTr(text,sl,tg,draft){
   if(performance.now()<coolUntil){if(draft)throw new Error('cooldown');await sleep(Math.min(coolUntil-performance.now(),3000))}
   let err;
   for(let i=0;i<2;i++){
     try{
-      const r=await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl='+sl+'&tl='+tg+'&dt=t&q='+encodeURIComponent(text),{signal:AbortSignal.timeout(8000)});
+      const r=await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl='+GC(sl)+'&tl='+GC(tg)+'&dt=t&q='+encodeURIComponent(text),{signal:AbortSignal.timeout(8000)});
       if(r.status===429||r.status===403){coolUntil=performance.now()+20000;thr=Math.min(32,thr*2);showPace();dbg('⏳ Google Translate web đang giới hạn: nghỉ 20s');throw new Error(draft?'cooldown':'429')}
       if(!r.ok)throw new Error(r.status);
       const j=await r.json(),t=(j[0]||[]).map(x=>x[0]||'').join('').trim();
@@ -389,7 +472,7 @@ async function webTr(text,sl,tg,draft){
   }
   if(draft)throw err;
   try{
-    const r=await fetch('https://api.mymemory.translated.net/get?q='+encodeURIComponent(text.slice(0,450))+'&langpair='+sl+'|'+tg,{signal:AbortSignal.timeout(8000)});
+    const r=await fetch('https://api.mymemory.translated.net/get?q='+encodeURIComponent(text.slice(0,450))+'&langpair='+GC(sl)+'|'+GC(tg),{signal:AbortSignal.timeout(8000)});
     const j=await r.json(),t=j.responseData&&j.responseData.translatedText;
     if(j.responseStatus==200&&t&&!/MYMEMORY WARNING/i.test(t))return t.trim();
   }catch(e){}
@@ -491,7 +574,7 @@ function stripEcho(t){
 let AUTO=true;try{AUTO=localStorage.getItem('auto2')!=='0'}catch(e){}
 $('auto').checked=AUTO;
 let pace=1;
-const BASE={ja:5.5,vi:4.2,en:2.6};
+const BASE={ja:5.5,vi:4.2,en:2.6,zh:4.5};
 const nz=x=>(x||'').replace(/[\s。、，．,.!?！？]/g,'');
 const units=(t,l)=>l==='en'?(t.match(/[A-Za-z0-9'’]+/g)||[]).length:l==='vi'?(t.match(/\S+/g)||[]).length:nz(t).length;
 const P=()=>AUTO?Math.min(2.4,pace<1.1?1:pace):1;
@@ -511,6 +594,8 @@ function liveInterim(t){
   setStatus('Đang nghe giọng nói…');
   if(D.bubble&&D.src!==src){D.bubble.rm();D.bubble=null;D.trans='';resetT()}
   if(!D.bubble){D.bubble=newMsg(src,tg);D.src=src;D.tg=tg}
+  if(!D.bubble.echoSet){D.bubble.echoSet=1;D.echo=!$('hp').checked&&src===lastTg&&(tts||performance.now()-ttsEnd<1200)}
+  if(!D.echo)setTurn('speak',src);
   const now=performance.now(),u=units(t,src);
   if(!D.t0){D.t0=now;D.w=[]}
   if(u>D.maxU){D.maxU=u;D.tl=now}
@@ -525,7 +610,7 @@ function draftTr(){
   if(now<coolUntil||gap>8000)return;
   if(now-lastSend<gap){if(!D.timer)D.timer=setTimeout(()=>{D.timer=null;draftTr()},gap-(now-lastSend));return}
   const txt=D.orig,b=D.bubble,tg=D.tg,sl=D.src;if(!b||!txt||txt===D.last)return;
-  if(D.last&&txt.length-D.last.length<(D.src==='ja'?3:6)&&!/[。！？!?.]$/.test(txt))return;
+  if(D.last&&txt.length-D.last.length<((D.src==='ja'||D.src==='zh')?3:6)&&!/[。！？!?.]$/.test(txt))return;
   D.last=txt;lastSend=now;const my=++seqN;
   translateText(txt,tg,true,sl).then(tr=>{if(b===D.bubble&&my>applied){applied=my;D.trans=tr;D.transFor=txt;b.set(D.orig,tr);earlySay(tr,tg)}}).catch(e=>{if(e.message!=='cooldown')dbg('Dịch nháp lỗi '+e.message)});
 }
@@ -535,29 +620,31 @@ function earlySay(tr,tg){
   while(D.spk<ok){say(s[D.spk],tg);D.spk++}
 }
 function liveFinal(t){
-  t=stripEcho(t.trim());const b=D.bubble,s0=D.src,prev=D.trans,tf=D.transFor,spk=D.spk,t0=D.t0,tl=D.tl,u=units(t,detect(t));
-  clearTimeout(D.timer);Object.assign(D,{bubble:null,orig:'',trans:'',timer:null,last:'',src:null,transFor:''});resetT();
+  t=stripEcho(t.trim());const ech=D.echo,b=D.bubble,s0=D.src,prev=D.trans,tf=D.transFor,spk=D.spk,t0=D.t0,tl=D.tl,u=units(t,detect(t));
+  clearTimeout(D.timer);Object.assign(D,{bubble:null,orig:'',trans:'',timer:null,last:'',src:null,transFor:'',echo:false});resetT();
   const src=detect(t),tg=t&&getMap()[src];
   if(!tg){b&&b.rm();return}
   if(t0&&tl-t0>=800&&u>=4)setPace(u/((tl-t0+700)/1000),src,.3);
   let m=b;if(m&&s0!==src){m.rm();m=null}
   if(!m)m=newMsg(src,tg);
   m.draft(true);m.set(t,prev||'…');setStatus('Đang dịch…');
+  if(prev&&nz(tf)===nz(t)&&!ech)turnAfter(src);   // dịch nháp đã xong → báo lượt ngay
   const trP=prev&&nz(tf)===nz(t)?Promise.resolve(prev):translateText(t,tg,false,src).catch(e=>{dbg('Dịch lỗi '+e.message);return prev});
   fchain=fchain.then(async()=>{
     const tr=await trP;
     if(tr){m.set(t,tr);m.draft(false);const s=splitSent(tr);for(let i=Math.min(spk,s.length);i<s.length;i++)say(s[i],tg)}else{m.draft(false);m.set(t,'⚠️ Chưa dịch được')}
+    if(!ech)turnAfter(src);
     if(running)setStatus('Đang lắng nghe…');
   });
 }
-const detect=t=>forced||(JP.test(t)?'ja':VN.test(t)?'vi':'en');
+const detect=t=>{if(forced)return forced;if(KANA.test(t))return 'ja';if(HAN.test(t)){const {holder:h,guest:g}=side();return (h==='zh'||g==='zh'||(h!=='ja'&&g!=='ja'))?'zh':'ja'}const {holder:h2,guest:g2}=side();let r=VN.test(t)?'vi':'en';if(h2!==r&&g2!==r){if(r==='en'&&(h2==='vi'||g2==='vi'))r='vi';else if(r==='vi'&&(h2==='en'||g2==='en'))r='en'}return r};
 let forced=null;
 
 async function runBT(it){
   const mp=getMap();
-  const prompt=`You are a live transcriber. The audio has ONE speaker (vi/en/ja); ignore noise, music, background and echo.
+  const prompt=`You are a live transcriber. The audio has ONE speaker (vi/en/ja/zh); ignore noise, music, background and echo.
 Reply in this exact format:
-line 1: language code of the speech (vi, en or ja), or none if there is no clear speech
+line 1: language code of the speech (vi, en, ja or zh), or none if there is no clear speech
 line 2: the verbatim transcript in the original language, nothing else (never translate).
 For none, print only: none`;
   const m=$('model').value.trim();
@@ -567,7 +654,7 @@ For none, print only: none`;
   if(!res.ok){const t=await res.text();dbg('Lỗi API '+res.status+': '+t.slice(0,150));throw new Error(res.status+' '+t.slice(0,200))}
   const out=(((await res.json()).candidates?.[0]?.content?.parts)||[]).map(x=>x.text||'').join('').trim();
   const nl=out.indexOf('\n');let lang=(nl<0?out:out.slice(0,nl)).trim().toLowerCase();
-  lang=(lang.match(/\b(vi|en|ja|none)\b/)||[lang])[0];
+  lang=(lang.match(/\b(vi|en|ja|zh|none)\b/)||[lang])[0];
   const tg=mp[lang];dbg('Gemini nhận dạng: '+lang+(tg&&tg!=='none'?' → '+tg+' (dịch bằng trình duyệt)':' (bỏ qua)'));
   if(!tg||tg==='none')return;
   let orig=(nl<0?'':out.slice(nl+1)).trim();if(!orig)return;
@@ -577,14 +664,15 @@ For none, print only: none`;
   let tr='';try{tr=await translateText(orig,tg,false,lang)}catch(e){dbg('Dịch lỗi '+e.message)}
   b.draft(false);
   if(tr){b.set(orig,tr);for(const s of splitSent(tr))say(s,tg)}else b.set(orig,'⚠️ Chưa dịch được')
+  if(!(it.risk&&lang===lastTg))turnAfter(lang);
 }
 async function run(it){const b64=it.wav,dur=it.dur;
   const mp=getMap();
   const rules=Object.entries(mp).filter(([a,t])=>t!=='none').map(([a,t])=>`${LN[a]} speech → translate to ${LN[t]}`).join('; ');
-  const prompt=`You are a live interpreter. The audio has ONE speaker (vi/en/ja); ignore noise, music, background and echo.
+  const prompt=`You are a live interpreter. The audio has ONE speaker (vi/en/ja/zh); ignore noise, music, background and echo.
 Rules: ${rules}.
 Reply in this exact format:
-line 1: language code of the speech (vi, en or ja), or none if there is no clear speech
+line 1: language code of the speech (vi, en, ja or zh), or none if there is no clear speech
 then: the translation, written in the TARGET language (never copy the original words)
 then a line containing only ###
 then: the verbatim transcript in the original language.
@@ -603,7 +691,7 @@ For none, print only: none`;
     if(nl<0&&!final)return;
     if(!lang){
       lang=(nl<0?full:full.slice(0,nl)).trim().toLowerCase();
-      lang=(lang.match(/\b(vi|en|ja|none)\b/)||[lang])[0];
+      lang=(lang.match(/\b(vi|en|ja|zh|none)\b/)||[lang])[0];
       tg=mp[lang];
       dbg('Gemini nhận dạng: '+lang+(tg&&tg!=='none'?' → '+tg:' (bỏ qua)'));
       if(!tg||tg==='none'){skip=true;return}
@@ -649,31 +737,33 @@ For none, print only: none`;
     if(skip){rd.cancel();break}
   }
   update(true);
-  if(redo&&tg){const tr=await translateText(redo,tg);if(tr){bubble=newMsg(lang,tg);bubble.set(redo,tr);say(tr,tg)}}
+  if(redo&&tg){const tr=await translateText(redo,tg);if(tr){bubble=newMsg(lang,tg);bubble.set(redo,tr);say(tr,tg)}turnAfter(lang)}
   {const k=full.indexOf('###');if(k>=0&&lang&&dur>=1500){const o=full.slice(k+3).trim(),n=units(o,lang);if(n>=4)setPace(n/(dur/1000),lang,.5)}}
+  if(lang&&tg&&tg!=='none'&&!skip&&!bad&&!redo&&!(it.risk&&lang===lastTg))turnAfter(lang);
   if(bad){
     const nl=full.indexOf('\n'),rest=nl<0?'':full.slice(nl+1),j=rest.indexOf('###');
     const t1=(j<0?rest:rest.slice(0,j)).trim(),o1=j<0?'':rest.slice(j+3).trim(),src=o1||t1;
     dbg('Bản dịch sai ngôn ngữ → dịch lại bằng văn bản');
     const tr=src?await translateText(src,tg,false,lang):'';
     if(tr){if(!bubble)bubble=newMsg(lang,tg);bubble.set(src,tr);say(tr,tg)}
+    turnAfter(lang);
   }
 }
 
 let pend=0;const tq=[];let tplay=false;
 function speak(text,lang){tq.push({text,lang});tts=true;pend=tq.length+(tplay?1:0);if(!tplay)playNext()}
 function playNext(){
-  if(!tq.length){tplay=false;pend=0;tts=false;ttsEnd=performance.now();mutedUntil=ttsEnd+Math.max(200,400/P());return}
+  if(!tq.length){tplay=false;pend=0;tts=false;ttsEnd=performance.now();mutedUntil=ttsEnd+Math.max(200,400/P());if(pendingTurn)flushTurn();return}
   tplay=true;
-  if(AUTO){const lim=tq[0].lang==='ja-JP'?140:300;let tot=0;for(const x of tq)tot+=x.text.length;
+  if(AUTO){const lim=CJK(tq[0].lang)?140:300;let tot=0;for(const x of tq)tot+=x.text.length;
     while(tq.length>1&&tot>lim){tot-=tq.shift().text.length;dbg('⏩ Bỏ câu cũ để kịp theo')}}
   const f=tq.shift();let text=f.text,n=0;
-  while(tq.length&&tq[0].lang===f.lang){text+=(f.lang==='ja-JP'?'':' ')+tq.shift().text;n++}
+  while(tq.length&&tq[0].lang===f.lang){text+=(CJK(f.lang)?'':' ')+tq.shift().text;n++}
   const back=n+tq.length;pend=back+1;noteSpoken(text);
-  const rate=Math.min(2.5,(+$('rate').value)*P()*(1+.12*Math.min(3,back)));
+  const rate=Math.min({en:1.45,zh:1.8,ja:1.8,vi:1.8}[f.lang.slice(0,2)]||1.8,(+$('rate').value)*P()*(1+.12*Math.min(3,back)));
   const lang=f.lang,u=new SpeechSynthesisUtterance(text);u.lang=lang;u.rate=rate;
-  const v=speechSynthesis.getVoices().find(x=>x.lang.replace('_','-').startsWith(lang.slice(0,2)));
-  if(v)u.voice=v;
+  const v=pickVoice(lang.slice(0,2));
+  if(v){u.voice=v;u.lang=v.lang}
   speechSynthesis.resume();
   let fin=false,iv,to;
   const done=()=>{if(fin)return;fin=true;clearInterval(iv);clearTimeout(to);playNext()};
