@@ -169,8 +169,8 @@ button,.chip{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 <div class="row"><span>Đọc ra loa: <select id="voice"><option value="both">Cả hai chiều</option><option value="guest">Chỉ đọc cho khách nghe</option><option value="holder">Chỉ đọc cho người cầm nghe</option><option value="off">Tắt tiếng (chỉ hiện chữ)</option></select></span></div>
 <div class="row"><label><input type="checkbox" id="auto" checked>⚡ Tự bám tốc độ nói (nói nhanh → chữ &amp; tiếng cũng nhanh theo)</label></div>
 <div class="row"><span>Mic khi loa đang đọc: <select id="duplex"><option value="open">Luôn mở – không mất lời (tự lọc tiếng vọng)</option><option value="mute">Tắt tạm (như cũ)</option></select></span></div>
-<div class="row"><label><input type="checkbox" id="hp">🎧 Chế độ tai nghe (nghe tiếp khi đang phát, nhanh hơn)</label><span>Cắt câu: <select id="sil"><option value="300">Siêu nhanh</option><option value="450" selected>Nhanh</option><option value="600">Vừa</option><option value="900">Chậm</option></select></span><span>Độ nhạy mic: <select id="sens"><option value="0.004">Rất cao</option><option value="0.008" selected>Cao</option><option value="0.015">Vừa</option></select></span><span>Tốc độ đọc: <select id="rate"><option value="0.9">0.9x</option><option value="1" selected>1x</option><option value="1.15">1.15x</option><option value="1.3">1.3x</option></select></span></div>
-<div class="row"><b>Giọng đọc:</b><span>English <select id="v_en"></select></span><span>中文 <select id="v_zh"></select></span><span>日本語 <select id="v_ja"></select></span><span>Việt <select id="v_vi"></select></span></div>
+<div class="row"><label><input type="checkbox" id="hp">🎧 Chế độ tai nghe (nghe tiếp khi đang phát, nhanh hơn)</label><span>Cắt câu: <select id="sil"><option value="300">Siêu nhanh</option><option value="450" selected>Nhanh</option><option value="600">Vừa</option><option value="900">Chậm</option></select></span><span>Độ nhạy mic: <select id="sens"><option value="0.004">Rất cao</option><option value="0.008" selected>Cao</option><option value="0.015">Vừa</option></select></span><span>Tốc độ tiếng Anh: <select id="rate_en"><option value="0.8">Rất chậm</option><option value="0.9">Chậm</option><option value="1" selected>Vừa</option><option value="1.1">Nhanh</option></select></span><span>Tốc độ đọc: <select id="rate"><option value="0.9">0.9x</option><option value="1" selected>1x</option><option value="1.15">1.15x</option><option value="1.3">1.3x</option></select></span></div>
+<div class="row"><b>Giọng đọc:</b><span>English <select id="v_en"></select> <button id="v_en_try" type="button" title="Nghe thử giọng này">▶ Nghe thử</button></span><span>中文 <select id="v_zh"></select></span><span>日本語 <select id="v_ja"></select></span><span>Việt <select id="v_vi"></select></span></div>
 <div class="row" style="color:var(--mut)">Để “Tự động” sẽ chọn giọng chuẩn nhất trên máy (ưu tiên giọng Natural/Neural/Google, đúng vùng en-US, 中文 zh-CN). Nếu vẫn khó nghe, chọn giọng khác ở đây rồi bấm 🔊 Thử loa.</div>
 <div id="dbg" style="font:12px/1.4 monospace;color:var(--mut);white-space:pre-wrap;word-break:break-all">Nhật ký: (trống)</div>
 </div></div>
@@ -223,6 +223,7 @@ function vscore(v,l){
   if(/natural|neural|online|premium|enhanced|wavenet|siri/i.test(n))s+=40;
   if(/google/i.test(n))s+=25;
   if(/aria|jenny|samantha|ava|allison|xiaoxiao|xiaoyi|yunxi|yunyang|nanami|keita|kyoko|hoaimy|namminh|tingting|meijia/i.test(n))s+=15;
+  if(l==='en'){if(/online \(natural\)|multilingual/i.test(n))s+=30;if(/google us english/i.test(n))s+=12;if(/jenny|aria|ava|andrew|emma|brian|guy|samantha|allison|nicky|zoe/i.test(n))s+=12;if(/en-(in|au|ph|za|ie|sg|nz)/.test(L))s-=15}
   if(!v.localService)s+=8;
   if(/compact|espeak|novelty|fred|albert|bad |zarvox|whisper|trinoids/i.test(n))s-=60;
   return s;
@@ -243,6 +244,9 @@ function pickVoice(l){
   const vs=vSorted(l),n=$('v_'+l)&&$('v_'+l).value;
   return (n&&vs.find(v=>v.name===n))||vs[0]||null;
 }
+try{$('rate_en').value=localStorage.getItem('rate_en')||'1'}catch(e){}
+$('rate_en').onchange=()=>{try{localStorage.setItem('rate_en',$('rate_en').value)}catch(e){}};
+$('v_en_try').onclick=()=>{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance('Hello, nice to meet you. Could you please speak a little slower?'),v=pickVoice('en');u.lang='en-US';if(v){u.voice=v;u.lang=v.lang}u.rate=+$('rate_en').value;speechSynthesis.speak(u)};
 try{speechSynthesis.addEventListener('voiceschanged',fillVoices)}catch(e){}
 fillVoices();setTimeout(fillVoices,800);setTimeout(fillVoices,2500);
 
@@ -820,7 +824,8 @@ function playNext(){
   const f=tq.shift();let text=f.text,n=0;
   while(tq.length&&tq[0].lang===f.lang){text+=(CJK(f.lang)?'':' ')+tq.shift().text;n++}
   const back=n+tq.length;pend=back+1;noteSpoken(text);
-  const rate=Math.min({en:1.45,zh:1.8,ja:1.8,vi:1.8}[f.lang.slice(0,2)]||1.8,(+$('rate').value)*P()*(1+.12*Math.min(3,back)));
+  const isEn=f.lang.slice(0,2)==='en';
+  const rate=isEn?Math.min(1.2,(+$('rate_en').value)*Math.min(P(),1.2)*(1+.05*Math.min(3,back))):Math.min({zh:1.8,ja:1.8,vi:1.8}[f.lang.slice(0,2)]||1.8,(+$('rate').value)*P()*(1+.12*Math.min(3,back)));
   const lang=f.lang,u=new SpeechSynthesisUtterance(text);u.lang=lang;u.rate=rate;
   const v=pickVoice(lang.slice(0,2));
   if(v){u.voice=v;u.lang=v.lang}
