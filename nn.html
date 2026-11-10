@@ -137,6 +137,13 @@ button,.chip{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .msg.draft.k_orig .main{color:var(--mut)}
 .msg.draft.k_orig .sub{color:var(--tx)}
 .msg.draft.k_tr .main{opacity:1}
+/* nút loa phát lại: chỉ ở câu gần nhất */
+.msg{position:relative}
+.msg .rp{display:none;position:absolute;top:6px;right:6px;width:44px;height:44px;min-width:44px;min-height:44px;padding:0;border-radius:50%;font-size:20px;line-height:1;align-items:center;justify-content:center;background:var(--b);border:0;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.msg:first-child .rp{display:flex}
+.msg:first-child{padding-right:58px}
+.msg .rp:active{transform:scale(.92)}
+.msg.draft .rp{opacity:.45}
 </style>
 </head>
 <body>
@@ -293,14 +300,18 @@ document.addEventListener('click',e=>{const c=e.target.closest('.chip');if(c)set
 // Mỗi câu = 1 thẻ ở màn nào hiểu được ngôn ngữ đó; câu mới luôn nằm trên cùng.
 function newMsg(src,tg){
   const {holder,guest}=side(),parts=[];
+  let cur={t:''};
+  const replay=()=>{const t=(cur.t||'').trim();if(!t||t==='…'||t.startsWith('⚠️'))return;tq.length=0;try{speechSynthesis.cancel()}catch(e){}speak(t,LC[tg]||'en-US')};
   for(const [who,X] of [['guest',guest],['holder',holder]]){
     const kind=src===X?'orig':tg===X?'tr':null;if(!kind)continue;
     const L=$('list_'+who),emp=L.querySelector('.empty');if(emp)emp.remove();
     const el=document.createElement('div');el.className='msg '+src;
     el.innerHTML='<div class="main"></div><div class="sub"></div>';
-    el.classList.add('k_'+kind);L.prepend(el);L.scrollTop=0;parts.push({el,kind});
+    el.classList.add('k_'+kind);
+    const rp=document.createElement('button');rp.type='button';rp.className='rp';rp.textContent='🔊';rp.title='Phát lại bản dịch';rp.onclick=e=>{e.stopPropagation();replay()};el.appendChild(rp);
+    L.prepend(el);L.scrollTop=0;parts.push({el,kind});
   }
-  return{draft(on){for(const p of parts)p.el.classList.toggle('draft',on)},rm(){for(const p of parts)p.el.remove()},set(orig,trans){for(const p of parts){p.el.querySelector('.main').textContent=p.kind==='orig'?orig:trans;p.el.querySelector('.sub').textContent=p.kind==='orig'?trans:orig}}};
+  return{draft(on){for(const p of parts)p.el.classList.toggle('draft',on)},rm(){for(const p of parts)p.el.remove()},set(orig,trans){cur.t=trans;for(const p of parts){p.el.querySelector('.main').textContent=p.kind==='orig'?orig:trans;p.el.querySelector('.sub').textContent=p.kind==='orig'?trans:orig}}};
 }
 function say(text,tg){
   const v=$('voice').value,{holder,guest}=side();
