@@ -153,7 +153,9 @@ button,.chip{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 <div id="drawer"><div class="sheet">
 <h2>Cài đặt <button id="closeset">Đóng</button></h2>
 <div class="row">
-<input id="key" type="password" placeholder="Gemini API key">
+<input id="key" type="password" placeholder="Gemini API key 1">
+<input id="key2" type="password" placeholder="API key 2 (tuỳ chọn, nên khác project)">
+<input id="key3" type="password" placeholder="API key 3 (tuỳ chọn, nên khác project)">
 <input id="model" list="ml" value="gemini-3.5-flash" style="flex:0 0 190px;min-width:150px" title="Tên model"><datalist id="ml"><option value="gemini-3.5-flash"><option value="gemini-3.5-flash-lite"><option value="gemini-3.6-flash"><option value="gemini-3.8-flash"><option value="gemini-2.5-flash"></datalist>
 <button id="test">Kiểm tra kết nối</button><button id="spk">🔊 Thử loa</button>
 </div>
@@ -204,7 +206,7 @@ function turnAfter(src){
   turnSrc=src;pendingTurn=false;setTurn('your',src);
 }
 function flushTurn(){pendingTurn=false;if(!running||D.bubble||speaking)return;setTurn('your',turnSrc)}
-try{$('key').value=localStorage.getItem('gk')||''}catch(e){}
+try{$('key').value=localStorage.getItem('gk')||'';$('key2').value=localStorage.getItem('gk2')||'';$('key3').value=localStorage.getItem('gk3')||''}catch(e){}
 let ctx,stream,proc,running=false;
 let speaking=false,tts=false,mutedUntil=0,floor=0.002;
 let seg=[],pre=[],silence=0,segLen=0;
@@ -310,21 +312,36 @@ try{if(!$('key').value)$('drawer').classList.add('open')}catch(e){}
 $('btn').addEventListener('click',()=>{
   setTimeout(()=>{if(running){$('drawer').classList.remove('open');try{navigator.wakeLock&&navigator.wakeLock.request('screen').catch(()=>{})}catch(e){}}},700);
 });
+// ---- nhiều API key: xoay vòng, key nào bị 429 thì nghỉ riêng, chuyển sang key khác ngay ----
+const KID=['key','key2','key3'],KS={cd:[0,0,0],rr:0,live:0};
+function keyList(){return KID.map((id,i)=>({i,k:($(id).value||'').trim()})).filter(x=>x.k)}
+function readyKeys(){const n=performance.now();return Math.max(1,keyList().filter(x=>KS.cd[x.i]<=n).length)}
+function pickKey(){const L=keyList();if(!L.length)return null;const n=performance.now(),ok=L.filter(x=>KS.cd[x.i]<=n);
+  if(ok.length)return ok[(KS.rr++)%ok.length];return L.reduce((a,b)=>KS.cd[a.i]<=KS.cd[b.i]?a:b)}
+function coolKey(i,sec){KS.cd[i]=performance.now()+sec*1000;showPace()}
+function allCoolUntil(){const L=keyList();if(!L.length)return 0;const n=performance.now();if(L.some(x=>KS.cd[x.i]<=n))return 0;return Math.min(...L.map(x=>KS.cd[x.i]))}
+function liveKeyPick(){const L=keyList();if(!L.length)return null;const n=performance.now();
+  for(let s=0;s<3;s++){const i=(KS.live+s)%3,x=L.find(y=>y.i===i);if(x&&KS.cd[i]<=n){KS.live=i;return x}}
+  return L.reduce((a,b)=>KS.cd[a.i]<=KS.cd[b.i]?a:b)}
 const API='https://generativelanguage.googleapis.com/v1beta/';
 $('test').onclick=async()=>{
-  const k=$('key').value.trim(),m=$('model').value.trim(),c=$('conn');
-  if(!k){c.textContent='❌ Chưa nhập API key';return}
-  c.textContent='⏳ Đang kiểm tra…';
-  try{
-    const r=await fetch(API+'models?pageSize=200&key='+encodeURIComponent(k));
-    if(!r.ok){c.textContent='❌ Key không hợp lệ hoặc bị chặn: '+r.status+' '+(await r.text()).slice(0,120);return}
-    const names=((await r.json()).models||[]).map(x=>x.name.replace('models/',''));
-    const has=names.includes(m);
-    const r2=await fetch(API+'models/'+m+':generateContent?key='+encodeURIComponent(k),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:'Trả lời đúng một chữ: OK'}]}]})});
-    const t=await r2.text();
-    if(r2.ok)c.textContent='✅ Kết nối được, model "'+m+'" hoạt động.';
-    else c.textContent='⚠️ Key đúng nhưng model "'+m+'" lỗi '+r2.status+'. '+(has?'':'Model này không có trong danh sách. ')+'Model dùng được: '+names.filter(n=>/flash/.test(n)&&!/image|tts|live|embed/.test(n)).slice(0,8).join(', ');
-  }catch(e){c.textContent='❌ Không kết nối được mạng/Google: '+e.message}
+  const m=$('model').value.trim(),c=$('conn'),L=keyList();
+  if(!L.length){c.textContent='❌ Chưa nhập API key';return}
+  c.style.whiteSpace='pre-wrap';c.textContent='⏳ Đang kiểm tra '+L.length+' key…';
+  const out=[];
+  for(const x of L){
+    const tag='Key '+(x.i+1)+': ';
+    try{
+      const r=await fetch(API+'models?pageSize=200&key='+encodeURIComponent(x.k));
+      if(!r.ok){out.push(tag+'❌ không hợp lệ/bị chặn '+r.status+' '+(await r.text()).replace(/\s+/g,' ').slice(0,90));continue}
+      const names=((await r.json()).models||[]).map(z=>z.name.replace('models/',''));
+      const has=names.includes(m);
+      const r2=await fetch(API+'models/'+m+':generateContent?key='+encodeURIComponent(x.k),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:'Trả lời đúng một chữ: OK'}]}]})});
+      if(r2.ok)out.push(tag+'✅ hoạt động');
+      else out.push(tag+(r2.status===429?'⏳ đang bị 429 (hết hạn mức)':'⚠️ model "'+m+'" lỗi '+r2.status+(has?'':' – không có trong danh sách. Thử: '+names.filter(n=>/flash/.test(n)&&!/image|tts|live|embed/.test(n)).slice(0,5).join(', '))));
+    }catch(e){out.push(tag+'❌ lỗi mạng: '+e.message)}
+  }
+  c.textContent=out.join('\n');
 };
 const dl=[];
 function dbg(t){dl.push(new Date().toTimeString().slice(0,8)+' '+t);if(dl.length>6)dl.shift();$('dbg').textContent=dl.join('\n')}
@@ -341,8 +358,9 @@ function setStatus(s){$('stt').textContent=s}
 
 $('btn').onclick=async()=>{
   if(running){stop();return}
-  const k=$('key').value.trim();if(!k){alert('Nhập API key');return}
-  try{localStorage.setItem('gk',k)}catch(e){}
+  if(!keyList().length){alert('Nhập API key');return}
+  try{localStorage.setItem('gk',$('key').value.trim());localStorage.setItem('gk2',$('key2').value.trim());localStorage.setItem('gk3',$('key3').value.trim())}catch(e){}
+  KS.cd=[0,0,0];
   // mở khoá âm thanh/loa NGAY trong cú chạm
   ctx=new AudioContext();ctx.resume&&ctx.resume();
   for(const l of ['vi-VN','en-US','ja-JP','zh-CN']){const u=new SpeechSynthesisUtterance('.');u.lang=l;u.volume=0;speechSynthesis.speak(u)}
@@ -382,7 +400,7 @@ function watch(){
   if(zeroStart&&now-zeroStart>3000&&!tts&&now>mutedUntil+500)return recoverMic('mic im lặng tuyệt đối');
 }
 document.addEventListener('visibilitychange',()=>{if(running&&!document.hidden){try{ctx.resume()}catch(e){}watch()}});
-function warm(){if(performance.now()<coolUntil)return;fetch(API+'models/'+$('model').value.trim()+'?key='+encodeURIComponent($('key').value.trim())).catch(()=>{})}
+function warm(){if(performance.now()<coolUntil)return;const K=pickKey();if(!K)return;fetch(API+'models/'+$('model').value.trim()+'?key='+encodeURIComponent(K.k)).catch(()=>{})}
 function stop(){setTurn('off');pendingTurn=false;$('turn').hidden=true;document.querySelector('.meter').hidden=false;clearInterval(warmT);clearInterval(watchT);try{msrc&&msrc.disconnect()}catch(e){}live=false;clearTimeout(rt);const w0=ws;ws=null;try{w0&&w0.close()}catch(e){}acc=[];
   running=false;proc&&proc.disconnect();stream&&stream.getTracks().forEach(t=>t.stop());ctx&&ctx.close();
   tq.length=0;tplay=false;spoken.length=0;ttsEnd=0;riskSeg=false;speechSynthesis.cancel();pend=0;tts=false;pace=1;thr=1;coolUntil=0;showPace();$('btn').textContent='▶ Bắt đầu';$('btn').classList.remove('on');setStatus('Đã dừng');$('lv').style.width=0;
@@ -493,7 +511,7 @@ async function webTr(text,sl,tg,draft){
   for(let i=0;i<2;i++){
     try{
       const r=await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl='+GC(sl)+'&tl='+GC(tg)+'&dt=t&q='+encodeURIComponent(text),{signal:AbortSignal.timeout(8000)});
-      if(r.status===429||r.status===403){coolUntil=performance.now()+20000;thr=Math.min(32,thr*2);showPace();dbg('⏳ Google Translate web đang giới hạn: nghỉ 20s');throw new Error(draft?'cooldown':'429')}
+      if(r.status===429||r.status===403){coolUntil=performance.now()+8000;thr=Math.min(6,thr*1.5);showPace();dbg('⏳ Google Translate web đang giới hạn: nghỉ 8s');throw new Error(draft?'cooldown':'429')}
       if(!r.ok)throw new Error(r.status);
       const j=await r.json(),t=(j[0]||[]).map(x=>x[0]||'').join('').trim();
       if(t){onOk();return t}
@@ -513,7 +531,7 @@ async function translateText(text,tg,draft,sl){
   if(BT())return freeTr(text,tg,draft,sl);
   const m=$('model').value.trim();
   const cfg=/gemini-3/.test(m)?{thinkingConfig:{thinkingLevel:'minimal'}}:/gemini-2\.5-flash/.test(m)?{thinkingConfig:{thinkingBudget:0},temperature:0}:{temperature:0};
-  const r=await gfetch(`${API}models/${m}:generateContent?key=${encodeURIComponent($('key').value.trim())}`,JSON.stringify({contents:[{parts:[{text:`Translate into ${LN[tg]}. The text may be an unfinished fragment of live speech: translate only the words given, never complete or add. Output only the translation, written in ${LN[tg]}:\n${text}`}]}],generationConfig:cfg}),{optional:!!draft});
+  const r=await gfetch(`${API}models/${m}:generateContent?key=__KEY__`,JSON.stringify({contents:[{parts:[{text:`Translate into ${LN[tg]}. The text may be an unfinished fragment of live speech: translate only the words given, never complete or add. Output only the translation, written in ${LN[tg]}:\n${text}`}]}],generationConfig:cfg}),{optional:!!draft});
   if(!r.ok)throw new Error(r.status);
   return ((await r.json()).candidates?.[0]?.content?.parts||[]).map(x=>x.text||'').join('').trim();
 }
@@ -528,7 +546,8 @@ $('snd').onclick=()=>{const v=$('voice');if(v.value==='off')v.value=v.dataset.pr
 $('voice').addEventListener('change',sndIcon);sndIcon();
 
 function liveOpen(){
-  const me=ws=new WebSocket('wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key='+encodeURIComponent($('key').value.trim()));
+  const K=liveKeyPick();if(!K){setStatus('Chưa nhập API key');return}
+  const me=ws=new WebSocket('wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key='+encodeURIComponent(K.k));me._ki=K.i;
   me.onopen=()=>me.send(JSON.stringify({setup:{model:'models/'+LIVE_MODEL,generationConfig:{responseModalities:['TEXT']},inputAudioTranscription:{languageCodes:[]}}}));
   me.onmessage=async ev=>{
     let t=ev.data;if(t instanceof Blob)t=await t.text();
@@ -542,11 +561,14 @@ function liveOpen(){
     if(me!==ws)return;
     const was=liveReady;liveReady=false;dbg('Live đóng '+ev.code+' '+(ev.reason||'').slice(0,100));
     if(!running||!live)return;
+    const ki=me._ki,quota=/quota|429|exhaust|resource|rate/i.test(ev.reason||'');
+    if(!was||quota){coolKey(ki,quota?90:20);KS.live=(ki+1)%3}
+    if(!was&&keyList().length>1&&keyList().some(x=>KS.cd[x.i]<=performance.now())){dbg('🔑 Live: key '+(ki+1)+' lỗi → đổi key khác');setStatus('Đổi key Live…');setTimeout(()=>{if(running&&live)liveOpen()},250);return}
     if(!was&&++fails>=2){live=false;setStatus('Live lỗi → dùng chế độ thường');$('conn').textContent='⚠️ Live không dùng được ('+ev.code+' '+(ev.reason||'').slice(0,100)+'). Đang dùng chế độ thường.';return}
     setStatus('Đang nối lại…');setTimeout(()=>{if(running&&live)liveOpen()},250);
   };
 }
-function cycle(){if(!running||!live)return;if(D.bubble){rt=setTimeout(cycle,3000);return}try{ws.close()}catch(e){}}
+function cycle(){if(!running||!live)return;if(D.bubble){rt=setTimeout(cycle,3000);return}KS.live=((ws&&ws._ki!=null?ws._ki:KS.live)+1)%3;try{ws.close()}catch(e){}}
 function pushPcm(d){
   const r=ctx.sampleRate/16000;
   while(rpos<d.length){const a=Math.floor(rpos),b=Math.min(d.length,Math.max(a+1,Math.floor(rpos+r)));let v=0;for(let j=a;j<b;j++)v+=d[j];v/=(b-a);acc.push(Math.max(-1,Math.min(1,v))*32767);rpos+=r}
@@ -562,18 +584,26 @@ function pushPcm(d){
 let coolUntil=0,thr=1,okRun=0;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function parseDelay(t){const m=/"retryDelay"\s*:\s*"([\d.]+)s"/.exec(t)||/retry in ([\d.]+)s/i.exec(t);return m?Math.min(60,+m[1]):null}
-function on429(t){const d=parseDelay(t)||5;coolUntil=performance.now()+d*1000;thr=Math.min(32,thr*2);okRun=0;
-  dbg('⏳ 429: nghỉ '+d.toFixed(0)+'s, giảm dịch nháp ×'+thr);showPace()}
-function onOk(){if(++okRun>=15){okRun=0;if(thr>1){thr=Math.max(1,thr/1.5);showPace()}}}
+function on429(t,i){const day=/PerDay|per day|daily/i.test(t),d=day?1800:Math.min(parseDelay(t)||4,25);
+  coolKey(i,d);const u=allCoolUntil();
+  if(u){coolUntil=u;thr=Math.min(6,thr*1.5);okRun=0;dbg('⏳ 429 cả '+keyList().length+' key: nghỉ '+d.toFixed(0)+'s, giảm dịch nháp ×'+thr)}
+  else dbg('🔑 Key '+(i+1)+' bị 429 → chuyển sang key khác')}
+function onOk(){if(++okRun>=5){okRun=0;if(thr>1){thr=Math.max(1,thr/2);showPace()}}}
 async function gfetch(url,body,o={}){
   for(let i=0;;i++){
-    const w=coolUntil-performance.now();
-    if(w>0){if(o.optional)throw new Error('cooldown');await sleep(Math.min(w,10000))}
-    const res=await fetch(url,{signal:AbortSignal.timeout(o.timeout||20000),method:'POST',headers:{'Content-Type':'application/json'},body});
-    if(res.status!==429){if(res.ok)onOk();return res}
-    on429(await res.text());
-    if(o.optional||i>=2)throw new Error('429 – hết hạn mức API');
-  }
+    const nk=keyList().length,w=allCoolUntil()-performance.now();
+    if(w>0){if(o.optional)throw new Error('cooldown');await sleep(Math.min(w,4000))}
+    const K=pickKey();if(!K)throw new Error('Chưa nhập API key');
+    const res=await fetch(url.replace('__KEY__',encodeURIComponent(K.k)),{signal:AbortSignal.timeout(o.timeout||20000),method:'POST',headers:{'Content-Type':'application/json'},body});
+    if(res.status===429){
+      on429(await res.text(),K.i);
+      if(allCoolUntil()===0&&i<nk)continue;                 // còn key khác rảnh → thử ngay, không chờ
+      if(o.optional||i>=nk+2)throw new Error('429 – hết hạn mức API');
+      continue}
+    if(res.status===403||res.status===401||(res.status===400&&/API key/i.test(await res.clone().text()))){
+      coolKey(K.i,300);dbg('🔑 Key '+(K.i+1)+' bị từ chối ('+res.status+') → bỏ qua 5 phút');
+      if(allCoolUntil()===0&&i<nk)continue}
+    if(res.ok)onOk();return res}
 }
 
 try{$('duplex').value=localStorage.getItem('duplex2')||'open'}catch(e){}
@@ -608,7 +638,7 @@ const BASE={ja:5.5,vi:4.2,en:2.6,zh:4.5};
 const nz=x=>(x||'').replace(/[\s。、，．,.!?！？]/g,'');
 const units=(t,l)=>l==='en'?(t.match(/[A-Za-z0-9'’]+/g)||[]).length:l==='vi'?(t.match(/\S+/g)||[]).length:nz(t).length;
 const P=()=>AUTO?Math.min(2.4,pace<1.1?1:pace):1;
-function showPace(){const p=P();$('pc').textContent=(p>1?'⚡×'+p.toFixed(1):'')+(thr>1?(p>1?' ':'')+'🐢':'')}
+function showPace(){const p=P(),L=keyList(),n=performance.now(),ok=L.filter(x=>KS.cd[x.i]<=n).length;$('pc').textContent=(p>1?'⚡×'+p.toFixed(1):'')+(thr>1?(p>1?' ':'')+'🐢':'')+(L.length>1?((p>1||thr>1)?' ':'')+'🔑'+ok+'/'+L.length:'')}
 $('auto').onchange=()=>{AUTO=$('auto').checked;try{localStorage.setItem('auto2',AUTO?'1':'0')}catch(e){}showPace()};
 function setPace(rate,l,a){const b=BASE[l];if(!b||!isFinite(rate))return;pace=pace*(1-a)+Math.max(.8,Math.min(2.6,rate/b))*a;showPace()}
 const silEff=()=>Math.max(200,SIL/Math.pow(P(),.8));
@@ -636,7 +666,7 @@ function liveInterim(t){
 }
 let lastSend=0,seqN=0,applied=0;
 function draftTr(){
-  const now=performance.now(),fast=BT()&&chromeOK[(D.src||'')+'>'+(D.tg||'')]===true,gap=Math.max(fast?150:450,(fast?250:700)/P())*thr;
+  const now=performance.now(),fast=BT()&&chromeOK[(D.src||'')+'>'+(D.tg||'')]===true,gap=Math.max(fast?150:300,(fast?250:700)/P())*thr/readyKeys();
   if(now<coolUntil||gap>8000)return;
   if(now-lastSend<gap){if(!D.timer)D.timer=setTimeout(()=>{D.timer=null;draftTr()},gap-(now-lastSend));return}
   const txt=D.orig,b=D.bubble,tg=D.tg,sl=D.src;if(!b||!txt||txt===D.last)return;
@@ -679,7 +709,7 @@ line 2: the verbatim transcript in the original language, nothing else (never tr
 For none, print only: none`;
   const m=$('model').value.trim();
   const cfg=/gemini-3/.test(m)?{thinkingConfig:{thinkingLevel:'minimal'}}:/gemini-2\.5-flash/.test(m)?{thinkingConfig:{thinkingBudget:0},temperature:0}:{temperature:0};
-  const res=await gfetch(`${API}models/${m}:generateContent?key=${encodeURIComponent($('key').value.trim())}`,
+  const res=await gfetch(`${API}models/${m}:generateContent?key=__KEY__`,
     JSON.stringify({contents:[{parts:[{text:prompt},{inline_data:{mime_type:'audio/wav',data:it.wav}}]}],generationConfig:cfg}),{timeout:30000});
   if(!res.ok){const t=await res.text();dbg('Lỗi API '+res.status+': '+t.slice(0,150));throw new Error(res.status+' '+t.slice(0,200))}
   const out=(((await res.json()).candidates?.[0]?.content?.parts)||[]).map(x=>x.text||'').join('').trim();
@@ -709,7 +739,7 @@ then: the verbatim transcript in the original language.
 For none, print only: none`;
   const m=$('model').value.trim();
   const cfg=/gemini-3/.test(m)?{thinkingConfig:{thinkingLevel:'minimal'}}:/gemini-2\.5-flash/.test(m)?{thinkingConfig:{thinkingBudget:0},temperature:0}:{temperature:0};
-  const res=await gfetch(`${API}models/${m}:streamGenerateContent?alt=sse&key=${encodeURIComponent($('key').value.trim())}`,
+  const res=await gfetch(`${API}models/${m}:streamGenerateContent?alt=sse&key=__KEY__`,
     JSON.stringify({contents:[{parts:[{text:prompt},{inline_data:{mime_type:'audio/wav',data:b64}}]}],generationConfig:cfg}),{timeout:30000});
   if(!res.ok){const t=await res.text();dbg('Lỗi API '+res.status+': '+t.slice(0,150));throw new Error(res.status+' '+t.slice(0,200))}
   const rd=res.body.getReader(),dec=new TextDecoder();
